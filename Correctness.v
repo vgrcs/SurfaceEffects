@@ -25,9 +25,8 @@ Import EffectSoundness.
 Axiom ReadOnlyEffectExpression :
   forall stty ctxt rgns ef ea ee,
     BackTriangle (stty, ctxt, rgns, Mu_App ef ea, ee) ->
-    forall h fheap aheap env env' rho rho' ec' ee' f x facts v aacts,
+    forall h fheap env env' rho rho' ec' ee' f x facts v,
       (h, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
-      (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
       forall p eff,
         (h, env, rho, ee) ⇓ (h, eff, p) ->
         ReadOnlyPhi p ->
