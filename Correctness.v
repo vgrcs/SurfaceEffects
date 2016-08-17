@@ -22,6 +22,83 @@ Require Import CorrectnessLemmas.
 Import TypeSoundness.
 Import EffectSoundness.
 
+Inductive EffEval : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
+  | BS_Alloc_Abs   : 
+      forall w r env rho heap,
+        find_R w rho = Some r ->
+        EffEval (heap, env, rho, AllocAbs w) (heap, Eff (Some (singleton_set (CA_AllocAbs r))), Phi_Nil)
+  | BS_Read_Abs    : 
+      forall w r env rho heap,
+        find_R w rho = Some r ->  
+        EffEval (heap, env, rho, ReadAbs w) (heap, Eff (Some (singleton_set (CA_ReadAbs r))), Phi_Nil)        
+  | BS_Write_Abs   : 
+      forall w r env rho heap,
+        find_R w rho = Some r ->   
+        EffEval (heap, env, rho, WriteAbs w) (heap, Eff (Some (singleton_set (CA_WriteAbs r))), Phi_Nil)
+  | BS_Read_Conc   : 
+      forall ea r l env rho (heap heap' : Heap) aacts,
+        EffEval (heap, env, rho, ea) (heap', Loc (Rgn2_Const true false r) l, aacts) ->
+        aacts = Phi_Nil->
+        EffEval (heap, env, rho, ReadConc ea) (heap', Eff (Some (singleton_set (CA_ReadConc r l))), Phi_Nil) 
+  | BS_Write_Conc  : 
+      forall ea r l env rho (heap heap' : Heap) aacts,
+        EffEval (heap, env, rho, ea) (heap', Loc (Rgn2_Const true false r) l, aacts) ->
+        aacts = Phi_Nil ->
+        EffEval (heap, env, rho, WriteConc ea) (heap', Eff (Some (singleton_set (CA_WriteConc r l))), Phi_Nil)
+  | BS_Eff_Concat  : 
+      forall a b env rho heap (effa effb : Theta) phia phib,
+        EffEval (heap, env, rho, a) (heap, Eff effa, phia) ->
+        EffEval (heap, env, rho, b) (heap, Eff effb, phib) ->
+        EffEval (heap, env, rho, Concat a b) (heap, Eff (Union_Theta effa effb), Phi_Seq phia phib)
+  | BS_Eff_Top     : 
+      forall env rho heap,
+        EffEval (heap, env, rho, Top) (heap, Eff None, Phi_Nil)
+  | BS_Eff_Empty   : 
+      forall  env rho heap,
+        EffEval (heap, env, rho, Empty) (heap, Eff (Some empty_set), Phi_Nil).
+
+Lemma SameEvaluationDifferentRho_1 :
+   forall h env env' rho rho' p ee eff ,
+       (forall w, find_R w rho = find_R w rho') ->
+       EffEval (h, env, rho, ee) (h, eff, p) ->
+       EffEval (h, env', rho', ee) (h, eff, p).
+Proof.
+  intros. 
+  generalize dependent env'.
+  generalize dependent rho'.
+  dependent induction H0; intros. 
+  - constructor. rewrite <- H0. assumption.
+  - constructor. rewrite <- H0. assumption.
+  - constructor. rewrite <- H0. assumption.
+  - econstructor.
+    + eapply IHEffEval; eauto.
+    + reflexivity.
+  - econstructor.
+    + apply IHEffEval; auto.
+    + reflexivity. 
+  - econstructor.
+    + apply IHEffEval1; auto.
+    + apply IHEffEval2; auto.
+  - constructor.
+  - constructor.
+
+Lemma SameEvaluationDifferentRho_2 :
+   forall h env env' rho rho' p ee eff stty s ty,
+       (forall w, find_R w rho = find_R w rho') ->
+       TcVal (stty, eff, Ty2_Effect) \/ TcVal (stty, eff, Ty2_Ref (Rgn2_Const true true s) ty) ->
+       EffEval (h, env, rho, ee) (h, eff, p) ->
+       EffEval (h, env', rho', ee) (h, eff, p).
+Proof.
+  intros.
+  generalize dependent stty.
+  dependent induction H1.
+  Focus 4.
+  econstructor; eauto. 
+  eapply IHEffEval; auto.
+  right. (* fail *)
+Admitted.
+
+
 Axiom ReadOnlyEffectExpression :
   forall stty ctxt rgns ef ea ee,
     BackTriangle (stty, ctxt, rgns, Mu_App ef ea, ee) ->
