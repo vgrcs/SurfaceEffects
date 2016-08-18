@@ -113,6 +113,43 @@ Proof.
   - intros. constructor.
 Qed.
 
+
+Lemma SameEvaluationDifferentEnvironment_2 :
+   forall h env env' rho rho' ee eff static stty ctxt rgns s ty,
+       (forall w, find_R w rho = find_R w rho') ->
+       (forall v, find_E v env = find_E v env') ->
+       ReadOnlyStatic static ->
+       TcExp (stty, ctxt, rgns, ee, Ty2_Effect, static) 
+       \/ 
+       TcExp (stty, ctxt, rgns, ee, Ty2_Ref (Rgn2_Const true true s) ty, static) ->
+       BigStep (h, env, rho, ee) (h, eff, Phi_Nil) ->
+       BigStep (h, env', rho', ee) (h, eff, Phi_Nil).
+Proof.
+  intros.
+  generalize dependent stty.
+  generalize dependent s.
+  generalize dependent ty.
+  dependent induction H3; try (solve [constructor]).
+  - intros. econstructor. rewrite H0 in H2. assumption.
+  - intros. destruct H2 as [H_ | H__]. inversion H_. inversion H__.
+  - intros. destruct H2 as [H_ | H__]. inversion H_. inversion H__.
+  - intros. econstructor. rewrite H in H2. assumption.
+  - intros. econstructor. rewrite H in H2. assumption.
+  - intros. econstructor. rewrite H in H2. assumption.
+  - econstructor; eauto.
+    destruct H2 as [H_ | H__].
+    + inversion H_; subst.
+      eapply IHBigStep with (s:= r0) (ty := t); auto.
+      right. eassumption.
+    + inversion H__; subst.
+  - econstructor; eauto.
+    destruct H2 as [H_ | H__].
+    + inversion H_; subst.
+      eapply IHBigStep with (s:= r0) (ty := t); auto.
+      right. eassumption.
+    + inversion H__; subst.
+Qed.
+
 Axiom ReadOnlyEffectExpression :
   forall stty ctxt rgns ef ea ee,
     BackTriangle (stty, ctxt, rgns, Mu_App ef ea, ee) ->
