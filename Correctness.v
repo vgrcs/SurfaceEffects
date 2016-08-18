@@ -22,6 +22,16 @@ Require Import CorrectnessLemmas.
 Import TypeSoundness.
 Import EffectSoundness.
 
+Axiom RightUnionEffectTcExp :
+  forall stty ctxt rgns a s ty eff1 eff2,
+    TcExp (stty, ctxt, rgns, a, Ty2_Effect, eff1) ->
+    TcExp (stty, ctxt, rgns, a, Ty2_Ref (Rgn2_Const true true s) ty, Union_Static_Action eff1 eff2).
+
+Axiom LeftUnionEffectTcExp :
+  forall stty ctxt rgns a eff1 eff2,
+    TcExp (stty, ctxt, rgns, a, Ty2_Effect, eff2) ->
+    TcExp (stty, ctxt, rgns, a, Ty2_Effect, Union_Static_Action eff1 eff2).
+
 Inductive EffEval : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   | BS_Alloc_Abs   : 
       forall w r env rho heap,
@@ -55,49 +65,53 @@ Inductive EffEval : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
         EffEval (heap, env, rho, Top) (heap, Eff None, Phi_Nil)
   | BS_Eff_Empty   : 
       forall  env rho heap,
-        EffEval (heap, env, rho, Empty) (heap, Eff (Some empty_set), Phi_Nil).
-
-Lemma SameEvaluationDifferentRho_1 :
-   forall h env env' rho rho' p ee eff ,
+        EffEval (heap, env, rho, Empty) (heap, Eff (Some empty_set), Phi_Nil).    
+    
+Lemma SameEvaluationDifferentEnvironment :
+   forall h env env' rho rho' p ee eff static stty ctxt rgns s ty,
        (forall w, find_R w rho = find_R w rho') ->
-       EffEval (h, env, rho, ee) (h, eff, p) ->
-       EffEval (h, env', rho', ee) (h, eff, p).
-Proof.
-  intros. 
-  generalize dependent env'.
-  generalize dependent rho'.
-  dependent induction H0; intros. 
-  - constructor. rewrite <- H0. assumption.
-  - constructor. rewrite <- H0. assumption.
-  - constructor. rewrite <- H0. assumption.
-  - econstructor.
-    + eapply IHEffEval; eauto.
-    + reflexivity.
-  - econstructor.
-    + apply IHEffEval; auto.
-    + reflexivity. 
-  - econstructor.
-    + apply IHEffEval1; auto.
-    + apply IHEffEval2; auto.
-  - constructor.
-  - constructor.
-
-Lemma SameEvaluationDifferentRho_2 :
-   forall h env env' rho rho' p ee eff stty s ty,
-       (forall w, find_R w rho = find_R w rho') ->
-       TcVal (stty, eff, Ty2_Effect) \/ TcVal (stty, eff, Ty2_Ref (Rgn2_Const true true s) ty) ->
+       TcExp (stty, ctxt, rgns, ee, Ty2_Effect, static) 
+       \/ 
+       TcExp (stty, ctxt, rgns, ee, Ty2_Ref (Rgn2_Const true true s) ty, static) ->
        EffEval (h, env, rho, ee) (h, eff, p) ->
        EffEval (h, env', rho', ee) (h, eff, p).
 Proof.
   intros.
   generalize dependent stty.
+  generalize dependent s.
+  generalize dependent ty.
   dependent induction H1.
-  Focus 4.
-  econstructor; eauto. 
-  eapply IHEffEval; auto.
-  right. (* fail *)
-Admitted.
-
+  - constructor. rewrite <- H. assumption.
+  - constructor. rewrite <- H. assumption.
+  - constructor. rewrite <- H. assumption.
+  - econstructor; eauto.
+    destruct H0 as [H2 | H3].
+    + inversion H2; subst.
+      eapply IHEffEval with (s:= r0) (ty := t); auto.
+      right. eassumption.
+    + inversion H3; subst.
+  - econstructor; eauto.
+    destruct H0 as [H2 | H3].
+    + inversion H2; subst.
+      eapply IHEffEval with (s:= r0) (ty := t); auto.
+      right. eassumption.
+    + inversion H3; subst.
+  - econstructor; eauto; destruct H0 as [H2 | H3].
+    + inversion H2; subst.
+      eapply IHEffEval1; auto.
+      right.  eapply RightUnionEffectTcExp; eauto. 
+      Unshelve. assumption.
+      Unshelve. assumption.
+    + inversion H3.
+    + inversion H2; subst.
+      eapply IHEffEval2; auto.
+      left.  apply LeftUnionEffectTcExp; eauto.
+      Unshelve. assumption.
+      Unshelve. assumption.
+    + inversion H3.
+  - intros. constructor.
+  - intros. constructor.
+Qed.
 
 Axiom ReadOnlyEffectExpression :
   forall stty ctxt rgns ef ea ee,
