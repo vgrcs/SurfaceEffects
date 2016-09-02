@@ -362,8 +362,8 @@ Proof.
         apply update_rho; auto.
         eapply extended_rho; eauto. }
   - admit.
-  - admit.
-  - inversion H0; subst.
+  - admit. 
+  - inversion H0; subst. 
     + assert (cacts ⊑ Some empty_set) by (eapply IHBS1_1; eauto; constructor).
       apply EmptyUnionIsIdentity.
       apply EmptyIsNil in H5; subst.
@@ -401,6 +401,21 @@ Proof.
     + inversion H; subst. constructor. apply PhiInThetaTop.  apply PhiInThetaTop.
   -
 Admitted.
+
+Axiom NonOverlappingUpdates:
+ forall f x ef ea ec' ee' v v' (env env': Env) (rho rho' : Rho) (heap fheap aheap bheap : Heap) (facts aacts bacts : Phi),
+   (heap, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
+   (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
+   (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') 
+     ⇓ (bheap, v', bacts) -> 
+   (forall a b effa effb effe phia phib phie,
+      facts ⊑ effa ->
+      aacts ⊑ effb ->
+      (heap, env, rho, a) ⇓ (heap, Eff effa, phia) ->
+      (heap, env, rho, b) ⇓ (heap, Eff effb, phib) ->
+      (heap, env, rho, Eff_App ef ea) ⇓ (heap, Eff effe, phie) ->
+      (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee') 
+       ⇓ (heap, Eff (Union_Theta effa (Union_Theta effb effe)), Phi_Seq phia (Phi_Seq phib phie))).
 
 Definition Correctness_NEW :
   forall h h' env rho p p' v eff stty ctxt rgns ea ee,
@@ -448,9 +463,7 @@ Proof.
       rewrite <- H13 in TcVal_v'.
  
       assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho efff, facts)).
-      eapply eff_sound; eauto.  
-
-
+      eapply eff_sound; eauto. 
 
       apply PTS_Seq. 
       + apply PTS_Seq.
@@ -478,10 +491,14 @@ Proof.
               + eapply ext_stores__env; eauto.
               + eapply ext_stores__exp; eauto.
               + assumption.
-              +  admit. } 
+              +  admit. }
       + inversion H; subst; inversion H0; subst.
-        * { eapply IHBS1_3 with (stty:=sttya) (ee:= ee'); auto.  
-            - inversion H24; subst.
+        * { inversion H24; subst. 
+            eapply IHBS1_3 with 
+                           (stty:=sttya) 
+                           (ee:= ee') 
+                           (p':= Phi_Seq phia (Phi_Seq phia0 phib0)); auto.  
+            - 
               assert (HEq_1 : fheap = h). 
               apply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H32.
               apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
@@ -492,7 +509,7 @@ Proof.
               apply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H32.
               apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
               assumption. assumption. admit. 
- 
+  
 
               assert (facts  ⊑ effa0) by
               (eapply IHBS1_1 with (ee:=a); eauto; inversion H1; subst; assumption).
@@ -502,10 +519,13 @@ Proof.
                 [rewrite HEq_1; assumption |
                  inversion H1; subst; inversion H23; subst; assumption | 
                  rewrite HEq_1; assumption]).
-   
-              assert (H''' : bacts  ⊑ effb0).
+
+              rewrite <- HEq_2 in HEq_1. rewrite HEq_1. 
+               
+              assert (bacts  ⊑ (Union_Theta effa0 (Union_Theta effa2 effb0))). 
               { eapply IHBS1_3 with (ee:=ee') (stty:=sttya);eauto.
-                - admit. 
+                - rewrite HEq_1. 
+                  eapply NonOverlappingUpdates; eauto.  
                 - eapply ext_stores__bt; eauto. 
                 - { apply update_env; simpl.   
                     - eapply ext_stores__env; eauto. 
@@ -515,14 +535,11 @@ Proof.
                     - eapply ext_stores__val with (stty:=sttya); eauto.
                   }
                 - eapply ext_stores__exp; eauto.
-              }  
+              } 
 
-              rewrite <- HEq_2 in HEq_1. rewrite HEq_1. 
-              admit. 
- 
-            - eapply ext_stores__bt; eauto.
-            - eassumption.
-            - eassumption.
+              eapply NonOverlappingUpdates; eauto.
+            - eapply ext_stores__bt; eauto. 
+            - eassumption. 
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
@@ -543,11 +560,78 @@ Proof.
                 - eapply ext_stores__val with (stty:=sttya); eauto. }
             - eapply ext_stores__exp; eauto.
           }
+  - inversion_clear H6; subst.    
+    assert (clsTcVal : exists stty',  
+             (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+               /\ TcHeap (fheap, stty')
+               /\ TcVal (stty', Cls (env', rho', Lambda x eb), 
+                         subst_rho rho (Ty2_ForallRgn effr tyr))). 
+    eapply ty_sound;eauto. 
+    destruct clsTcVal as [sttyb [Weakb [TcHeapb TcVal_cls]]]; eauto.
+    inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst.  
+    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | |  | | | | | | | | | | |  ]; subst.
+    rewrite <- H12 in TcVal_cls.
+    do 2 rewrite subst_rho_forallrgn in H12.
+    inversion H12.
+    
+    apply PTS_Seq.
+    + eapply IHBS1_1; eauto. 
+      inversion H1; subst.
+      * assumption.
+      * econstructor; eauto.
+    + inversion H1; subst.
+      { eapply IHBS1_2 with (ee:=∅); eauto. 
+        inversion H0; subst. econstructor.
+        apply update_rho; auto.
+        eapply extended_rho; eauto. }
+      { eapply IHBS1_2 with (ee:=⊤); eauto. 
+        induction eff.
+        - inversion H0. 
+        -  inversion H0. econstructor. 
+        - econstructor.
+          eassumption.
+        - apply update_rho; auto.
+        - eapply extended_rho; eauto. }
   - admit.
   - admit.
-  - admit.
-  - admit. 
-  - admit.
+  - inversion H0; subst. 
+    + assert (cacts ⊑ Some empty_set) by
+          (eapply IHBS1_1 with (p':=Phi_Nil); eauto; constructor).
+      apply EmptyUnionIsIdentity.
+      apply EmptyIsNil in H6; subst.
+      apply PTS_Seq; [apply PTS_Nil |].
+      assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)).
+      eapply eff_sound; eauto.
+      assert (HEq_1 :  cheap = h). 
+      apply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in H16.
+      apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+      assumption. constructor. admit.
+      rewrite UnionEmptyWithEffIsEff.
+      eapply IHBS1_2 with (ee:=efft); eauto.
+      * eapply EvalTrueIsTrue; eauto; rewrite <- HEq_1 in H. 
+        eassumption. 
+        rewrite HEq_1. rewrite HEq_1 in BS1_1. assumption.
+      * now rewrite HEq_1.  
+    + inversion H; subst. constructor. apply PhiInThetaTop.  apply PhiInThetaTop.
+  - inversion H0; subst. 
+    + assert (cacts ⊑ Some empty_set) by 
+          (eapply IHBS1_1 with (p':=Phi_Nil); eauto; constructor).
+      apply EmptyUnionIsIdentity.
+      apply EmptyIsNil in H6; subst.
+      apply PTS_Seq; [apply PTS_Nil |].
+      assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)).
+      eapply eff_sound; eauto.
+      assert (HEq_1 :  cheap = h). 
+      apply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in H16.
+      apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+      assumption. constructor. admit.
+      rewrite UnionEmptyWithEffIsEff.
+      eapply IHBS1_2 with (ee:=efff); eauto.
+      * eapply EvalFalseIsFalse; eauto; rewrite <- HEq_1 in H. 
+        eassumption. 
+        rewrite HEq_1. rewrite HEq_1 in BS1_1. assumption.
+      * now rewrite HEq_1. 
+    + inversion H; subst. constructor. apply PhiInThetaTop.  apply PhiInThetaTop.
   - inversion H1; subst; inversion H2; subst.
     apply EnsembleUnionComp.  
      + eapply IHBS1; eauto. inversion H3. assumption.
@@ -555,11 +639,40 @@ Proof.
        apply PTS_Elem. apply DAT_Alloc_Abs.
        rewrite H in H9. inversion H9.
        apply In_singleton.
-     + apply PhiInThetaTop.
-  -
+     + apply PhiInThetaTop.  
+  - inversion H2; subst.
+    + inversion H1; subst. 
+      apply EnsembleUnionComp.
+      * eapply IHBS1; eauto. 
+        inversion H3; subst. assumption.
+      * apply PTS_Elem. inversion H18; subst.
+        rewrite H in H9; inversion H9.
+        apply DAT_Read_Abs. apply In_singleton.
+    + inversion H1; subst.
+      assert (aacts ⊑ Some empty_set) by (eapply IHBS1; eauto; constructor).
+      apply PTS_Seq.
+      * apply EmptyInAnyTheta. assumption.
+      * apply PTS_Elem.
+        simpl in H; inversion H; subst.
+        assert ( HD : (h, Loc (Rgn2_Const true false r1) l0, Phi_Nil) 
+                      =  (h', Loc (Rgn2_Const true false r) l, aacts))
+          by (eapply DynamicDeterminism; eauto). inversion HD; subst. 
+        apply DAT_Read_Conc. apply In_singleton.
+    + econstructor. 
+      * inversion H9; subst.
+        eapply IHBS1; eauto.  econstructor. 
+        eassumption.
+      * inversion H1; subst.    
+        apply PTS_Elem. apply DAT_Top.
+  - admit.  
+  - admit. 
+  - admit.  
+  - admit.
+  - admit.
+  - admit. 
 Admitted.
 
-
+ 
 Definition Correctness_Z :
   forall h h' env rho p p' v eff stty ctxt rgns ea ee,
     (h, env, rho, ea) ⇓ (h', v, p) ->
@@ -567,7 +680,7 @@ Definition Correctness_Z :
     BackTriangle (stty, ctxt, rgns, ea, ee) ->
     forall  ty static, 
       ReadOnlyPhi p' ->
-      TcHeap (h, stty) ->
+       TcHeap (h, stty) ->
       TcRho (rho, rgns) ->
       TcEnv (stty, rho, env, ctxt) -> 
       TcExp (stty, ctxt, rgns, ea, ty, static) ->
