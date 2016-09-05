@@ -8,6 +8,21 @@ Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_R : forall phi, Phi_Par Phi_Nil phi = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
+Lemma UnionEmptyWithEffIsEff:
+  forall eff,
+    Union_Theta (Some empty_set) eff = eff.
+Proof.
+  intro.
+  induction eff; simpl; [| reflexivity]. 
+  apply f_equal.
+  assert (set_union empty_set a = a).
+  - apply Extensionality_Ensembles.
+    unfold Same_set, Included; split; intros x H_; unfold In in *.
+    * destruct H_; [inversion H | assumption ].
+    * apply Union_intror. assumption.
+  - assumption.    
+Qed.
+
 Lemma PhiInThetaTop:
   forall phi, phi ⊑ Theta_Top.
 Proof.  

@@ -427,32 +427,26 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   | BS_Lambda_Abs : forall x eb env rho heap,
                       (heap, env, rho, Lambda x eb) ⇓ (heap, Cls (env, rho, Lambda x eb), Phi_Nil)
   | BS_Mu_App     : forall f x ef ea ec' ee' v v'
-                           (env env': Env) (rho rho' : Rho) (heap fheap aheap bheap : Heap) (facts aacts bacts : Phi),
+                           (env env': Env) (rho rho' : Rho) (heap fheap aheap bheap : Heap) 
+                           (facts aacts bacts : Phi),
                       (heap, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
                       (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
                       (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') ⇓ (bheap, v', bacts) ->
                       (heap, env, rho,  Mu_App ef ea) ⇓ (bheap, v', Phi_Seq (Phi_Seq facts aacts) bacts) 
   | BS_Rgn_App    : forall x er eb w v v'
-                           (env env': Env) (rho rho' : Rho) (heap fheap aheap bheap : Heap) (facts aacts bacts : Phi), 
+                           (env env': Env) (rho rho' : Rho) 
+                           (heap fheap aheap bheap : Heap) (facts aacts bacts : Phi), 
                       (heap, env, rho, er) ⇓ (fheap, Cls (env', rho', Lambda x eb), facts) ->
                       find_R w rho = Some v' ->
                       (fheap, env', update_R (x, v') rho' , eb) ⇓ (bheap, v, bacts) ->
                       (heap, env, rho, Rgn_App er w) ⇓ (bheap, v, Phi_Seq facts bacts)          
-  | BS_Eff_App    : forall f x ef ea ec' ee' v v' (env env': Env) (rho rho' : Rho) heap (facts aacts bacts : Phi) eff_e trace a b eff_a eff_b phia phib, 
+  | BS_Eff_App    : forall f x ef ea ec' ee' v v' 
+                           (env env': Env) (rho rho' : Rho) heap (facts aacts bacts : Phi) trace, 
                       (heap, env, rho, ef) ⇓ (heap, Cls (env', rho', Mu f x ec' ee'), facts) ->
                       (heap, env, rho, ea) ⇓ (heap, v', aacts) ->
-                      (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v') env', rho', ee') ⇓ (heap, v, bacts) -> 
-
-                      v = Eff eff_e ->
+                      (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v') env', rho', ee') 
+                        ⇓ (heap, v, bacts) -> 
                       trace = Phi_Seq (Phi_Seq facts aacts) bacts ->
-
-                      facts ⊑ eff_a ->
-                      aacts ⊑ eff_b ->
-                      (heap, env, rho, a) ⇓ (heap, Eff eff_a, phia) ->
-                      (heap, env, rho, b) ⇓ (heap, Eff eff_b, phib) ->
-                      ReadOnlyPhi (Phi_Seq phia (Phi_Seq phib trace)) ->
-                      (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v') env', rho', ee') ⇓ (heap, Eff (Union_Theta eff_a (Union_Theta eff_b eff_e)), Phi_Seq phia (Phi_Seq phib trace)) ->
-
                       (heap, env, rho, Eff_App ef ea) ⇓ (heap, v, trace)
   | BS_Pair_Par   : forall env rho ea1 ef1 ea2 ef2 v1 v2 theta1 theta2
                            (heap heap_mu1 heap_mu2 heap' : Heap) (acts_mu1 acts_mu2 acts_eff1 acts_eff2 : Phi),
