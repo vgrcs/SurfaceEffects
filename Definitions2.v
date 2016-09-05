@@ -95,7 +95,7 @@ Inductive Phi :=
  | Phi_Elem : DynamicAction -> Phi                                
  | Phi_Par : Phi -> Phi -> Phi                 
  | Phi_Seq : Phi -> Phi -> Phi.
-
+ 
 Fixpoint phi_as_list (phi : Phi) : Trace :=
   match phi with
     | Phi_Nil => nil
@@ -417,113 +417,124 @@ Inductive Det_Trace : Phi -> Prop :=
 Reserved Notation "e '⇓' n" (at level 50, left associativity).
 Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   | BS_Nat_Cnt    : forall n env rho heap,
-                        (heap, env, rho, Const n) ⇓ (heap, Num n, Phi_Nil)
+                      (heap, env, rho, Const n) ⇓ (heap, Num n, Phi_Nil)
   | BS_Boolean    : forall b env rho heap,
-                        (heap, env, rho, Bool b) ⇓ (heap, Bit b, Phi_Nil)                                     
+                      (heap, env, rho, Bool b) ⇓ (heap, Bit b, Phi_Nil)                                    
   | BS_Val_Var    : forall x v env rho heap,
-                        find_E x env = Some v -> (heap, env, rho, Var x) ⇓ (heap, v, Phi_Nil)                          
+                      find_E x env = Some v -> (heap, env, rho, Var x) ⇓ (heap, v, Phi_Nil)                
   | BS_Mu_Abs     : forall f x ec ee env rho (heap fheap : Heap),
-                        (heap, env, rho, Mu f x ec ee) ⇓ (heap, Cls (env, rho, Mu f x ec ee), Phi_Nil)
+                      (heap, env, rho, Mu f x ec ee) ⇓ (heap, Cls (env, rho, Mu f x ec ee), Phi_Nil)
   | BS_Lambda_Abs : forall x eb env rho heap,
-                        (heap, env, rho, Lambda x eb) ⇓ (heap, Cls (env, rho, Lambda x eb), Phi_Nil)
+                      (heap, env, rho, Lambda x eb) ⇓ (heap, Cls (env, rho, Lambda x eb), Phi_Nil)
   | BS_Mu_App     : forall f x ef ea ec' ee' v v'
                            (env env': Env) (rho rho' : Rho) (heap fheap aheap bheap : Heap) (facts aacts bacts : Phi),
-                        (heap, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
-                        (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
-                        (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') ⇓ (bheap, v', bacts) ->
-                        (heap, env, rho,  Mu_App ef ea) ⇓ (bheap, v', Phi_Seq (Phi_Seq facts aacts) bacts) 
+                      (heap, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
+                      (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
+                      (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') ⇓ (bheap, v', bacts) ->
+                      (heap, env, rho,  Mu_App ef ea) ⇓ (bheap, v', Phi_Seq (Phi_Seq facts aacts) bacts) 
   | BS_Rgn_App    : forall x er eb w v v'
                            (env env': Env) (rho rho' : Rho) (heap fheap aheap bheap : Heap) (facts aacts bacts : Phi), 
-                        (heap, env, rho, er) ⇓ (fheap, Cls (env', rho', Lambda x eb), facts) ->
-                        find_R w rho = Some v' ->
-                        (fheap, env', update_R (x, v') rho' , eb) ⇓ (bheap, v, bacts) ->
-                        (heap, env, rho, Rgn_App er w) ⇓ (bheap, v, Phi_Seq facts bacts)          
-  | BS_Eff_App    : forall f x ef ea ec' ee' v v' (env env': Env) (rho rho' : Rho) heap (facts aacts bacts : Phi), 
-                        (heap, env, rho, ef) ⇓ (heap, Cls (env', rho', Mu f x ec' ee'), facts) ->
-                        (heap, env, rho, ea) ⇓ (heap, v', aacts) ->
-                        (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v') env', rho', ee') ⇓ (heap, v, bacts) ->
-                        (heap, env, rho, Eff_App ef ea) ⇓ (heap, v, Phi_Seq (Phi_Seq facts aacts) bacts)
+                      (heap, env, rho, er) ⇓ (fheap, Cls (env', rho', Lambda x eb), facts) ->
+                      find_R w rho = Some v' ->
+                      (fheap, env', update_R (x, v') rho' , eb) ⇓ (bheap, v, bacts) ->
+                      (heap, env, rho, Rgn_App er w) ⇓ (bheap, v, Phi_Seq facts bacts)          
+  | BS_Eff_App    : forall f x ef ea ec' ee' v v' (env env': Env) (rho rho' : Rho) heap (facts aacts bacts : Phi) eff_e trace a b eff_a eff_b phia phib, 
+                      (heap, env, rho, ef) ⇓ (heap, Cls (env', rho', Mu f x ec' ee'), facts) ->
+                      (heap, env, rho, ea) ⇓ (heap, v', aacts) ->
+                      (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v') env', rho', ee') ⇓ (heap, v, bacts) -> 
+
+                      v = Eff eff_e ->
+                      trace = Phi_Seq (Phi_Seq facts aacts) bacts ->
+
+                      facts ⊑ eff_a ->
+                      aacts ⊑ eff_b ->
+                      (heap, env, rho, a) ⇓ (heap, Eff eff_a, phia) ->
+                      (heap, env, rho, b) ⇓ (heap, Eff eff_b, phib) ->
+                      ReadOnlyPhi (Phi_Seq phia (Phi_Seq phib trace)) ->
+                      (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v') env', rho', ee') ⇓ (heap, Eff (Union_Theta eff_a (Union_Theta eff_b eff_e)), Phi_Seq phia (Phi_Seq phib trace)) ->
+
+                      (heap, env, rho, Eff_App ef ea) ⇓ (heap, v, trace)
   | BS_Pair_Par   : forall env rho ea1 ef1 ea2 ef2 v1 v2 theta1 theta2
                            (heap heap_mu1 heap_mu2 heap' : Heap) (acts_mu1 acts_mu2 acts_eff1 acts_eff2 : Phi),
-                        (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap, Eff theta1, acts_eff1) ->
-                        (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap, Eff theta2, acts_eff2) ->
-                        ReadOnlyPhi acts_eff1 ->
-                        ReadOnlyPhi acts_eff2 ->
-                        Disjointness theta1 theta2 /\ not (Conflictness theta1 theta2) ->
-                        (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, Num v1, acts_mu1) ->
-                        (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, Num v2, acts_mu2) ->
-                        acts_mu1 ⊑ theta1 ->
-                        acts_mu2 ⊑ theta2 -> 
-                        (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, heap') ->
-                        (heap, env, rho, Pair_Par ef1 ea1 ef2 ea2) 
-                           ⇓ (heap', Pair (v1, v2), Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2))
+                      (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap, Eff theta1, acts_eff1) ->
+                      (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap, Eff theta2, acts_eff2) ->
+                      ReadOnlyPhi acts_eff1 ->
+                      ReadOnlyPhi acts_eff2 ->
+                      Disjointness theta1 theta2 /\ not (Conflictness theta1 theta2) ->
+                      (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, Num v1, acts_mu1) ->
+                      (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, Num v2, acts_mu2) ->
+                      acts_mu1 ⊑ theta1 ->
+                      acts_mu2 ⊑ theta2 -> 
+                      (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, heap') ->
+                      (heap, env, rho, Pair_Par ef1 ea1 ef2 ea2) 
+                        ⇓ (heap', Pair (v1, v2), Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2))
   | BS_Cond_True  : forall e et ef env rho v (heap cheap theap : Heap) (cacts tacts : Phi),
-                        (heap, env, rho, e) ⇓ (cheap, (Bit true), cacts) -> 
-                        (cheap, env, rho, et) ⇓ (theap, v, tacts) -> 
-                        (heap, env, rho, Cond e et ef) ⇓ (theap, v, Phi_Seq cacts tacts)
+                      (heap, env, rho, e) ⇓ (cheap, (Bit true), cacts) -> 
+                      (cheap, env, rho, et) ⇓ (theap, v, tacts) -> 
+                      (heap, env, rho, Cond e et ef) ⇓ (theap, v, Phi_Seq cacts tacts)
   | BS_Cond_False : forall e et ef env rho v (heap cheap fheap : Heap) (cacts facts : Phi),
-                        (heap, env, rho, e) ⇓ (cheap, (Bit false), cacts) -> 
-                        (cheap, env, rho, ef) ⇓ (fheap, v, facts) -> 
-                        (heap, env, rho, Cond e et ef) ⇓ (fheap, v, Phi_Seq cacts facts) 
+                      (heap, env, rho, e) ⇓ (cheap, (Bit false), cacts) -> 
+                      (cheap, env, rho, ef) ⇓ (fheap, v, facts) -> 
+                      (heap, env, rho, Cond e et ef) ⇓ (fheap, v, Phi_Seq cacts facts) 
   | BS_New_Ref     : forall e w r l v env rho  (heap heap' : Heap) vacts,
-                        (heap, env, rho, e) ⇓ (heap', v, vacts) ->
-                        find_R w rho = Some r ->
-                        find_H (r, l) heap' = None -> 
-                        (heap, env, rho, Ref w e) ⇓ (update_H ((r, l), v) heap',
-                                                     Loc (Rgn2_Const true false r) l,
-                                                     Phi_Seq vacts (Phi_Elem (DA_Alloc r l v)))   
+                       (heap, env, rho, e) ⇓ (heap', v, vacts) ->
+                       find_R w rho = Some r ->
+                       find_H (r, l) heap' = None -> 
+                       (heap, env, rho, Ref w e) ⇓ (update_H ((r, l), v) heap',
+                                                    Loc (Rgn2_Const true false r) l,
+                                                    Phi_Seq vacts (Phi_Elem (DA_Alloc r l v)))   
   | BS_Get_Ref     : forall ea w r l v env rho (heap heap' : Heap) aacts,
-                        (heap, env, rho, ea) ⇓ (heap', Loc w l, aacts) ->
-                        find_R w rho = Some r ->
-                        find_H (r, l) heap' = Some v ->                       
-                        (heap, env, rho, DeRef w ea) ⇓ (heap', v, Phi_Seq aacts (Phi_Elem (DA_Read r l v)))
+                       (heap, env, rho, ea) ⇓ (heap', Loc w l, aacts) ->
+                       find_R w rho = Some r ->
+                       find_H (r, l) heap' = Some v ->                       
+                       (heap, env, rho, DeRef w ea) ⇓ (heap', v, Phi_Seq aacts (Phi_Elem (DA_Read r l v)))
   | BS_Set_Ref     : forall ea ev w r l v env rho (heap heap' heap'' : Heap) (aacts vacts : Phi),
-                        (heap, env, rho, ea) ⇓ (heap', Loc w l, aacts) ->
-                        (heap', env, rho, ev) ⇓ (heap'', v, vacts) ->
-                        find_R w rho = Some r ->
-                        (heap, env, rho, Assign w ea ev) ⇓ (update_H ((r, l), v) heap'', Unit,
-                                                            Phi_Seq (Phi_Seq aacts vacts) (Phi_Elem (DA_Write r l v)))
+                       (heap, env, rho, ea) ⇓ (heap', Loc w l, aacts) ->
+                       (heap', env, rho, ev) ⇓ (heap'', v, vacts) ->
+                       find_R w rho = Some r ->
+                       (heap, env, rho, Assign w ea ev) ⇓ (update_H ((r, l), v) heap'', Unit,
+                                                           Phi_Seq (Phi_Seq aacts vacts) (Phi_Elem (DA_Write r l v)))
   | BS_Nat_Plus    : forall a b va vb env rho (heap lheap rheap : Heap) (lacts racts : Phi),
-                        (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
-                        (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->  
-                        (heap, env, rho, Plus a b) ⇓ (rheap, Num (va + vb), Phi_Seq lacts racts)
+                       (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
+                       (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->  
+                       (heap, env, rho, Plus a b) ⇓ (rheap, Num (va + vb), Phi_Seq lacts racts)
   | BS_Nat_Minus   : forall a b va vb env rho (heap lheap rheap : Heap) (lacts racts : Phi),
-                        (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
-                        (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->  
-                        (heap, env, rho, Minus a b) ⇓ (rheap, Num (va - vb), Phi_Seq lacts racts)
+                       (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
+                       (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->  
+                       (heap, env, rho, Minus a b) ⇓ (rheap, Num (va - vb), Phi_Seq lacts racts)
   | BS_Nat_Times   : forall a b va vb env rho (heap lheap rheap : Heap) (lacts racts : Phi),
-                        (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
-                        (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) -> 
-                        (heap, env, rho, Times a b) ⇓ (rheap, Num (va * vb), Phi_Seq lacts racts)
+                       (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
+                       (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) -> 
+                       (heap, env, rho, Times a b) ⇓ (rheap, Num (va * vb), Phi_Seq lacts racts)
   | BS_Bool_Eq     : forall a b va vb env rho (heap lheap rheap : Heap) (lacts racts : Phi),
-                        (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
-                        (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->   
-                        (heap, env, rho, Eq a b) ⇓ (rheap, Bit (beq_nat va vb), Phi_Seq lacts racts)
+                       (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
+                       (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->   
+                       (heap, env, rho, Eq a b) ⇓ (rheap, Bit (beq_nat va vb), Phi_Seq lacts racts)
   | BS_Alloc_Abs   : forall w r env rho heap,
-                        find_R w rho = Some r ->
-                        (heap, env, rho, AllocAbs w) ⇓ (heap, Eff (Some (singleton_set (CA_AllocAbs r))), Phi_Nil)
+                       find_R w rho = Some r ->
+                       (heap, env, rho, AllocAbs w) ⇓ (heap, Eff (Some (singleton_set (CA_AllocAbs r))), Phi_Nil)
   | BS_Read_Abs    : forall w r env rho heap,
-                        find_R w rho = Some r ->  
-                        (heap, env, rho, ReadAbs w) ⇓ (heap, Eff (Some (singleton_set (CA_ReadAbs r))), Phi_Nil)        
+                       find_R w rho = Some r ->  
+                       (heap, env, rho, ReadAbs w) ⇓ (heap, Eff (Some (singleton_set (CA_ReadAbs r))), Phi_Nil)        
   | BS_Write_Abs   : forall w r env rho heap,
-                        find_R w rho = Some r ->   
-                        (heap, env, rho, WriteAbs w) ⇓ (heap, Eff (Some (singleton_set (CA_WriteAbs r))), Phi_Nil)
+                       find_R w rho = Some r ->   
+                       (heap, env, rho, WriteAbs w) ⇓ (heap, Eff (Some (singleton_set (CA_WriteAbs r))), Phi_Nil)
   | BS_Read_Conc   : forall ea r l env rho (heap heap' : Heap) aacts,
-                        (heap, env, rho, ea) ⇓ (heap', Loc (Rgn2_Const true false r) l, aacts) ->
-                        aacts = Phi_Nil->
-                        (heap, env, rho, ReadConc ea) ⇓ (heap', Eff (Some (singleton_set (CA_ReadConc r l))), Phi_Nil) 
+                       (heap, env, rho, ea) ⇓ (heap', Loc (Rgn2_Const true false r) l, aacts) ->
+                       aacts = Phi_Nil->
+                       (heap, env, rho, ReadConc ea) ⇓ (heap', Eff (Some (singleton_set (CA_ReadConc r l))), Phi_Nil) 
   | BS_Write_Conc  : forall ea r l env rho (heap heap' : Heap) aacts,
-                        (heap, env, rho, ea) ⇓ (heap', Loc (Rgn2_Const true false r) l, aacts) ->
-                        aacts = Phi_Nil ->
-                        (heap, env, rho, WriteConc ea) ⇓ (heap', Eff (Some (singleton_set (CA_WriteConc r l))), Phi_Nil)
+                       (heap, env, rho, ea) ⇓ (heap', Loc (Rgn2_Const true false r) l, aacts) ->
+                       aacts = Phi_Nil ->
+                       (heap, env, rho, WriteConc ea) ⇓ (heap', Eff (Some (singleton_set (CA_WriteConc r l))), Phi_Nil)
   | BS_Eff_Concat  : forall a b env rho heap (effa effb : Theta) phia phib,
-                        (heap, env, rho, a) ⇓ (heap, Eff effa, phia) ->
-                        (heap, env, rho, b) ⇓ (heap, Eff effb, phib) ->
-                        (heap, env, rho, Concat a b) ⇓ (heap, Eff (Union_Theta effa effb), Phi_Seq phia phib)
+                       (heap, env, rho, a) ⇓ (heap, Eff effa, phia) ->
+                       (heap, env, rho, b) ⇓ (heap, Eff effb, phib) ->
+                       (heap, env, rho, Concat a b) ⇓ (heap, Eff (Union_Theta effa effb), Phi_Seq phia phib)
   | BS_Eff_Top     : forall env rho heap,
-                        (heap, env, rho, Top) ⇓ (heap, Eff None, Phi_Nil)
+                       (heap, env, rho, Top) ⇓ (heap, Eff None, Phi_Nil)
   | BS_Eff_Empty   : forall  env rho heap,
-                       (heap, env, rho, Empty) ⇓ (heap, Eff (Some empty_set), Phi_Nil)
+                       (heap, env, rho, Empty) ⇓ (heap, Eff (Some empty_set), Phi_Nil)    
 where "e '⇓' n" := (BigStep e n) : type_scope.
 
 Lemma bs_det : forall heap env rho exp heap1 val1 phi1 heap2 val2 phi2,
@@ -665,12 +676,12 @@ where "ec '◀' ee" := (BackTriangle2 ec ee) : type_scope.
 Reserved Notation "stty ';;' ctxt ';;' rgns '|-' ec '<<' ee" (at level 50, left associativity).
 Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
   | TC_Nat_Cnt     : forall stty ctxt rgns n,
-                        TcExp (stty, ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action)
+                        TcExp (stty, ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action) 
   | TC_Boolean     : forall stty ctxt rgns b,
                         TcExp (stty, ctxt, rgns, Bool b, Ty2_Boolean, Empty_Static_Action)
   | TC_Val_Var     : forall stty ctxt rgns x ty,
                         find_T x ctxt = Some ty ->
-                        TcExp (stty, ctxt, rgns, Var x, ty, Empty_Static_Action)                           
+                        TcExp (stty, ctxt, rgns, Var x, ty, Empty_Static_Action)
   | TC_Mu_Abs      : forall stty ctxt rgns f x ec ee tyx effc tyc effe,
                         BackTriangle (stty, update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, ec, ee) ->
                         TcExp (stty, update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, ec, tyc, effc) ->
@@ -683,10 +694,9 @@ Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
                         BackTriangle (stty, ctxt, set_union rgns (singleton_set x), er, ∅) ->
                         TcExp (stty, ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
                         TcExp (stty, ctxt, rgns, Lambda x er, Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr), Empty_Static_Action)
-  | TC_Mu_App      : forall stty ctxt rgns ef ea tya effc tyc effe efff effa rho,
+  | TC_Mu_App      : forall stty ctxt rgns ef ea tya effc tyc effe efff effa,
                         TcExp (stty, ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
                         TcExp (stty, ctxt, rgns, ea, tya, effa) ->
-                        ReadOnlyStatic (fold_subst_eps rho efff) ->
                         TcExp (stty, ctxt, rgns, Mu_App ef ea, tyc, Union_Static_Action (Union_Static_Action efff effa) effc)
   | TC_Rgn_App      : forall stty ctxt rgns er w tyr effr efff,
                         TcExp (stty, ctxt, rgns, er, Ty2_ForallRgn effr tyr, efff) ->
@@ -758,72 +768,70 @@ Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
                             
 with BackTriangle : Sigma * Gamma * Omega * Expr * Expr -> Prop :=
   | BT_Num_Pure     : forall stty ctxt rgns (n : nat),
-                          TcExp (stty, ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action) ->   
-                          BackTriangle (stty, ctxt, rgns, (Const n), ∅)
+                        TcExp (stty, ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action) ->
+                        BackTriangle (stty, ctxt, rgns, (Const n), ∅)
   | BT_Bool_Pure    : forall stty ctxt rgns (b : bool),
-                          TcExp (stty, ctxt, rgns, Bool b, Ty2_Boolean, Empty_Static_Action) ->
-                          BackTriangle (stty, ctxt, rgns, Bool b, ∅)
+                        TcExp (stty, ctxt, rgns, Bool b, Ty2_Boolean, Empty_Static_Action) ->
+                        BackTriangle (stty, ctxt, rgns, Bool b, ∅)
   | BT_Var_Pure     : forall stty ctxt rgns ty (x : ascii),
-                          TcExp (stty, ctxt, rgns, Var x, ty, Empty_Static_Action) ->
-                          BackTriangle (stty, ctxt, rgns, Var x, ∅)
+                        TcExp (stty, ctxt, rgns, Var x, ty, Empty_Static_Action) ->
+                        BackTriangle (stty, ctxt, rgns, Var x, ∅)
   | BT_Abs_Pure     : forall stty ctxt rgns (f x: ascii) (ec ee: Expr),
-                          BackTriangle (stty, ctxt, rgns, Mu f x ec ee, ∅)
+                        BackTriangle (stty, ctxt, rgns, Mu f x ec ee, ∅)
   | BT_Rgn_Pure     : forall stty ctxt rgns (x: ascii) (e: Expr),
-                          BackTriangle (stty, ctxt, rgns, Lambda x e, ∅)
-  | BT_App_Conc     : forall  stty ctxt rgns (ef ea efff effa effe: Expr) ty_ef ty_ea  static_ef static_ea static_eff rho,
-                        (forall w rho rho', find_R w rho = find_R w rho') ->
-                        (forall v env env', find_E v env = find_E v env') ->
+                        BackTriangle (stty, ctxt, rgns, Lambda x e, ∅)
+  | BT_App_Conc     : forall  stty ctxt rgns (ef ea efff effa effe: Expr) ty_ef ty_ea  static_ef static_ea static_eff,
                         TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
                         TcExp (stty, ctxt, rgns, ea, ty_ea, static_ea) ->
                         TcExp (stty, ctxt, rgns, efff ⊕ (effa ⊕ effe), Ty2_Effect, static_eff) ->
                         BackTriangle (stty, ctxt, rgns, ef, efff) ->
                         BackTriangle (stty, ctxt, rgns, ea, effa) ->
                         BackTriangle (stty, ctxt, rgns, Eff_App ef ea, effe) ->
-                        ReadOnlyStatic (fold_subst_eps rho static_ef) ->
-                        ReadOnlyStatic (fold_subst_eps rho static_ea) ->
-                        BackTriangle (stty, ctxt, rgns, Mu_App ef ea, efff ⊕ (effa ⊕ effe))
-  (*BackTriangle (stty, ctxt, rgns, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea))*) 
+                        (forall rho, ReadOnlyStatic (fold_subst_eps rho static_ef)) ->
+                        (forall rho, ReadOnlyStatic (fold_subst_eps rho static_ea)) ->
+                        BackTriangle (stty, ctxt, rgns, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea))
   | BT_Rgn_App      : forall stty ctxt rgns er w ty_eb static_er,
                         TcExp (stty, ctxt, rgns, er, ty_eb, static_er) ->
                         TcExp (stty, ctxt, rgns, ∅, Ty2_Effect, Empty_Static_Action) ->
                         BackTriangle (stty, ctxt, rgns, er, ∅) ->    
                         BackTriangle (stty, ctxt, rgns, Rgn_App er w, ∅)                                  
-  | BT_Cond_Cond    : forall stty ctxt rgns (e et ef effe efft efff : Expr) ty_e ty_et ty_ef static_e static_et static_ef rho,
+  | BT_Cond_Cond    : forall stty ctxt rgns (e et ef effe efft efff : Expr) ty_e ty_et ty_ef static_e static_et static_ef,
                         TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
                         TcExp (stty, ctxt, rgns, et, ty_et, static_et) ->
                         TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
-                        ReadOnlyStatic (fold_subst_eps rho static_e) ->
+                        (forall rho, ReadOnlyStatic (fold_subst_eps rho static_e)) ->
                         BackTriangle (stty, ctxt, rgns, e, ∅) ->
                         BackTriangle (stty, ctxt, rgns, et, efft) ->
                         BackTriangle (stty, ctxt, rgns, ef, efff) ->
                         BackTriangle (stty, ctxt, rgns, Cond e et ef, Cond e efft efff)
   | BT_Ref_Alloc_Abs : forall stty ctxt rgns (e eff : Expr) (w : rgn2_in_exp) ty_e static_e,
-                          TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
-                          BackTriangle (stty, ctxt, rgns, e, eff) ->
-                          BackTriangle (stty, ctxt, rgns, Ref w e, eff ⊕ AllocAbs w)
+                         TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
+                         BackTriangle (stty, ctxt, rgns, e, eff) ->
+                         BackTriangle (stty, ctxt, rgns, Ref w e, eff ⊕ AllocAbs w)
   | BT_Ref_Read_Abs  : forall stty ctxt rgns (e eff : Expr) (w : rgn2_in_exp) ty_e static_e,
-                          TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
-                          BackTriangle (stty, ctxt, rgns, e, eff) ->
-                          BackTriangle (stty, ctxt, rgns, DeRef w e, eff ⊕ (ReadAbs w))
+                         TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
+                         BackTriangle (stty, ctxt, rgns, e, eff) ->
+                         BackTriangle (stty, ctxt, rgns, DeRef w e, eff ⊕ (ReadAbs w))
   | BT_Ref_Read_Conc : forall stty ctxt rgns (e eff : Expr) (r : Region) ty_e static_e,
-                          TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
-                          BackTriangle (stty, ctxt, rgns, e, ∅) ->
-                          BackTriangle (stty, ctxt, rgns, DeRef (Rgn2_Const true false r) e, ReadConc e)
-  | BT_Ref_Write_Abs : forall stty ctxt rgns (e1 e2 eff2 : Expr) (w : rgn2_in_exp)  ty_e1 static_e1  ty_e2 static_e2,
-                          TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
-                          TcExp (stty, ctxt, rgns, e2, ty_e2, static_e2) ->
-                          BackTriangle (stty, ctxt, rgns, e1, ∅) ->
-                          BackTriangle (stty, ctxt, rgns, e2, eff2) ->
-                          BackTriangle (stty, ctxt, rgns, Assign w e1 e2, eff2 ⊕ (WriteAbs w))            
-  | BT_Ref_Write_Conc: forall stty ctxt rgns (e1 e2 eff2 : Expr) (r : Region)  ty_e1 static_e1  ty_e2 static_e2,
-                          TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
-                          TcExp (stty, ctxt, rgns, e2, ty_e2, static_e2) ->
-                          BackTriangle (stty, ctxt, rgns, e1, ∅) ->
-                          BackTriangle (stty, ctxt, rgns, e2, eff2) ->
-                          BackTriangle (stty, ctxt, rgns, Assign (Rgn2_Const true false r) e1 e2, eff2 ⊕ (WriteConc e1))
-  | BT_Top_Approx    : forall stty ctxt rgns (e : Expr) ty_e static_e,
-                          TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
-                          BackTriangle (stty, ctxt, rgns, e, Top)
+                         TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
+                         BackTriangle (stty, ctxt, rgns, e, ∅) ->
+                         BackTriangle (stty, ctxt, rgns, DeRef (Rgn2_Const true false r) e, ReadConc e)
+  | BT_Ref_Write_Abs : forall stty ctxt rgns (e1 e2 eff1 eff2 : Expr) (w : rgn2_in_exp) 
+                       ty_e1 static_e1,
+                         BackTriangle (stty, ctxt, rgns, e1, eff1) ->
+                         BackTriangle (stty, ctxt, rgns, e2, eff2) ->
+                         TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
+                         (forall rho, ReadOnlyStatic (fold_subst_eps rho static_e1)) ->
+                         BackTriangle (stty, ctxt, rgns, Assign w e1 e2, eff1 ⊕ (eff2 ⊕ (WriteAbs w)))            
+  | BT_Ref_Write_Conc: forall stty ctxt rgns (e1 e2 eff1 eff2 : Expr) (r : Region)
+                       ty_e1 static_e1,
+                         BackTriangle (stty, ctxt, rgns, e1, eff1) ->
+                         BackTriangle (stty, ctxt, rgns, e2, eff2) ->
+                         TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
+                         (forall rho, ReadOnlyStatic (fold_subst_eps rho static_e1)) ->
+                         BackTriangle (stty, ctxt, rgns, Assign (Rgn2_Const true false r) e1 e2, eff1 ⊕ (eff2 ⊕ (WriteConc e1)))
+  | BT_Top_Approx    : forall stty ctxt rgns (e : Expr),
+                         BackTriangle (stty, ctxt, rgns, e, Top)
 where "stty ';;' ctxt ';;' rgns '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, ec, ee)) : type_scope.
 
 Scheme tc_exp__xind := Induction for TcExp Sort Prop
@@ -925,7 +933,8 @@ Qed.
 Lemma ext_stores__exp:
    forall stty stty',
      (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
-     (forall ctxt rgns e t eff, TcExp (stty, ctxt, rgns, e, t, eff) -> TcExp (stty', ctxt, rgns, e, t, eff)).
+     (forall ctxt rgns e t eff, TcExp (stty, ctxt, rgns, e, t, eff) 
+                                    -> TcExp (stty', ctxt, rgns, e, t, eff)).
 Proof.
   intros.
   apply (match ext_stores__exp__bt__aux with conj F _ => F (stty, ctxt, rgns, e, t, eff) end); auto.
@@ -934,7 +943,8 @@ Qed.
 Lemma ext_stores__bt:
    forall stty stty',
      (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
-     (forall ctxt rgns ec ee, BackTriangle (stty, ctxt, rgns, ec, ee) -> BackTriangle (stty', ctxt, rgns, ec, ee)).
+     (forall ctxt rgns ec ee, BackTriangle (stty, ctxt, rgns, ec, ee) 
+                                  -> BackTriangle (stty', ctxt, rgns, ec, ee)).
 Proof.
   intros.
   apply (match ext_stores__exp__bt__aux with conj _ F => F (stty, ctxt, rgns, ec, ee) end); auto.
