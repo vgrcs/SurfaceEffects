@@ -10,14 +10,16 @@ Require Import Coq.Arith.Plus.
 Require Import Coq.Arith.Minus.
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Compare_dec.
-Require Import Keys.
-Require Import Heap.
-Require Import EffectSystem.
-Require Import Environment.
-Require Import TypeSystem.
-Require Import Determinism.
-Require Import Definitions.
-Require Import CorrectnessLemmas.
+
+Add LoadPath "." as Top.
+Require Import Top.Keys.
+Require Import Top.Heap.
+Require Import Top.EffectSystem.
+Require Import Top.Environment.
+Require Import Top.TypeSystem.
+Require Import Top.Determinism.
+Require Import Top.Definitions.
+Require Import Top.CorrectnessLemmas.
 
 Import TypeSoundness.
 Import EffectSoundness.
@@ -164,12 +166,12 @@ Proof.
             assert (HD' : (h'', v', aacts0) = (h'', v0, aacts))
               by (eapply DynamicDeterminism; eauto). inversion HD'; subst.  
  
-            (*assert (facts  ⊑ effa0) by
+            assert (facts  ⊑ effa0) by
               (eapply IHBS1_1 with (ee:=a); eauto; inversion H1; subst; assumption).
 
             assert (aacts  ⊑ effa2) by
               (eapply IHBS1_2 with (ee:=effa1) (p':=phia0); eauto;
-              inversion H1; inversion H22; subst; assumption).*)
+              inversion H1; inversion H23; subst; assumption).
 
             assert (bacts  ⊑ effb0).
             eapply IHBS1_3
@@ -177,7 +179,7 @@ Proof.
                    (ee:= ee') 
                    (h'':= h'');  eauto.
             - eapply ext_stores__bt; eauto. 
-            - inversion H1; subst. inversion H21; subst. inversion H33; subst. assumption.
+            - inversion H1; subst. inversion H33; subst. inversion H38; subst. assumption.
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
