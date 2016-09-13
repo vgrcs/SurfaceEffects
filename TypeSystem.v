@@ -5,13 +5,15 @@ Require Import Coq.Sets.Ensembles.
 Require Import Ascii.
 Require Import Coq.ZArith.Znat.
 Require Import Coq.Program.Equality.
-Require Import Tactics.
-Require Import Keys.
-Require Import Definitions.
-Require Import Nameless.
-Require Import CorrectnessLemmas.
-Require Import Environment.
-Require Import Heap. 
+
+Add LoadPath "." as Top.
+Require Import Top.Tactics.
+Require Import Top.Keys.
+Require Import Top.Definitions.
+Require Import Top.Nameless.
+Require Import Top.CorrectnessLemmas.
+Require Import Top.Environment.
+Require Import Top.Heap. 
 Require Import Omega.
 
 Module TypeSoundness.

@@ -24,18 +24,6 @@ Require Import Top.CorrectnessLemmas.
 Import TypeSoundness.
 Import EffectSoundness.
 
- 
-Axiom BackTriangle_intror : 
-  forall stty ctxt rgns e effa effb,
-    BackTriangle (stty, ctxt, rgns, e, effa) ->
-    BackTriangle (stty, ctxt, rgns, e, effa ⊕ effb).
-
-Axiom BackTriangle_introl : 
-  forall stty ctxt rgns e effa effb,
-    BackTriangle (stty, ctxt, rgns, e, effa) ->
-    BackTriangle (stty, ctxt, rgns, e, effb ⊕ effa).
-
-
 Lemma EvalTrueIsTrue:
 forall h env rho e efft efff eff tacts,
   (h, env, rho, Cond e efft efff) ⇓ (h, Eff eff, tacts) ->
@@ -70,7 +58,7 @@ Definition Correctness :
   forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,
     (h, env, rho, ea) ⇓ (h', v, p) ->
     (h, env, rho, ee) ⇓ (h'', Eff eff, p') ->
-    BackTriangle (stty, ctxt, rgns, ea, ee) ->
+    BackTriangle (stty, ctxt, rgns, rho, ea, ee) ->
     forall static ty, 
       ReadOnlyPhi p' ->
       TcHeap (h, stty) ->
@@ -114,24 +102,26 @@ Proof.
  
       apply PTS_Seq. 
       + apply PTS_Seq. 
-         * { eapply IHBS1_1; eauto. 
-             inversion H0; subst.
-             - now apply BackTriangle_intror.   
-             - econstructor; eauto. }
-        * { inversion H0; subst. 
-            - eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H28.
+         * { inversion H0; subst.
+             - inversion H; subst. 
+                assert (facts  ⊑ effa1).
+                eapply IHBS1_1; eauto. 
+                inversion H1. assumption.
+                apply Theta_introl. assumption. 
+             - inversion H; subst.
+               apply PhiInThetaTop. }
+        * { inversion H0; subst.  
+            - eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H27.
               apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.
+              inversion H; subst. inversion H31; subst.
+              assert (aacts  ⊑ effa2). 
               eapply IHBS1_2; subst; eauto.
-              + eapply ext_stores__bt; eauto.
-                eapply BackTriangle_introl. 
-                eapply BackTriangle_intror. 
-                eassumption.
-              + eapply ext_stores__env; eauto.
-              + eapply ext_stores__exp; eauto.
-              + assumption. 
-              + assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)).
-                 eapply eff_sound; eauto. 
-                 eassumption.
+              inversion H1; subst. inversion H21; subst. assumption.
+              apply Theta_intror. apply Theta_introl. assumption.
+              assumption.
+              assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)).
+              eapply eff_sound; eauto. 
+              eassumption.
             - induction eff; inversion H.
               eapply IHBS1_2 with (h'':=fheap) (ee:=⊤) ; eauto. 
               + rewrite <- H21. econstructor. 
@@ -139,9 +129,8 @@ Proof.
               + eapply ext_stores__env; eauto.
               + eapply ext_stores__exp; eauto. }
       + inversion H; subst; inversion H0; subst. 
-        * { 
-            assert (HEq_1 : fheap = h''). 
-            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H31. 
+        * { assert (HEq_1 : fheap = h''). 
+            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H30. 
             apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
             assumption. assumption.
 
@@ -153,12 +142,12 @@ Proof.
             eapply eff_sound; eauto. rewrite HEq_1. assumption.
 
             assert (HEq_2 : aheap = fheap).  
-            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H32.
+            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H31.
             apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
             assumption. assumption. eassumption. 
-            
+             
             inversion H24; subst.  
-            inversion H34; subst.
+            inversion H32; subst.
             assert (HD: (h'', Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0), facts0) =
                         (h'', Cls (env', rho', Mu f x ec' ee'), facts))
               by (eapply DynamicDeterminism; eauto). inversion HD; subst.
@@ -171,7 +160,7 @@ Proof.
 
             assert (aacts  ⊑ effa2) by
               (eapply IHBS1_2 with (ee:=effa1) (p':=phia0); eauto;
-              inversion H1; inversion H23; subst; assumption).
+              inversion H1; inversion H25; subst; assumption).
 
             assert (bacts  ⊑ effb0).
             eapply IHBS1_3
@@ -179,7 +168,7 @@ Proof.
                    (ee:= ee') 
                    (h'':= h'');  eauto.
             - eapply ext_stores__bt; eauto. 
-            - inversion H1; subst. inversion H33; subst. inversion H38; subst. assumption.
+            - inversion H1; subst. inversion H26; subst. inversion H36; subst. assumption.
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
@@ -247,7 +236,7 @@ Proof.
       assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)).
       eapply eff_sound; eauto.
       assert (HEq_1 :  cheap = h). 
-      eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in H16.
+      eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in H17.
       apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
       assumption. constructor. eassumption.
       rewrite UnionEmptyWithEffIsEff. 
@@ -270,7 +259,7 @@ Proof.
       assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)).
       eapply eff_sound; eauto.
       assert (HEq_1 :  cheap = h). 
-      eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in H16.
+      eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in H17.
       apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
       assumption. constructor. eassumption.
       rewrite UnionEmptyWithEffIsEff.
@@ -328,7 +317,7 @@ Proof.
             assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts)).
             eapply eff_sound; eauto. 
             assert (HEq_1 : heap' = h'').   
-            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H17.
+            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H18.
             apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
             assumption. assumption. eassumption.
 
@@ -357,7 +346,7 @@ Proof.
             assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts)).
             eapply eff_sound; eauto. 
             assert (HEq_1 : heap' = h''). 
-            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H17.
+            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H18.
             apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
             assumption. assumption. eassumption.
 

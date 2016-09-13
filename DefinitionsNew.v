@@ -749,12 +749,6 @@ with BackTriangle : Sigma * Gamma * Omega * Expr * Expr -> Prop :=
                          BackTriangle (stty, ctxt, rgns, Assign (Rgn2_Const true false r) e1 e2, eff1 ⊕ (eff2 ⊕ (WriteConc e1)))
   | BT_Top_Approx    : forall stty ctxt rgns (e : Expr),
                          BackTriangle (stty, ctxt, rgns, e, Top)
-  | BT_intror         : forall stty ctxt rgns e effa effb,
-                          BackTriangle  (stty, ctxt, rgns, e, effa) ->
-                          BackTriangle (stty, ctxt, rgns, e, effa ⊕ effb)
-  | BT_introl         : forall stty ctxt rgns e effa effb,
-                          BackTriangle  (stty, ctxt, rgns, e, effa) ->
-                          BackTriangle (stty, ctxt, rgns, e, effb ⊕ effa)
 
 with TcVal : (Sigma * Val * tau) -> Prop :=
   | TC_Num     : forall stty n,
@@ -1004,5 +998,5 @@ Proof.
   unfold mk_TcEnv_ext_store_ty in HEnv. apply HEnv in H. 
   - now simpl in H.
   - now cbv.
-Qed.
+Qed.*)
 

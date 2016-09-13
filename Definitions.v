@@ -15,10 +15,12 @@ Require Import Coq.Arith.Plus.
 Require Import Coq.Arith.Minus. 
 Require Import Coq.Init.Peano.
 Require Import Ascii.
-Require Import Keys.
-Require Import Tactics.
-Require Export Nameless.
-Require Export TypeLemmas.
+
+Add LoadPath "." as Top.
+Require Import Top.Keys.
+Require Import Top.Tactics.
+Require Export Top.Nameless.
+Require Export Top.TypeLemmas.
 
 
 Inductive Expr :=
@@ -589,8 +591,8 @@ Inductive TcRgn : (Omega * rgn2_in_exp) -> Prop :=
                       set_elem rgns r ->
                       TcRgn (rgns, Rgn2_FVar true false r).      
 
-Reserved Notation "stty ';;' ctxt ';;' rgns '|-' ec '<<' ee" (at level 50, left associativity).
-Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
+Reserved Notation "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" (at level 50, left associativity).
+Inductive TcExp : (Sigma * Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
   | TC_Nat_Cnt     : forall stty ctxt rgns n,
                         TcExp (stty, ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action) 
   | TC_Boolean     : forall stty ctxt rgns b,
@@ -599,30 +601,40 @@ Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
                         find_T x ctxt = Some ty ->
                         TcExp (stty, ctxt, rgns, Var x, ty, Empty_Static_Action)
   | TC_Mu_Abs      : forall stty ctxt rgns f x ec ee tyx effc tyc effe,
-                        BackTriangle (stty, update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, ec, ee) ->
-                        TcExp (stty, update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, ec, tyc, effc) ->
-                        TcExp (stty, update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, ee, Ty2_Effect, effe) ->
-                        TcExp (stty, ctxt, rgns, Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect, Empty_Static_Action)
+                        (forall rho, 
+                           BackTriangle (stty, 
+                                         update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt,
+                                         rgns, rho, ec, ee)) ->
+                        TcExp (stty, update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, 
+                               rgns, ec, tyc, effc) ->
+                        TcExp (stty, update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, 
+                               rgns, ee, Ty2_Effect, effe) ->
+                        TcExp (stty, ctxt, rgns, Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect, 
+                               Empty_Static_Action)
   | TC_Rgn_Abs     : forall stty ctxt rgns x er effr tyr,
                         not_set_elem rgns x ->
                         lc_type tyr ->
                         lc_type_eps effr ->
-                        BackTriangle (stty, ctxt, set_union rgns (singleton_set x), er, ∅) ->
+                        (forall rho, 
+                           BackTriangle (stty, ctxt, set_union rgns (singleton_set x), rho, er, ∅)) ->
                         TcExp (stty, ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
-                        TcExp (stty, ctxt, rgns, Lambda x er, Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr), Empty_Static_Action)
+                        TcExp (stty, ctxt, rgns, Lambda x er, 
+                               Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr), Empty_Static_Action)
   | TC_Mu_App      : forall stty ctxt rgns ef ea tya effc tyc effe efff effa,
                         TcExp (stty, ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
                         TcExp (stty, ctxt, rgns, ea, tya, effa) ->
-                        TcExp (stty, ctxt, rgns, Mu_App ef ea, tyc, Union_Static_Action (Union_Static_Action efff effa) effc)
+                        TcExp (stty, ctxt, rgns, Mu_App ef ea, 
+                               tyc, Union_Static_Action (Union_Static_Action efff effa) effc)
   | TC_Rgn_App      : forall stty ctxt rgns er w tyr effr efff,
                         TcExp (stty, ctxt, rgns, er, Ty2_ForallRgn effr tyr, efff) ->
                         TcRgn (rgns, w) ->
-                        TcExp (stty, ctxt, rgns, Rgn_App er w, open (mk_rgn_type w) tyr,
+                        TcExp (stty, ctxt, rgns,  Rgn_App er w, open (mk_rgn_type w) tyr,
                                Union_Static_Action efff (open_rgn_eff (mk_rgn_type w) effr))
   | TC_Eff_App     : forall stty ctxt rgns ef ea tya effc tyc effe efff effa,
                         TcExp (stty, ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
                         TcExp (stty, ctxt, rgns, ea, tya, effa) ->
-                        TcExp (stty, ctxt, rgns, Eff_App ef ea, Ty2_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
+                        TcExp (stty, ctxt, rgns, Eff_App ef ea, 
+                               Ty2_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
   | TC_New_Ref     : forall stty ctxt rgns e t veff w s,      
                         TcExp (stty, ctxt, rgns, e, t, veff) -> 
                         w = Rgn2_Const true false s ->
@@ -646,7 +658,7 @@ Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
                         TcExp (stty, ctxt, rgns, e2, te, eff2) -> 
                         TcExp (stty, ctxt, rgns, Cond b e1 e2, te, Union_Static_Action eff (Union_Static_Action eff1 eff2))
   | TC_Nat_Plus    : forall stty ctxt rgns e1 e2 eff1 eff2,   
-                        TcExp (stty, ctxt, rgns,  e1, Ty2_Natural, eff1) ->
+                        TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
                         TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
                         TcExp (stty, ctxt, rgns, Plus e1 e2, Ty2_Natural, Union_Static_Action eff1 eff2)
   | TC_Nat_Minus  : forall stty ctxt rgns e1 e2 eff1 eff2,   
@@ -669,7 +681,7 @@ Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
                         TcExp (stty, ctxt, rgns, e, Ty2_Ref (Rgn2_Const true true r) t, aeff) ->
                         TcExp (stty, ctxt, rgns, ReadConc e, Ty2_Effect, aeff)
   | TC_Write_Abs  : forall stty ctxt rgns r,
-                       TcExp (stty, ctxt, rgns, WriteAbs r, Ty2_Effect, Empty_Static_Action)
+                       TcExp (stty, ctxt, rgns,  WriteAbs r, Ty2_Effect, Empty_Static_Action)
   | TC_Write_Conc : forall stty ctxt rgns e r t aeff,
                        TcExp (stty, ctxt, rgns, e,  Ty2_Ref (Rgn2_Const true true r) t, aeff) ->
                        TcExp (stty, ctxt, rgns, WriteConc e, Ty2_Effect, aeff)
@@ -682,79 +694,75 @@ Inductive TcExp : (Sigma * Gamma * Omega * Expr * tau * Epsilon) -> Prop :=
   | TC_Eff_Empty  : forall stty ctxt rgns,
                       TcExp (stty, ctxt, rgns, Empty, Ty2_Effect, Empty_Static_Action)
                             
-with BackTriangle : Sigma * Gamma * Omega * Expr * Expr -> Prop :=
-  | BT_Num_Pure     : forall stty ctxt rgns (n : nat),
+with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
+  | BT_Num_Pure     : forall stty ctxt rgns rho (n : nat),
                         TcExp (stty, ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action) ->
-                        BackTriangle (stty, ctxt, rgns, (Const n), ∅)
-  | BT_Bool_Pure    : forall stty ctxt rgns (b : bool),
+                        BackTriangle (stty, ctxt, rgns, rho, (Const n), ∅)
+  | BT_Bool_Pure    : forall stty ctxt rgns rho (b : bool),
                         TcExp (stty, ctxt, rgns, Bool b, Ty2_Boolean, Empty_Static_Action) ->
-                        BackTriangle (stty, ctxt, rgns, Bool b, ∅)
-  | BT_Var_Pure     : forall stty ctxt rgns ty (x : ascii),
+                        BackTriangle (stty, ctxt, rgns, rho, Bool b, ∅)
+  | BT_Var_Pure     : forall stty ctxt rgns rho ty (x : ascii),
                         TcExp (stty, ctxt, rgns, Var x, ty, Empty_Static_Action) ->
-                        BackTriangle (stty, ctxt, rgns, Var x, ∅)
-  | BT_Abs_Pure     : forall stty ctxt rgns (f x: ascii) (ec ee: Expr),
-                        BackTriangle (stty, ctxt, rgns, Mu f x ec ee, ∅)
-  | BT_Rgn_Pure     : forall stty ctxt rgns (x: ascii) (e: Expr),
-                        BackTriangle (stty, ctxt, rgns, Lambda x e, ∅)
-  | BT_App_Conc     : forall  stty ctxt rgns (ef ea efff effa effe: Expr) ty_ef ty_ea  static_ef static_ea static_eff,
+                        BackTriangle (stty, ctxt, rgns, rho, Var x, ∅)
+  | BT_Abs_Pure     : forall stty ctxt rgns rho (f x: ascii) (ec ee: Expr),
+                        BackTriangle (stty, ctxt, rgns, rho, Mu f x ec ee, ∅)
+  | BT_Rgn_Pure     : forall stty ctxt rgns rho (x: ascii) (e: Expr),
+                        BackTriangle (stty, ctxt, rgns, rho, Lambda x e, ∅)
+  | BT_App_Conc     : forall  stty ctxt rgns rho (ef ea efff effa: Expr) 
+                              ty_ef ty_ea  static_ef static_ea,
                         TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
                         TcExp (stty, ctxt, rgns, ea, ty_ea, static_ea) ->
-                        TcExp (stty, ctxt, rgns, efff ⊕ (effa ⊕ effe), Ty2_Effect, static_eff) ->
-                        BackTriangle (stty, ctxt, rgns, ef, efff) ->
-                        BackTriangle (stty, ctxt, rgns, ea, effa) ->
-                        BackTriangle (stty, ctxt, rgns, Eff_App ef ea, effe) ->
-                        (forall rho, ReadOnlyStatic (fold_subst_eps rho static_ef)) ->
-                        (forall rho, ReadOnlyStatic (fold_subst_eps rho static_ea)) ->
-                        BackTriangle (stty, ctxt, rgns, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea))
-  | BT_Rgn_App      : forall stty ctxt rgns er w ty_eb static_er,
+                        BackTriangle (stty, ctxt, rgns, rho, ef, efff) ->
+                        BackTriangle (stty, ctxt, rgns, rho, ea, effa) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_ef) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_ea) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea)) 
+  | BT_Rgn_App      : forall stty ctxt rgns rho er w ty_eb static_er,
                         TcExp (stty, ctxt, rgns, er, ty_eb, static_er) ->
                         TcExp (stty, ctxt, rgns, ∅, Ty2_Effect, Empty_Static_Action) ->
-                        BackTriangle (stty, ctxt, rgns, er, ∅) ->    
-                        BackTriangle (stty, ctxt, rgns, Rgn_App er w, ∅)                                  
-  | BT_Cond_Cond    : forall stty ctxt rgns (e et ef effe efft efff : Expr) ty_e ty_et ty_ef static_e static_et static_ef,
+                        BackTriangle (stty, ctxt, rgns, rho, er, ∅) ->    
+                        BackTriangle (stty, ctxt, rgns, rho, Rgn_App er w, ∅)                                  
+  | BT_Cond_Cond    : forall stty ctxt rgns rho (e et ef effe efft efff : Expr) 
+                             ty_e ty_et ty_ef static_e static_et static_ef,
                         TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
                         TcExp (stty, ctxt, rgns, et, ty_et, static_et) ->
                         TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
-                        (forall rho, ReadOnlyStatic (fold_subst_eps rho static_e)) ->
-                        BackTriangle (stty, ctxt, rgns, e, ∅) ->
-                        BackTriangle (stty, ctxt, rgns, et, efft) ->
-                        BackTriangle (stty, ctxt, rgns, ef, efff) ->
-                        BackTriangle (stty, ctxt, rgns, Cond e et ef, Cond e efft efff)
-  | BT_Ref_Alloc_Abs : forall stty ctxt rgns (e eff : Expr) (w : rgn2_in_exp) ty_e static_e,
+                        ReadOnlyStatic (fold_subst_eps rho static_e) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e, ∅) ->
+                        BackTriangle (stty, ctxt, rgns, rho, et, efft) ->
+                        BackTriangle (stty, ctxt, rgns, rho, ef, efff) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Cond e et ef, Cond e efft efff)
+  | BT_Ref_Alloc_Abs : forall stty ctxt rgns rho (e eff : Expr) (w : rgn2_in_exp) ty_e static_e,
                          TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
-                         BackTriangle (stty, ctxt, rgns, e, eff) ->
-                         BackTriangle (stty, ctxt, rgns, Ref w e, eff ⊕ AllocAbs w)
-  | BT_Ref_Read_Abs  : forall stty ctxt rgns (e eff : Expr) (w : rgn2_in_exp) ty_e static_e,
+                         BackTriangle (stty, ctxt, rgns, rho, e, eff) ->
+                         BackTriangle (stty, ctxt, rgns, rho, Ref w e, eff ⊕ AllocAbs w)
+  | BT_Ref_Read_Abs  : forall stty ctxt rgns rho (e eff : Expr) (w : rgn2_in_exp) ty_e static_e,
                          TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
-                         BackTriangle (stty, ctxt, rgns, e, eff) ->
-                         BackTriangle (stty, ctxt, rgns, DeRef w e, eff ⊕ (ReadAbs w))
-  | BT_Ref_Read_Conc : forall stty ctxt rgns (e eff : Expr) (r : Region) ty_e static_e,
+                         BackTriangle (stty, ctxt, rgns, rho, e, eff) ->
+                         BackTriangle (stty, ctxt, rgns, rho, DeRef w e, eff ⊕ (ReadAbs w))
+  | BT_Ref_Read_Conc : forall stty ctxt rgns rho (e eff : Expr) (r : Region) ty_e static_e,
                          TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
-                         BackTriangle (stty, ctxt, rgns, e, ∅) ->
-                         BackTriangle (stty, ctxt, rgns, DeRef (Rgn2_Const true false r) e, ReadConc e)
-  | BT_Ref_Write_Abs : forall stty ctxt rgns (e1 e2 eff1 eff2 : Expr) (w : rgn2_in_exp) 
+                         BackTriangle (stty, ctxt, rgns, rho, e, ∅) ->
+                         BackTriangle (stty, ctxt, rgns, rho, DeRef (Rgn2_Const true false r) e, ReadConc e)
+  | BT_Ref_Write_Abs : forall stty ctxt rgns rho (e1 e2 eff1 eff2 : Expr) (w : rgn2_in_exp) 
                        ty_e1 static_e1,
-                         BackTriangle (stty, ctxt, rgns, e1, eff1) ->
-                         BackTriangle (stty, ctxt, rgns, e2, eff2) ->
+                         BackTriangle (stty, ctxt, rgns, rho, e1, eff1) ->
+                         BackTriangle (stty, ctxt, rgns, rho, e2, eff2) ->
                          TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
-                         (forall rho, ReadOnlyStatic (fold_subst_eps rho static_e1)) ->
-                         BackTriangle (stty, ctxt, rgns, Assign w e1 e2, eff1 ⊕ (eff2 ⊕ (WriteAbs w)))            
-  | BT_Ref_Write_Conc: forall stty ctxt rgns (e1 e2 eff1 eff2 : Expr) (r : Region)
+                         ReadOnlyStatic (fold_subst_eps rho static_e1) ->
+                         BackTriangle (stty, ctxt, rgns, rho, Assign w e1 e2, eff1 ⊕ (eff2 ⊕ (WriteAbs w)))
+  | BT_Ref_Write_Conc: forall stty ctxt rgns rho (e1 e2 eff1 eff2 : Expr) (r : Region)
                        ty_e1 static_e1,
-                         BackTriangle (stty, ctxt, rgns, e1, eff1) ->
-                         BackTriangle (stty, ctxt, rgns, e2, eff2) ->
+                         BackTriangle (stty, ctxt, rgns, rho, e1, eff1) ->
+                         BackTriangle (stty, ctxt, rgns, rho, e2, eff2) ->
                          TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
-                         (forall rho, ReadOnlyStatic (fold_subst_eps rho static_e1)) ->
-                         BackTriangle (stty, ctxt, rgns, Assign (Rgn2_Const true false r) e1 e2, eff1 ⊕ (eff2 ⊕ (WriteConc e1)))
-  | BT_Top_Approx    : forall stty ctxt rgns (e : Expr),
-                         BackTriangle (stty, ctxt, rgns, e, Top)
-where "stty ';;' ctxt ';;' rgns '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, ec, ee)) : type_scope.
+                         ReadOnlyStatic (fold_subst_eps rho static_e1) ->
+                         BackTriangle (stty, ctxt, rgns, rho, 
+                                       Assign (Rgn2_Const true false r) e1 e2, eff1 ⊕ (eff2 ⊕ (WriteConc e1)))
+  | BT_Top_Approx    : forall stty ctxt rgns rho (e : Expr),
+                         BackTriangle (stty, ctxt, rgns, rho, e, Top)
 
-Scheme tc_exp__xind := Induction for TcExp Sort Prop
-  with bt__xind := Induction for BackTriangle Sort Prop.
-Combined Scheme tc_exp__bt__xind from tc_exp__xind, bt__xind.
-
-Inductive TcVal : (Sigma * Val * tau) -> Prop :=
+with TcVal : (Sigma * Val * tau) -> Prop :=
   | TC_Num     : forall stty n,
                    TcVal (stty, Num n, Ty2_Natural)
   | TC_Bit     : forall stty b,
@@ -802,7 +810,9 @@ with TcRho : (Rho * Omega) -> Prop :=
                 (forall stty v r u t,
                    not_set_elem rgns r ->
                    TcVal (stty, v, subst_rho rho (subst_in_type r u t))) ->
-               TcRho (rho, rgns).
+               TcRho (rho, rgns)
+where "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, rho, ec, ee)) : type_scope.
+
 
 
 
@@ -822,49 +832,29 @@ Proof.
   assumption.
 Qed.
 
+(*Scheme tc_exp__xind := Induction for TcExp Sort Prop
+                        with bt__xind := Induction for BackTriangle Sort Prop.
+Combined Scheme tc_exp__bt__xind from tc_exp__xind, bt__xind.
+
 Scheme tc_val__xind := Induction for TcVal Sort Prop
                        with tc_env__xind := Induction for TcEnv Sort Prop
                        with tc_rho__xind := Induction for TcRho Sort Prop.
-Combined Scheme tc_val__tc_env__xind from tc_val__xind, tc_env__xind, tc_rho__xind.
+Combined Scheme tc_val__tc_env__xind from tc_val__xind, tc_env__xind, tc_rho__xind.*)
 
-Lemma ext_stores__exp__bt__aux:
-  (forall p, TcExp p ->
-             match p with (stty, ctxt, rgns, e, t, eff) => 
-               forall stty',
-                 (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') ->
-                 TcExp (stty', ctxt, rgns, e, t, eff)
-             end)
-    /\
-  (forall p, BackTriangle p ->
-             match p with (stty, ctxt, rgns, ec, ee) => 
-               forall stty',
-                 (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') ->
-                 BackTriangle (stty', ctxt, rgns, ec, ee)
-             end).
-Proof.
-  apply tc_exp__bt__xind;
- try (econstructor); eauto.
-Qed.
 
-Lemma ext_stores__exp:
-   forall stty stty',
-     (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
-     (forall ctxt rgns e t eff, TcExp (stty, ctxt, rgns, e, t, eff) -> TcExp (stty', ctxt, rgns, e, t, eff)).
-Proof.
-  intros.
-  apply (match ext_stores__exp__bt__aux with conj F _ => F (stty, ctxt, rgns, e, t, eff) end); auto.
-Qed.
+Scheme tc_exp__xind := Induction for TcExp Sort Prop
+                        with bt__xind := Induction for BackTriangle Sort Prop
+                        with tc_val__xind := Induction for TcVal Sort Prop
+                        with tc_env__xind := Induction for TcEnv Sort Prop
+                        with tc_rho__xind := Induction for TcRho Sort Prop.
 
-Lemma ext_stores__bt:
-   forall stty stty',
-     (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
-     (forall ctxt rgns ec ee, BackTriangle (stty, ctxt, rgns, ec, ee) -> BackTriangle (stty', ctxt, rgns, ec, ee)).
-Proof.
-  intros.
-  apply (match ext_stores__exp__bt__aux with conj _ F => F (stty, ctxt, rgns, ec, ee) end); auto.
-Qed.
+Combined Scheme tc__xind from 
+  tc_exp__xind, 
+  bt__xind,
+  tc_val__xind, 
+  tc_env__xind, 
+  tc_rho__xind.
 
-        
 Definition get_store_typing_val {A B:Type} (p : Sigma * A * B) : Sigma   
   := fst (fst p).
 
@@ -877,7 +867,104 @@ Definition mk_TcVal_ext_store_ty (p : Sigma * Val * tau) (stty' : Sigma)
 Definition mk_TcEnv_ext_store_ty (p : Sigma * Rho * Env * Gamma) (stty' : Sigma)
   := TcEnv (stty', snd (fst (fst p)), snd (fst p), snd p).
 
-Lemma ext_stores__val_env__aux:
+Lemma ext_stores__exp__bt__aux:
+  (forall p, TcExp p ->
+             match p with (stty, ctxt, rgns, e, t, eff) => 
+               forall stty',
+                 (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') ->
+                 TcExp (stty', ctxt, rgns, e, t, eff)
+             end)
+    /\
+  (forall p, BackTriangle p ->
+             match p with (stty, ctxt, rgns, rho, ec, ee) => 
+               forall stty',
+                 (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') ->
+                 BackTriangle (stty', ctxt, rgns, rho, ec, ee)
+             end)
+   /\  
+  (forall p,
+        TcVal p ->        
+        forall stty stty',
+        (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
+        get_store_typing_val p = stty -> mk_TcVal_ext_store_ty p stty') 
+  /\
+     (forall p,
+        TcEnv p ->           
+        forall stty stty',
+        (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
+        get_store_typing_env p = stty -> mk_TcEnv_ext_store_ty p stty') 
+  /\
+     (forall p,
+        TcRho p -> TcRho p) . 
+Proof.
+  apply tc__xind; try (solve [econstructor;eauto] ).
+  - intros.
+    unfold mk_TcVal_ext_store_ty, 
+           mk_TcEnv_ext_store_ty, 
+           get_store_typing_val, 
+           get_store_typing_env in *; simpl in *. 
+    constructor. subst. auto.
+  - intros.
+     unfold mk_TcVal_ext_store_ty, 
+           mk_TcEnv_ext_store_ty, 
+           get_store_typing_val, 
+           get_store_typing_env in *; simpl in *.
+    subst.
+    econstructor; eauto.
+  - intros.
+     unfold mk_TcVal_ext_store_ty, 
+           mk_TcEnv_ext_store_ty, 
+           get_store_typing_val, 
+           get_store_typing_env in *; simpl in *.
+    subst.
+    econstructor; eauto.
+Qed.
+
+Lemma ext_stores__exp:
+   forall stty stty',
+     (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
+     (forall ctxt rgns e t eff, TcExp (stty, ctxt, rgns, e, t, eff) -> 
+        TcExp (stty', ctxt, rgns, e, t, eff)).
+Proof.
+  intros.
+  apply (match ext_stores__exp__bt__aux with conj F _ => 
+    F (stty, ctxt, rgns, e, t, eff) end); auto.
+Qed.
+
+Lemma ext_stores__bt:
+   forall stty stty',
+     (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
+     (forall ctxt rgns rho ec ee, BackTriangle (stty, ctxt, rgns, rho, ec, ee) -> 
+      BackTriangle (stty', ctxt, rgns, rho, ec, ee)).
+Proof.
+  intros.
+  apply (match ext_stores__exp__bt__aux with conj _ (conj F _) => 
+    F (stty, ctxt, rgns, rho, ec, ee) end); auto.
+Qed.
+
+Lemma ext_stores__val:
+   forall stty stty',
+     (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
+     (forall v t, TcVal (stty, v, t) -> 
+      TcVal (stty', v, t)).
+Proof.
+  intros.
+  eapply (match ext_stores__exp__bt__aux with conj _ (conj _ (conj F _)) =>
+   F (stty, v, t) end); eauto.
+Qed.
+
+Lemma ext_stores__env:
+   forall stty stty',
+     (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
+     (forall rho env ctxt, TcEnv (stty, rho, env, ctxt) ->  
+      TcEnv (stty', rho, env, ctxt)).
+Proof.
+  intros.
+  eapply (match ext_stores__exp__bt__aux with conj _ (conj _ (conj _ (conj F _))) =>
+   F (stty, rho, env, ctxt) end); eauto.
+Qed.
+
+(*Lemma ext_stores__val_env__aux:
    forall stty stty',
      (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
      (forall p,
@@ -905,13 +992,12 @@ Lemma ext_stores__val:
      (forall v t, TcVal (stty, v, t) -> TcVal (stty', v, t)).
 Proof.
   intros stty stty' HWeak v t H. pose HWeak.  
-  apply ext_stores__val_env__aux in e. destruct e as [HTc  HEnv].  
+  apply ext_stores__val_env__auxc  HEnv].  
   inversion H; subst; try econstructor; eauto.
   - eapply ext_stores__exp in H5. 
     + eapply HEnv in H4. cbv in H4. exact H4. cbv. reflexivity. 
     + exact HWeak.
   - eapply ext_stores__exp in H5. eassumption. exact HWeak.
-  (*- apply HTc in H4; [unfold mk_TcVal_ext_store_ty in H4; simpl in H4; assumption | reflexivity]. *)
 Qed.
 
 Lemma ext_stores__env:
@@ -924,5 +1010,5 @@ Proof.
   unfold mk_TcEnv_ext_store_ty in HEnv. apply HEnv in H. 
   - now simpl in H.
   - now cbv.
-Qed.
+Qed.*)
 
