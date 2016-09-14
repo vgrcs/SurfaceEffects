@@ -1,7 +1,9 @@
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Lists.List.
-Require Import Definitions.
+
+Add LoadPath "." as Top.
+Require Import Top.Definitions.
 
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
@@ -33,18 +35,23 @@ Lemma EmptyIsNil:
   forall phi, phi ⊑ Theta_Empty -> phi = Phi_Nil.
 Proof.
   induction phi; intros.
-  reflexivity.
-  inversion H; subst; inversion H1; subst; try (solve [contradiction]).
-  - admit.
-  - admit.  
-  - assert ( H1 : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H1.
-    assert ( H2 : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H2.
+  - reflexivity. 
+  - unfold Theta_Empty, empty_set in H. 
+    dependent induction H; inversion H; subst; try (solve [inversion H2]).
+    + dependent induction H; try (solve [inversion H]).
+      * eapply IHDA_in_Theta; eauto. admit.
+      * eapply IHDA_in_Theta; eauto. admit.
+    + dependent induction H; try (solve [inversion H]).
+      * eapply IHDA_in_Theta; eauto. admit.
+      * eapply IHDA_in_Theta; eauto. admit.
+  - inversion H; subst. 
+    assert ( H_ : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H_.
+    assert ( H__ : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H__.
     rewrite Phi_Par_Nil_R. reflexivity.
-  - assert ( H1 : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H1.
-    assert ( H2 : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H2.
-    rewrite Phi_Seq_Nil_R. reflexivity. 
-Admitted.
-
+  - assert ( H_ : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H_.
+    assert ( H__ : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H__.
+    rewrite Phi_Seq_Nil_R. reflexivity.
+Admitted. 
 
 Lemma EmptyInAnyTheta:
   forall phi theta, phi ⊑ Theta_Empty -> phi ⊑ theta .
@@ -59,7 +66,7 @@ Proof.
     apply PTS_Seq. apply IHphi1. apply PTS_Nil.  apply IHphi1. apply PTS_Nil. 
 Admitted.
 
-Lemma EnsembleUnionSym :
+Lemma EnsembleUnionSym:
   forall (phi : Phi) (theta theta' : Theta),
     phi ⊑ theta -> phi ⊑ (Union_Theta theta theta') /\ phi ⊑ (Union_Theta theta' theta).
 Proof.
@@ -407,7 +414,11 @@ Proof.
   - inversion H2; subst;
     assert (h=fheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; [reflexivity | reflexivity | assumption]). 
-  - admit.
+  - inversion H9; subst. inversion H13; subst. 
+    assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
+    assert (h = heap_mu2) by (eapply IHBigStep4; eauto).
+    rewrite <- H10 in H4. rewrite <- H11 in H5. 
+    admit.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; assumption).

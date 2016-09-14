@@ -832,16 +832,6 @@ Proof.
   assumption.
 Qed.
 
-(*Scheme tc_exp__xind := Induction for TcExp Sort Prop
-                        with bt__xind := Induction for BackTriangle Sort Prop.
-Combined Scheme tc_exp__bt__xind from tc_exp__xind, bt__xind.
-
-Scheme tc_val__xind := Induction for TcVal Sort Prop
-                       with tc_env__xind := Induction for TcEnv Sort Prop
-                       with tc_rho__xind := Induction for TcRho Sort Prop.
-Combined Scheme tc_val__tc_env__xind from tc_val__xind, tc_env__xind, tc_rho__xind.*)
-
-
 Scheme tc_exp__xind := Induction for TcExp Sort Prop
                         with bt__xind := Induction for BackTriangle Sort Prop
                         with tc_val__xind := Induction for TcVal Sort Prop
@@ -963,52 +953,3 @@ Proof.
   eapply (match ext_stores__exp__bt__aux with conj _ (conj _ (conj _ (conj F _))) =>
    F (stty, rho, env, ctxt) end); eauto.
 Qed.
-
-(*Lemma ext_stores__val_env__aux:
-   forall stty stty',
-     (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
-     (forall p,
-        TcVal p -> get_store_typing_val p = stty -> mk_TcVal_ext_store_ty p stty') /\
-     (forall p,
-        TcEnv p -> get_store_typing_env p = stty -> mk_TcEnv_ext_store_ty p stty') /\
-     (forall p,
-        TcRho p -> TcRho p) .  
-Proof. 
-  intros stty stty' HWeak. 
-  apply tc_val__tc_env__xind; intro stty''; intros; 
-  try constructor; try assumption ;  
-  unfold mk_TcVal_ext_store_ty, mk_TcEnv_ext_store_ty, get_store_typing_val, get_store_typing_env in *; simpl in *; 
-  try assumption.
-  - subst. now apply HWeak.
-  - eapply ext_stores__exp in t2.  
-    + intuition; econstructor; eauto. 
-    + subst; exact HWeak.
-  - intuition.  eapply H; eassumption. 
-Qed.
-
-Lemma ext_stores__val:
-   forall stty stty',
-     (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
-     (forall v t, TcVal (stty, v, t) -> TcVal (stty', v, t)).
-Proof.
-  intros stty stty' HWeak v t H. pose HWeak.  
-  apply ext_stores__val_env__auxc  HEnv].  
-  inversion H; subst; try econstructor; eauto.
-  - eapply ext_stores__exp in H5. 
-    + eapply HEnv in H4. cbv in H4. exact H4. cbv. reflexivity. 
-    + exact HWeak.
-  - eapply ext_stores__exp in H5. eassumption. exact HWeak.
-Qed.
-
-Lemma ext_stores__env:
-   forall stty stty',
-     (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
-     (forall rho env ctxt, TcEnv (stty, rho, env, ctxt) -> TcEnv (stty', rho, env, ctxt)).
-Proof.
-  intros stty stty' HWeak rho env ctxt H. pose HWeak.  
-  apply ext_stores__val_env__aux in e. destruct e as [HTc  HEnv]. 
-  unfold mk_TcEnv_ext_store_ty in HEnv. apply HEnv in H. 
-  - now simpl in H.
-  - now cbv.
-Qed.*)
-
