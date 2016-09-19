@@ -7,7 +7,7 @@ Require Import Top.Definitions.
 
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
-Axiom Phi_Par_Nil_R : forall phi, Phi_Par Phi_Nil phi = phi.
+Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
 Lemma UnionEmptyWithEffIsEff:
@@ -31,19 +31,46 @@ Proof.
   induction phi; intros; econstructor; try assumption; apply DAT_Top.
 Qed.
 
+Lemma EmptyUnionisEmptySet :
+  forall acts a,
+    acts = Empty_set ComputedAction ->
+    a = Empty_set ComputedAction ->
+    Union ComputedAction acts a =  Empty_set ComputedAction.
+Proof.
+  intros acts a H1 H2.
+  apply Extensionality_Ensembles.
+  unfold Same_set, Included.
+  split.
+  - intros x Hx. rewrite H1 in Hx. 
+    replace (Union ComputedAction (Empty_set ComputedAction) a) 
+    with a in Hx 
+    by (apply Extensionality_Ensembles;
+        unfold Same_set, Included; split; intros y Hy; 
+        unfold In in *;
+          [apply Union_intror; assumption | destruct Hy; [inversion H | assumption]]).
+    rewrite H2 in Hx. inversion Hx.
+  - intros x Hx. inversion Hx.
+Qed. 
+
+Require Export JMeq.
+Axiom DAInThetaImpliesNotEmpty:
+  forall da acts,
+    DA_in_Theta da (Some acts) ->
+    Some acts ~= Some (Empty_set ComputedAction).
+
 Lemma EmptyIsNil:
   forall phi, phi ⊑ Theta_Empty -> phi = Phi_Nil.
 Proof.
   induction phi; intros.
   - reflexivity. 
-  - unfold Theta_Empty, empty_set in H. 
+  - unfold Theta_Empty, empty_set in H; 
     dependent induction H; inversion H; subst; try (solve [inversion H2]).
+    + dependent induction H; try (solve [inversion H]); intros.
+      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
+      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
     + dependent induction H; try (solve [inversion H]).
-      * eapply IHDA_in_Theta; eauto. admit.
-      * eapply IHDA_in_Theta; eauto. admit.
-    + dependent induction H; try (solve [inversion H]).
-      * eapply IHDA_in_Theta; eauto. admit.
-      * eapply IHDA_in_Theta; eauto. admit.
+      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto. 
+      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
   - inversion H; subst. 
     assert ( H_ : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H_.
     assert ( H__ : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H__.
@@ -51,20 +78,23 @@ Proof.
   - assert ( H_ : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H_.
     assert ( H__ : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H__.
     rewrite Phi_Seq_Nil_R. reflexivity.
-Admitted. 
+Qed.
+
+
 
 Lemma EmptyInAnyTheta:
   forall phi theta, phi ⊑ Theta_Empty -> phi ⊑ theta .
 Proof.  
   induction phi; intros; try (solve [econstructor]).
-  - inversion H; subst; inversion H1; subst; inversion H3; subst;
-    try (solve [assert (set_union acts a = empty_set -> acts = empty_set) by admit; apply H2 in H0; subst; inversion H5]);
-    try (solve [admit]).
+  - econstructor. unfold Theta_Empty, empty_set in H.
+    dependent induction H; dependent induction H; try (solve [inversion H]). 
+    * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
+    * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
   - inversion H; subst. apply EmptyIsNil in H2. apply EmptyIsNil in H4. subst.
     apply PTS_Par. apply IHphi1. apply PTS_Nil.  apply IHphi1. apply PTS_Nil.
   - inversion H; subst. apply EmptyIsNil in H2. apply EmptyIsNil in H4. subst.
     apply PTS_Seq. apply IHphi1. apply PTS_Nil.  apply IHphi1. apply PTS_Nil. 
-Admitted.
+Qed.
 
 Lemma EnsembleUnionSym:
   forall (phi : Phi) (theta theta' : Theta),
@@ -74,10 +104,10 @@ Proof.
   generalize dependent theta'.
   induction H; intros theta'.
   - split; [apply PTS_Nil | apply PTS_Nil]. 
-  - destruct theta as [acts|]; destruct theta' as [acts'|]; intuition; simpl;
-    try (apply PTS_Elem; inversion H; subst; apply DAT_Top). 
-    + econstructor. apply DAT_intror. assumption.
-    + econstructor. apply DAT_introl. assumption.
+  - destruct theta as [acts|]; destruct theta' as [acts'|]; 
+    intuition; simpl; try (solve [apply PTS_Elem; apply DAT_Top]). 
+    + apply PTS_Elem. apply DAT_intror. assumption.
+    + apply PTS_Elem. apply DAT_introl. assumption.    
   - destruct theta as [acts|]; destruct theta' as [acts'|]; intuition;
     (apply PTS_Seq; [apply IHPhi_Theta_Soundness1 | apply IHPhi_Theta_Soundness2]).
   - split; destruct theta as [acts|]; destruct theta' as [acts'|]; intuition;
@@ -90,7 +120,7 @@ Proof.
   intros p eff H; inversion H; subst; try apply PTS_Nil.  
   induction eff; apply PTS_Elem;
   try assert ( HUnionEmpty : (Union_Theta (Some empty_set)  (Some a)) = Some a) 
-     by (unfold Union_Theta, set_union, empty_set; f_equal;
+    by (unfold Union_Theta, set_union, empty_set; f_equal;
          apply Extensionality_Ensembles; red; split; unfold Included;
          intros x Hx; [ inversion Hx; subst; [contradiction | assumption] | apply Union_intror]; auto).
   - rewrite HUnionEmpty in H0; assumption.
@@ -399,6 +429,13 @@ Proof.
   - eapply IHBigStep; [reflexivity | auto].
   - eapply IHBigStep; [reflexivity | auto]. 
 Qed.
+       
+Axiom ReadOnlyWalkSameHeap:
+  forall acts_mu1 acts_mu2 h same_h,
+    ReadOnlyPhi (Phi_Par acts_mu1 acts_mu2) ->
+    (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
+    h = same_h.
+                                   
 
 Lemma ReadOnlyTracePreservesHeap_1 : 
   forall h env rho e same_h v' acts, (h, env, rho, e) ⇓ (same_h, v', acts) -> 
@@ -418,7 +455,7 @@ Proof.
     assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
     assert (h = heap_mu2) by (eapply IHBigStep4; eauto).
     rewrite <- H10 in H4. rewrite <- H11 in H5. 
-    admit.
+    eapply ReadOnlyWalkSameHeap; eauto.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; assumption).
@@ -442,7 +479,7 @@ Proof.
     (eapply IHBigStep2; [reflexivity | assumption]).
   - eapply EmptyTracePreservesHeap_1; eauto.
   - eapply EmptyTracePreservesHeap_1. eauto. reflexivity. 
-Admitted.   
+Qed.   
 
 Inductive SA_DA_Soundness : StaticAction -> DynamicAction -> Prop :=
 | SA_DA_Read : forall r l v, SA_DA_Soundness (SA_Read (Rgn2_Const true true r)) (DA_Read r l v)

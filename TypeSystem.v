@@ -364,25 +364,32 @@ Lemma subst_rho_open_close_eps:
     fold_subst_eps rho (opening_rgn_in_eps2 n (mk_rgn_type w) e1).
 Proof.
   intros rho n w v' rho' e e1 x  Hcl1 HF H. 
-  apply Extensionality_Ensembles. 
+  apply Extensionality_Ensembles.  
   unfold Same_set, Included.
-  split. intros; unfold In in *.
-  - unfold fold_subst_eps.  unfold fold_subst_eps in H0.
+  split; intros; unfold In in *.
+  - unfold fold_subst_eps.  unfold fold_subst_eps in H0. 
     unfold opening_rgn_in_eps2, closing_rgn_in_eps2. unfold opening_rgn_in_eps2, closing_rgn_in_eps2 in H0.
     destruct H0 as [sa [[sa' [[sa'' [H2 H3]] H4]] H5]].
     subst.
     exists (opening_rgn_in_sa2 n (mk_rgn_type w) sa'').
     split.
-    exists sa''. intuition. admit.
-    symmetry.
-    eapply subst_rho_open_close_sa.
-    inversion Hcl1; subst. destruct (H0 sa''). assumption.
-    assumption.
-    unfold fold_subst_eps in H.
-    apply equal_f with sa'' in H.
-    assert ((exists sa' : StaticAction2,
-         closing_rgn_in_eps2 n x e sa' /\ fold_subst_sa rho' sa' = sa'') -> (exists sa' : StaticAction2, e1 sa' /\ fold_subst_sa rho sa' = sa'')).
-    intro. rewrite H. assumption.
+    + exists sa''. intuition. admit.
+    + symmetry. 
+      inversion Hcl1; subst. destruct (H0 sa'').
+      erewrite subst_rho_open_close_sa; eauto. 
+      unfold fold_subst_eps in H.
+      admit.
+ - unfold fold_subst_eps.  unfold fold_subst_eps in H0. 
+   unfold opening_rgn_in_eps2, closing_rgn_in_eps2. unfold opening_rgn_in_eps2, closing_rgn_in_eps2 in H0.
+   destruct H0 as [sa [[sa' [H1 H2]] H3]].
+   rewrite <- H3.     
+   exists (opening_rgn_in_sa2 n (Rgn2_Const true true v') (closing_rgn_in_sa2 n x sa')).
+   split.  
+   + exists (closing_rgn_in_sa2 n x sa'). intuition.
+     exists sa'. intuition. admit.
+   +  inversion Hcl1; subst. destruct (H0 sa').
+      erewrite subst_rho_open_close_sa; eauto.  
+      admit.
 Admitted.
    
 Lemma subst_rho_open_close :

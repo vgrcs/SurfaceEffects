@@ -169,6 +169,7 @@ Inductive DA_in_Theta : DynamicAction -> Theta -> Prop :=
                       DA_in_Theta da (Some (set_union a acts)).
 
 
+
 Inductive Disjoint_Dynamic : DynamicAction -> DynamicAction -> Prop :=
 | DD_Alloc_Alloc  : forall r1 l1 r2 l2 v1 v2, (r1, l1) <> (r2, l2) -> Disjoint_Dynamic (DA_Alloc r1 l1 v1) (DA_Alloc r2 l2 v2)
 | DD_Alloc_Read   : forall r1 l1 r2 l2 v1 v2, (r1, l1) <> (r2, l2) -> Disjoint_Dynamic (DA_Alloc r1 l1 v1) (DA_Read r2 l2 v2)

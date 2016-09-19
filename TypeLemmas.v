@@ -6,8 +6,10 @@ Require Import Coq.MSets.MSetWeakList.
 Require Import Coq.FSets.FSetFacts.
 Require Import Coq.FSets.FMapAVL.
 Require Import Coq.FSets.FMapFacts.
-Require Import Keys.
-Require Import Nameless.
+
+Add LoadPath "." as Top.
+Require Import Top.Keys.
+Require Import Top.Nameless.
 
 Module R := FMapAVL.Make (AsciiVars).
 Module RMapP := FMapFacts.Facts R.
@@ -44,10 +46,9 @@ Lemma baz:
       elems1 ++ (k',v')::elems2 = R.elements (R.add k' v' rho) /\
       elems1 ++ elems2 = R.elements rho.
 Proof.
-  (* unfold R.elements. unfold R.Raw.elements. unfold R.Raw.elements_aux. *)
   destruct rho. induction this; intros k' v' H.
   - exists nil. exists nil. intuition.
-  - simpl. destruct (AsciiVars.compare k' k).
+  - destruct (AsciiVars.compare k' k).
     + admit.
     + inversion e0; subst.
       contradict H. unfold R.In, R.Raw.In0. simpl. eauto.
