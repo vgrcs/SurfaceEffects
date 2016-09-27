@@ -19,6 +19,7 @@ Require Import Top.EffectSystem.
 Require Import Top.Environment.
 Require Import Top.TypeSystem.
 Require Import Top.Determinism.
+Require Import Top.DeterminismExt.
 Require Import Top.Definitions.
 Require Import Top.CorrectnessLemmas.
 
@@ -108,18 +109,20 @@ Proof.
         apply PTS_Seq.
         SSCase "facts ⊑ eff".
           inversion H0; subst.
-          SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))".
+          SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
             inversion H; subst. 
             assert (facts  ⊑ effa1).
             eapply IHBS1_1; eauto. 
             inversion H1. assumption.
-            apply Theta_introl. assumption.
+            apply Theta_introl. assumption. 
+          SSSCase " Mu_App ef ea0 << Eff_App ef ea0".  
+             eapply IHBS1_1; eauto. 
           SSSCase "Mu_App ef ea0 << (⊤)".  
             inversion H; subst.
             apply PhiInThetaTop.
         SSCase " aacts ⊑ eff".    
           inversion H0; subst.
-          SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))".
+          SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
             eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H27.
             apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.
             inversion H; subst. inversion H31; subst.
@@ -131,15 +134,79 @@ Proof.
             assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)).
             eapply eff_sound; eauto. 
             eassumption.
+          SSSCase "Mu_App ef ea0 << Eff_App ef ea0".  
+            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H27. 
+            apply ReadOnlyTracePreservesHeap_1 in BS1_1. 
+            symmetry in BS1_1.  rewrite <- BS1_1 in H.
+                
+            eapply IHBS1_2; eauto using ext_stores__env,  ext_stores__exp.    
+            
+            eapply EqualHeaps; eauto. now apply Equal_heap_equal.
+            assumption.
+            
+            assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)).
+            eapply eff_sound; eauto. 
+            eassumption.
           SSSCase "Mu_App ef ea0 << (⊤)".  
-           induction eff; inversion H.
-           eapply IHBS1_2 with (h'':=fheap) (ee:=⊤) ; eauto using ext_stores__env,  ext_stores__exp.  
-           rewrite <- H21; econstructor. 
-           econstructor.
+            induction eff; inversion H.
+            eapply IHBS1_2 with (h'':=fheap) (ee:=⊤) ; eauto using ext_stores__env,  ext_stores__exp.  
+            rewrite <- H21; econstructor. 
+            econstructor.
       SCase "bacts ⊑ eff".     
         inversion H; subst; inversion H0; subst. 
+        SSSCase "Mu_App ef0 ea << Eff_App ef0 ea".
+          assert (HEq_1 : fheap = h'').  
+          eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H31. 
+          apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
+          assumption. assumption.
+
+          assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)).
+          eapply eff_sound; eauto. 
+          eassumption.
+
+          assert (aacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ea, aacts)).
+          eapply eff_sound; eauto. rewrite HEq_1. assumption.
+
+          assert (HEq_2 : aheap = fheap).  
+          eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H32.
+          apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
+          assumption. assumption. eassumption. 
+ 
+          assert (facts  ⊑ eff). 
+          eapply IHBS1_1  with (stty:=stty) ; eauto.
+  
+          assert (aacts  ⊑ eff).      
+          { eapply IHBS1_2 with (stty:=stty); eauto.
+            - rewrite HEq_1. eassumption.
+            - eapply EqualHeaps; eauto. symmetry in HEq_1. now apply Equal_heap_equal. }  
+          
+          assert (HSubset : Phi_Seq facts aacts ⊑ (Union_Theta eff eff)).
+          eapply EnsembleUnionComp; eauto.
+ 
+          assert (HD: H.Equal h'' h'' /\ Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) =
+                                           Cls (env', rho', Mu f x ec' ee') /\ facts0 = facts)
+            by (eapply DynamicDeterminism_ext; eauto; 
+                rewrite HEq_1 in BS1_1; [apply HFacts.Equal_refl | assumption]).  
+          destruct HD as [? [HD_ ?]]; inversion HD_; subst.
+          
+          assert (HD' : H.Equal h'' h'' /\  v' = v0 /\ aacts0 = aacts)
+            by (eapply DynamicDeterminism_ext; eauto). destruct HD' as [? [? ?]]; subst. 
+          
+          { eapply IHBS1_3
+            with (stty:=sttya) 
+                   (ee:= ee') 
+                   (h'':= h''); eauto. 
+            - eapply ext_stores__bt; eauto.
+            - inversion H1. assumption.
+            - { apply update_env; simpl.  
+                - eapply ext_stores__env; eauto. 
+                 apply update_env.  
+                  + eassumption.
+                  + eapply ext_stores__val with (stty:=sttyb); eauto.
+                - eapply ext_stores__val with (stty:=sttya); eauto. }
+            - eapply ext_stores__exp; eauto. }
         SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))".
-          assert (HEq_1 : fheap = h''). 
+          assert (HEq_1 : fheap = h'').  
           eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in H30. 
           apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
           assumption. assumption.
@@ -155,8 +222,16 @@ Proof.
           eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in H31.
           apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
           assumption. assumption. eassumption. 
+ 
+          inversion H24; subst.   
           
-          inversion H24; subst.  
+          assert (facts  ⊑ effa0) by
+              (eapply IHBS1_1 with (ee:=a); eauto; inversion H1; subst; assumption).
+ 
+          assert (aacts  ⊑ effa2) by   
+              (eapply IHBS1_2 with (ee:=effa1) (p':=phia0); eauto;
+               inversion H1; inversion H22; subst; assumption). 
+
           inversion H32; subst.
           assert (HD: (h'', Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0), facts0) =
                       (h'', Cls (env', rho', Mu f x ec' ee'), facts))
@@ -165,20 +240,13 @@ Proof.
           assert (HD' : (h'', v', aacts0) = (h'', v0, aacts))
             by (eapply DynamicDeterminism; eauto). inversion HD'; subst.  
 
-          assert (facts  ⊑ effa0) by
-              (eapply IHBS1_1 with (ee:=a); eauto; inversion H1; subst; assumption).
- 
-          assert (aacts  ⊑ effa2) by 
-              (eapply IHBS1_2 with (ee:=effa1) (p':=phia0); eauto;
-               inversion H1; inversion H25; subst; assumption).
-
           assert (bacts  ⊑ effb0). 
           { eapply IHBS1_3
               with (stty:=sttya) 
                    (ee:= ee') 
                    (h'':= h''); eauto.
             - eapply ext_stores__bt; eauto. 
-            - inversion H1; subst. inversion H26; subst. inversion H36; subst. assumption.
+            - inversion H1; subst. inversion H25; subst. inversion H34; subst. assumption.
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
