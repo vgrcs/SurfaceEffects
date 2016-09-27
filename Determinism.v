@@ -497,14 +497,9 @@ Proof.
         }
   - do 2 constructor.    
   - econstructor. inversion HDisj; subst.
-    assert (Disjoint_Dynamic (DA_Alloc r l v) (DA_Alloc r0 l0 v0)) by (apply H; simpl; auto).
-    inversion H0; subst. 
-    eapply Disjointness_Preserves_Update_Alloc in HStep2; eauto.
-    destruct HStep2 as [heap' [? ?]]. inversion H0; subst. unfold H.Equal in H1.
-    inversion H3; subst.
-    unfold update_H in *; simpl in *.
-    admit.  
-Admitted.
+    assert (Disjoint_Dynamic (DA_Alloc r l v) (DA_Alloc r0 l0 v0)) by (apply H; simpl; auto). 
+    constructor.
+Qed.
 
 Lemma Par_Step_Write_Write :
   forall phi1 r1 l1 v1 phi2 r2 l2 v2 phi1' phi2' heapa heapb heap1' heap2',
@@ -2850,7 +2845,7 @@ Proof.
 Admitted.
 
 
-
+(*
 Lemma Equal_heap_equal:
   forall (heap1 heap2 : Heap),
     heap1 = heap2 -> H.Equal heap1 heap2.
@@ -2909,20 +2904,30 @@ Proof.
     eapply IHDyn1_3; eauto.
     destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3. subst.
     intuition.
-  - assert (HR1 : H.Equal heap_a heap_b /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0) by (eapply IHDyn1_1; eauto).
+  - assert (HR1 : H.Equal heap_a heap_b /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0) 
+      by (eapply IHDyn1_1; eauto).
     destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
-    assert (HR2 : H.Equal heap_a heap_b /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3) by (eapply IHDyn1_2; eauto).
+    assert (HR2 : H.Equal heap_a heap_b /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3) 
+      by (eapply IHDyn1_2; eauto).
     destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
-    assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0)  by (eapply IHDyn1_3; eauto). 
+    assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0)  
+      by (eapply IHDyn1_3; eauto). 
     inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3. 
-    assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3)  by (eapply IHDyn1_4; eauto). 
+    assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3)  
+      by (eapply IHDyn1_4; eauto).  
     inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
-    intuition. eapply unique_heap_new with (heapa := heap_a) (heapb := heap_b) (theta1:=theta0) (theta2:=theta3); eauto.
+    intuition. 
+    eapply unique_heap_new with (heapa := heap_a) (heapb := heap_b) (theta1:=theta0) (theta2:=theta3). 
+    + eauto. (* from correctness *)
+    + eauto. (* from correctness *) 
+    + eauto. (* from correctness *) 
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
-                  by (eapply Det_trace_from_theta; eauto; [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
+        by (eapply Det_trace_from_theta; eauto; 
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
       now inversion H11.
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
-                  by (eapply Det_trace_from_theta; eauto; [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
+        by (eapply Det_trace_from_theta; eauto; 
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
       now inversion H11.
   -  assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 ).
      eapply IHDyn1_1; eauto.
@@ -3027,3 +3032,4 @@ Proof.
      intuition.
 Qed.
 
+*)

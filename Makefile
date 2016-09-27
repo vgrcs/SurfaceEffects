@@ -106,6 +106,7 @@ VFILES:=Keys.v\
   TypeSystem.v\
   EffectSystem.v\
   Determinism.v\
+  DeterminismExt.v\
   Correctness.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)

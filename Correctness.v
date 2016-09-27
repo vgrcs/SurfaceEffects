@@ -165,13 +165,20 @@ Proof.
           assert (HD' : (h'', v', aacts0) = (h'', v0, aacts))
             by (eapply DynamicDeterminism; eauto). inversion HD'; subst.  
 
+          assert (facts  ⊑ effa0) by
+              (eapply IHBS1_1 with (ee:=a); eauto; inversion H1; subst; assumption).
+ 
+          assert (aacts  ⊑ effa2) by 
+              (eapply IHBS1_2 with (ee:=effa1) (p':=phia0); eauto;
+               inversion H1; inversion H25; subst; assumption).
+
           assert (bacts  ⊑ effb0). 
           { eapply IHBS1_3
               with (stty:=sttya) 
                    (ee:= ee') 
                    (h'':= h''); eauto.
             - eapply ext_stores__bt; eauto. 
-            - inversion H1; subst. inversion H21; subst. inversion H26; subst. assumption.
+            - inversion H1; subst. inversion H26; subst. inversion H36; subst. assumption.
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
