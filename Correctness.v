@@ -246,7 +246,7 @@ Proof.
   Case "par_pair".
     inversion H6; subst.
     apply PTS_Seq; inversion H5; subst; apply PhiInThetaTop.
-  Case "cond_true".
+  Case "cond_true". 
     inversion H0; subst. 
     SCase "Cond e et ef << Cond e efft efff".
       assert (cacts ⊑ Some empty_set) by
@@ -261,7 +261,7 @@ Proof.
       apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
       assumption. constructor. eassumption.
       rewrite UnionEmptyWithEffIsEff. 
-      eapply IHBS1_2 with (ee:=efft); eauto.
+      eapply IHBS1_2 with (ee:=efft); eauto. 
       SSCase "Invoke DynamicDeterminism to prove equal heaps".
         { eapply EvalTrueIsTrue; eauto. 
           - assert (h=h'').
@@ -313,8 +313,8 @@ Proof.
      apply In_singleton.
     SCase "Ref w e << (⊤)". 
      apply PhiInThetaTop.  
-  Case "get_ref e".  
-   inversion H2; subst.  
+  Case "get_ref e".     
+   inversion H2; subst.
    SCase "DeRef w ea0 << (eff0 ⊕ ReadAbs w)".
      inversion H1; subst. 
      apply EnsembleUnionComp.

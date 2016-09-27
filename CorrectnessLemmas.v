@@ -52,25 +52,44 @@ Proof.
   - intros x Hx. inversion Hx.
 Qed. 
 
-Require Export JMeq.
-Axiom DAInThetaImpliesNotEmpty:
-  forall da acts,
-    DA_in_Theta da (Some acts) ->
-    Some acts ~= Some (Empty_set ComputedAction).
+Lemma EmptyUnionisEmptySet_2 :
+  forall acts a,
+    Union ComputedAction acts a =  Empty_set ComputedAction -> 
+    acts = Empty_set ComputedAction /\ a = Empty_set ComputedAction.
+Proof.
+  intros. split.
+  + rewrite <- H.
+    apply Extensionality_Ensembles.
+    unfold Same_set, Included.
+    split; intros. 
+    * apply Union_introl; assumption.
+    * rewrite H in H0. inversion H0.
+ + rewrite <- H.
+   apply Extensionality_Ensembles.
+   unfold Same_set, Included.
+   split; intros. 
+   * apply Union_intror; assumption.
+   * rewrite H in H0. inversion H0.
+Qed.
 
 Lemma EmptyIsNil:
   forall phi, phi ⊑ Theta_Empty -> phi = Phi_Nil.
 Proof.
   induction phi; intros.
   - reflexivity. 
-  - unfold Theta_Empty, empty_set in H; 
+  - unfold Theta_Empty, empty_set in H. 
     dependent induction H; inversion H; subst; try (solve [inversion H2]).
-    + dependent induction H; try (solve [inversion H]); intros.
-      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
-      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
+    + clear H2. clear H0. clear a. clear acts. 
+      dependent induction H; try (solve [inversion H]); intros.
+      * eapply IHDA_in_Theta; eauto. apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
+      * eapply IHDA_in_Theta; eauto. apply EmptyUnionisEmptySet_2 in x.
+         destruct x; subst. intuition.
     + dependent induction H; try (solve [inversion H]).
-      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto. 
-      * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
+      * eapply IHDA_in_Theta; eauto.  apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
+      * eapply IHDA_in_Theta; eauto.  apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
   - inversion H; subst. 
     assert ( H_ : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H_.
     assert ( H__ : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H__.
@@ -80,16 +99,16 @@ Proof.
     rewrite Phi_Seq_Nil_R. reflexivity.
 Qed.
 
-
-
 Lemma EmptyInAnyTheta:
   forall phi theta, phi ⊑ Theta_Empty -> phi ⊑ theta .
 Proof.  
   induction phi; intros; try (solve [econstructor]).
   - econstructor. unfold Theta_Empty, empty_set in H.
     dependent induction H; dependent induction H; try (solve [inversion H]). 
-    * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
-    * eapply IHDA_in_Theta; eauto. eapply DAInThetaImpliesNotEmpty; eauto.
+    * eapply IHDA_in_Theta; eauto. apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
+    * eapply IHDA_in_Theta; eauto. apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
   - inversion H; subst. apply EmptyIsNil in H2. apply EmptyIsNil in H4. subst.
     apply PTS_Par. apply IHphi1. apply PTS_Nil.  apply IHphi1. apply PTS_Nil.
   - inversion H; subst. apply EmptyIsNil in H2. apply EmptyIsNil in H4. subst.
