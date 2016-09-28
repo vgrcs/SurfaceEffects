@@ -552,4 +552,4 @@ Proof.
     SCase "racts ⊑ eff".    
       inversion H; subst.
       apply PhiInThetaTop. 
-Admitted.
+Qed.
