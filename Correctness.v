@@ -419,10 +419,10 @@ Proof.
      SSCase " Phi_Elem (DA_Read r l v) ⊑ Some (singleton_set (CA_ReadConc r1 l0))".  
       apply PTS_Elem.
       simpl in H; inversion H; subst.
-      assert ( HD : (h'', Loc (Rgn2_Const true false r1) l0, Phi_Nil) 
-                    =  (h', Loc (Rgn2_Const true false r) l, aacts))
-        by admit. (*(eapply DynamicDeterminism; eauto).*) 
-      inversion HD; subst. 
+      assert (HD: H.Equal h'' h' /\  Loc (Rgn2_Const true false r1) l0 =
+                                     Loc (Rgn2_Const true false r) l /\ Phi_Nil = aacts)
+        by (eapply DynamicDeterminism_ext; eauto; apply HMapP.Equal_refl).
+      destruct HD as [? [H_ ?]]; inversion H_; subst.
       apply DAT_Read_Conc. apply In_singleton.
    SCase "DeRef w ea0 << (⊤)".   
      econstructor.  
@@ -497,13 +497,13 @@ Proof.
         inversion H20; subst. 
         assert (Phi_Elem (DA_Write r l v0) ⊑ effb0).
         apply PTS_Elem. inversion H21; subst.
-        assert ( HD : (heap', Loc (Rgn2_Const true false r0) l, aacts) 
-                      =  (h'', Loc (Rgn2_Const true false r1) l0, Phi_Nil))
-         by admit. (* (eapply DynamicDeterminism; eauto).*) 
-         inversion HD; subst.
-         inversion H; subst.
-         apply DAT_Write_Conc; apply In_singleton.
-         apply Theta_intror. apply Theta_intror. assumption.
+        assert (HD: H.Equal heap' h'' /\  Loc (Rgn2_Const true false r0) l =
+                                          Loc (Rgn2_Const true false r1) l0 /\ aacts = Phi_Nil)
+          by (eapply DynamicDeterminism_ext; eauto; apply HMapP.Equal_refl).
+        destruct HD as [? [H_ ?]]; inversion H_; subst.
+        inversion H; subst.
+        apply DAT_Write_Conc; apply In_singleton.
+        apply Theta_intror. apply Theta_intror. assumption.
     SCase "Assign w ea0 ev << (⊤)". 
       inversion H0; subst.   
       apply PhiInThetaTop.
