@@ -32,13 +32,13 @@ Axiom AllocAddressIsDeterministic:
     l = l0.
 
 Theorem DynamicDeterminism_ext : 
-  forall heap_a heap_b rgns env exp heap1 heap2 val1 val2 acts1 acts2,
+  forall heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2,
     H.Equal heap_a heap_b ->
-    (heap_a, rgns, env, exp) ⇓ (heap1, val1, acts1) ->
-    (heap_b, rgns, env, exp) ⇓ (heap2, val2, acts2) ->
+    (heap_a, env, rho, exp) ⇓ (heap1, val1, acts1) ->
+    (heap_b, env, rho, exp) ⇓ (heap2, val2, acts2) ->
     H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
-  intros heap_a heap_b rgns env exp heap1 heap2 val1 val2 acts1 acts2 Heq Dyn1. 
+  intros heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2 Heq Dyn1. 
   generalize dependent acts2; generalize dependent val2; generalize dependent heap2. generalize dependent heap_b;
   dependent induction Dyn1; intros heap_b Heq heap2 val2 acts2 Dyn2; inversion Dyn2; subst;
   try (solve [intuition]).
