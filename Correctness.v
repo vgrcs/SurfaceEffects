@@ -76,6 +76,120 @@ Proof.
     assumption. 
 Qed.
 
+Theorem DynamicDeterminism_ext_2 : 
+  forall heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2,
+    H.Equal heap_a heap_b ->
+    (heap_a, env, rho, exp) ⇓ (heap1, val1, acts1) ->
+    (heap_b, env, rho, exp) ⇓ (heap2, val2, acts2) ->
+    forall stty ty ctxt rgns static ee eff p,
+      (heap_a, env, rho, ee) ⇓ (heap_a, Eff eff, p) ->
+      BackTriangle (stty, ctxt, rgns, rho, exp, ee) ->
+      ReadOnlyPhi p ->
+      TcHeap (heap_a, stty) ->
+      TcRho (rho, rgns) ->
+      TcEnv (stty, rho, env, ctxt) -> 
+      TcExp (stty, ctxt, rgns, exp, ty, static) ->
+      acts1 ⊑ eff ->
+      H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
+
+(*Proof.
+  intros heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2 Heq Dyn1.
+  intros Dyn2.
+  intros stty ty ctxt rgns static ee eff p Hee Hback Hronly Hheap Hrho Henv Hexp Hsound.
+  generalize dependent acts2; generalize dependent val2; generalize dependent heap2. generalize dependent heap_b.
+  generalize dependent  ee. generalize dependent p. 
+  generalize dependent stty. generalize dependent ctxt. generalize dependent rgns. generalize dependent eff.
+  generalize dependent ty. generalize dependent static.
+  dependent induction Dyn1;  
+  intros static ty eff; intros Hsound rgns Hrho ctxt stty Hheap Henv Hexp p; intros Honly ee_exp Hee Hback;
+  intros heap_b Heq heap2 val2 acts2 Dyn2;
+  inversion Dyn2; subst; try(solve [intuition]).
+  - intuition. rewrite H in H1. inversion H1; subst. reflexivity.
+  - inversion Hback; subst.
+    + assert ( RH1 : H.Equal fheap fheap0 /\ Cls (env', rho', Mu f x ec' ee') = 
+                                           Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).  
+      eapply IHDyn1_1; eauto. 
+      inversion Hee; subst.
+      * { apply Theta_introl.
+          eapply Correctness with (p':=phia); eauto. 
+          - inversion Honly; subst. assumption. }
+      * admit.
+      * destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal aheap aheap0 /\ v = v0 /\ aacts = aacts0). 
+        inversion Hee; subst.  
+        inversion H16; subst.
+        assert (H_ : heap_a = fheap) by admit. 
+        eapply IHDyn1_2 with (eff:=effa1) (p:=phia0); eauto.
+        { eapply Correctness with (p':=phia0); eauto. 
+          - rewrite <- H_. eassumption.
+          - inversion Honly; subst. inversion H5; subst. assumption.
+          - rewrite <- H_. assumption. }
+        rewrite <- H_. assumption.
+        inversion Honly; subst. inversion H5; subst. assumption.
+        rewrite <- H_. assumption.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
+    
+        assert ( RH3 : H.Equal heap1 heap2 /\ val1 = val2 /\ bacts = bacts0).
+        inversion Hee; subst; inversion H16; subst. inversion Hexp;subst. 
+        
+        assert (heap_a = heap_b) by admit.
+        assert (heap_b = fheap) by admit.
+        assert (fheap = fheap0) by admit.
+        assert (fheap0 = aheap0) by admit.
+        rewrite H5 in H0. rewrite <- H0 in H2. rewrite <- H in H2.
+        assert (clsTcVal : exists stty',  
+                             (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                             /\ TcHeap (heap_a, stty')
+                             /\ TcVal (stty', 
+                                       Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0), 
+                                       subst_rho rho (Ty2_Arrow tya effc ty effe Ty2_Effect))) 
+          by (eapply ty_sound; eauto).
+        destruct clsTcVal as [sttyb [Weakb [TcHeapb TcVal_cls]]]; eauto.
+        
+        rewrite <- H7 in H8. rewrite <- H0 in H8. rewrite <- H in H8.
+        assert (argTcVal : exists stty',
+                             (forall l t', ST.find l sttyb = Some t' -> ST.find l stty' = Some t')
+                             /\ TcHeap (heap_a, stty')
+                             /\ TcVal (stty', v0, subst_rho rho tya))
+          by (eapply ty_sound; eauto using update_env, ext_stores__env, ext_stores__exp).
+        destruct argTcVal as [sttya [Weaka [TcHeapa TcVal_v']]]; eauto.
+        
+        inversion TcVal_cls as [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
+        inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | ]; subst.        rewrite <- H22 in TcVal_cls. 
+        do 2 rewrite subst_rho_arrow in H22. inversion H22. 
+        rewrite <- H15 in TcVal_v'.
+ 
+        eapply IHDyn1_3; eauto. 
+        { eapply Correctness; eauto. 
+          - admit.
+          - assert (aheap = aheap0) by admit. 
+            rewrite H7. assumption. 
+          - apply update_env; simpl. 
+            + eapply ext_stores__env with (stty:=sttyb); eauto.
+              apply update_env; [assumption | eapply ext_stores__val with (stty:=sttyb); eauto].
+            + admit.  
+        }
+        assert (aheap = aheap0) by admit. 
+        rewrite H7. assumption. 
+        
+        { apply update_env; simpl.  
+          - eapply ext_stores__env  with (stty:=sttyb); eauto. 
+            apply update_env.  
+            + eassumption.
+            + eapply ext_stores__val with (stty:=sttyb); eauto.
+          - admit. }
+        admit. 
+
+        
+        
+        destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+        auto.
+    + admit.
+    + admit.
+  - admit.
+*)
+Admitted.          
+
 Definition Correctness :
   forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,
     (h, env, rho, ea) ⇓ (h', v, p) ->
