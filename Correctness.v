@@ -635,7 +635,7 @@ Definition Correctness_ext :
       TcRho (rho, rgns) ->
       TcEnv (stty, rho, env, ctxt) -> 
       TcExp (stty, ctxt, rgns, ea, ty, static) ->
-      p ⊑ eff /\ H.Equal h h_ /\ v = v_ /\ p = p_.
+      p ⊑ eff /\ H.Equal h' h'_ /\ v = v_ /\ p = p_.
 Proof.
     intros h  h'  h'' env rho p  p' v  eff stty ctxt rgns ea ee BS1. 
     generalize dependent p'. 
@@ -644,7 +644,7 @@ Proof.
     generalize dependent ctxt.
     generalize dependent rgns.
     generalize dependent eff.
-    generalize dependent h''.  
+    generalize dependent h''.
     dynamic_cases (dependent induction BS1) Case;
     intros h'' eff rgns ctxt stty ee_exp p'; 
     intros h_ h'_ v_ p_ HEqual BS2;
@@ -655,7 +655,7 @@ Proof.
     inversion BS2; subst; intuition.
     rewrite H in H2. now inversion H2.
     Case "mu_app".       
-    assert (Phi_Seq (Phi_Seq facts aacts) bacts ⊑ eff).
+    assert (HSOUND : Phi_Seq (Phi_Seq facts aacts) bacts ⊑ eff).
     { 
       inversion HExp as  [ | | | | | 
                          ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
@@ -792,15 +792,17 @@ Proof.
       assert (HSubset : Phi_Seq facts aacts ⊑ (Union_Theta eff eff)) by
           (eapply EnsembleUnionComp; eauto).  
       
-      assert (HD: H.Equal h'' h'' /\ Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) =
-                                     Cls (env', rho', Mu f x ec' ee') /\ facts0 = facts).
-      { admit. }
-      destruct HD as [? [HD_ ?]]; inversion HD_; subst.
-      
-      assert (HD' : H.Equal h'' h'' /\  v' = v0 /\ aacts0 = aacts).
-      { admit. } 
-      destruct HD' as [? [? ?]]; subst. 
-      
+      assert (HD: facts  ⊑ eff /\
+                  H.Equal fheap h'' 
+                  /\  Cls (env', rho', Mu f x ec' ee') = Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0)
+                  /\ facts = facts0) by
+          (eapply  IHBS1_1 with (h_:=h''); eauto; apply HFacts.Equal_refl).
+      destruct HD as [A [HeqHeap [HEqCls HEqfacts]]]. symmetry in HEqCls.  inversion HEqCls; subst. 
+
+      assert (HD' : aacts  ⊑ eff /\  H.Equal h'' h'' /\ v0 =  v' /\ aacts =  aacts0) by
+          (eapply IHBS1_2; eauto; inversion HRonly; inversion H4; assumption).
+      destruct HD' as [A_ [B [C D]]]. symmetry in C, D. subst.
+
       assert (H_ : bacts ⊑ eff).
       { eapply IHBS1_3
         with (stty:=sttya) 
@@ -848,14 +850,16 @@ Proof.
         - inversion HRonly; inversion H4; subst; assumption. } 
       
       inversion H9; subst.
-      assert (HD: H.Equal h'' h'' /\  Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0)  =
-                                      Cls (env', rho', Mu f x ec' ee') /\ facts0 = facts)
-        by (admit).  
-      destruct HD as [? [H_ ?]]; inversion H_; subst. clear H_.
-      
-      assert (HD' : H.Equal h'' h'' /\ v' =  v0 /\ aacts0 =  aacts).
-      { admit. }
-      destruct HD' as [? [H__ ?]]; inversion H__; subst.
+      assert (HD: facts  ⊑ effa0 /\
+                  H.Equal h'' h'' 
+                  /\  Cls (env', rho', Mu f x ec' ee') = Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0)
+                  /\ facts = facts0) by
+          (eapply  IHBS1_1  with (h_:=h''); eauto; [apply HFacts.Equal_refl | now inversion HRonly]).
+      destruct HD as [A [HeqHeap [HEqCls HEqfacts]]].  symmetry in HEqCls.   inversion HEqCls; subst. 
+
+      assert (HD' : aacts  ⊑ effa2 /\  H.Equal h'' h'' /\ v0 =  v' /\ aacts =  aacts0) by
+          (eapply IHBS1_2; eauto; inversion HRonly; inversion H4; assumption).
+      destruct HD' as [A_ [B [C D]]]; symmetry in C, D; subst.
       
       assert (H_ : bacts  ⊑ effb0). 
       { eapply IHBS1_3
@@ -863,7 +867,7 @@ Proof.
                (ee:= ee') 
                (h'':= h''); eauto.
         - eapply ext_stores__bt; eauto. 
-        - inversion HRonly; subst. inversion H10; subst.  inversion H14; subst. assumption.
+        - inversion HRonly; subst. inversion H4; subst.  inversion H8; subst. assumption.
         - { apply update_env; simpl.  
             - eapply ext_stores__env; eauto. 
               apply update_env.  
@@ -892,7 +896,23 @@ Proof.
           - eapply ext_stores__val with (stty:=sttya); eauto. }
         SSSSCase "Extended TcExp". 
         eapply ext_stores__exp; eauto. }
-      exact H_. }
+      exact H_. } 
+    
+    inversion BS2; subst.  
+    assert (h = h_) by admit.
+    assert ( RH1 : facts ⊑ eff /\
+                   H.Equal fheap fheap0 /\ 
+                   Cls (env', rho', Mu f x ec' ee') = Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ 
+                   facts = facts0 ). 
+    { rewrite <- H in H2.
+      inversion HExp; subst.
+      eapply IHBS1_1; eauto.  
+      - inversion HBt; subst.
+        + admit.
+        + assumption.
+        + econstructor. }
+    destruct RH1 as [? [h_eq_1 [v_eq_1 a_eq_1]]]. inversion v_eq_1. subst.
+  
 Admitted.
 
 
