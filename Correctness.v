@@ -655,39 +655,39 @@ Proof.
     inversion BS2; subst; intuition.
     rewrite H in H2. now inversion H2.
     Case "mu_app".       
-    assert (HSOUND : Phi_Seq (Phi_Seq facts aacts) bacts ⊑ eff).
-    { 
-      inversion HExp as  [ | | | | | 
+    inversion HExp as  [ | | | | | 
                          ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
                          | | | | | | | | | | | | | | | | | | ]; subst.
-      assert (clsTcVal : exists stty',  
-                           (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
-                           /\ TcHeap (fheap, stty')
-                           /\ TcVal (stty', 
-                                     Cls (env', rho', Mu f x ec' ee'), 
-                         subst_rho rho (Ty2_Arrow tya effc ty effe Ty2_Effect))) 
-        by (eapply ty_sound; eauto).
-      destruct clsTcVal as [sttyb [Weakb [TcHeapb TcVal_cls]]]; eauto.
-      
-      assert (argTcVal : exists stty',
-                           (forall l t', ST.find l sttyb = Some t' -> ST.find l stty' = Some t')
-                           /\ TcHeap (aheap, stty')
-                           /\ TcVal (stty', v0, subst_rho rho tya))
-        by (eapply ty_sound; eauto using update_env, ext_stores__env, ext_stores__exp).
-      destruct argTcVal as [sttya [Weaka [TcHeapa TcVal_v']]]; eauto.
-      
-      inversion TcVal_cls as [ | | | 
-                               ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
-                               | | ]; subst. 
-      inversion TcExp_abs as [ | | | 
-                               ? ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
-                               | | | | | | | | | | | | | | | | | | | | ]; subst.
-      rewrite <- HSubst in TcVal_cls.
-      do 2 rewrite subst_rho_arrow in HSubst. 
-      inversion HSubst as [[H_tyx_tya A C D E]]; clear A C D E.
-      rewrite <- H_tyx_tya in TcVal_v'.
-      
-      apply PTS_Seq. 
+    assert (clsTcVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (fheap, stty')
+                         /\ TcVal (stty', 
+                                   Cls (env', rho', Mu f x ec' ee'), 
+                                   subst_rho rho (Ty2_Arrow tya effc ty effe Ty2_Effect))) 
+      by (eapply ty_sound; eauto).
+    destruct clsTcVal as [sttyb [Weakb [TcHeapb TcVal_cls]]]; eauto.
+    
+    assert (argTcVal : exists stty',
+                         (forall l t', ST.find l sttyb = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (aheap, stty')
+                         /\ TcVal (stty', v0, subst_rho rho tya))
+      by (eapply ty_sound; eauto using update_env, ext_stores__env, ext_stores__exp).
+    destruct argTcVal as [sttya [Weaka [TcHeapa TcVal_v']]]; eauto.
+    
+    inversion TcVal_cls as [ | | | 
+                             ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
+                             | | ]; subst. 
+    inversion TcExp_abs as [ | | | 
+                             ? ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
+                             | | | | | | | | | | | | | | | | | | | | ]; subst.
+    rewrite <- HSubst in TcVal_cls.
+    do 2 rewrite subst_rho_arrow in HSubst. 
+    inversion HSubst as [[H_tyx_tya A C D E]]; clear A C D E.
+    rewrite <- H_tyx_tya in TcVal_v'.
+    
+    assert (HSOUND : Phi_Seq (Phi_Seq facts aacts) bacts ⊑ eff).
+    
+    { apply PTS_Seq. 
       SCase "Phi_Seq facts aacts ⊑ eff".
       apply PTS_Seq.
       SSCase "facts ⊑ eff".
@@ -897,22 +897,111 @@ Proof.
         SSSSCase "Extended TcExp". 
         eapply ext_stores__exp; eauto. }
       exact H_. } 
-    
-    inversion BS2; subst.  
-    assert (h = h_) by admit.
-    assert ( RH1 : facts ⊑ eff /\
-                   H.Equal fheap fheap0 /\ 
+
+     
+    inversion BS2; subst. 
+    assert ( RH1 : H.Equal fheap fheap0 /\ 
                    Cls (env', rho', Mu f x ec' ee') = Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ 
                    facts = facts0 ). 
-    { rewrite <- H in H2.
-      inversion HExp; subst.
-      eapply IHBS1_1; eauto.  
-      - inversion HBt; subst.
-        + admit.
-        + assumption.
-        + econstructor. }
-    destruct RH1 as [? [h_eq_1 [v_eq_1 a_eq_1]]]. inversion v_eq_1. subst.
-  
+    { inversion HExp; subst.
+      inversion HBt; subst.
+      inversion HEff; subst.
+      - eapply IHBS1_1 with (ee:=efff1) (p':=phia); eauto. 
+        inversion HRonly.
+        assumption.
+      - eapply IHBS1_1; eauto.
+      - eapply IHBS1_1; eauto.
+        econstructor. }
+    destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst. 
+     
+    inversion HBt as [ | | | |  
+                       | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                       | ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea  
+                       | | | | | | | |]; subst. 
+    SCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
+       assert ( RH2 : H.Equal aheap aheap0 /\ v0 = v1 /\ aacts = aacts0).
+       { inversion HEff; subst.
+         inversion H11; subst.
+         assert (HEq_1 : fheap = h'').  
+         { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts0) in HR_ef. 
+           - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
+             assumption. assumption.
+           - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts0)) by
+                 (eapply eff_sound; eauto). 
+             eassumption. }
+         eapply IHBS1_2 with (p':=phia0); eauto .
+         - rewrite HEq_1. eassumption.
+         - inversion HRonly. inversion H5.  assumption.
+         - rewrite HEq_1. assumption. }
+       destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
+       
+       assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
+       { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya); eauto.
+         - admit.
+         - eapply ext_stores__bt; eauto.   
+         - { apply update_env; simpl.  
+             - eapply ext_stores__env; eauto. 
+               apply update_env.  
+               + eassumption.
+               + eapply ext_stores__val with (stty:=sttyb); eauto.
+             - eapply ext_stores__val with (stty:=sttya); eauto. }
+         - eapply ext_stores__exp; eauto. }
+       destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+       intuition.
+
+    SCase "Mu_App ef0 ea << Eff_App ef0 ea".   
+      assert ( RH2 : H.Equal aheap aheap0 /\ v0 = v1 /\ aacts = aacts0).
+      { inversion HEff; subst. 
+        assert (HEq_1 : fheap = h'').  
+        { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts0) in HR_ef. 
+          - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
+            assumption. assumption.
+          - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts0)) by
+                (eapply eff_sound; eauto). 
+            eassumption. }
+        eapply IHBS1_2; eauto .
+        - rewrite HEq_1. eassumption.
+        - rewrite HEq_1. assumption. }
+      destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
+      
+      assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
+      { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya); eauto.
+        - admit.
+        - eapply ext_stores__bt; eauto.   
+        - { apply update_env; simpl.  
+            - eapply ext_stores__env; eauto. 
+              apply update_env.  
+              + eassumption.
+              + eapply ext_stores__val with (stty:=sttyb); eauto.
+            - eapply ext_stores__val with (stty:=sttya); eauto. }
+        - eapply ext_stores__exp; eauto. }
+      destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+      intuition.
+      
+    SCase "Mu_App ef ea0 << (⊤)". 
+        assert ( RH2 : H.Equal aheap aheap0 /\ v0 = v1 /\ aacts = aacts0).
+        { inversion HEff; subst.
+          eapply IHBS1_2 with (ee:=⊤); eauto .
+          - econstructor.
+          - econstructor.
+          - eapply ext_stores__env; eauto. 
+          - eapply ext_stores__exp; eauto. }
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
+
+        assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
+        { eapply IHBS1_3 with (ee:=⊤) (stty:=sttya); eauto.
+          - admit.
+          - econstructor.
+          - { apply update_env; simpl.  
+              - eapply ext_stores__env; eauto. 
+                apply update_env.  
+                + eassumption.
+                + eapply ext_stores__val with (stty:=sttyb); eauto.
+              - eapply ext_stores__val with (stty:=sttya); eauto. }
+          - eapply ext_stores__exp; eauto. }
+        destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+        intuition.
+   Case "rgn_app".
 Admitted.
 
 
