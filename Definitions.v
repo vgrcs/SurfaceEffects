@@ -416,6 +416,14 @@ Inductive Det_Trace : Phi -> Prop :=
                                 not (Conflict_Traces (phi_as_list phi1) (phi_as_list phi2)) /\
                                 Disjoint_Traces (phi_as_list phi1) (phi_as_list phi2) ->
                                 Det_Trace (Phi_Par phi1 phi2). 
+(*
+Axiom DynamicConstraints : 
+  forall h env rho ef env' rho' f x ec' ee' facts ea0 v0 aacts eff p' p'',
+  (h, env, rho, ef) ⇓ (h, Cls (env', rho', Mu f x ec' ee'), facts) ->   
+  (h, env, rho, ea0) ⇓ (h, v0, aacts) ->
+  (h, env, rho, Eff_App ef ea0) ⇓ (h, Eff eff, p') ->
+  (h, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v0) env', rho', ee') ⇓ (h, Eff eff, p'').
+*)
 
 Reserved Notation "e '⇓' n" (at level 50, left associativity).
 Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
@@ -434,7 +442,8 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
                            (facts aacts bacts : Phi),
                       (heap, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
                       (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
-                      (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') ⇓ (bheap, v', bacts) ->
+                      (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') 
+                        ⇓ (bheap, v', bacts) ->
                       (heap, env, rho,  Mu_App ef ea) ⇓ (bheap, v', Phi_Seq (Phi_Seq facts aacts) bacts) 
   | BS_Rgn_App    : forall x er eb w v v'
                            (env env': Env) (rho rho' : Rho) 
@@ -444,13 +453,12 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
                       (fheap, env', update_R (x, v') rho' , eb) ⇓ (bheap, v, bacts) ->
                       (heap, env, rho, Rgn_App er w) ⇓ (bheap, v, Phi_Seq facts bacts)          
   | BS_Eff_App    : forall f x ef ea ec' ee' v v' 
-                           (env env': Env) (rho rho' : Rho) heap (facts aacts bacts : Phi) trace, 
+                           (env env': Env) (rho rho' : Rho) heap (facts aacts bacts : Phi), 
                       (heap, env, rho, ef) ⇓ (heap, Cls (env', rho', Mu f x ec' ee'), facts) ->
                       (heap, env, rho, ea) ⇓ (heap, v', aacts) ->
                       (heap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v') env', rho', ee') 
                         ⇓ (heap, v, bacts) -> 
-                      trace = Phi_Seq (Phi_Seq facts aacts) bacts ->
-                      (heap, env, rho, Eff_App ef ea) ⇓ (heap, v, trace)
+                      (heap, env, rho, Eff_App ef ea) ⇓ (heap, v, Phi_Seq (Phi_Seq facts aacts) bacts)
   | BS_Pair_Par   : forall env rho ea1 ef1 ea2 ef2 v1 v2 theta1 theta2
                            (heap heap_mu1 heap_mu2 heap' : Heap) (acts_mu1 acts_mu2 acts_eff1 acts_eff2 : Phi),
                       (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap, Eff theta1, acts_eff1) ->
