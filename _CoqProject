@@ -11,3 +11,4 @@ EffectSystem.v
 Determinism.v 
 DeterminismExt.v
 Correctness.v
+CorrectDeterminism.v
