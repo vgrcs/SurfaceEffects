@@ -142,15 +142,13 @@ Proof.
           {
           inversion HBt as [ | | | | | 
                              ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                             | | | | | | | | |]; subst.
+                             | | | | | | | |]; subst.
           SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
             inversion HEff; subst. 
             assert (facts  ⊑ effa1).
             eapply IHBS1_1; eauto. 
             inversion HRonly. assumption.
             apply Theta_introl. assumption. 
-          SSSCase " Mu_App ef ea0 << Eff_App ef ea0".  
-             eapply IHBS1_1; eauto. 
           SSSCase "Mu_App ef ea0 << (⊤)".  
             inversion HEff; subst.
             apply PhiInThetaTop.
@@ -159,7 +157,6 @@ Proof.
         SSCase " aacts ⊑ eff".   
           inversion HBt as [ | | | |  
                              | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                             | ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea  
                              | | | | | | | |]; subst.
           SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
             assert (H_ : aacts  ⊑ eff).
@@ -177,18 +174,6 @@ Proof.
                     (eapply eff_sound; eauto). 
                 eassumption. }
             exact H_.
-          SSSCase "Mu_App ef ea0 << Eff_App ef ea0".   
-            assert (H_ : aacts  ⊑ eff).
-            { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
-              - apply ReadOnlyTracePreservesHeap_1 in BS1_1. 
-                + symmetry in BS1_1.  rewrite <- BS1_1 in HEff.
-                  eapply IHBS1_2; eauto using ext_stores__env,  ext_stores__exp.    
-                  eapply EqualHeaps; eauto. now apply Equal_heap_equal.
-                + assumption.  
-              - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)) by
-                    (eapply eff_sound; eauto). 
-                eassumption. }
-            exact H_.
           SSSCase "Mu_App ef ea0 << (⊤)".  
             assert (H_ : aacts  ⊑ eff).
             { induction eff; inversion HEff; subst.
@@ -200,62 +185,7 @@ Proof.
         inversion HEff; subst; 
         inversion HBt as [ | | | |  
                            | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea  
                            | | | | | | | |]; subst.
-        SSSCase "Mu_App ef0 ea << Eff_App ef0 ea".
-          assert (HEq_1 : fheap = h'').   
-          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
-            - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
-              assumption. assumption. 
-            - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)) by
-                  (eapply eff_sound; eauto). 
-              eassumption. }
-          
-          assert (aacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ea, aacts)) by
-              (eapply eff_sound; eauto; rewrite HEq_1; assumption).
-
-          assert (HEq_2 : aheap = fheap).  
-          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in HR_ea.
-            - apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
-              assumption. assumption. 
-            - eassumption. }
- 
-          assert (facts  ⊑ eff). 
-          eapply IHBS1_1  with (stty:=stty) ; eauto.
-  
-          assert (aacts  ⊑ eff).      
-          { eapply IHBS1_2 with (stty:=stty); eauto.
-            - rewrite HEq_1. eassumption.
-            - eapply EqualHeaps; eauto. symmetry in HEq_1. now apply Equal_heap_equal. }  
-          
-          assert (HSubset : Phi_Seq facts aacts ⊑ (Union_Theta eff eff)) by
-              (eapply EnsembleUnionComp; eauto). 
- 
-          assert (HD: H.Equal h'' h'' /\ Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) =
-                                           Cls (env', rho', Mu f x ec' ee') /\ facts0 = facts)
-            by (eapply DynamicDeterminism_ext; eauto; 
-                rewrite HEq_1 in BS1_1; [apply HFacts.Equal_refl | assumption]).  
-          destruct HD as [? [HD_ ?]]; inversion HD_; subst. 
-          
-          assert (HD' : H.Equal h'' h'' /\  v' = v0 /\ aacts0 = aacts)
-            by (eapply DynamicDeterminism_ext; eauto). 
-          destruct HD' as [? [? ?]]; subst. 
-
-          assert (H_ : bacts ⊑ eff).
-          { eapply IHBS1_3
-            with (stty:=sttya) 
-                   (ee:= ee') 
-                   (h'':= h''); eauto. 
-            - eapply ext_stores__bt; eauto.
-            - inversion HRonly. assumption.
-            - { apply update_env; simpl.  
-                - eapply ext_stores__env; eauto. 
-                 apply update_env.  
-                  + eassumption.
-                  + eapply ext_stores__val with (stty:=sttyb); eauto.
-                - eapply ext_stores__val with (stty:=sttya); eauto. }
-            - eapply ext_stores__exp; eauto. }
-          exact H_.
         SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))".
           assert (HEq_1 : fheap = h'').  
           { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -385,7 +315,7 @@ Proof.
     inversion HBt; subst.
     apply PTS_Seq; inversion HEff; subst; apply PhiInThetaTop.
   Case "cond_true". 
-    inversion HBt as [ | | | | | | |   
+    inversion HBt as [ | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
                        | | | | | | ]; subst.
     SCase "Cond e et ef << Cond e efft efff". 
@@ -411,7 +341,7 @@ Proof.
       inversion HEff; subst.  
       constructor; apply PhiInThetaTop.
   Case "cond_false".    
-  inversion HBt as [ | | | | | | |   
+  inversion HBt as [ | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
                        | | | | | | ]; subst.
     SCase "Cond e et ef << Cond e efft efff".
@@ -436,7 +366,7 @@ Proof.
       constructor; apply PhiInThetaTop.
   Case "new_ref e".
   inversion HEff; subst; 
-  inversion HBt as [ | | | | | |   
+  inversion HBt as [ | | | | |   
                      | | | ? ? ? ? ? ? ? ? ? TcExp_e HBt_e
                      | | | | | ]; subst.
     apply EnsembleUnionComp.    
@@ -449,7 +379,7 @@ Proof.
     SCase "Ref w e << (⊤)". 
      apply PhiInThetaTop.  
   Case "get_ref e".     
-   inversion HBt as [ | | | | | | | | | 
+   inversion HBt as [ | | | | | | | | 
                       | ? ? ? ? ? ? ? ? ? TcExp_ea0 HBt_ea0
                       | | | | ]; subst.
    SCase "DeRef w ea0 << (eff0 ⊕ ReadAbs w)".
@@ -488,7 +418,7 @@ Proof.
        apply PTS_Elem. 
        apply DAT_Top.
   Case "set_ref e1 e2".
-    inversion HBt as [| | | | | | | | | | |
+    inversion HBt as [| | | | | | | | | |
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ]; subst.

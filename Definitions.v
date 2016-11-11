@@ -726,15 +726,6 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                         ReadOnlyStatic (fold_subst_eps rho static_ef) ->
                         ReadOnlyStatic (fold_subst_eps rho static_ea) ->
                         BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea)) 
-  | BT_App_Conc_2   : forall  stty ctxt rgns rho (ef ea: Expr)
-                              ty_ef ty_ea  static_ef static_ea,
-                        TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
-                        TcExp (stty, ctxt, rgns, ea, ty_ea, static_ea) ->
-                        BackTriangle (stty, ctxt, rgns, rho, ef, Eff_App ef ea) ->
-                        BackTriangle (stty, ctxt, rgns, rho, ea, Eff_App ef ea) ->
-                        ReadOnlyStatic (fold_subst_eps rho static_ef) ->
-                        ReadOnlyStatic (fold_subst_eps rho static_ea) ->
-                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, Eff_App ef ea) 
   | BT_Rgn_App      : forall stty ctxt rgns rho er w ty_eb static_er,
                         TcExp (stty, ctxt, rgns, er, ty_eb, static_er) ->
                         TcExp (stty, ctxt, rgns, ∅, Ty2_Effect, Empty_Static_Action) ->
