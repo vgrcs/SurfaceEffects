@@ -30,7 +30,90 @@ Axiom AllocAddressIsDeterministic:
   forall r0 l l0 heap,
     find_H (r0, l0) heap = find_H (r0, l) heap ->
     l = l0.
- 
+
+Theorem DynamicDeterminism_ext_1 : 
+  forall heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2 theta,
+    H.Equal heap_a heap_b ->
+    acts1 ⊑ theta -> 
+    acts2 ⊑ theta -> 
+    (heap_a, env, rho, exp) ⇓ (heap1, val1, acts1) ->
+    (heap_b, env, rho, exp) ⇓ (heap2, val2, acts2) ->
+    H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
+Proof.
+  intros heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2 theta Heq Hsound1 Hsound2 Dyn1. 
+  generalize dependent acts2; generalize dependent val2; generalize dependent heap2. 
+  generalize dependent heap_b.
+  dependent induction Dyn1;
+  intros heap_b Heq heap2 val2 acts2 Hsound2 Dyn2; inversion Dyn2; subst;
+  try (solve [intuition]).
+  - intuition. rewrite H in H1. inversion H1; subst. reflexivity.
+  - assert ( RH1 : H.Equal fheap fheap0 /\ 
+                   Cls (env', rho', Mu f x ec' ee') = Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ 
+                   facts = facts0 ).
+    eapply IHDyn1_1; eauto. 
+    inversion Hsound1. inversion H1. assumption.
+    inversion Hsound2. inversion H1. assumption.
+    
+    destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+    assert ( RH2 : H.Equal aheap aheap0 /\ v = v0 /\ aacts = aacts0).
+    eapply IHDyn1_2; eauto.
+    inversion Hsound1. inversion H1. assumption.
+    inversion Hsound2. inversion H1. assumption.
+
+    destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
+    
+    assert ( RH3 : H.Equal heap1 heap2 /\ val1 = val2 /\ bacts = bacts0).
+    eapply IHDyn1_3; eauto. 
+    inversion Hsound1. assumption.
+    inversion Hsound2. assumption.
+
+    destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+    auto.
+  - admit.
+  - admit.
+  - assert (HR1 : H.Equal heap_a heap_b /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0). 
+    eapply IHDyn1_1; eauto.
+    inversion Hsound1. inversion H7. assumption.
+    inversion Hsound2. inversion H7. assumption.
+  
+    destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+    assert (HR2 : H.Equal heap_a heap_b /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3). 
+    eapply IHDyn1_2; eauto.
+    inversion Hsound1. inversion H7. assumption.
+    inversion Hsound2. inversion H7. assumption.
+
+    destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+    assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0). 
+    eapply IHDyn1_3; eauto.
+    inversion Hsound1. inversion H9. assumption.
+    inversion Hsound2. inversion H9. assumption.
+
+    inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3. 
+    assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
+    eapply IHDyn1_4; eauto.  
+    inversion Hsound1. inversion H10. assumption.
+    inversion Hsound2. inversion H10. assumption.
+
+    inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
+    intuition. 
+    eapply unique_heap_new with (heapa := heap_a) (heapb := heap_b) (theta1:=theta0) (theta2:=theta3). 
+    + eassumption. (* from correctness *)
+    + eassumption. (* from correctness *) 
+    + intuition.
+    + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
+        by (eapply Det_trace_from_theta; eauto; 
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
+      now inversion H11.
+    + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
+        by (eapply Det_trace_from_theta; eauto; 
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
+      now inversion H11.
+    + assumption.
+    + assumption.
+    + assumption.
+  - admit.
+Admitted.
+
 Theorem DynamicDeterminism_ext : 
   forall heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2,
     H.Equal heap_a heap_b ->
@@ -39,7 +122,8 @@ Theorem DynamicDeterminism_ext :
     H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
   intros heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2 Heq Dyn1. 
-  generalize dependent acts2; generalize dependent val2; generalize dependent heap2. generalize dependent heap_b;
+  generalize dependent acts2; generalize dependent val2; generalize dependent heap2. 
+  generalize dependent heap_b.
   dependent induction Dyn1; intros heap_b Heq heap2 val2 acts2 Dyn2; inversion Dyn2; subst;
   try (solve [intuition]).
   - intuition. rewrite H in H1. inversion H1; subst. reflexivity.
