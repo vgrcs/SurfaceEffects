@@ -236,8 +236,8 @@ uninstall: uninstall_me.sh
 	@echo "B $(COQLIB) stm" >> .merlin
 	@echo "B $(COQLIB) grammar" >> .merlin
 	@echo "B $(COQLIB) config" >> .merlin
-	@echo "B /home/vitor/Coq/SurfaceEffects" >> .merlin
-	@echo "S /home/vitor/Coq/SurfaceEffects" >> .merlin
+	@echo "B /home/banshee/Unito/SurfaceEffects" >> .merlin
+	@echo "S /home/banshee/Unito/SurfaceEffects" >> .merlin
 
 clean::
 	rm -f $(OBJFILES) $(OBJFILES:.o=.native) $(NATIVEFILES)

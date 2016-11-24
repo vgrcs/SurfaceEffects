@@ -288,7 +288,8 @@ Proof.
  
       eapply BS_Mu_App in BS1_3; eauto.
       assert (RH : H.Equal h' h'_ /\ v = v_ /\ Phi_Seq (Phi_Seq facts aacts) bacts = p_).
-      eapply DynamicDeterminism_ext; eauto. 
-      intuition.
-   Case "rgn_app".
+      eapply DynamicDeterminism_ext_1; eauto.
+      admit.  
+      intuition.   
+  Case "rgn_app".
 Admitted.
