@@ -416,14 +416,7 @@ Inductive Det_Trace : Phi -> Prop :=
                                 not (Conflict_Traces (phi_as_list phi1) (phi_as_list phi2)) /\
                                 Disjoint_Traces (phi_as_list phi1) (phi_as_list phi2) ->
                                 Det_Trace (Phi_Par phi1 phi2). 
-(*
-Axiom DynamicConstraints : 
-  forall h env rho ef env' rho' f x ec' ee' facts ea0 v0 aacts eff p' p'',
-  (h, env, rho, ef) ⇓ (h, Cls (env', rho', Mu f x ec' ee'), facts) ->   
-  (h, env, rho, ea0) ⇓ (h, v0, aacts) ->
-  (h, env, rho, Eff_App ef ea0) ⇓ (h, Eff eff, p') ->
-  (h, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v0) env', rho', ee') ⇓ (h, Eff eff, p'').
-*)
+
 
 Reserved Notation "e '⇓' n" (at level 50, left associativity).
 Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=

@@ -181,6 +181,7 @@ Proof.
   intros k1 v1 k2 v2 b H.
   unfold subst_in_type.
   induction b; simpl; try (solve [simpl; reflexivity ]).
+  - f_equal; [apply IHb1 | apply IHb2].
   - f_equal; [ | apply IHb].
     now apply  subst_type_rgn_comm_2.
   - f_equal; [ apply IHb1 | |  apply IHb2 | |  apply IHb3]; eauto using subst_type_eps_comm_2.

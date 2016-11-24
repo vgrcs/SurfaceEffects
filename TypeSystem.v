@@ -158,6 +158,20 @@ Proof.
     + destruct sa; rewrite <- H2; simpl; f_equal.
 Qed.
 
+Lemma subst_rho_pair : 
+  forall rho t1 t2,
+    subst_rho rho (Ty2_Pair t1 t2) = Ty2_Pair (subst_rho rho t1) (subst_rho rho t2).
+Proof.
+  unfold subst_rho.
+  unfold R.fold. unfold R.Raw.fold.
+  intro rho. destruct rho. simpl. induction this; intros t1 t2.
+  - reflexivity.
+  - assert (Hl: R.Raw.bst this1) by (inversion is_bst; auto).
+    assert (Hr: R.Raw.bst this2) by (inversion is_bst; auto).
+    rewrite IHthis1 by assumption. f_equal. 
+    unfold subst_in_type; simpl.
+    rewrite IHthis2 by assumption. f_equal. 
+Qed.
  
 Lemma subst_rho_arrow :
   forall rho tyr1 eff1 tyr2 eff2 tyr3,
@@ -403,18 +417,23 @@ Proof.
   unfold open, close_var.
   intros rho w v' rho' x tyr0 tyr Hcl1 HF.  
   generalize dependent 0.   
-  generalize dependent tyr. generalize dependent tyr0.
+  generalize dependent tyr. generalize dependent tyr0. 
   induction tyr0; induction tyr; intros n;
   simpl;
   repeat (rewrite subst_rho_natural ||
                   rewrite subst_rho_boolean ||
                   rewrite subst_rho_unit ||
                   rewrite subst_rho_forallrgn ||
-                  rewrite subst_rho_effect
+                  rewrite subst_rho_effect ||
+                  rewrite subst_rho_pair
          );
   try (solve [intro Z; inversion Z | intro Y; reflexivity | intro X; assumption |
               intros; rewrite subst_rho_tyref in H; inversion H |
               intros; rewrite subst_rho_arrow in H; inversion H ]).
+  - inversion Hcl1; subst. 
+    intros. f_equal; inversion H.  
+    + erewrite <- IHtyr0_1; eauto.
+    + erewrite <- IHtyr0_2; eauto. 
   - intro. symmetry in H. rewrite  subst_rho_tyref in H.
     rewrite  subst_rho_tyref in H. inversion H as [ [HR1 HR2] ].
     repeat rewrite subst_rho_tyref. f_equal.

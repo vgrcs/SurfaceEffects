@@ -3,7 +3,9 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Arith.EqNat.
 Require Import Ascii.
-Require Import Keys.
+
+Add LoadPath "." as Top.
+Require Import Top.Keys.
 
 Definition empty_set `{T: Type} := Empty_set T.
 Definition singleton_set `{T: Type} (e: T) := Singleton T e.
@@ -47,7 +49,8 @@ Inductive type2 :=
   | Ty2_Natural : type2
   | Ty2_Boolean : type2
   | Ty2_Effect  : type2
-  | Ty2_Unit    : type2                   
+  | Ty2_Unit    : type2 
+  | Ty2_Pair    : type2 -> type2 -> type2                  
   | Ty2_Ref     : rgn2_in_typ -> type2 -> type2
   | Ty2_Arrow   : type2 -> Epsilon2 -> type2 -> Epsilon2 -> type2 -> type2
   | Ty2_ForallRgn : Epsilon2 -> type2 -> type2.
@@ -77,6 +80,7 @@ Fixpoint opening_rgn_exp (k: nat) (u: rgn2_in_typ) (t: type2) {struct t} : type2
   | Ty2_Boolean => t
   | Ty2_Effect  => t
   | Ty2_Unit    => t                     
+  | Ty2_Pair ty1 ty2  =>  Ty2_Pair (opening_rgn_exp k u ty1)  (opening_rgn_exp k u ty2) 
   | Ty2_Ref rgn ty => Ty2_Ref (opening_rgn_in_rgn2 k u rgn) (opening_rgn_exp k u ty)
   | Ty2_Arrow aty ceff crty eeff erty => Ty2_Arrow (opening_rgn_exp k u aty)
                                                    (opening_rgn_in_eps2 k u ceff) (opening_rgn_exp k u crty)
@@ -117,7 +121,8 @@ Fixpoint subst_type (z : Name) (u : rgn2_in_exp) (t : type2) {struct t} : type2 
     | Ty2_Natural => Ty2_Natural
     | Ty2_Boolean => Ty2_Boolean
     | Ty2_Effect  => Ty2_Effect
-    | Ty2_Unit    => Ty2_Unit                       
+    | Ty2_Unit    => Ty2_Unit
+    | Ty2_Pair t1 t2  => Ty2_Pair (subst_type z u t1) (subst_type z u t2)                      
     | Ty2_Ref r t => Ty2_Ref (subst_rgn z u r) (subst_type z u t)
     | Ty2_Arrow aty ceff crty eeff erty => Ty2_Arrow (subst_type z u aty) (subst_eps z u ceff) (subst_type z u crty)
                                                      (subst_eps z u eeff) (subst_type z u erty)
@@ -152,7 +157,8 @@ Fixpoint frv (t: type2) : Ensemble Name :=
   | Ty2_Natural    => empty_set
   | Ty2_Boolean    => empty_set
   | Ty2_Effect     => empty_set
-  | Ty2_Unit       => empty_set                        
+  | Ty2_Unit       => empty_set
+  | Ty2_Pair t1 t2 => set_union (frv t1) (frv t2)                        
   | Ty2_Ref rgn ty => set_union (free_rgn_vars_in_rgn2 rgn) (frv ty)
   | Ty2_Arrow aty ceff crty eeff erty =>
                       set_union (frv aty)
@@ -192,7 +198,8 @@ Fixpoint closing_rgn_exp (k: nat) (x: Name) (t: type2) {struct t} : type2 :=
   | Ty2_Natural => t
   | Ty2_Boolean => t
   | Ty2_Effect  => t
-  | Ty2_Unit    => t                     
+  | Ty2_Unit    => t
+  | Ty2_Pair t1 t2 => Ty2_Pair  (closing_rgn_exp k x t1) (closing_rgn_exp k x t2)
   | Ty2_Ref rgn ty => Ty2_Ref (closing_rgn_in_rgn2 k x rgn) (closing_rgn_exp k x ty)
   | Ty2_Arrow aty ceff crty eeff erty => Ty2_Arrow (closing_rgn_exp k x aty)
                                                    (closing_rgn_in_eps2 k x ceff) (closing_rgn_exp k x crty)
@@ -224,6 +231,8 @@ Definition lc u := lc_type_rgn (mk_rgn_type u).
 
 Inductive lc_type : type2 -> Prop :=
   | lc_natural : lc_type Ty2_Natural
+  | lc_pair    : forall t1 t2,
+                   lc_type t1 -> lc_type t2 -> lc_type (Ty2_Pair t1 t2)
   | lc_ref     : forall r t,
                    lc_type_rgn r -> lc_type t -> lc_type (Ty2_Ref r t)
   | lc_arrow   : forall aty ceff crty eeff erty,
@@ -309,8 +318,10 @@ Qed.
  
 Lemma SUBST_AS_CLOSE_OPEN : subst_as_close_open.
 Proof.
-  intros x t u H. unfold open, close_var. generalize 0. intro.
+  intros x t u H. unfold open, close_var. generalize 0. intro. 
   dependent induction t; intros; simpl; try (solve [reflexivity]).
+  - inversion H; subst.
+    f_equal; [apply IHt1 | apply IHt2]; assumption.
   - f_equal;[ | apply IHt]. unfold subst_rgn, opening_rgn_in_rgn2, closing_rgn_in_rgn2.
     unfold rgn2_in_typ in r. dependent induction r. 
     + reflexivity.
@@ -385,6 +396,7 @@ Proof.
   intros t x H.  unfold close_var, open_var. generalize 0.
   induction t; simpl; intuition;
   unfold not_set_elem, set_union, empty_set, Complement, not in *.
+  - f_equal; [apply IHt1 | apply IHt2]; simpl in H; intuition.
   - simpl in H. assert (H' : In Name (free_rgn_vars_in_rgn2 r) x -> False)
       by (intros; apply H; now apply Union_introl).
     f_equal; unfold rgn2_in_typ in r; dependent induction r; subst; simpl.
@@ -480,6 +492,7 @@ Proof.
   intros x t H. unfold open_var, close_var. generalize 0.
   induction H; intros; simpl.
   - reflexivity.
+  - f_equal; [apply IHlc_type1 | apply IHlc_type2].
   - f_equal; [ rewrite open_close_rgn; auto | apply IHlc_type].
   - f_equal; try (solve [rewrite  open_close_eps; auto]); [apply IHlc_type1 | apply IHlc_type2 | apply IHlc_type3].
   - f_equal. rewrite  open_close_eps; auto. apply  IHlc_type.
@@ -517,6 +530,7 @@ Proof.
   intros u t Hlc. unfold open.
   generalize 0. induction Hlc; intros; simpl.
   - reflexivity.
+  - f_equal; [apply IHHlc1  | apply IHHlc2].
   - f_equal; [| apply IHHlc].
     unfold opening_rgn_in_rgn2.
     unfold rgn2_in_typ in r. dependent induction r.
@@ -597,6 +611,7 @@ Proof.
   - reflexivity.
   - reflexivity.
   - reflexivity.  
+  - f_equal; [apply IHt1 |  apply IHt2]; assumption.
   - (*unfold open_rgn_in_type, close_rgn_in_type; simpl.*)
     f_equal; [ |  apply IHt]; auto.
     fold (subst_rgn x u (opening_rgn_in_rgn2 n v r)).
@@ -694,6 +709,9 @@ Proof.
   - reflexivity.
   - reflexivity.
   - reflexivity.  
+  - f_equal; [apply IHt1 | apply IHt2];
+    unfold not_set_elem, Complement in *; 
+    simpl in H; intuition.
   - unfold not_set_elem, Complement in H.
     f_equal; [ | apply IHt].
     + apply subst_fresh_rgn.
