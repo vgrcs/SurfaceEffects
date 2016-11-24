@@ -14,6 +14,7 @@ Require Import Top.Nameless.
 Require Import Top.CorrectnessLemmas.
 Require Import Top.Environment.
 Require Import Top.Heap. 
+Require Import Top.Determinism.
 Require Import Omega.
 
 Module TypeSoundness.
@@ -608,9 +609,21 @@ Proof.
     edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto.
     inversion TcVal_app1 as [A B [C D HRApp1] | | | | | |]; subst. 
     inversion TcVal_app2 as [A B [C D HRApp2] | | | | | |]; subst.  
-    exists sttym. intuition.
+    exists sttym. intuition. 
     SCase "TcHeap".
-      admit.
+      assert (HPermute : H.Equal hp' heap_mu1).
+      eapply unique_heap_new with (heapa:=hp) (heapb:=hp) (theta1:=theta1) (theta2:=theta2); eauto. 
+      SSCase "DetTrace_1".
+        eapply Dynamic_DetTrace; eauto.
+      SSCase "DetTrace_2".
+        eapply Dynamic_DetTrace; eauto.
+      SSCase "Heap facts".
+        apply HFacts.Equal_refl.
+      SSCase "Additional rule ==>*". 
+        admit.
+      eapply EqualHeaps; eauto. 
+      apply HFacts.Equal_sym.
+      assumption.
     SCase "TcVal".
       econstructor; [rewrite <- HRApp1 | rewrite <- HRApp2]; constructor.
   Case "cond_true".  
