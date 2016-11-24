@@ -787,8 +787,14 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
                    TcEnv (stty, rho, env, ctxt) ->
                    TcExp (stty, ctxt, rgns, e, t, Empty_Static_Action) ->
                    TcVal (stty, Cls (env, rho, e), subst_rho rho t) 
-  | TC_Unit     : forall stty, TcVal (stty, Unit, Ty2_Unit)
-  | TC_Eff      : forall stty e, TcVal (stty, Eff e, Ty2_Effect)
+  | TC_Unit    : forall stty, 
+                   TcVal (stty, Unit, Ty2_Unit)
+  | TC_Pair    : forall stty v1 v2 rho ty1 ty2,
+                   TcVal (stty, Num v1, subst_rho rho ty1) ->
+                   TcVal (stty, Num v2, subst_rho rho ty2) ->
+                   TcVal (stty, Pair (v1, v2), subst_rho rho (Ty2_Pair ty1 ty2))
+  | TC_Eff     : forall stty e, 
+                   TcVal (stty, Eff e, Ty2_Effect)
        
                         
 with TcEnv : (Sigma * Rho * Env * Gamma) -> Prop :=
@@ -914,7 +920,14 @@ Proof.
     subst.
     econstructor; eauto.
   - intros.
-     unfold mk_TcVal_ext_store_ty, 
+    unfold mk_TcVal_ext_store_ty, 
+           mk_TcEnv_ext_store_ty, 
+           get_store_typing_val, 
+           get_store_typing_env in *; simpl in *.
+    subst.
+    econstructor; eauto.
+  - intros.
+    unfold mk_TcVal_ext_store_ty, 
            mk_TcEnv_ext_store_ty, 
            get_store_typing_val, 
            get_store_typing_env in *; simpl in *.

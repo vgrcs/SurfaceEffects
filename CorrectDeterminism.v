@@ -140,7 +140,7 @@ Proof.
       
       inversion TcVal_cls as [ | | | 
                                ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
-                               | | ]; subst. 
+                               | | |]; subst. 
       inversion TcExp_abs as [ | | | 
                                ? ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
                                | | | | | | | | | | | | | | | | | | | | |]; subst.

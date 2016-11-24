@@ -105,7 +105,7 @@ Proof.
          eauto using update_env, ext_stores__env, ext_stores__exp).
 
 
-    inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
+    inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | | ]; subst. 
 
     rewrite <- H4 in TcVal_cls. 
@@ -137,7 +137,7 @@ Proof.
     apply sound_comp.
     
     eapply IHD1; eauto.
-    inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
+    inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | | ]; subst. 
     do 2 rewrite subst_rho_forallrgn in H5. inversion H5. clear H5.
     unfold open_rgn_eff.
@@ -168,7 +168,7 @@ Proof.
         (eapply IHD2 with (stty := sttyb);
          eauto using update_env, ext_stores__env, ext_stores__exp).
 
-    inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
+    inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | | ]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |]; subst.
 
     rewrite <- H4 in TcVal_cls. 
