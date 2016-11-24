@@ -106,7 +106,7 @@ Proof.
   Case "mu_app".     
     inversion HExp as  [ | | | | | 
                          ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
-                         | | | | | | | | | | | | | | | | | | ]; subst.
+                         | | | | | | | | | | | | | | | | | | |]; subst.
     assert (clsTcVal : exists stty',  
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
                /\ TcHeap (fheap, stty')
@@ -128,7 +128,7 @@ Proof.
                                | | ]; subst. 
       inversion TcExp_abs as [ | | | 
                                ? ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
-                               | | | | | | | | | | | | | | | | | | | | ]; subst.
+                               | | | | | | | | | | | | | | | | | | | | |]; subst.
       rewrite <- HSubst in TcVal_cls.
       do 2 rewrite subst_rho_arrow in HSubst. 
       inversion HSubst as [[H_tyx_tya A C D E]]; clear A C D E.
@@ -142,7 +142,7 @@ Proof.
           {
           inversion HBt as [ | | | | | 
                              ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                             | | | | | | | |]; subst.
+                             | | | | | | | | |]; subst.
           SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
             inversion HEff; subst. 
             assert (facts  ⊑ effa1).
@@ -157,7 +157,7 @@ Proof.
         SSCase " aacts ⊑ eff".   
           inversion HBt as [ | | | |  
                              | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                             | | | | | | | |]; subst.
+                             | | | | | | | | |]; subst.
           SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
             assert (H_ : aacts  ⊑ eff).
             { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -185,7 +185,7 @@ Proof.
         inversion HEff; subst; 
         inversion HBt as [ | | | |  
                            | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | | | | | | |]; subst.
+                           | | | | | | | | |]; subst.
         SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))".
           assert (HEq_1 : fheap = h'').  
           { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -260,7 +260,7 @@ Proof.
   Case "rgn_app".
     inversion HExp as  [ | | | | | 
                          | ? ? ? ? ? ? ? ? HTcExp_er HTcRgn_w 
-                         | | | | | | | | | | | | | | | | | ]; subst.
+                         | | | | | | | | | | | | | | | | | |]; subst.
     assert (clsTcVal : exists stty',  
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
                /\ TcHeap (fheap, stty')
@@ -274,7 +274,7 @@ Proof.
                                | | ]; subst. 
     inversion TcExp_abs as [ | | | |
                                ? ? ? ? ? ? ? HNo HLc1 HLc2 HBt_eb HTExp_eb
-                               | | | | | | | | | | | | | | | | | | | ]; subst.
+                               | | | | | | | | | | | | | | | | | | | |]; subst.
     rewrite <- HSubst in TcVal_cls.
     do 2 rewrite subst_rho_forallrgn in HSubst.
     inversion HSubst as [[H_fold A]]; clear A.
@@ -311,11 +311,14 @@ Proof.
            apply PhiInThetaTop.
       - inversion HEff; subst.
         apply PhiInThetaTop. }
-  Case "par_pair".
-    inversion HBt; subst.
-    apply PTS_Seq; inversion HEff; subst; apply PhiInThetaTop.
+  Case "par_pair". 
+    inversion HBt; subst. 
+    SCase "concat mu_app effects". 
+      admit. 
+    SCase "top". 
+      apply PTS_Seq; inversion HEff; subst; apply PhiInThetaTop.
   Case "cond_true". 
-    inversion HBt as [ | | | | | |   
+    inversion HBt as [ | | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
                        | | | | | | ]; subst.
     SCase "Cond e et ef << Cond e efft efff". 
@@ -341,7 +344,7 @@ Proof.
       inversion HEff; subst.  
       constructor; apply PhiInThetaTop.
   Case "cond_false".    
-  inversion HBt as [ | | | | | |   
+  inversion HBt as [ | | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
                        | | | | | | ]; subst.
     SCase "Cond e et ef << Cond e efft efff".
@@ -366,7 +369,7 @@ Proof.
       constructor; apply PhiInThetaTop.
   Case "new_ref e".
   inversion HEff; subst; 
-  inversion HBt as [ | | | | |   
+  inversion HBt as [ | | | | | |   
                      | | | ? ? ? ? ? ? ? ? ? TcExp_e HBt_e
                      | | | | | ]; subst.
     apply EnsembleUnionComp.    
@@ -379,7 +382,7 @@ Proof.
     SCase "Ref w e << (⊤)". 
      apply PhiInThetaTop.  
   Case "get_ref e".     
-   inversion HBt as [ | | | | | | | | 
+   inversion HBt as [ | | | | | | | | | 
                       | ? ? ? ? ? ? ? ? ? TcExp_ea0 HBt_ea0
                       | | | | ]; subst.
    SCase "DeRef w ea0 << (eff0 ⊕ ReadAbs w)".
@@ -418,7 +421,7 @@ Proof.
        apply PTS_Elem. 
        apply DAT_Top.
   Case "set_ref e1 e2".
-    inversion HBt as [| | | | | | | | | |
+    inversion HBt as [| | | | | | | | | | |
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ]; subst.
@@ -547,4 +550,4 @@ Proof.
     SCase "racts ⊑ eff".    
       inversion HEff; subst.
       apply PhiInThetaTop. 
-Qed.
+Admitted.

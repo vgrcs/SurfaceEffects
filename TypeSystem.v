@@ -554,7 +554,7 @@ Proof.
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  
     eapply ext_stores__env; eauto. eapply ext_stores__exp. eassumption. eassumption. 
     inversion TcVal_mu as [ | | | ? ? ? ? ? ? ?   TcRho_rho' TcEnv_env' TcExp_abs | | ] ; subst.      
-    inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | |  | | | | | | | | | | | | | | | | | | ]; subst.
+    inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst.
     rewrite <- H4 in TcVal_mu. 
     do 2 rewrite subst_rho_arrow in H4. inversion H4.
     assert (SubstEq1: subst_rho rho' tyx = subst_rho rho tya) by assumption. 
@@ -569,7 +569,7 @@ Proof.
   Case "rgn_app".     
     edestruct IHD1 as [sttyl [Weak1 [TcHeap1 TcVal_lam]]]; eauto. 
     inversion TcVal_lam as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_lam | | ]; subst.   
-    inversion TcExp_lam as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | |  | | | | | | | | | | |  ]; subst.  
+    inversion TcExp_lam as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst.  
     edestruct IHD2 as [sttyr [Weak2 [TcHeap2 TcVal_res]]]; eauto using update_env, ext_stores__env, ext_stores__exp.
     apply update_rho. assumption. assumption. eapply extended_rho; eauto. 
     exists sttyr; intuition. 
@@ -588,7 +588,7 @@ Proof.
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto.
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto using ext_stores__env, ext_stores__exp.
     inversion TcVal_mu as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
-    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | |  | | | | | | | | | | |  ]; subst. 
+    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst. 
     edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
     SCase "Extended Env".
       apply update_env.
@@ -603,6 +603,8 @@ Proof.
     exists sttyb. intuition.
     rewrite subst_rho_effect. rewrite subst_rho_effect in TcVal_res.
     assumption.
+  Case "par_pair".
+    admit.
   Case "cond_true".  
     edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
     edestruct IHD2 as [stty1 [Weak1 [TcHeapv1 TcVal_e1]]]; 
@@ -737,6 +739,6 @@ Proof.
   Case "eff_concat". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_top". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_empty". exists stty. intuition. rewrite subst_rho_effect. constructor.
-Qed.    
+Admitted.
 
 End TypeSoundness.

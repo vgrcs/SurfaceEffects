@@ -251,14 +251,15 @@ Inductive Conflict_Traces : Trace -> Trace -> Prop :=
                   Conflict_Traces phi1 phi2.
 
 Inductive Conflict_Computed_Actions : ComputedAction -> ComputedAction -> Prop :=
-| C_WriteConc_ReadConc : forall r l, Conflict_Computed_Actions  (CA_ReadConc r l) ( CA_WriteConc r l)
-| C_WriteAbs_ReadConc : forall r l, Conflict_Computed_Actions  (CA_ReadConc r l) ( CA_WriteAbs r)                                                  | C_ReadAbs_WriteConc : forall r l, Conflict_Computed_Actions  (CA_ReadAbs r) ( CA_WriteConc r l)
-| C_WriteAbs_ReadAbs : forall r, Conflict_Computed_Actions  (CA_ReadAbs r) ( CA_WriteAbs r)
-| C_WriteAbs_WriteAbs : forall r, Conflict_Computed_Actions  (CA_WriteAbs r) ( CA_WriteAbs r)
-| C_WriteAbs_WriteConc : forall r l, Conflict_Computed_Actions  (CA_WriteAbs r) ( CA_WriteConc r l)
-| C_WriteConc_WriteAbs : forall r l, Conflict_Computed_Actions (CA_WriteConc r l) (CA_WriteAbs r)
-| C_WriteConc_WriteConc : forall r l, Conflict_Computed_Actions (CA_WriteConc r l) (CA_WriteConc r l)
-| C_WriteConc_ReadAbs : forall r l, Conflict_Computed_Actions (CA_WriteConc r l) (CA_ReadAbs r).
+ | C_WriteConc_ReadConc : forall r l, Conflict_Computed_Actions  (CA_ReadConc r l) ( CA_WriteConc r l)
+ | C_WriteAbs_ReadConc : forall r l, Conflict_Computed_Actions  (CA_ReadConc r l) ( CA_WriteAbs r)
+ | C_ReadAbs_WriteConc : forall r l, Conflict_Computed_Actions  (CA_ReadAbs r) ( CA_WriteConc r l)
+ | C_WriteAbs_ReadAbs : forall r, Conflict_Computed_Actions  (CA_ReadAbs r) ( CA_WriteAbs r)
+ | C_WriteAbs_WriteAbs : forall r, Conflict_Computed_Actions  (CA_WriteAbs r) ( CA_WriteAbs r)
+ | C_WriteAbs_WriteConc : forall r l, Conflict_Computed_Actions  (CA_WriteAbs r) ( CA_WriteConc r l)
+ | C_WriteConc_WriteAbs : forall r l, Conflict_Computed_Actions (CA_WriteConc r l) (CA_WriteAbs r)
+ | C_WriteConc_WriteConc : forall r l, Conflict_Computed_Actions (CA_WriteConc r l) (CA_WriteConc r l)
+ | C_WriteConc_ReadAbs : forall r l, Conflict_Computed_Actions (CA_WriteConc r l) (CA_ReadAbs r).
 
 Inductive Conflict_Sets_Computed_Actions : Ensemble (ComputedAction) -> Ensemble (ComputedAction) -> Prop :=
  | C_Set_CA  : forall theta1 theta2,
@@ -614,87 +615,92 @@ Inductive TcExp : (Sigma * Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                         TcExp (stty, ctxt, rgns, Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect, 
                                Empty_Static_Action)
   | TC_Rgn_Abs     : forall stty ctxt rgns x er effr tyr,
-                        not_set_elem rgns x ->
-                        lc_type tyr ->
-                        lc_type_eps effr ->
-                        (forall rho, 
-                           BackTriangle (stty, ctxt, set_union rgns (singleton_set x), rho, er, ∅)) ->
-                        TcExp (stty, ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
-                        TcExp (stty, ctxt, rgns, Lambda x er, 
-                               Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr), Empty_Static_Action)
+                       not_set_elem rgns x ->
+                       lc_type tyr ->
+                       lc_type_eps effr ->
+                       (forall rho, 
+                          BackTriangle (stty, ctxt, set_union rgns (singleton_set x), rho, er, ∅)) ->
+                       TcExp (stty, ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
+                       TcExp (stty, ctxt, rgns, Lambda x er, 
+                              Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr), Empty_Static_Action)
   | TC_Mu_App      : forall stty ctxt rgns ef ea tya effc tyc effe efff effa,
-                        TcExp (stty, ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
-                        TcExp (stty, ctxt, rgns, ea, tya, effa) ->
-                        TcExp (stty, ctxt, rgns, Mu_App ef ea, 
-                               tyc, Union_Static_Action (Union_Static_Action efff effa) effc)
-  | TC_Rgn_App      : forall stty ctxt rgns er w tyr effr efff,
-                        TcExp (stty, ctxt, rgns, er, Ty2_ForallRgn effr tyr, efff) ->
-                        TcRgn (rgns, w) ->
-                        TcExp (stty, ctxt, rgns,  Rgn_App er w, open (mk_rgn_type w) tyr,
-                               Union_Static_Action efff (open_rgn_eff (mk_rgn_type w) effr))
+                       TcExp (stty, ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
+                       TcExp (stty, ctxt, rgns, ea, tya, effa) ->
+                       TcExp (stty, ctxt, rgns, Mu_App ef ea, 
+                              tyc, Union_Static_Action (Union_Static_Action efff effa) effc)
+  | TC_Rgn_App     : forall stty ctxt rgns er w tyr effr efff,
+                       TcExp (stty, ctxt, rgns, er, Ty2_ForallRgn effr tyr, efff) ->
+                       TcRgn (rgns, w) ->
+                       TcExp (stty, ctxt, rgns,  Rgn_App er w, open (mk_rgn_type w) tyr,
+                              Union_Static_Action efff (open_rgn_eff (mk_rgn_type w) effr))
   | TC_Eff_App     : forall stty ctxt rgns ef ea tya effc tyc effe efff effa,
-                        TcExp (stty, ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
-                        TcExp (stty, ctxt, rgns, ea, tya, effa) ->
-                        TcExp (stty, ctxt, rgns, Eff_App ef ea, 
-                               Ty2_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
+                       TcExp (stty, ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
+                       TcExp (stty, ctxt, rgns, ea, tya, effa) ->
+                       TcExp (stty, ctxt, rgns, Eff_App ef ea, 
+                              Ty2_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
+  | TC_Pair_Par    : forall stty ctxt rgns ef1 ea1 ef2 ea2 ty1 ty2 eff1 eff2,
+                       TcExp (stty, ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+                       TcExp (stty, ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+                       TcExp (stty, ctxt, rgns, Pair_Par ef1 ea1 ef2 ea2, Ty2_Pair ty1 ty2, 
+                              Union_Static_Action eff1 eff2)
   | TC_New_Ref     : forall stty ctxt rgns e t veff w s,      
-                        TcExp (stty, ctxt, rgns, e, t, veff) -> 
-                        w = Rgn2_Const true false s ->
-                        TcExp (stty, ctxt, rgns, Ref w e, Ty2_Ref (mk_rgn_type w) t,
-                               Union_Static_Action veff (Singleton_Static_Action (SA_Alloc(mk_rgn_type w))))
+                       TcExp (stty, ctxt, rgns, e, t, veff) -> 
+                       w = Rgn2_Const true false s ->
+                       TcExp (stty, ctxt, rgns, Ref w e, Ty2_Ref (mk_rgn_type w) t,
+                              Union_Static_Action veff (Singleton_Static_Action (SA_Alloc(mk_rgn_type w))))
   | TC_Get_Ref     : forall stty ctxt rgns e t aeff w s,
-                        w = Rgn2_Const true false s ->
-                        TcExp (stty, ctxt, rgns, e, Ty2_Ref (mk_rgn_type w) t, aeff) ->
-                        TcRgn (rgns, w) ->
-                        TcExp (stty, ctxt, rgns, DeRef w e, t, Union_Static_Action aeff (Singleton_Static_Action (SA_Read  (mk_rgn_type w))))
+                       w = Rgn2_Const true false s ->
+                       TcExp (stty, ctxt, rgns, e, Ty2_Ref (mk_rgn_type w) t, aeff) ->
+                       TcRgn (rgns, w) ->
+                       TcExp (stty, ctxt, rgns, DeRef w e, t, Union_Static_Action aeff (Singleton_Static_Action (SA_Read  (mk_rgn_type w))))
   | TC_Set_Ref     : forall stty ctxt rgns ea ev t aeff veff w s,
-                        w = Rgn2_Const true false s -> 
-                        TcExp (stty, ctxt, rgns, ea, Ty2_Ref (mk_rgn_type w) t, aeff) ->
-                        TcExp (stty, ctxt, rgns, ev, t, veff) ->
-                        TcRgn (rgns, w) ->
-                        TcExp (stty, ctxt, rgns, Assign w ea ev, Ty2_Unit,
-                               Union_Static_Action (Union_Static_Action aeff veff) (Singleton_Static_Action (SA_Write  (mk_rgn_type w))))
+                       w = Rgn2_Const true false s -> 
+                       TcExp (stty, ctxt, rgns, ea, Ty2_Ref (mk_rgn_type w) t, aeff) ->
+                       TcExp (stty, ctxt, rgns, ev, t, veff) ->
+                       TcRgn (rgns, w) ->
+                       TcExp (stty, ctxt, rgns, Assign w ea ev, Ty2_Unit,
+                              Union_Static_Action (Union_Static_Action aeff veff) (Singleton_Static_Action (SA_Write  (mk_rgn_type w))))
   | TC_Conditional : forall stty ctxt rgns b e1 e2 te eff eff1 eff2,      
-                        TcExp (stty, ctxt, rgns, b, Ty2_Boolean, eff) ->         
-                        TcExp (stty, ctxt, rgns, e1, te, eff1) -> 
-                        TcExp (stty, ctxt, rgns, e2, te, eff2) -> 
-                        TcExp (stty, ctxt, rgns, Cond b e1 e2, te, Union_Static_Action eff (Union_Static_Action eff1 eff2))
+                       TcExp (stty, ctxt, rgns, b, Ty2_Boolean, eff) ->         
+                       TcExp (stty, ctxt, rgns, e1, te, eff1) -> 
+                       TcExp (stty, ctxt, rgns, e2, te, eff2) -> 
+                       TcExp (stty, ctxt, rgns, Cond b e1 e2, te, Union_Static_Action eff (Union_Static_Action eff1 eff2))
   | TC_Nat_Plus    : forall stty ctxt rgns e1 e2 eff1 eff2,   
-                        TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
-                        TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
-                        TcExp (stty, ctxt, rgns, Plus e1 e2, Ty2_Natural, Union_Static_Action eff1 eff2)
-  | TC_Nat_Minus  : forall stty ctxt rgns e1 e2 eff1 eff2,   
-                        TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
-                        TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
-                        TcExp (stty, ctxt, rgns, Minus e1 e2, Ty2_Natural, Union_Static_Action eff1 eff2)
-  | TC_Nat_Times  : forall stty ctxt rgns e1 e2 eff1 eff2,   
-                        TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
-                        TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
-                        TcExp (stty, ctxt, rgns, Times e1 e2, Ty2_Natural, Union_Static_Action eff1 eff2)
+                       TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
+                       TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
+                       TcExp (stty, ctxt, rgns, Plus e1 e2, Ty2_Natural, Union_Static_Action eff1 eff2)
+  | TC_Nat_Minus   : forall stty ctxt rgns e1 e2 eff1 eff2,   
+                       TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
+                       TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
+                       TcExp (stty, ctxt, rgns, Minus e1 e2, Ty2_Natural, Union_Static_Action eff1 eff2)
+  | TC_Nat_Times   : forall stty ctxt rgns e1 e2 eff1 eff2,   
+                       TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
+                       TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
+                       TcExp (stty, ctxt, rgns, Times e1 e2, Ty2_Natural, Union_Static_Action eff1 eff2)
   | TC_Bool_Eq     : forall stty ctxt rgns e1 e2 eff1 eff2,   
-                        TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
-                        TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
-                        TcExp (stty, ctxt, rgns, Eq e1 e2, Ty2_Boolean, Union_Static_Action eff1 eff2)
-  | TC_Alloc_Abs  : forall stty ctxt rgns r,
-                        TcExp (stty, ctxt, rgns, AllocAbs r, Ty2_Effect, Empty_Static_Action)
-  | TC_Read_Abs   : forall stty ctxt rgns r,
-                        TcExp (stty, ctxt, rgns, ReadAbs r, Ty2_Effect, Empty_Static_Action)
-  | TC_Read_Conc  : forall stty ctxt rgns e r t aeff,
-                        TcExp (stty, ctxt, rgns, e, Ty2_Ref (Rgn2_Const true true r) t, aeff) ->
-                        TcExp (stty, ctxt, rgns, ReadConc e, Ty2_Effect, aeff)
-  | TC_Write_Abs  : forall stty ctxt rgns r,
+                       TcExp (stty, ctxt, rgns, e1, Ty2_Natural, eff1) ->
+                       TcExp (stty, ctxt, rgns, e2, Ty2_Natural, eff2) -> 
+                       TcExp (stty, ctxt, rgns, Eq e1 e2, Ty2_Boolean, Union_Static_Action eff1 eff2)
+  | TC_Alloc_Abs   : forall stty ctxt rgns r,
+                       TcExp (stty, ctxt, rgns, AllocAbs r, Ty2_Effect, Empty_Static_Action)
+  | TC_Read_Abs    : forall stty ctxt rgns r,
+                       TcExp (stty, ctxt, rgns, ReadAbs r, Ty2_Effect, Empty_Static_Action)
+  | TC_Read_Conc   : forall stty ctxt rgns e r t aeff,
+                       TcExp (stty, ctxt, rgns, e, Ty2_Ref (Rgn2_Const true true r) t, aeff) ->
+                       TcExp (stty, ctxt, rgns, ReadConc e, Ty2_Effect, aeff)
+  | TC_Write_Abs   : forall stty ctxt rgns r,
                        TcExp (stty, ctxt, rgns,  WriteAbs r, Ty2_Effect, Empty_Static_Action)
-  | TC_Write_Conc : forall stty ctxt rgns e r t aeff,
+  | TC_Write_Conc  : forall stty ctxt rgns e r t aeff,
                        TcExp (stty, ctxt, rgns, e,  Ty2_Ref (Rgn2_Const true true r) t, aeff) ->
                        TcExp (stty, ctxt, rgns, WriteConc e, Ty2_Effect, aeff)
-  | TC_Eff_Concat : forall stty ctxt rgns a b eff1 eff2,   
+  | TC_Eff_Concat  : forall stty ctxt rgns a b eff1 eff2,   
                        TcExp (stty, ctxt, rgns, a, Ty2_Effect, eff1) ->
                        TcExp (stty, ctxt, rgns, b, Ty2_Effect, eff2) -> 
                        TcExp (stty, ctxt, rgns, Concat a b, Ty2_Effect, Union_Static_Action eff1 eff2)                   
-  | TC_Eff_Top    : forall stty ctxt rgns,
+  | TC_Eff_Top     : forall stty ctxt rgns,
                        TcExp (stty, ctxt, rgns, Top, Ty2_Effect, Empty_Static_Action)
-  | TC_Eff_Empty  : forall stty ctxt rgns,
-                      TcExp (stty, ctxt, rgns, Empty, Ty2_Effect, Empty_Static_Action)
+  | TC_Eff_Empty   : forall stty ctxt rgns,
+                       TcExp (stty, ctxt, rgns, Empty, Ty2_Effect, Empty_Static_Action)
                             
 with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
   | BT_Num_Pure     : forall stty ctxt rgns rho (n : nat),
@@ -719,6 +725,10 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                         ReadOnlyStatic (fold_subst_eps rho static_ef) ->
                         ReadOnlyStatic (fold_subst_eps rho static_ea) ->
                         BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea)) 
+  | BT_Pair_Par     : forall stty ctxt rgns rho ef1 ea1 ef2 ea2 eff1 eff2,
+                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef1 ea1, eff1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef2 ea2, eff2) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Pair_Par ef1 ea1 ef2 ea2, eff1 ⊕ eff2)
   | BT_Rgn_App      : forall stty ctxt rgns rho er w ty_eb static_er,
                         TcExp (stty, ctxt, rgns, er, ty_eb, static_er) ->
                         TcExp (stty, ctxt, rgns, ∅, Ty2_Effect, Empty_Static_Action) ->

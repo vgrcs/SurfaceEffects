@@ -121,7 +121,7 @@ Proof.
       (* Start the proof of the "effect soundness" part *) 
       inversion HExp as  [ | | | | | 
                            ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
-                           | | | | | | | | | | | | | | | | | | ]; subst.
+                           | | | | | | | | | | | | | | | | | | | ]; subst.
       assert (clsTcVal : exists stty',  
                            (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
                            /\ TcHeap (fheap, stty')
@@ -143,7 +143,7 @@ Proof.
                                | | ]; subst. 
       inversion TcExp_abs as [ | | | 
                                ? ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
-                               | | | | | | | | | | | | | | | | | | | | ]; subst.
+                               | | | | | | | | | | | | | | | | | | | | |]; subst.
       rewrite <- HSubst in TcVal_cls.
       do 2 rewrite subst_rho_arrow in HSubst. 
       inversion HSubst as [[H_tyx_tya A C D E]]; clear A C D E.
@@ -160,7 +160,7 @@ Proof.
             {
               inversion HBt as [ | | | |  
                                  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                                 | | | | | | | |]; subst.
+                                 | | | | | | | | |]; subst.
               SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
                 inversion HEff; subst.  
                 assert (facts  ⊑ effa1).
@@ -176,7 +176,7 @@ Proof.
       SSCase " aacts ⊑ eff".   
         inversion HBt as [ | | | |  
                            | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | | | | | | |]; subst.
+                           | | | | | | | | |]; subst.
         SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
           assert (H_ : aacts  ⊑ eff).
           { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -204,7 +204,7 @@ Proof.
         inversion HEff; subst; 
         inversion HBt as [ | | | |  
                            | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | | | | | | |]; subst. 
+                           | | | | | | | | |]; subst. 
         SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))".
           assert (HEq_1 : fheap = h'').  
           { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -289,7 +289,6 @@ Proof.
       eapply BS_Mu_App in BS1_3; eauto.
       assert (RH : H.Equal h' h'_ /\ v = v_ /\ Phi_Seq (Phi_Seq facts aacts) bacts = p_).
       eapply DynamicDeterminism_ext_1; eauto.
-      admit.  
       intuition.   
   Case "rgn_app".
 Admitted.

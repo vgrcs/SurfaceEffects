@@ -1,23 +1,18 @@
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
-Require Import Tactics.
-Require Import Keys.
-Require Import Definitions.
-Require Import Environment.
-Require Import TypeSystem.
-Require Import Heap.
-Require Import CorrectnessLemmas.
+
+Add LoadPath "." as Top.
+Require Import Top.Tactics.
+Require Import Top.Keys.
+Require Import Top.Definitions.
+Require Import Top.Environment.
+Require Import Top.TypeSystem.
+Require Import Top.Heap.
+Require Import Top.CorrectnessLemmas.
 
 Module EffectSoundness.
 
 Import TypeSoundness.
-
-(*
-Inductive Epsilon_Phi_Soundness :  (Epsilon * Phi) -> Prop := 
-  | EPS : forall st dy, (forall da,  DA_in_Phi da dy -> exists sa, In StaticAction st sa) -> Epsilon_Phi_Soundness (st, dy).
-*)
-
-
 
 Lemma EmptyInNil:
   forall st, Epsilon_Phi_Soundness (st, Phi_Nil).
@@ -111,7 +106,7 @@ Proof.
 
 
     inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
-    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | |  | | | | | | | | | | |  ]; subst. 
+    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | | ]; subst. 
 
     rewrite <- H4 in TcVal_cls. 
     do 2 rewrite subst_rho_arrow in H4. inversion H4. 
@@ -143,7 +138,7 @@ Proof.
     
     eapply IHD1; eauto.
     inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
-    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | |  | | | | | | | | | | |  ]; subst. 
+    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | | ]; subst. 
     do 2 rewrite subst_rho_forallrgn in H5. inversion H5. clear H5.
     unfold open_rgn_eff.
     erewrite <- subst_rho_open_close_eps; eauto. 
@@ -174,7 +169,7 @@ Proof.
          eauto using update_env, ext_stores__env, ext_stores__exp).
 
     inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | ]; subst. 
-    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | |  | | | | | | | | | | |  ]; subst.
+    inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |]; subst.
 
     rewrite <- H4 in TcVal_cls. 
     do 2 rewrite subst_rho_arrow in H4. inversion H4. 
@@ -193,6 +188,8 @@ Proof.
     apply sound_comp; [| assumption].
     apply sound_comp; [|assumption].
     assumption.
+  Case "par_pair".
+    admit.
   Case "cond_true". 
     assert (boolTcVal : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
@@ -311,7 +308,7 @@ Proof.
     apply sound_comp; eauto.
   Case "eff_top". apply EmptyInNil.
   Case "eff_empty". apply EmptyInNil.
-Qed.
+Admitted.
 
 
 Lemma ReadOnlyTracePreservesHeap_2 : 
