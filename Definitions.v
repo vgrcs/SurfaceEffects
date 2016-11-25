@@ -187,10 +187,6 @@ Inductive Disjoint_Traces : Trace -> Trace -> Prop :=
                      (forall p1 p2, In p1 phi1 -> In p2 phi2 -> Disjoint_Dynamic p1 p2) ->
                      Disjoint_Traces phi1 phi2.
 
-Axiom Disjoint_Traces_Sym :
-  forall t1 t2, Disjoint_Traces t1 t2 -> Disjoint_Traces t2 t1.
-
-
 Inductive Disjoint_Static : StaticAction2 -> StaticAction2 -> Prop :=
  | DS_Read_Read   : forall r1 r2, Disjoint_Static (SA2_Read r1) (SA2_Read r2)
  | DS_Write_Write : forall r1 r2, r1 <> r2 -> Disjoint_Static (SA2_Write r1) (SA2_Write r2)
@@ -235,8 +231,6 @@ Inductive Disjoint_Sets_Computed_Actions : Ensemble (ComputedAction) -> Ensemble
 Inductive Disjointness : Theta -> Theta -> Prop :=
  | D_Theta  : forall theta1 theta2, Disjoint_Sets_Computed_Actions theta1 theta2 -> Disjointness (Some theta1) (Some theta2).
 
-Axiom Disjointness_Sym : forall theta1 theta2, Disjointness theta1 theta2 -> Disjointness theta2 theta1.
-
 Inductive Conflict_Dynamic_Actions : DynamicAction -> DynamicAction -> Prop :=
 | D_Read_Write : forall r l v (a : DynamicAction),
                    Conflict_Dynamic_Actions ( DA_Read r l v) (DA_Write r l v)
@@ -273,8 +267,6 @@ Inductive Conflictness : Theta -> Theta -> Prop :=
  | C_TopR : forall theta1, Conflictness theta1 None
  | C_Theta  : forall theta1 theta2,
                  Conflict_Sets_Computed_Actions theta1 theta2 -> Conflictness (Some theta1) (Some theta2).
-
-Axiom Conflictness_Sym : forall theta1 theta2, ~ Conflictness theta1 theta2 -> ~ Conflictness theta2 theta1.
 
 Module H := FMapAVL.Make (RegionVars).
  

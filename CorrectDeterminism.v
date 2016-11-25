@@ -22,6 +22,7 @@ Require Import Top.Determinism.
 Require Import Top.DeterminismExt.
 Require Import Top.Definitions.
 Require Import Top.CorrectnessLemmas.
+Require Import Top.Axioms.
 
 Import TypeSoundness.
 Import EffectSoundness.
@@ -75,13 +76,6 @@ Proof.
     rewrite <- HD_.
     assumption. 
 Qed. 
-
-Axiom DynamicConstraints : 
-  forall h env rho ef env' rho' f x ec' ee' facts ea0 v0 aacts eff p' p'',
-  (h, env, rho, ef) ⇓ (h, Cls (env', rho', Mu f x ec' ee'), facts) ->   
-  (h, env, rho, ea0) ⇓ (h, v0, aacts) ->
-  (h, env, rho, Eff_App ef ea0) ⇓ (h, Eff eff, p') ->
-  (h, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v0) env', rho', ee') ⇓ (h, Eff eff, p'').
 
 Definition Correctness_ext :
   forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,

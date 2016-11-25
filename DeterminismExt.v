@@ -19,12 +19,7 @@ Require Import Top.Definitions.
 Require Import Top.CorrectnessLemmas.
 Require Import Top.Determinism.
 
-Lemma Equal_heap_equal:
-  forall (heap1 heap2 : Heap),
-    heap1 = heap2 -> H.Equal heap1 heap2.
-Proof.
-  intros heap1 heap2 H. subst. apply HMapP.Equal_refl.
-Qed.
+
 
 Axiom AllocAddressIsDeterministic:
   forall r0 l l0 heap,
