@@ -4,6 +4,7 @@ Require Import Coq.Lists.List.
 
 Add LoadPath "." as Top.
 Require Import Top.Definitions.
+Require Import Top.Heap.
 
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
@@ -449,12 +450,13 @@ Proof.
   - eapply IHBigStep; [reflexivity | auto]. 
 Qed.
        
-Axiom ReadOnlyWalkSameHeap:
-  forall acts_mu1 acts_mu2 h same_h,
-    ReadOnlyPhi (Phi_Par acts_mu1 acts_mu2) ->
-    (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
-    h = same_h.
-                                   
+
+Axiom DeterminismUpToPermutations:
+  forall (h h' h_: Heap) env rho exp v p,
+    H.Equal h' h_ -> (* assume we can prove this for an hypothetical heap:=h_ *)
+    H.Equal h h'  -> (* read only p *)
+    (h, env, rho, exp) ⇓ (h', v, p) ->
+    h' = h_.
 
 Lemma ReadOnlyTracePreservesHeap_1 : 
   forall h env rho e same_h v' acts, (h, env, rho, e) ⇓ (same_h, v', acts) -> 
@@ -472,9 +474,12 @@ Proof.
     (eapply IHBigStep2; [reflexivity | reflexivity | assumption]). 
   - inversion H10; subst. inversion H14; subst. 
     assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
-    assert (h = heap_mu2) by (eapply IHBigStep4; eauto). 
-    rewrite <- H11 in H4. rewrite <- H12 in H5.
-    eapply ReadOnlyWalkSameHeap; eauto.
+    assert (h = heap_mu2) by (eapply IHBigStep4; eauto).  
+    destruct H8. apply HFacts.Equal_sym in H8. apply HFacts.Equal_sym in H17.
+    rewrite H11.
+    apply Equal_heap_equal in H11.
+    apply Equal_heap_equal in H12.
+    eapply DeterminismUpToPermutations with (h:=h) (h':=heap_mu1) (h_:=same_h); eauto.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; assumption).
