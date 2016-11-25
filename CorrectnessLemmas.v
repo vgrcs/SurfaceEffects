@@ -470,10 +470,10 @@ Proof.
   - inversion H2; subst;
     assert (h=fheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; [reflexivity | reflexivity | assumption]). 
-  - inversion H9; subst. inversion H13; subst. 
+  - inversion H10; subst. inversion H14; subst. 
     assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
-    assert (h = heap_mu2) by (eapply IHBigStep4; eauto).
-    rewrite <- H10 in H4. rewrite <- H11 in H5. 
+    assert (h = heap_mu2) by (eapply IHBigStep4; eauto). 
+    rewrite <- H11 in H4. rewrite <- H12 in H5.
     eapply ReadOnlyWalkSameHeap; eauto.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;

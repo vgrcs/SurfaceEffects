@@ -463,7 +463,8 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
                       (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, Num v1, acts_mu1) ->
                       (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, Num v2, acts_mu2) ->
                       acts_mu1 ⊑ theta1 ->
-                      acts_mu2 ⊑ theta2 -> 
+                      acts_mu2 ⊑ theta2 ->
+                      H.Equal heap' heap_mu1 /\ H.Equal heap' heap_mu2 ->
                       (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, heap') ->
                       (heap, env, rho, Pair_Par ef1 ea1 ef2 ea2) 
                         ⇓ (heap', Pair (v1, v2), Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2))

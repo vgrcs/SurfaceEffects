@@ -72,25 +72,25 @@ Proof.
   - admit.
   - assert (HR1 : H.Equal heap_a heap_b /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0). 
     eapply IHDyn1_1; eauto.
-    inversion Hsound1. inversion H7. assumption.
+    inversion Hsound1. inversion H8. assumption.
     (*inversion Hsound2. inversion H7. assumption.*)
   
     destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
     assert (HR2 : H.Equal heap_a heap_b /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3). 
     eapply IHDyn1_2; eauto.
-    inversion Hsound1. inversion H7. assumption.
+    inversion Hsound1. inversion H8. assumption.
     (*inversion Hsound2. inversion H7. assumption.*)
 
     destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
     assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0). 
     eapply IHDyn1_3; eauto.
-    inversion Hsound1. inversion H9. assumption.
+    inversion Hsound1. inversion H10. assumption.
     (*inversion Hsound2. inversion H9. assumption.*)
 
     inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3. 
     assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
     eapply IHDyn1_4; eauto.  
-    inversion Hsound1. inversion H10. assumption.
+    inversion Hsound1. inversion H11. assumption.
     (*inversion Hsound2. inversion H10. assumption.*)
 
     inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
@@ -99,14 +99,14 @@ Proof.
     + eassumption. (* from correctness *)
     + eassumption. (* from correctness *) 
     + intuition.
+    + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3)) by
+          (eapply Det_trace_from_theta; eauto; 
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
+      now inversion H15.
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (eapply Det_trace_from_theta; eauto; 
             [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H11.
-    + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
-        by (eapply Det_trace_from_theta; eauto; 
-            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H11.
+      now inversion H15.
     + assumption.
     + assumption.
     + assumption.
@@ -180,11 +180,11 @@ Proof.
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (eapply Det_trace_from_theta; eauto; 
             [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H11.
+      now inversion H15.
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (eapply Det_trace_from_theta; eauto; 
             [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H11.
+      now inversion H15.
     + assumption.
     + assumption.
     + assumption.  
