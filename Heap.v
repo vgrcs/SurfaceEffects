@@ -259,6 +259,13 @@ Qed.
 Module HFacts := FMapFacts.Facts H.
 Module STFacts := FMapFacts.Facts ST.
 
+Lemma Equal_heap_equal:
+  forall (heap1 heap2 : Heap),
+    heap1 = heap2 -> H.Equal heap1 heap2.
+Proof.
+  intros heap1 heap2 H. subst. apply HMapP.Equal_refl.
+Qed.
+
 Lemma EqualHeaps:
  forall heap_a heap_b store,
    TcHeap (heap_a, store) ->

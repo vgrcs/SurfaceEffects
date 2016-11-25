@@ -37,12 +37,26 @@ Lemma sound_comp :
 Proof.
   intros st1 st2 dy1 dy2 H1 H2.
   inversion H1 as [? ? HEps1]; inversion H2 as [? ? HEps2]; subst; constructor;
-  intros eff HIn. (*apply List.in_app_or in HIn.*)
+  intros eff HIn.
   inversion HIn; subst.
   destruct H3 as [HIn_1 | HIn_2].
   - apply HEps1 in HIn_1; destruct HIn_1 as [ca HIn']; exists ca; intuition.
   - apply HEps2 in HIn_2; destruct HIn_2 as [ca HIn']; exists ca; intuition.
 Qed. 
+
+Lemma sound_comp_par :
+  forall (st1 st2 : Epsilon) (dy1 dy2 : Phi),
+    Epsilon_Phi_Soundness (st1, dy1) -> Epsilon_Phi_Soundness (st2, dy2) ->
+    Epsilon_Phi_Soundness (Union StaticAction st1 st2, Phi_Par dy1 dy2). 
+Proof.
+  intros st1 st2 dy1 dy2 H1 H2.
+  inversion H1 as [? ? HEps1]; inversion H2 as [? ? HEps2]; subst; constructor;
+  intros eff HIn. 
+  inversion HIn; subst.
+  destruct H3 as [HIn_1 | HIn_2].
+  - apply HEps1 in HIn_1; destruct HIn_1 as [ca HIn']; exists ca; intuition.
+  - apply HEps2 in HIn_2; destruct HIn_2 as [ca HIn']; exists ca; intuition.
+Qed.
 
 Lemma fold_dist_union : forall rho (eff1 eff2 : Epsilon),
                           fold_subst_eps rho (Union_Static_Action eff1 eff2) =
@@ -189,7 +203,48 @@ Proof.
     apply sound_comp; [|assumption].
     assumption.
   Case "par_pair".
-    admit.
+    assert (HA : Epsilon_Phi_Soundness (fold_subst_eps rho eff1, acts_mu1)).
+    eapply IHD3; eauto.
+    assert (HB : Epsilon_Phi_Soundness (fold_subst_eps rho eff2, acts_mu2)).
+    eapply IHD4; eauto.
+    assert (HC : Epsilon_Phi_Soundness (fold_subst_eps rho eff3, acts_eff1)).
+    eapply IHD1; eauto.
+    assert (HD : Epsilon_Phi_Soundness (fold_subst_eps rho eff4, acts_eff2)).
+    eapply IHD2; eauto.  
+    assert (H_ : Epsilon_Phi_Soundness (Union_Static_Action (fold_subst_eps rho eff1) (fold_subst_eps rho eff2), 
+                                        Phi_Seq acts_mu1 acts_mu2))
+     by (apply sound_comp; auto).
+    assert (H__ : Epsilon_Phi_Soundness (Union_Static_Action (fold_subst_eps rho eff3) (fold_subst_eps rho eff4), 
+                                         Phi_Seq acts_eff1 acts_eff2))
+     by (apply sound_comp; auto).
+
+    rewrite fold_dist_union.
+    replace (fold_subst_eps rho (Union_Static_Action (Union_Static_Action eff3 eff4) eff2)) with
+            (Union_Static_Action (fold_subst_eps rho (Union_Static_Action eff3 eff4)) (fold_subst_eps rho eff2))
+      by (rewrite <- fold_dist_union; reflexivity).
+
+    replace (Union_Static_Action (Union_Static_Action (fold_subst_eps rho (Union_Static_Action eff3 eff4))
+                                                      (fold_subst_eps rho eff2)) (fold_subst_eps rho eff1)) with
+     (Union_Static_Action (fold_subst_eps rho (Union_Static_Action eff3 eff4)) 
+                                              (Union_Static_Action (fold_subst_eps rho eff1) (fold_subst_eps rho eff2))). 
+    SCase "". 
+     { apply sound_comp with (dy1:=Phi_Par acts_eff1 acts_eff2) (dy2:=Phi_Par acts_mu1 acts_mu2).
+       - rewrite fold_dist_union. apply sound_comp_par; assumption.
+       - apply sound_comp_par; assumption. } 
+    SCase "replace proof". 
+      rewrite fold_dist_union.
+      unfold Union_Static_Action.
+      { apply Extensionality_Ensembles;
+        unfold Same_set, Included; split; intros x HUnion; unfold Ensembles.In in *.
+        - inversion HUnion; subst; inversion H6; subst. 
+          + apply Union_introl. apply Union_introl. apply Union_introl. assumption.
+          + apply Union_introl. apply Union_introl. apply Union_intror. assumption.
+          + apply Union_intror. assumption. 
+          + apply Union_introl. apply Union_intror. assumption.
+        - inversion HUnion; subst; inversion H6; subst. 
+          + apply Union_introl. assumption.
+          + apply Union_intror. apply Union_intror. assumption.
+          + apply Union_intror. apply Union_introl. assumption. }
   Case "cond_true". 
     assert (boolTcVal : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
@@ -308,7 +363,7 @@ Proof.
     apply sound_comp; eauto.
   Case "eff_top". apply EmptyInNil.
   Case "eff_empty". apply EmptyInNil.
-Admitted.
+Qed.
 
 
 Lemma ReadOnlyTracePreservesHeap_2 : 

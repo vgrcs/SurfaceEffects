@@ -639,11 +639,13 @@ Inductive TcExp : (Sigma * Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        TcExp (stty, ctxt, rgns, ea, tya, effa) ->
                        TcExp (stty, ctxt, rgns, Eff_App ef ea, 
                               Ty2_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
-  | TC_Pair_Par    : forall stty ctxt rgns ef1 ea1 ef2 ea2 ty1 ty2 eff1 eff2,
+  | TC_Pair_Par    : forall stty ctxt rgns ef1 ea1 ef2 ea2 ty1 ty2 ty3 ty4 eff1 eff2 eff3 eff4,
                        TcExp (stty, ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
                        TcExp (stty, ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+                       TcExp (stty, ctxt, rgns, Eff_App ef1 ea1, ty3, eff3) ->
+                       TcExp (stty, ctxt, rgns, Eff_App ef2 ea2, ty4, eff4) ->
                        TcExp (stty, ctxt, rgns, Pair_Par ef1 ea1 ef2 ea2, Ty2_Pair ty1 ty2, 
-                              Union_Static_Action eff1 eff2)
+                             Union_Static_Action (Union_Static_Action (Union_Static_Action eff3 eff4) eff2) eff1)
   | TC_New_Ref     : forall stty ctxt rgns e t veff w s,      
                        TcExp (stty, ctxt, rgns, e, t, veff) -> 
                        w = Rgn2_Const true false s ->
