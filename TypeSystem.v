@@ -609,11 +609,11 @@ Proof.
     edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto.
     inversion TcVal_app1 as [A B [C D HRApp1] | | | | | |]; subst. 
     inversion TcVal_app2 as [A B [C D HRApp2] | | | | | |]; subst.  
-    exists sttym. intuition. 
+    exists (Functional_Map_Union sttya sttym). intuition. 
+    SCase "Weakening".
+      admit.
     SCase "TcHeap".
-      eapply EqualHeaps; eauto. 
-      apply HFacts.Equal_sym.
-      assumption.
+      admit.
     SCase "TcVal".
       econstructor; [rewrite <- HRApp1 | rewrite <- HRApp2]; constructor.
   Case "cond_true".  
@@ -750,6 +750,6 @@ Proof.
   Case "eff_concat". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_top". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_empty". exists stty. intuition. rewrite subst_rho_effect. constructor.
-Qed.
+Admitted.
 
 End TypeSoundness.

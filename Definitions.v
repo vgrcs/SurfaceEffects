@@ -295,15 +295,6 @@ Definition update_R (p: Name * Region) (m : Rho) := R.add (fst p) (snd p) m.
 Definition find_H (k: H_Key) (m: Heap) : option Val := H.find k m.
 Definition update_H (p: H_Key * Val) (m: Heap) := H.add (fst p) (snd p) m.
 
-Definition Functional_Map_Union (heap1 heap2 : Heap) : Heap :=
-  let f := fun (k : nat * nat) (v : Val) (m : Heap) => H.add k v m
-  in H.fold f heap1 heap2.
-
-Inductive merge : Heap -> Heap -> Heap -> Prop :=
-| mergeL : forall heap1 heap2, merge heap1 heap2 (Functional_Map_Union heap1 heap2)
-| mergeR : forall heap1 heap2, merge heap1 heap2 (Functional_Map_Union heap2 heap1).
-
-
 Reserved Notation "phi '⊑' theta" (at level 50, left associativity).
 Inductive Phi_Theta_Soundness : Phi -> Theta -> Prop :=
 | PTS_Nil :
@@ -574,6 +565,15 @@ Definition update_rec_T (f: ascii * tau) (x: ascii * tau) m :=
 
 Definition find_ST (k: ST.key) (m: Sigma) : option tau := ST.find k m.
 Definition update_ST (p: ST.key * tau) m := ST.add (fst p) (snd p) m.
+
+Definition Functional_Map_Union (stty1 stty2 : Sigma) : Sigma :=
+  let f := fun (k : nat * nat) (v : tau) (m : Sigma) => ST.add k v m
+  in ST.fold f stty1 stty2.
+
+
+Inductive merge : Sigma -> Sigma -> Sigma -> Prop :=
+| mergeL : forall stty1 stty2, merge stty1 stty2 (Functional_Map_Union stty1 stty2)
+| mergeR : forall stty1 stty2, merge stty1 stty2 (Functional_Map_Union stty2 stty1).
 
 Notation "'∅'" := (Empty)  (at level 60).
 Notation "'⊤'" := (Top) (at level 60).

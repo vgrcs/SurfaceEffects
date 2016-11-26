@@ -7,11 +7,6 @@ Require Import Top.Definitions.
 Require Import Top.Heap.
 Require Import Top.Axioms.
 
-(*Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
-Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
-Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
-Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.*)
-
 Lemma UnionEmptyWithEffIsEff:
   forall eff,
     Union_Theta (Some empty_set) eff = eff.
@@ -467,12 +462,9 @@ Proof.
     (eapply IHBigStep2; [reflexivity | reflexivity | assumption]). 
   - inversion H10; subst. inversion H14; subst. 
     assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
-    assert (h = heap_mu2) by (eapply IHBigStep4; eauto).  
-    destruct H8. apply HFacts.Equal_sym in H8. apply HFacts.Equal_sym in H17.
-    rewrite H11.
-    apply Equal_heap_equal in H11.
-    apply Equal_heap_equal in H12.
-    eapply DeterminismUpToPermutations with (h:=h) (h':=heap_mu1) (h_:=same_h); eauto.
+    assert (h = heap_mu2) by (eapply IHBigStep4; eauto). 
+    rewrite <- H11 in H4. rewrite <- H12 in H5.
+    eapply ReadOnlyWalkSameHeap; eauto.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; assumption).
