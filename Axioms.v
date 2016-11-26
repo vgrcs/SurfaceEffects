@@ -18,11 +18,17 @@ Axiom ReadOnlyWalkSameHeap:
   forall acts_mu1 acts_mu2 h same_h,
     ReadOnlyPhi (Phi_Par acts_mu1 acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
-    h = same_h.
+    H.Equal h same_h.
 
-Axiom deterministicTcHeap:
-  forall stty1 h stty2 h' acts_mu1 acts_mu2,
-    TcHeap (h, stty1) ->
-    TcHeap (h, stty2) ->
-    (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, h') ->
-    TcHeap (h', Functional_Map_Union stty1 stty2).
+Axiom UnionTcHeap:
+  forall hp' heap_mu1 heap_mu2 sttym sttya,
+    H.Equal hp' (Functional_Map_Union_Heap heap_mu1 heap_mu2) ->
+    TcHeap (heap_mu1, sttym) ->
+    TcHeap (heap_mu2, sttya) ->
+    TcHeap (hp', Functional_Map_Union sttya sttym).
+
+Axiom UnionStoreTyping:
+  forall l sttya sttym t', 
+    ST.find (elt:=tau) l sttya = Some t' -> 
+    ST.find (elt:=tau) l sttym = Some t' ->
+    ST.find (elt:=tau) l (Functional_Map_Union sttya sttym) = Some t'.

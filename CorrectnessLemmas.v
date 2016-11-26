@@ -464,7 +464,9 @@ Proof.
     assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
     assert (h = heap_mu2) by (eapply IHBigStep4; eauto). 
     rewrite <- H11 in H4. rewrite <- H12 in H5.
-    eapply ReadOnlyWalkSameHeap; eauto.
+    assert (H.Equal h same_h) by (eapply ReadOnlyWalkSameHeap; eauto).
+    eapply EquivalenceUpToPermutations; eauto.
+    apply HFacts.Equal_refl.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; assumption).

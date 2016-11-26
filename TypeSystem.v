@@ -15,6 +15,8 @@ Require Import Top.CorrectnessLemmas.
 Require Import Top.Environment.
 Require Import Top.Heap. 
 Require Import Top.Determinism.
+Require Import Top.Axioms.
+
 Require Import Omega.
 
 Module TypeSoundness.
@@ -611,9 +613,9 @@ Proof.
     inversion TcVal_app2 as [A B [C D HRApp2] | | | | | |]; subst.  
     exists (Functional_Map_Union sttya sttym). intuition. 
     SCase "Weakening".
-      admit.
+      apply UnionStoreTyping; [apply Weaka | apply Weak1]; auto.
     SCase "TcHeap".
-      admit.
+      eapply UnionTcHeap; eauto.
     SCase "TcVal".
       econstructor; [rewrite <- HRApp1 | rewrite <- HRApp2]; constructor.
   Case "cond_true".  
