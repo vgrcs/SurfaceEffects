@@ -277,6 +277,10 @@ Definition V_Key := Raw.key.
 Definition R_Key := R.key.
 Definition H_Key := H.key.
 
+Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap :=
+  let f := fun (k : nat * nat) (v : Val) (m : Heap) => H.add k v m
+  in H.fold f heap1 heap2.
+
 Definition find_E (k: V_Key) (m: Env) : option Val := Raw.find (elt := Val) k m. 
 Definition update_E (p: Name * Val) (m : Env) := Raw.add (fst p) (snd p) m.
 Definition update_rec_E (f : ascii * Val) (x: ascii * Val) m :=
@@ -447,7 +451,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
                       (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, Num v2, acts_mu2) ->
                       acts_mu1 ⊑ theta1 ->
                       acts_mu2 ⊑ theta2 ->
-                      H.Equal heap' heap_mu1 /\ H.Equal heap' heap_mu2 ->
+                      H.Equal heap' (Functional_Map_Union_Heap heap_mu1 heap_mu2) ->
                       (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, heap') ->
                       (heap, env, rho, Pair_Par ef1 ea1 ef2 ea2) 
                         ⇓ (heap', Pair (v1, v2), Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2))
@@ -569,7 +573,6 @@ Definition update_ST (p: ST.key * tau) m := ST.add (fst p) (snd p) m.
 Definition Functional_Map_Union (stty1 stty2 : Sigma) : Sigma :=
   let f := fun (k : nat * nat) (v : tau) (m : Sigma) => ST.add k v m
   in ST.fold f stty1 stty2.
-
 
 Inductive merge : Sigma -> Sigma -> Sigma -> Prop :=
 | mergeL : forall stty1 stty2, merge stty1 stty2 (Functional_Map_Union stty1 stty2)

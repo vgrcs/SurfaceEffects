@@ -96,12 +96,12 @@ Proof.
     + intuition.
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3)) by
           (eapply Det_trace_from_theta; eauto; 
-            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H15.
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption).
+      now inversion H12.
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (eapply Det_trace_from_theta; eauto; 
             [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H15.
+      now inversion H12.
     + assumption.
     + assumption.
     + assumption.
@@ -174,12 +174,12 @@ Proof.
     + eauto. (* from correctness *) 
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (eapply Det_trace_from_theta; eauto; 
-            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H15.
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption).
+      now inversion H12.
     + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (eapply Det_trace_from_theta; eauto; 
-            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption);
-      now inversion H15.
+            [ apply Dynamic_DetTrace in Dyn1_3 | apply Dynamic_DetTrace in Dyn1_4]; assumption).
+      now inversion H12.
     + assumption.
     + assumption.
     + assumption.  
