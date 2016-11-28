@@ -254,6 +254,24 @@ Qed.
 
 Module RMapOrdProp := FMapFacts.OrdProperties R.
 
+Axiom fold_subst_rgn_left_1:
+  forall this1 k e this2 t x this1_is_bst,
+    R.Raw.bst (R.Raw.Node this1 k e this2 t) ->
+    R.Raw.In x this2 ->
+    (fold_subst_rgn {| R.this := this1; R.is_bst := this1_is_bst |} (Rgn2_FVar true true x) = 
+     Rgn2_FVar true true x).
+
+Axiom fold_subst_rgn_left_2:
+  forall this1 k (e : nat) this2 (t : Int.Z_as_Int.t) x v  is_bst_,
+    R.MapsTo x v {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst_ |} ->
+    R.Raw.In x this2 ->
+    AsciiVars.lt k x.
+
+(*Axiom fold_subst_rgn_eq_1:
+  forall k this1 (e : nat) this2 is_bst_ this2_is_bst t,
+    R.MapsTo k e {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst_ |} ->
+    fold_subst_rgn {| R.this := this2; R.is_bst := this2_is_bst |} (Rgn2_Const true true e) = Rgn2_Const true true e.*)
+
 Lemma subst_rho_fvar_2:
   forall rho x v,
    find_R (Rgn2_FVar true false x) rho = Some v ->
@@ -272,52 +290,31 @@ Proof.
                     (subst_rgn k (Rgn2_Const true false e)
                                (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true x)))
     ) by (unfold fold_subst_rgn, R.fold, R.Raw.fold in *; reflexivity).
-    apply  RMapP.find_mapsto_iff in H.
-
-    
+    apply  RMapP.find_mapsto_iff in H.    
     inversion H; subst. 
     + (* x = k *)
-      apply RMapP.find_mapsto_iff in H.
-      
-      unfold R.find, R.Raw.find in H. simpl in H.
-      destruct (AsciiVars.compare k k).
-      * unfold AsciiVars.lt in l. omega.
-      *  unfold AsciiVars.eq in e0. 
-         apply R.Raw.InRoot with (l:= R.Raw.empty nat) (r:=R.Raw.empty nat) (e:=e) (h:=t) in e0.
-         inversion e0; subst.  
-         {  admit. }
-         {  inversion H1. }
-         {  inversion H1. }
-      *  unfold AsciiVars.lt in l. omega. 
-
-         
-      (*replace (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true k) )
-      with (Rgn2_FVar true true k) by admit.
-      simpl. destruct (RMapP.eq_dec k k).
-      * rewrite subst_rho_rgn_const. reflexivity.
-      * contradict n. reflexivity. *)
+      destruct (AsciiVars.compare k k); try (solve [unfold AsciiVars.lt in l; omega]). 
+      eapply R.Raw.Proofs.find_iff in H. 
+      apply R.Raw.InRoot with (l:= R.Raw.empty nat) (r:=R.Raw.empty nat) (e:=e) (h:=t) in e0.
+      apply R.Raw.Proofs.In_node_iff in e0.
+      destruct e0 as [? | [? | ?]]. 
+      * apply R.Raw.Proofs.In_MapsTo in H0. destruct H0. contradict H0. apply R.Raw.Proofs.empty_1.
+      * admit.
+      * apply R.Raw.Proofs.In_MapsTo in H0. destruct H0. contradict H0. apply R.Raw.Proofs.empty_1.
+      * auto.
     + apply R.Raw.Proofs.find_1 in H1; auto.
       apply IHthis1 with (is_bst := Hl) in H1. rewrite H1. simpl.
       rewrite subst_rho_rgn_const. reflexivity.
     + apply R.Raw.Proofs.find_1 in H1; auto.
-      assert (R.Raw.In x this2) by (apply R.Raw.Proofs.find_iff in H1; [ eapply R.Raw.Proofs.MapsTo_In; eassumption | assumption]).
+      assert (R.Raw.In x this2) by (apply R.Raw.Proofs.find_iff in H1; 
+                                    [ eapply R.Raw.Proofs.MapsTo_In; eassumption | assumption]).
       apply IHthis2 with (is_bst := Hr) in H1.
-
-      (* apply R.Raw.InRight with (l:= R.Raw.empty nat) (r:=this2) (h:=t) (e':=e) (y:=k) in H0.
-      inversion H0; subst.
-      {  admit. }
-      { inversion H3. }
-      { admit. } *)
-
-      assert (Hthis1 : (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true x) =
-                        Rgn2_FVar true true x)) by admit.
-      rewrite Hthis1. simpl.
-      assert (AsciiVars.lt k x) by admit.
+      erewrite fold_subst_rgn_left_1; eauto; simpl.
+      assert (AsciiVars.lt k x) by (eapply fold_subst_rgn_left_2; eauto).
       apply AsciiVars.lt_not_eq in H2.
       destruct (RMapP.eq_dec k x); subst; [contradict H0; auto | assumption].
 Admitted.
 
-     
 Lemma subst_rho_open_close_rgn :
   forall rho n w v' rho' r r0 x,
     lc_type_rgn r0 ->
