@@ -254,25 +254,6 @@ Qed.
 
 Module RMapOrdProp := FMapFacts.OrdProperties R.
 
-Axiom fold_subst_rgn_left_1:
-  forall this1 k e this2 t x this1_is_bst,
-    R.Raw.bst (R.Raw.Node this1 k e this2 t) ->
-    R.Raw.In x this2 ->
-    (fold_subst_rgn {| R.this := this1; R.is_bst := this1_is_bst |} (Rgn2_FVar true true x) = 
-     Rgn2_FVar true true x).
-
-Axiom fold_subst_rgn_left_2:
-  forall this1 k (e : nat) this2 (t : Int.Z_as_Int.t) x v  is_bst_,
-    R.MapsTo x v {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst_ |} ->
-    R.Raw.In x this2 ->
-    AsciiVars.lt k x.
-
-Axiom fold_subst_rgn_eq_1:
-  forall k this1 (e:nat) this2 (t : Int.Z_as_Int.t) (b:R.Raw.bst (R.Raw.Node this1 k e this2 t)),
-    R.Raw.find k (R.this {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := b|}) = Some e ->
-    fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := b|} (Rgn2_FVar true true k) 
-    = Rgn2_Const true true e.
-
 Lemma subst_rho_fvar_2:
   forall rho x v,
    find_R (Rgn2_FVar true false x) rho = Some v ->
@@ -385,27 +366,35 @@ Proof.
   - unfold fold_subst_eps.  unfold fold_subst_eps in H0. 
     unfold opening_rgn_in_eps2, closing_rgn_in_eps2. unfold opening_rgn_in_eps2, closing_rgn_in_eps2 in H0.
     destruct H0 as [sa [[sa' [[sa'' [H2 H3]] H4]] H5]].
-    subst.
-    exists (opening_rgn_in_sa2 n (mk_rgn_type w) sa'').
-    split.
-    + exists sa''. intuition. admit.
-    + symmetry. 
-      inversion Hcl1; subst. destruct (H0 sa'').
-      erewrite subst_rho_open_close_sa; eauto. 
-      unfold fold_subst_eps in H.
-      admit.
+    rewrite <- H5. rewrite <- H4. rewrite <- H3.
+    inversion Hcl1. destruct (H0 sa'').
+
+    assert (fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa'') /\ e1 sa /\ e sa'') by
+        (eapply subst_rho_eps_aux_1; eauto).
+
+    assert(fold_subst_sa rho' (opening_rgn_in_sa2 n (Rgn2_Const true true v') (closing_rgn_in_sa2 n x sa'')) =
+            fold_subst_sa rho (opening_rgn_in_sa2 n (mk_rgn_type w) sa)). 
+    apply subst_rho_open_close_sa; auto. intuition.
+    rewrite H9. 
+    exists (opening_rgn_in_sa2 n (mk_rgn_type w) sa).
+    intuition.
+    exists sa.
+    intuition.
  - unfold fold_subst_eps.  unfold fold_subst_eps in H0. 
    unfold opening_rgn_in_eps2, closing_rgn_in_eps2. unfold opening_rgn_in_eps2, closing_rgn_in_eps2 in H0.
    destruct H0 as [sa [[sa' [H1 H2]] H3]].
-   rewrite <- H3.     
-   exists (opening_rgn_in_sa2 n (Rgn2_Const true true v') (closing_rgn_in_sa2 n x sa')).
+   rewrite <- H3. rewrite <- H2. 
+   exists (opening_rgn_in_sa2 n (Rgn2_Const true true v') (closing_rgn_in_sa2 n x sa')). 
    split.  
-   + exists (closing_rgn_in_sa2 n x sa'). intuition.
-     exists sa'. intuition. admit.
-   +  inversion Hcl1; subst. destruct (H0 sa').
-      erewrite subst_rho_open_close_sa; eauto.  
-      admit.
-Admitted.
+   + exists (closing_rgn_in_sa2 n x sa').  intuition.
+     exists sa'. intuition.  
+     assert (fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa') /\ e1 sa /\ e sa') by
+         (eapply subst_rho_eps_aux_1 in H; eauto; intuition; eauto).
+     intuition.
+   + inversion Hcl1. destruct (H0 sa').
+     eapply subst_rho_open_close_sa; eauto. 
+     eapply subst_rho_eps_aux_2; eauto.
+Qed.
    
 Lemma subst_rho_open_close :
   forall rho w v' rho' x tyr0 tyr,
@@ -750,6 +739,6 @@ Proof.
   Case "eff_concat". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_top". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_empty". exists stty. intuition. rewrite subst_rho_effect. constructor.
-Admitted.
+Qed.
 
 End TypeSoundness.
