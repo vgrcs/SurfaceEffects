@@ -231,7 +231,7 @@ Proof.
   intro rho. destruct rho. induction this; intros x.
   - unfold fold_subst_rgn, R.fold, R.Raw.fold; simpl. right. reflexivity.
   - assert (Hl: R.Raw.bst this1) by (inversion is_bst; auto).
-    assert (Hr: R.Raw.bst this2) by (inversion is_bst; auto). 
+    assert (Hr: R.Raw.bst this2) by (inversion is_bst; auto).  
     replace (fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst |} (Rgn2_FVar true true x))
     with
     (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |}
@@ -267,10 +267,11 @@ Axiom fold_subst_rgn_left_2:
     R.Raw.In x this2 ->
     AsciiVars.lt k x.
 
-(*Axiom fold_subst_rgn_eq_1:
-  forall k this1 (e : nat) this2 is_bst_ this2_is_bst t,
-    R.MapsTo k e {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst_ |} ->
-    fold_subst_rgn {| R.this := this2; R.is_bst := this2_is_bst |} (Rgn2_Const true true e) = Rgn2_Const true true e.*)
+Axiom fold_subst_rgn_eq_1:
+  forall k this1 (e:nat) this2 (t : Int.Z_as_Int.t) (b:R.Raw.bst (R.Raw.Node this1 k e this2 t)),
+    R.Raw.find k (R.this {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := b|}) = Some e ->
+    fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := b|} (Rgn2_FVar true true k) 
+    = Rgn2_Const true true e.
 
 Lemma subst_rho_fvar_2:
   forall rho x v,
@@ -293,15 +294,15 @@ Proof.
     apply  RMapP.find_mapsto_iff in H.    
     inversion H; subst. 
     + (* x = k *)
-      destruct (AsciiVars.compare k k); try (solve [unfold AsciiVars.lt in l; omega]). 
-      eapply R.Raw.Proofs.find_iff in H. 
-      apply R.Raw.InRoot with (l:= R.Raw.empty nat) (r:=R.Raw.empty nat) (e:=e) (h:=t) in e0.
-      apply R.Raw.Proofs.In_node_iff in e0.
-      destruct e0 as [? | [? | ?]]. 
-      * apply R.Raw.Proofs.In_MapsTo in H0. destruct H0. contradict H0. apply R.Raw.Proofs.empty_1.
-      * admit.
-      * apply R.Raw.Proofs.In_MapsTo in H0. destruct H0. contradict H0. apply R.Raw.Proofs.empty_1.
-      * auto.
+      destruct (AsciiVars.compare k k); try (solve [unfold AsciiVars.lt in l; omega]).
+      replace (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} 
+                              (subst_rgn k (Rgn2_Const true false e)
+                              (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true k))))
+      with (fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst |} 
+                           (Rgn2_FVar true true k)) by
+          (unfold fold_subst_rgn, R.fold, R.Raw.fold in *; reflexivity).  
+      eapply R.Raw.Proofs.find_1 in H; auto.
+      apply fold_subst_rgn_eq_1; auto.
     + apply R.Raw.Proofs.find_1 in H1; auto.
       apply IHthis1 with (is_bst := Hl) in H1. rewrite H1. simpl.
       rewrite subst_rho_rgn_const. reflexivity.
@@ -313,7 +314,7 @@ Proof.
       assert (AsciiVars.lt k x) by (eapply fold_subst_rgn_left_2; eauto).
       apply AsciiVars.lt_not_eq in H2.
       destruct (RMapP.eq_dec k x); subst; [contradict H0; auto | assumption].
-Admitted.
+Qed.
 
 Lemma subst_rho_open_close_rgn :
   forall rho n w v' rho' r r0 x,
