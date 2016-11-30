@@ -77,6 +77,104 @@ Proof.
     assumption. 
 Qed. 
 
+Definition Correctness_ext_1 :
+  forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,
+    (h, env, rho, ea) ⇓ (h', v, p) ->
+    forall h_ h'_ v_ p_,
+      H.Equal h h_ ->
+      (h_, env, rho, ea) ⇓ (h'_, v_, p_) ->
+      (h, env, rho, ee) ⇓ (h'', Eff eff, p') ->
+    BackTriangle (stty, ctxt, rgns, rho, ea, ee) ->
+    forall static ty, 
+      ReadOnlyPhi p' ->
+      TcHeap (h, stty) ->
+      TcRho (rho, rgns) ->
+      TcEnv (stty, rho, env, ctxt) -> 
+      TcExp (stty, ctxt, rgns, ea, ty, static) ->
+      H.Equal h' h'_ /\ v = v_ /\ p = p_.
+Proof.
+   intros h  h'  h'' env rho p  p' v  eff stty ctxt rgns ea ee BS1. 
+   generalize dependent p'. 
+   generalize dependent ee.
+   generalize dependent stty.
+   generalize dependent ctxt.
+   generalize dependent rgns.
+   generalize dependent eff.
+   generalize dependent h''.
+   dynamic_cases (dependent induction BS1) Case;
+     intros h'' eff rgns ctxt stty ee_exp p'; 
+     intros h_ h'_ v_ p_ HEqual BS2;
+     intros HEff HBt static ty HRonly HHeap HRho HEnv HExp;
+     inversion BS2; subst;
+     try (solve [intuition]).
+   Case "var x".
+     inversion BS2; subst. intuition. 
+     rewrite H in H1. inversion H1; subst. reflexivity.
+   Case "mu_app".
+      { inversion HBt as [ | | | |  
+                                 | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                                 | | | | | | | | |]; subst.
+        - inversion HEff; subst. inversion H11; subst.
+          inversion HRonly; subst.  inversion H5; subst.
+          assert ( RH1 : H.Equal fheap fheap0 /\ Cls (env', rho', Mu f x ec' ee') = 
+                                           Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).
+          eapply IHBS1_1 with (ee:=efff); eauto.
+          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst. 
+          assert ( RH2 : H.Equal aheap aheap0 /\ v0 = v1 /\ aacts = aacts0).
+          assert (HEq_1 : fheap = h'').  
+          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts0) in HR_ef. 
+            - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
+              assumption. assumption.
+            - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts0)) by
+                  (eapply eff_sound; eauto). 
+              eassumption. }
+          assert (aacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ea, aacts)) by
+              (eapply eff_sound; eauto; rewrite HEq_1; assumption).
+          assert (HEq_2 : aheap = fheap).   
+          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in HR_ea.
+            - apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
+              assumption. assumption. 
+            - eassumption. }
+          { eapply IHBS1_2 with (ee:=effa) (p':=phia0); eauto.
+            - rewrite HEq_1. eassumption.
+            - rewrite HEq_1. eassumption. } 
+          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
+          
+          assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
+          assert (HEq_1 : fheap = h'').  
+          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts0) in HR_ef. 
+            - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
+              assumption. assumption.
+            - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts0)) by
+                  (eapply eff_sound; eauto). 
+              eassumption. }
+          assert (aacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ea, aacts0)) by
+              (eapply eff_sound; eauto; rewrite HEq_1; assumption).
+          assert (HEq_2 : aheap = fheap).   
+          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts0) in HR_ea.
+            - apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
+              assumption. assumption. 
+            - eassumption. }
+          { eapply IHBS1_3 with (ee:=ee'0); eauto.
+            - admit.
+            - eapply ext_stores__bt; eauto.
+          destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+          auto.
+
+eapply IHBS1_3
+            with 
+                   (ee:= ee') 
+                   (h'':= h''); eauto.
+            -  
+            - inversion HRonly; subst. inversion H5; subst. inversion H8; subst. assumption.
+            - { apply update_env; simpl.  
+                - eapply ext_stores__env; eauto. 
+                  apply update_env.  
+                  + eassumption.
+                  + eapply ext_stores__val with (stty:=sttyb); eauto.
+                - eapply ext_stores__val with (stty:=sttya); eauto. }
+            - eapply ext_stores__exp; eauto. } 
+
 Definition Correctness_ext :
   forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,
     (h, env, rho, ea) ⇓ (h', v, p) ->
