@@ -424,7 +424,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
                       (heap, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
                       (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
                       (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') 
-                        ⇓ (bheap, v', bacts) ->
+                        ⇓ (bheap, v', bacts) -> 
                       (heap, env, rho,  Mu_App ef ea) ⇓ (bheap, v', Phi_Seq (Phi_Seq facts aacts) bacts) 
   | BS_Rgn_App    : forall x er eb w v v'
                            (env env': Env) (rho rho' : Rho) 

@@ -8,6 +8,16 @@ Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
+Axiom EvaluationMuAppIncludesEffectEvaluation:
+  forall h'' env rho ef fheap env' rho' f x ec' ee' facts ea aheap v v' aacts h' bacts e eacts h_,
+    (h'', env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
+    (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
+    (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', 
+            rho', ec') ⇓ (h', v', bacts)->
+    H.Equal h_ aheap ->
+    (h_, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', 
+            rho', ee') ⇓ (h_, e, eacts).
+
 Axiom EquivalenceUpToPermutations:
   forall (h h' h_: Heap) env rho exp v p,
     H.Equal h' h_ -> (* assume we can prove this for an hypothetical heap:=h_ *)
