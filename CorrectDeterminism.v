@@ -213,7 +213,8 @@ Proof.
          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst.
          assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
          { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya); eauto. 
-           - admit.
+           - eapply EvaluationMuAppIncludesEffectEvaluation 
+             with (aheap:=aheap0) (fheap:=fheap0); eauto.
            - eapply ext_stores__bt; eauto.
            - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
@@ -225,7 +226,12 @@ Proof.
            destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
          auto.
     }
-  Case "rgn_app".
+  Case "rgn_app". 
+    admit.
+  Case "eff_app".
+    admit.
+  Case "par_pair".
+      
 Admitted.
 
 Definition Correctness_ext :
@@ -429,11 +435,97 @@ Proof.
               eapply ext_stores__exp; eauto. }
           exact H_. } 
 
-      (* Start the proof of the "determinism" part *) 
- 
-      eapply BS_Mu_App in BS1_3; eauto.
-      assert (RH : H.Equal h' h'_ /\ v = v_ /\ Phi_Seq (Phi_Seq facts aacts) bacts = p_).
-      eapply DynamicDeterminism_ext_1; eauto.
-      intuition.   
-  Case "rgn_app".
+      (* Start the proof of the "determinism" part *)
+      { inversion HBt; subst. inversion HEff; subst.
+        - eapply BS_Mu_App in BS1_3; eauto.
+          assert (RH : H.Equal h' h'_ /\ v = v_ /\ Phi_Seq (Phi_Seq facts aacts) bacts = p_).
+          eapply Correctness_ext_1; eauto.
+          intuition.  
+        - eapply BS_Mu_App in BS1_3; eauto.
+          assert (RH : H.Equal h' h'_ /\ v = v_ /\ Phi_Seq (Phi_Seq facts aacts) bacts = p_).
+          eapply Correctness_ext_1; eauto.
+          intuition. }
+  Case "rgn_app". 
+    admit.
+  Case "eff_app".
+    admit.
+  Case "par_pair".
+    (* Start the proof of the "effect soundness" part *) 
+    
+    (* left part of the conjunction *)
+    assert (HSOUND :  Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2) ⊑ eff).
+    inversion HBt as [ | | | |  
+                       | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? A B C D HBt_a HBt_b HBt_c HBt_d | | | | | | | |]; subst; 
+    inversion HEff; subst; [ | apply PhiInThetaTop].
+    
+    clear H2. clear H3. 
+    clear H. clear H0.
+    
+    inversion HExp as  [ | | | | | ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
+                               | | | 
+                               ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
+                               | | | | | | | | | | | | | | | | ]; subst.  
+    inversion HEff; subst. inversion H2; subst. inversion H12; subst.
+
+    assert (H' : acts_eff1 ⊑ effa1).
+    { eapply IHBS1_1; eauto.
+      + { assert (HEq_1 : h'' = h_).
+          assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
+          eapply EquivalenceUpToPermutations; eauto. 
+          rewrite <- HEq_1. eassumption. }
+      + inversion HRonly. inversion H7; subst. assumption. }
+    assert (H'' : acts_eff2 ⊑ effb1).
+    { eapply IHBS1_2; eauto.
+      + { assert (HEq_1 : h'' = h_).
+          assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
+          eapply EquivalenceUpToPermutations; eauto. 
+          rewrite <- HEq_1. eassumption. }
+      + inversion HRonly. inversion H7; subst. assumption. }
+    assert (H''' : acts_mu1 ⊑ effa0).
+    { eapply IHBS1_3; eauto.
+      + { assert (HEq_1 : h'' = h_).
+          assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
+          eapply EquivalenceUpToPermutations; eauto. 
+          rewrite <- HEq_1. eassumption. }
+      + inversion HRonly. inversion H10; subst. assumption. }
+    assert (H'''' : acts_mu2 ⊑ effb2).
+    { eapply IHBS1_4; eauto.
+      + { assert (HEq_1 : h'' = h_).
+          assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
+          eapply EquivalenceUpToPermutations; eauto. 
+          rewrite <- HEq_1. eassumption. }
+      + inversion HRonly. inversion H10; subst. assumption. }
+    
+    assert (H_ : (Phi_Par acts_eff1 acts_eff2) ⊑ (Union_Theta effa1 effb1)). 
+    apply PTS_Par; [ apply Theta_introl | apply Theta_intror ]; eauto.
+
+    assert (H__ : (Phi_Par acts_mu1 acts_mu2) ⊑ (Union_Theta effa0 effb2)). 
+    apply PTS_Par; [ apply Theta_introl | apply Theta_intror ]; eauto.
+    
+    assert (_H_ : acts_mu1 ⊑ theta1).
+    { inversion HBt_c; subst.
+      - eapply IHBS1_3 ; eauto.
+        + { assert (HEq_1 : h'' = h_).
+            assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
+            eapply EquivalenceUpToPermutations; eauto. 
+            rewrite <- HEq_1. eassumption. }
+        + admit. 
+        + eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:= acts_eff1) in B; auto. 
+          assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ee_1, acts_eff1)) by
+              (eapply eff_sound; eauto). 
+          assumption.
+      - eapply IHBS1_3; eauto.
+        +  { assert (HEq_1 : h'' = h_).
+            assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
+            eapply EquivalenceUpToPermutations; eauto. 
+            rewrite <- HEq_1. eassumption. }
+        + admit.
+        + eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:= acts_eff1) in B; auto. 
+          assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ee_1, acts_eff1)) by
+              (eapply eff_sound; eauto). 
+          assumption.
+    }  
+  
+
 Admitted.

@@ -723,10 +723,18 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                         ReadOnlyStatic (fold_subst_eps rho static_ef) ->
                         ReadOnlyStatic (fold_subst_eps rho static_ea) ->
                         BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea)) 
-  | BT_Pair_Par     : forall stty ctxt rgns rho ef1 ea1 ef2 ea2 eff1 eff2,
-                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef1 ea1, eff1) ->
-                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef2 ea2, eff2) ->
-                        BackTriangle (stty, ctxt, rgns, rho, Pair_Par ef1 ea1 ef2 ea2, eff1 ⊕ eff2)
+  | BT_Pair_Par     : forall stty ctxt rgns rho ef1 ea1 ef2 ea2 eff1 eff2 eff3 eff4 
+                             ty_e static_ee_1 static_ee_2,
+                        TcExp (stty, ctxt, rgns, Eff_App ef1 ea1, ty_e, static_ee_1) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_ee_1) ->
+                        TcExp (stty, ctxt, rgns, Eff_App ef2 ea2, ty_e, static_ee_2) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_ee_2) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Eff_App ef1 ea1, eff1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Eff_App ef2 ea2, eff2) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef1 ea1, eff3) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef2 ea2, eff4) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Pair_Par ef1 ea1 ef2 ea2, 
+                                      (eff1 ⊕ eff2) ⊕ (eff3 ⊕ eff4))
   | BT_Rgn_App      : forall stty ctxt rgns rho er w ty_eb static_er,
                         TcExp (stty, ctxt, rgns, er, ty_eb, static_er) ->
                         TcExp (stty, ctxt, rgns, ∅, Ty2_Effect, Empty_Static_Action) ->
@@ -904,12 +912,13 @@ Lemma ext_stores__exp__bt__aux:
         TcRho p -> TcRho p) . 
 Proof.
   apply tc__xind; try (solve [econstructor;eauto] ).
-  - intros.
+  - intros. 
     unfold mk_TcVal_ext_store_ty, 
            mk_TcEnv_ext_store_ty, 
            get_store_typing_val, 
-           get_store_typing_env in *; simpl in *. 
-    constructor. subst. auto.
+           get_store_typing_env in *; simpl in *.
+    subst.
+    econstructor; eauto.
   - intros.
      unfold mk_TcVal_ext_store_ty, 
            mk_TcEnv_ext_store_ty, 
