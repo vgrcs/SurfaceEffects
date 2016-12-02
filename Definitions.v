@@ -635,6 +635,8 @@ Inductive TcExp : (Sigma * Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        TcExp (stty, ctxt, rgns, Eff_App ef ea, 
                               Ty2_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
   | TC_Pair_Par    : forall stty ctxt rgns ef1 ea1 ef2 ea2 ty1 ty2 ty3 ty4 eff1 eff2 eff3 eff4,
+                       (forall rho, BackTriangle (stty, ctxt, rgns, rho, Mu_App ef1 ea1, Eff_App ef1 ea1)) ->
+                       (forall rho, BackTriangle (stty, ctxt, rgns, rho, Mu_App ef2 ea2, Eff_App ef2 ea2)) ->
                        TcExp (stty, ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
                        TcExp (stty, ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
                        TcExp (stty, ctxt, rgns, Eff_App ef1 ea1, ty3, eff3) ->
@@ -718,11 +720,14 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                               ty_ef ty_ea  static_ef static_ea,
                         TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
                         TcExp (stty, ctxt, rgns, ea, ty_ea, static_ea) ->
-                        BackTriangle (stty, ctxt, rgns, rho, ef, efff) ->
-                        BackTriangle (stty, ctxt, rgns, rho, ea, effa) ->
+                        BackTriangle (stty, ctxt, rgns, rho, ef, Eff_App ef ea) ->
+                        BackTriangle (stty, ctxt, rgns, rho, ea, Eff_App ef ea) ->
+                        (*BackTriangle (stty, ctxt, rgns, rho, ef, efff) ->
+                        BackTriangle (stty, ctxt, rgns, rho, ea, effa) ->*)
                         ReadOnlyStatic (fold_subst_eps rho static_ef) ->
                         ReadOnlyStatic (fold_subst_eps rho static_ea) ->
-                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea)) 
+                        (*BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, efff ⊕ (effa ⊕ Eff_App ef ea))*)
+                        BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, Eff_App ef ea)
   | BT_Pair_Par     : forall stty ctxt rgns rho ef1 ea1 ef2 ea2 eff1 eff2 eff3 eff4 
                              ty_e static_ee_1 static_ee_2,
                         TcExp (stty, ctxt, rgns, Eff_App ef1 ea1, ty_e, static_ee_1) ->
