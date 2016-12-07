@@ -8,12 +8,15 @@ Require Import Coq.FSets.FMapAVL.
 Require Import Coq.FSets.FMapFacts.
 Require Import Coq.Structures.OrderedTypeEx.
 Require Import Coq.Lists.List.
-Require Import Coq.Numbers.Natural.Peano.NPeano. 
+Require Import Coq.Numbers.Natural.Peano.NPeano.
+Require Import Coq.Arith.Peano_dec. 
 Require Import Coq.Arith.EqNat.
 Require Import Coq.Arith.Mult.
 Require Import Coq.Arith.Plus.
 Require Import Coq.Arith.Minus. 
 Require Import Coq.Init.Peano.
+Require Import Coq.Bool.Bool.
+Require Import Coq.Strings.String.
 Require Import Ascii.
 
 Add LoadPath "." as Top.
@@ -49,7 +52,11 @@ Inductive Expr :=
   | Concat    : Expr -> Expr -> Expr
   | Top       : Expr
   | Empty     : Expr. 
-Notation "'(|' a ',' b '|)" := (Pair_Par a b) (at level 60).
+Notation "'(|' a b ',' c d '|)" := (Pair_Par a b c d) (at level 60).
+
+Inductive ParallelExpr : Expr -> Prop :=
+  | ParExpr : forall ef1 ea1 ef2 ea2, 
+                ParallelExpr (Pair_Par ef1 ea1 ef2 ea2). 
 
 
 Module E := FMapAVL.Make (AsciiVars).

@@ -100,7 +100,7 @@ Proof.
   generalize dependent h''.  
   dynamic_cases (dependent induction BS1) Case;
   intros h'' eff rgns ctxt stty ee_exp p' 
-         HEff HBt 
+         HEff HBt
          static ty 
          HRonly HHeap HRho HEnv HExp; 
   try (solve [econstructor]).

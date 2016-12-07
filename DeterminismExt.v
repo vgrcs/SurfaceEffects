@@ -18,15 +18,14 @@ Require Import Top.Environment.
 Require Import Top.Definitions.
 Require Import Top.CorrectnessLemmas.
 Require Import Top.Determinism.
-
+Require Import Top.TypeSystem.
 
 
 Axiom AllocAddressIsDeterministic:
   forall r0 l l0 heap,
     find_H (r0, l0) heap = find_H (r0, l) heap ->
     l = l0.
-
-
+    
 Theorem DynamicDeterminism_ext : 
   forall heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2,
     H.Equal heap_a heap_b ->
@@ -36,13 +35,13 @@ Theorem DynamicDeterminism_ext :
 Proof.
   intros heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2 Heq Dyn1. 
   generalize dependent acts2; generalize dependent val2; generalize dependent heap2. 
-  generalize dependent heap_b.
+  generalize dependent heap_b. 
   dependent induction Dyn1; intros heap_b Heq heap2 val2 acts2 Dyn2; inversion Dyn2; subst;
   try (solve [intuition]).
   - intuition. rewrite H in H1. inversion H1; subst. reflexivity.
   - assert ( RH1 : H.Equal fheap fheap0 /\ Cls (env', rho', Mu f x ec' ee') = 
-                                           Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 )
-      by (eapply IHDyn1_1; eauto).
+                                           Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).
+    eapply IHDyn1_1; eauto. 
     destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
     assert ( RH2 : H.Equal aheap aheap0 /\ v = v0 /\ aacts = aacts0) by (eapply IHDyn1_2; eauto).
     destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
