@@ -517,18 +517,18 @@ Proof.
          eapply ext_stores__exp; eauto.
          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst.
          assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
-         { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya); eauto. 
-           - eapply EvaluationMuAppIncludesEffectEvaluation 
-             with (aheap:=aheap0) (fheap:=fheap0); eauto.
-           - eapply ext_stores__bt; eauto.
+         { eapply IHBS1_3 with (stty:=sttya) (ee:=⊤) (eff:=None); eauto. 
+           - constructor.
+           - constructor.
            - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
                   + eassumption.
                   + eapply ext_stores__val with (stty:=sttyb); eauto.
                 - eapply ext_stores__val with (stty:=sttya); eauto. }
-            - eapply ext_stores__exp; eauto. } 
-           destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+            - eapply ext_stores__exp; eauto.
+         } 
+         destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
          auto.
       }   
   Case "rgn_app". 
