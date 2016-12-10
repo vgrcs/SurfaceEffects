@@ -9,14 +9,11 @@ Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
 Axiom EvaluationMuAppIncludesEffectEvaluation:
-  forall h'' env rho ef fheap env' rho' f x ec' ee' facts ea aheap v v' aacts h' bacts e eacts h_,
+  forall h'' env rho ef fheap env' rho' f x ec' ee' facts ea aheap v v' aacts h' bacts e eacts, 
     (h'', env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
     (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
-    (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', 
-            rho', ec') ⇓ (h', v', bacts)->
-    H.Equal h_ aheap ->
-    (h_, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', 
-            rho', ee') ⇓ (h_, e, eacts).
+    (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') ⇓ (h', v', bacts)->
+    (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee') ⇓ (aheap, e, eacts).
 
 Axiom EquivalenceUpToPermutations:
   forall (h h' h_: Heap) env rho exp v p,
@@ -30,6 +27,13 @@ Axiom ReadOnlyWalkSameHeap:
     ReadOnlyPhi (Phi_Par acts_mu1 acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
     H.Equal h same_h.
+
+Axiom EqualHeapsEqualFold :
+  forall heap_mu1 heap_mu0 heap_mu2 heap_mu3,
+    H.Equal heap_mu1 heap_mu0 ->
+    H.Equal heap_mu2 heap_mu3 ->
+    H.Equal (Functional_Map_Union_Heap heap_mu1 heap_mu2) 
+            (Functional_Map_Union_Heap heap_mu0 heap_mu3).
 
 Axiom UnionTcHeap:
   forall hp' heap_mu1 heap_mu2 sttym sttya,

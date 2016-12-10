@@ -185,9 +185,8 @@ Proof.
             - apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
               assumption. assumption. 
             - eassumption. }
-          { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya) ; eauto.
-            - eapply EvaluationMuAppIncludesEffectEvaluation 
-                    with (aheap:=aheap0) (fheap:=fheap0); eauto.
+          { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya)  (h'':=aheap) (p':=bacts1); eauto.
+            - eapply EvaluationMuAppIncludesEffectEvaluation; eauto.
             - eapply ext_stores__bt; eauto.
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
@@ -212,18 +211,18 @@ Proof.
          eapply ext_stores__exp; eauto.
          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst.
          assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
-         { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya); eauto. 
-           - eapply EvaluationMuAppIncludesEffectEvaluation 
-             with (aheap:=aheap0) (fheap:=fheap0); eauto.
-           - eapply ext_stores__bt; eauto.
+         { eapply IHBS1_3 with (stty:=sttya) (ee:=⊤) (eff:=None); eauto. 
+           - constructor.
+           - constructor.
            - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
                   + eassumption.
                   + eapply ext_stores__val with (stty:=sttyb); eauto.
                 - eapply ext_stores__val with (stty:=sttya); eauto. }
-            - eapply ext_stores__exp; eauto. } 
-           destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+            - eapply ext_stores__exp; eauto.
+         } 
+         destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
          auto.
     }
   Case "rgn_app". 
@@ -490,9 +489,8 @@ Proof.
             - rewrite HEq_1. eassumption. } 
           destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
           assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
-          { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya); eauto.
-            - eapply EvaluationMuAppIncludesEffectEvaluation 
-              with (aheap:=aheap0) (fheap:=fheap0); eauto.
+          { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya)  (h'':=aheap) (p':=bacts1); eauto.
+            - eapply EvaluationMuAppIncludesEffectEvaluation; eauto.
             - eapply ext_stores__bt; eauto.
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
@@ -517,18 +515,18 @@ Proof.
          eapply ext_stores__exp; eauto.
          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst.
          assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
-         { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya); eauto. 
-           - eapply EvaluationMuAppIncludesEffectEvaluation 
-             with (aheap:=aheap0) (fheap:=fheap0); eauto.
-           - eapply ext_stores__bt; eauto.
+         { eapply IHBS1_3 with (stty:=sttya) (ee:=⊤) (eff:=None); eauto. 
+           - constructor.
+           - constructor.
            - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
                   + eassumption.
                   + eapply ext_stores__val with (stty:=sttyb); eauto.
                 - eapply ext_stores__val with (stty:=sttya); eauto. }
-            - eapply ext_stores__exp; eauto. } 
-           destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+            - eapply ext_stores__exp; eauto.
+         } 
+         destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
          auto.
       }   
   Case "rgn_app". 
@@ -770,28 +768,29 @@ Proof.
       inversion HEff; subst. inversion HEff; subst. inversion H28; subst.  inversion H9; subst.
       
       clear H18. clear H19. clear H23. clear H24.
+      clear H. clear H0. clear H2. clear H3.
       assert (HR1 : H.Equal h'' h_ /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0). 
       
       { eapply IHBS1_1 with (ee:=eff1); eauto.
-        inversion HRonly. inversion H12. assumption. }   
+        inversion HRonly. inversion H2. assumption. }   
       destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
       
       assert (HR2 : H.Equal h'' h_ /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3). 
       { eapply IHBS1_2 with (ee:=eff2); eauto.
-        inversion HRonly. inversion H12. assumption. }
+        inversion HRonly. inversion H2. assumption. }
       destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
       
       assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0).  
       { inversion HExp; subst.
         eapply IHBS1_3 with (ee:=eff3) (ty:=ty1) (static:=eff0); eauto.   
-        inversion HRonly. inversion H14. assumption.
+        inversion HRonly. inversion H3. assumption.
       }
       inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3; subst.
       
       assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
       { inversion HExp; subst.
         eapply IHBS1_4 with (ee:=eff4); eauto.
-        inversion HRonly. inversion H14. assumption. }
+        inversion HRonly. inversion H3. assumption. }
       inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
       split.
       - rewrite <- H13 in HSOUND.
@@ -822,15 +821,34 @@ Proof.
         + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
             by (eapply Det_trace_from_theta; eauto; 
                 [ apply Dynamic_DetTrace in BS1_3 | apply Dynamic_DetTrace in BS1_4]; assumption).
-          inversion H24. assumption.
+          inversion H18. assumption.
         + assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
             by (eapply Det_trace_from_theta; eauto; 
                 [ apply Dynamic_DetTrace in BS1_3 | apply Dynamic_DetTrace in BS1_4]; assumption).
-        inversion H24. assumption. 
-      - intuition. 
-        + admit.
-        + admit.
-        + admit.  
+        inversion H18. assumption. 
+      - inversion HEff; subst.
+        inversion HExp; subst.
+        assert (HR1 : H.Equal h'' h_ /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0) 
+          by (eapply IHBS1_1 ; eauto; constructor).
+        destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert (HR2 : H.Equal h'' h_ /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3) 
+          by (eapply IHBS1_2 with (ee:=⊤); eauto; constructor).
+        destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0)
+          by (eapply IHBS1_3 with (ee:=⊤) ; eauto; constructor).
+        inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3; subst.
+        assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
+        eapply IHBS1_4 with (ee:=⊤); eauto; constructor.
+        inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
+
+        assert (H.Equal (Functional_Map_Union_Heap heap_mu1 heap_mu2) 
+                        (Functional_Map_Union_Heap heap_mu0 heap_mu3)) 
+          by (eapply EqualHeapsEqualFold; eauto).
+        assert (H.Equal h' (Functional_Map_Union_Heap heap_mu0 heap_mu3)).
+        eapply HFacts.Equal_trans; eauto.    
+        apply HFacts.Equal_sym in H25.
+        assert (H.Equal h' h'_) by (eapply HFacts.Equal_trans; eauto).
+        intuition.
     }
   Case "cond_true".
 Admitted.
