@@ -828,14 +828,27 @@ Proof.
         inversion H18. assumption. 
       - inversion HEff; subst.
         inversion HExp; subst.
-        assert (HR1 : H.Equal h'' h_ /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0).       
-        { eapply IHBS1_1 ; eauto. 
-          - constructor. }
+        assert (HR1 : H.Equal h'' h_ /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0) 
+          by (eapply IHBS1_1 ; eauto; constructor).
         destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert (HR2 : H.Equal h'' h_ /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3) 
+          by (eapply IHBS1_2 with (ee:=⊤); eauto; constructor).
+        destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0)
+          by (eapply IHBS1_3 with (ee:=⊤) ; eauto; constructor).
+        inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3; subst.
+        assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
+        eapply IHBS1_4 with (ee:=⊤); eauto; constructor.
+        inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
 
-        + admit.
-        + admit.
-        + admit.  
+        assert (H.Equal (Functional_Map_Union_Heap heap_mu1 heap_mu2) 
+                        (Functional_Map_Union_Heap heap_mu0 heap_mu3)) 
+          by (eapply EqualHeapsEqualFold; eauto).
+        assert (H.Equal h' (Functional_Map_Union_Heap heap_mu0 heap_mu3)).
+        eapply HFacts.Equal_trans; eauto.    
+        apply HFacts.Equal_sym in H25.
+        assert (H.Equal h' h'_) by (eapply HFacts.Equal_trans; eauto).
+        intuition.
     }
   Case "cond_true".
 Admitted.
