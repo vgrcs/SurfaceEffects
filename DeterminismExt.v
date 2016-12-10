@@ -25,7 +25,7 @@ Axiom AllocAddressIsDeterministic:
   forall r0 l l0 heap,
     find_H (r0, l0) heap = find_H (r0, l) heap ->
     l = l0.
-    
+
 Theorem DynamicDeterminism_ext : 
   forall heap_a heap_b env rho exp heap1 heap2 val1 val2 acts1 acts2,
     H.Equal heap_a heap_b ->
