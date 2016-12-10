@@ -344,7 +344,7 @@ Proof.
       assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
           (eapply eff_sound; eauto).
       assert (HEq_1 :  cheap = h). 
-      { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in HR.
+      {eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in HR.
         - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
           assumption. constructor. 
         - eassumption. }

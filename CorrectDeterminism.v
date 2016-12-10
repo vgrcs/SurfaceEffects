@@ -691,50 +691,53 @@ Proof.
          apply PhiInThetaTop. 
     }
     (* start the proof of the "determinism" part *) 
-    { inversion HBt as [ | | | | | | |   
+    { inversion BS2; subst.
+      - inversion HBt as [ | | | | | | |   
                          | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
-                           TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
-                       | | | | | | ]; subst;   
-        inversion BS2; subst.
-      - assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 )
-          by (eapply IHBS1_1 with (ee:=∅) (p':=Phi_Nil); eauto; econstructor).
-        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
-        
-        assert (HEq_1 :  cheap = h) by admit.
-        assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ tacts = tacts0 ).
-        { eapply IHBS1_2 ; eauto.
-          - assert (H' : cacts0 ⊑ Some empty_set).
-              { eapply IHBS1_1 with (h_:=h) (p':=Phi_Nil); eauto. 
-                - apply HFacts.Equal_refl. 
-                - constructor.
-                - constructor. } 
-              apply EmptyIsNil in H'. subst.    
-              eapply EvalTrueIsTrue; eauto. 
-          - subst. assumption.  }
-        
-        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
-          intuition.
-      - assert ( RH1: H.Equal cheap cheap0 /\ Bit true = Bit false /\ cacts = cacts0). 
-        eapply IHBS1_1  with (ee:=∅) (p':=Phi_Nil); eauto; econstructor.
-        destruct RH1 as [? [D ?]]. discriminate D. 
-      - inversion HExp; subst.
-        assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 )
-          by (eapply IHBS1_1 with (ee:=⊤) (p':=Phi_Nil); eauto; econstructor).
-        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
-        
-        assert (HEq_1 :  cheap = h) by admit.
-          assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ tacts = tacts0 ).
-          { eapply IHBS1_2 with (ee:=⊤) (p':=Phi_Nil); eauto.
-            - econstructor. 
-            - econstructor. 
+                             TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
+                         | | | | | | ]; subst.
+        + assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 )
+            by (eapply IHBS1_1 with (ee:=∅) (p':=Phi_Nil); eauto; econstructor).
+          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
+          
+          assert (H' : cacts0 ⊑ Some empty_set).
+          { eapply IHBS1_1 with (h_:=h) (p':=Phi_Nil); eauto. 
+            - apply HFacts.Equal_refl. 
             - constructor.
-            - subst. assumption. }
+            - constructor. } 
+          apply EmptyIsNil in H'. subst.  
+          
+          assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ tacts = tacts0 ).
+          { eapply IHBS1_2 ; eauto.
+            - eapply EvalTrueIsTrue; eauto. 
+            - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+              subst. assumption.  constructor. }
           destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
-          intuition.           
-      - inversion HExp; subst. 
+          intuition.
+        + induction eff; inversion HEff; subst.
+          inversion HExp; subst.
+
+          assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho eff, cacts)).
+          eapply eff_sound; eauto.      
+          assert (HEq_1 :  cheap = h''). 
+          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=cacts) in H4.
+            - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+              assumption. assumption. 
+            - eassumption. } 
+          
+          assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 ) 
+            by (eapply IHBS1_1 ; eauto; econstructor).
+          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
+          
+          assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ tacts = tacts0 ) 
+            by (eapply IHBS1_2 with (p':=Phi_Nil); eauto; econstructor).
+          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
+          intuition.          
+      - inversion HExp; subst.
         assert ( RH1: H.Equal cheap cheap0 /\ Bit true = Bit false /\ cacts = cacts0). 
-        eapply IHBS1_1 with (ee:=⊤) (p':=Phi_Nil); eauto; econstructor.
-        destruct RH1 as [? [D ?]]. discriminate D.
+        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto. econstructor. econstructor.
+        constructor.
+        destruct RH1 as [? [D ?]]. discriminate D. 
     }
  Case "cond_false".
 Admitted.
