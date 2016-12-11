@@ -758,7 +758,7 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                         TcExp (stty, ctxt, rgns, e, ty_e, static_e) ->
                         TcExp (stty, ctxt, rgns, et, ty_et, static_et) ->
                         TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
-                        ReadOnlyStatic (fold_subst_eps rho static_e) ->
+                        (*ReadOnlyStatic (fold_subst_eps rho static_e) ->*)
                         BackTriangle (stty, ctxt, rgns, rho, e, ∅) ->
                         BackTriangle (stty, ctxt, rgns, rho, et, efft) ->
                         BackTriangle (stty, ctxt, rgns, rho, ef, efff) ->

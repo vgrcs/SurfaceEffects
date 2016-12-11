@@ -333,7 +333,7 @@ Proof.
       apply PTS_Seq; inversion HEff; subst; apply PhiInThetaTop.
   Case "cond_true". 
     inversion HBt as [ | | | | | | |   
-                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
+                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
                        | | | | | | ]; subst.
     SCase "Cond e et ef << Cond e efft efff". 
       assert (H' : cacts ⊑ Some empty_set) by
@@ -341,25 +341,29 @@ Proof.
       apply EmptyUnionIsIdentity.
       apply EmptyIsNil in H'; subst.
       apply PTS_Seq; [apply PTS_Nil |]. 
-      assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
+
+      (*assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
           (eapply eff_sound; eauto).
       assert (HEq_1 :  cheap = h). 
       {eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in HR.
         - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
           assumption. constructor. 
-        - eassumption. }
+        - eassumption. }*)
+      
       rewrite UnionEmptyWithEffIsEff. 
       eapply IHBS1_2 with (ee:=efft); eauto. 
       SSCase "Invoke DynamicDeterminism to prove equal heaps".
         eapply EvalTrueIsTrue; eauto.
+        apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
         eapply EqualHeaps; eauto. 
-        apply Equal_heap_equal. auto.
+        apply Equal_heap_equal. symmetry. auto.
+        constructor.
     SCase "Cond e et ef << (⊤)". 
       inversion HEff; subst.  
       constructor; apply PhiInThetaTop.
   Case "cond_false".    
   inversion HBt as [ | | | | | | |   
-                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
+                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
                        | | | | | | ]; subst.
     SCase "Cond e et ef << Cond e efft efff".
       assert (H' :cacts ⊑ Some empty_set) by 
@@ -367,13 +371,18 @@ Proof.
       apply EmptyUnionIsIdentity.
       apply EmptyIsNil in H'; subst.
       apply PTS_Seq; [apply PTS_Nil |].
-      assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
+      (*assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
           (eapply eff_sound; eauto).
       assert (HEq_1 :  cheap = h). 
       { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in HR.
         - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
           assumption. constructor. 
-        - eassumption. }
+        - eassumption. }*)
+      assert (HEq_1 :  cheap = h).
+      apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+      assumption.
+      constructor.
+      
       rewrite UnionEmptyWithEffIsEff.
       eapply IHBS1_2 with (ee:=efff); eauto; [| rewrite HEq_1; assumption].
       SSCase "Invoke DynamicDeterminism to prove equal heaps".

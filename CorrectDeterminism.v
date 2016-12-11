@@ -661,7 +661,7 @@ Proof.
     assert (HSOUND :  Phi_Seq cacts tacts ⊑ eff).
     { inversion HBt as [ | | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
-                           TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
+                           TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
                        | | | | | | ]; subst. 
       - assert (H' : cacts ⊑ Some empty_set).
         { eapply IHBS1_1 with (h_:=h) (p':=Phi_Nil); eauto. 
@@ -672,17 +672,23 @@ Proof.
         apply EmptyUnionIsIdentity.
         apply EmptyIsNil in H'. subst. 
         apply PTS_Seq; [apply PTS_Nil |].
+
+        assert (HEq_1 :  cheap = h).
+        { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+          assumption.
+          constructor. }
+
         rewrite UnionEmptyWithEffIsEff.
         
-        assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
+        (*assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
             (eapply eff_sound; eauto).      
         assert (HEq_1 :  cheap = h). 
         { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in HR.
           - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
             assumption. constructor. 
-          - eassumption. } 
+          - eassumption. } *)
         
-        { eapply IHBS1_2 with (ee:=efft)  (h_:=h) ; eauto. 
+        { eapply IHBS1_2 with (ee:=efft)  (h_:=h) ; eauto.
           - apply Equal_heap_equal. auto.
           - subst. eassumption.
           - eapply EvalTrueIsTrue; eauto. 
@@ -694,7 +700,7 @@ Proof.
     { inversion BS2; subst.
       - inversion HBt as [ | | | | | | |   
                          | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
-                             TcExp_e TcExp_et TcExp_ef HR HBt_e HBt_et HBt_ef
+                             TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
                          | | | | | | ]; subst.
         + assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 )
             by (eapply IHBS1_1 with (ee:=∅) (p':=Phi_Nil); eauto; econstructor).
