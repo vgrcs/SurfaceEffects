@@ -833,4 +833,122 @@ Proof.
          inversion H0; subst.
          intuition.
     }
+  Case "set_ref e1 e2".
+    (* left part of the conjunction *)
+    assert (HSOUND : Phi_Seq (Phi_Seq aacts vacts) (Phi_Elem (DA_Write r l v0)) ⊑ eff ).
+    { inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ]; subst. 
+      SCase "Assign w ea0 ev << (eff1 ⊕ (eff2 ⊕ WriteAbs w))".
+        inversion HEff; subst.
+        apply PTS_Seq. 
+        SSCase "Phi_Seq aacts vacts ⊑ Union_Theta effa effb".
+          apply EnsembleUnionComp.
+          SSSCase "aacts ⊑ effa".
+            inversion HExp; subst.
+            eapply IHBS1_1 with (h_:=h''); eauto using HFacts.Equal_refl. 
+            inversion HRonly; subst. assumption.
+          SSSCase "vacts ⊑ effb". 
+            inversion HEff; subst. 
+            inversion H9; subst.
+            inversion HExp; subst.
+            
+            assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts)) by
+                (eapply eff_sound; eauto). 
+            assert (HEq_1 : heap' = h'').   
+            eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in HR.
+            { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+              - assumption. 
+              - assumption. } 
+            exact facts_Eff. 
+            
+            assert (vacts ⊑ effa1). 
+            { eapply IHBS1_2 with (p':= phia0); eauto using HFacts.Equal_refl.  
+              - rewrite HEq_1. eassumption.
+              - inversion HRonly; subst. inversion H6; subst. eassumption.
+              - rewrite HEq_1. assumption. }
+            apply Theta_introl. assumption.
+        SSCase "Phi_Elem (DA_Write r l v0) ⊑ Union_Theta effa effb".    
+          inversion H9; subst. 
+          assert (Phi_Elem (DA_Write r l v0) ⊑ effb0).
+          apply PTS_Elem. inversion H10; subst.
+          rewrite H in H1. inversion H1; subst.
+          apply DAT_Write_Abs; apply In_singleton.
+          apply Theta_intror. apply Theta_intror. 
+          assumption.
+      SCase " Assign (Rgn2_Const true false r0) ea0 ev << (eff1 ⊕ (eff2 ⊕ WriteConc ea0))".
+         inversion HEff; subst. 
+         apply PTS_Seq.
+         SSCase "Phi_Seq aacts vacts ⊑ Union_Theta effa effb".
+           apply EnsembleUnionComp.
+           SSSCase "aacts ⊑ effa".
+             inversion HExp; subst.
+             eapply IHBS1_1 with (h_:=h'');  eauto using HFacts.Equal_refl.  
+             inversion HRonly; subst. 
+             assumption.
+           SSSCase "vacts ⊑ effb". 
+             inversion HExp; subst. 
+             inversion H13; subst. 
+             inversion H9; subst.
+
+             assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts)) by
+                 (eapply eff_sound; eauto). 
+             assert (HEq_1 : heap' = h''). 
+             { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in HR.
+               - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+                 assumption. assumption. 
+               - eassumption. }
+             
+             assert (vacts ⊑ effa0). 
+             { eapply IHBS1_2 with (p':= phia0);  eauto using HFacts.Equal_refl.     
+               - rewrite HEq_1. eassumption.
+               - inversion HRonly; subst. inversion H6; subst. assumption.
+               - rewrite HEq_1. assumption. }
+             apply Theta_introl. assumption. 
+        SSCase "Phi_Elem (DA_Write r l v0) ⊑ Union_Theta effa effb".
+          inversion H9; subst. 
+          assert (Phi_Elem (DA_Write r l v0) ⊑ effb0).
+          apply PTS_Elem. inversion H10; subst.   
+          assert (HD: H.Equal heap' h'' /\  Loc (Rgn2_Const true false r0) l =
+                                            Loc (Rgn2_Const true false r1) l0 /\ aacts = Phi_Nil)
+            by (eapply IHBS1_1 with (h_:=h'') (ee:=eff1); eauto using HFacts.Equal_refl;
+                inversion HRonly; assumption).
+          destruct HD as [? [H_ ?]]; inversion H_; subst.
+          inversion H; subst.
+          apply DAT_Write_Conc; apply In_singleton.
+          apply Theta_intror. apply Theta_intror. assumption.
+      SCase "Assign w ea0 ev << (⊤)".
+        inversion HEff; subst.   
+        apply PhiInThetaTop.
+    }
+    (* start the proof of the "determinism" part *) 
+    { inversion BS2; subst.
+      inversion HExp; subst. 
+      
+      inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ]; subst. 
+      - inversion HEff; subst. 
+        inversion H15; subst.
+        
+        assert ( RH1 : H.Equal heap' heap'0 /\  
+                       Loc (Rgn2_Const true false s) l = Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ). 
+        eapply IHBS1_1 with (ee:=eff1); eauto. inversion HRonly. assumption.
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.
+        assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
+        eapply IHBS1_2 with (eff:=effa0) (p':=phia0); eauto.
+        assert (HEq_1 : h'' = heap') by admit.
+        rewrite <- HEq_1. eassumption. inversion HRonly. inversion H7. assumption.
+        assert (HEq_1 : h'' = heap') by admit.
+        rewrite <- HEq_1. assumption.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2.
+        rewrite H in H11; inversion H11; subst. 
+        intuition.
+        unfold update_H; simpl. apply HMapP.add_m; auto. 
+      - admit.
+      - admit.  
+    }
 Admitted.
