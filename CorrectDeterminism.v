@@ -698,6 +698,16 @@ Proof.
     }
     (* start the proof of the "determinism" part *) 
     { inversion BS2; subst.
+      inversion HExp; subst.
+      assert (bitVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (cheap0, stty')
+                         /\ TcVal (stty', 
+                                   Bit true, 
+                                   subst_rho rho Ty2_Boolean)). 
+      eapply ty_sound; eauto using EqualHeaps.
+      destruct bitVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+
       - inversion HBt as [ | | | | | | |   
                          | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
                              TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
@@ -721,29 +731,106 @@ Proof.
           destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
           intuition.
         + induction eff; inversion HEff; subst.
-          inversion HExp; subst.
-
-          assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho eff, cacts)).
-          eapply eff_sound; eauto.      
-          assert (HEq_1 :  cheap = h''). 
-          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=cacts) in H4.
-            - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
-              assumption. assumption. 
-            - eassumption. } 
-          
+      
           assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 ) 
             by (eapply IHBS1_1 ; eauto; econstructor).
           destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
           
-          assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ tacts = tacts0 ) 
-            by (eapply IHBS1_2 with (p':=Phi_Nil); eauto; econstructor).
+          assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ tacts = tacts0 ). 
+          { eapply IHBS1_2 with (ee:=⊤) (stty:=sttyb) (p':=Phi_Nil); 
+            eauto using ext_stores__env, ext_stores__exp.   
+            - econstructor.
+            - econstructor.
+            - symmetry in h_eq_1. eapply EqualHeaps; eauto. }
           destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
           intuition.          
       - inversion HExp; subst.
         assert ( RH1: H.Equal cheap cheap0 /\ Bit true = Bit false /\ cacts = cacts0). 
-        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto. econstructor. econstructor.
-        constructor.
+        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto; econstructor. 
         destruct RH1 as [? [D ?]]. discriminate D. 
     }
- Case "cond_false".
+  Case "cond_false".
+    admit.
+  Case "new_ref e".
+    admit.
+  Case "get_ref e". 
+    (* left part of the conjunction *)
+    assert (HSOUND : Phi_Seq aacts (Phi_Elem (DA_Read r l v)) ⊑ eff ).
+    { inversion HBt as [ | | | | | | |   
+                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef | 
+                       | ? ? ? ? ? ? ? ? ? TcExp_ea0 HBt_ea0 | 
+                       | | | ]; subst. 
+      - inversion HEff; subst. 
+        apply EnsembleUnionComp.
+        + eapply IHBS1 with (h_:=h''); eauto using HFacts.Equal_refl.  
+          inversion HRonly; subst. assumption.
+        + apply PTS_Elem. inversion H10; subst.
+          rewrite H in H2; inversion H2.
+          apply DAT_Read_Abs. apply In_singleton.  
+      - inversion HEff; subst.
+        assert (aacts ⊑ Some empty_set). 
+        eapply IHBS1 with (h_:=h); eauto using HFacts.Equal_refl; constructor.
+        apply PTS_Seq.
+        + apply EmptyInAnyTheta. assumption.
+        + apply PTS_Elem.
+          simpl in H; inversion H; subst.  
+          assert (HD: H.Equal h' h'' /\  
+                      Loc (Rgn2_Const true false r) l = Loc (Rgn2_Const true false r1) l0 /\ 
+                      aacts  = Phi_Nil ).
+          eapply IHBS1 with (h_:=h) (ee:=∅); eauto using HFacts.Equal_refl; constructor.
+          destruct HD as [? [H_ ?]]; inversion H_; subst.
+          apply DAT_Read_Conc. apply In_singleton.
+      - econstructor; inversion HEff; subst; apply PhiInThetaTop.
+    }  
+    (* start the proof of the "determinism" part *) 
+    { inversion BS2; subst.
+      inversion HExp; subst. 
+      
+      inversion HBt as [ | | | | | | |   
+                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef | 
+                       | ? ? ? ? ? ? ? ? ? TcExp_ea0 HBt_ea0 | 
+                       | | | ]; subst. 
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal h' h'_ /\  
+                       Loc (Rgn2_Const true false s) l =  Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ) 
+          by (eapply IHBS1 with (ee:=eff0); eauto; inversion HRonly; assumption).
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. 
+        inversion v_eq_1.
+        assert (H_ : forall k, find_H k h' = find_H k h'_)
+          by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
+         rewrite H_ in H0.
+         simpl in H10. inversion H10. 
+         simpl in H. inversion H.
+         subst. rewrite H6 in H11.
+         rewrite H11 in H0.
+         inversion H0; subst.
+         intuition.
+      -  inversion HEff; subst.
+         assert ( RH1 : H.Equal h' h'_ /\  
+                       Loc (Rgn2_Const true false s) l =  Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ) 
+           by (eapply IHBS1 with (ee:=∅); eauto; econstructor).
+         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1; subst.
+         assert (H_ : forall k, find_H k h' = find_H k h'_)
+           by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
+         rewrite H_ in H0.
+         simpl in H10, H. inversion H; inversion H10; subst.
+         rewrite H7 in H0. rewrite H11 in H0.
+         inversion H0; subst.
+         intuition.
+      -  inversion HEff; subst.
+         assert ( RH1 : H.Equal h' h'_ /\  
+                       Loc (Rgn2_Const true false s) l =  Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ) 
+           by (eapply IHBS1 with (ee:=⊤); eauto; econstructor).
+         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1; subst.
+         assert (H_ : forall k, find_H k h' = find_H k h'_)
+           by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
+         rewrite H_ in H0.
+         simpl in H10, H. inversion H; inversion H10; subst. 
+         rewrite H3 in H0. rewrite H11 in H0.
+         inversion H0; subst.
+         intuition.
+    }
 Admitted.

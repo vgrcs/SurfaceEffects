@@ -668,7 +668,6 @@ Inductive TcExp : (Sigma * Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        TcExp (stty, ctxt, rgns, Assign w ea ev, Ty2_Unit,
                               Union_Static_Action (Union_Static_Action aeff veff) (Singleton_Static_Action (SA_Write  (mk_rgn_type w))))
   | TC_Conditional : forall stty ctxt rgns b e1 e2 te eff eff1 eff2,     
-                       (forall rho, ReadOnlyStatic (fold_subst_eps rho eff)) ->
                        TcExp (stty, ctxt, rgns, b, Ty2_Boolean, eff) ->         
                        TcExp (stty, ctxt, rgns, e1, te, eff1) -> 
                        TcExp (stty, ctxt, rgns, e2, te, eff2) -> 
