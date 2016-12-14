@@ -75,7 +75,7 @@ Proof.
     subst.
     rewrite <- HD_.
     assumption. 
-Qed. 
+Qed.
 
 Definition Correctness_ext :
   forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,
@@ -223,7 +223,7 @@ Proof.
           destruct HD as [A [HeqHeap [HEqCls HEqfacts]]].  symmetry in HEqCls.   inversion HEqCls; subst. 
           
           assert (HD' : aacts  ⊑ eff /\  H.Equal h'' h'' /\ v0 =  v' /\ aacts =  aacts0) by
-              (eapply IHBS1_2; eauto; inversion HRonly; inversion H5; assumption).
+              (eapply IHBS1_2; eauto; inversion HRonly as [ | | ? ? A B | ]; inversion B; assumption).
           destruct HD' as [A_ [B [C D]]]; symmetry in C, D; subst.
           
           assert (H_ : bacts  ⊑ eff). 
@@ -269,7 +269,7 @@ Proof.
                                  | | | | | | | | |]; subst. 
      
         - inversion HEff; subst.
-          inversion HRonly; subst.  inversion H1; subst.
+          inversion HRonly as [ | | ? ? A B | ]; inversion A.
 
           assert ( RH1 : H.Equal fheap fheap0 /\ Cls (env', rho', Mu f x ec' ee') = 
                                            Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).
@@ -502,28 +502,28 @@ Proof.
           assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
           eapply EquivalenceUpToPermutations; eauto. 
           rewrite <- HEq_1. eassumption. }
-      + inversion HRonly. inversion H7; subst. assumption. }
+      + inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
     assert (H'' : acts_eff2 ⊑ effb1).
     { eapply IHBS1_2; eauto.
       + { assert (HEq_1 : h'' = h_).
           assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
           eapply EquivalenceUpToPermutations; eauto. 
           rewrite <- HEq_1. eassumption. }
-      + inversion HRonly. inversion H7; subst. assumption. }
+      + inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
     assert (H''' : acts_mu1 ⊑ effa0).
     { eapply IHBS1_3; eauto.
       + { assert (HEq_1 : h'' = h_).
           assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
           eapply EquivalenceUpToPermutations; eauto. 
           rewrite <- HEq_1. eassumption. }
-      + inversion HRonly. inversion H10; subst. assumption. }
+      + inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
     assert (H'''' : acts_mu2 ⊑ effb2).
     { eapply IHBS1_4; eauto.
       + { assert (HEq_1 : h'' = h_).
           assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
           eapply EquivalenceUpToPermutations; eauto. 
           rewrite <- HEq_1. eassumption. }
-      + inversion HRonly. inversion H10; subst. assumption. }
+      + inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
     
     assert (H_ : (Phi_Par acts_eff1 acts_eff2) ⊑ (Union_Theta effa1 effb1)). 
     apply PTS_Par; [ apply Theta_introl | apply Theta_intror ]; eauto.
@@ -578,25 +578,25 @@ Proof.
       assert (HR1 : H.Equal h'' h_ /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0). 
       
       { eapply IHBS1_1 with (ee:=eff1); eauto.
-        inversion HRonly. inversion H2. assumption. }   
+        inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }   
       destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
       
       assert (HR2 : H.Equal h'' h_ /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3). 
       { eapply IHBS1_2 with (ee:=eff2); eauto.
-        inversion HRonly. inversion H2. assumption. }
+        inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
       destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
       
       assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0).  
       { inversion HExp; subst.
         eapply IHBS1_3 with (ee:=eff3) (ty:=ty1) (static:=eff0); eauto.   
-        inversion HRonly. inversion H3. assumption.
+        inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption.
       }
       inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3; subst.
       
       assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
       { inversion HExp; subst.
         eapply IHBS1_4 with (ee:=eff4); eauto.
-        inversion HRonly. inversion H3. assumption. }
+        inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
       inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
       split.
       - rewrite <- H13 in HSOUND.
@@ -866,7 +866,7 @@ Proof.
             assert (vacts ⊑ effa1). 
             { eapply IHBS1_2 with (p':= phia0); eauto using HFacts.Equal_refl.  
               - rewrite HEq_1. eassumption.
-              - inversion HRonly; subst. inversion H6; subst. eassumption.
+              - inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption.
               - rewrite HEq_1. assumption. }
             apply Theta_introl. assumption.
         SSCase "Phi_Elem (DA_Write r l v0) ⊑ Union_Theta effa effb".    
@@ -903,7 +903,7 @@ Proof.
              assert (vacts ⊑ effa0). 
              { eapply IHBS1_2 with (p':= phia0);  eauto using HFacts.Equal_refl.     
                - rewrite HEq_1. eassumption.
-               - inversion HRonly; subst. inversion H6; subst. assumption.
+               - inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption.
                - rewrite HEq_1. assumption. }
              apply Theta_introl. assumption. 
         SSCase "Phi_Elem (DA_Write r l v0) ⊑ Union_Theta effa effb".
@@ -941,14 +941,51 @@ Proof.
         assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
         eapply IHBS1_2 with (eff:=effa0) (p':=phia0); eauto.
         assert (HEq_1 : h'' = heap') by admit.
-        rewrite <- HEq_1. eassumption. inversion HRonly. inversion H7. assumption.
+        rewrite <- HEq_1. eassumption.
+        inversion HRonly as [ | | ? ? A B | ]; inversion B; assumption.
         assert (HEq_1 : h'' = heap') by admit.
         rewrite <- HEq_1. assumption.
         destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2.
         rewrite H in H11; inversion H11; subst. 
         intuition.
         unfold update_H; simpl. apply HMapP.add_m; auto. 
-      - admit.
-      - admit.  
+      - inversion HEff; inversion H15; subst.
+         assert ( RH1 : H.Equal heap' heap'0 /\  
+                       Loc (Rgn2_Const true false s) l = Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ). 
+         eapply IHBS1_1 with (ee:=eff1); eauto. inversion HRonly. assumption.
+         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.
+         assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
+         eapply IHBS1_2 with (eff:=effa0) (p':=phia0); eauto.
+         assert (HEq_1 : h'' = heap') by admit.
+         rewrite <- HEq_1. eassumption.  
+         inversion HRonly as [ | | ? ? A B | ]; inversion B; assumption.
+         assert (HEq_1 : h'' = heap') by admit.
+         rewrite <- HEq_1. assumption.
+         destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2.
+         rewrite H in H11; inversion H11; subst. 
+         intuition.
+         unfold update_H; simpl. apply HMapP.add_m; auto. 
+        
+      - inversion HEff; subst. 
+        assert ( RH1 : H.Equal heap' heap'0 /\  
+                       Loc (Rgn2_Const true false s) l = Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ). 
+         eapply IHBS1_1 with (ee:= ⊤); eauto; constructor.
+         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.
+         assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
+         eapply IHBS1_2 ; eauto.
+         + assert (HEq_1 : h'' = heap') by admit.
+           rewrite <- HEq_1. eassumption. 
+         + constructor.
+         + assert (HEq_1 : h'' = heap') by admit.
+           rewrite <- HEq_1. eassumption. 
+
+         + intuition.  
+           * apply PhiInThetaTop.
+           * unfold update_H; simpl. apply HMapP.add_m; auto.
+             rewrite H in H11. inversion H11; auto.
+           * rewrite H in H11. inversion H11; subst.
+             reflexivity.
     }
 Admitted.
