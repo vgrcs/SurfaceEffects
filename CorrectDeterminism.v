@@ -632,7 +632,8 @@ Proof.
         
       - inversion HExp; subst. 
         assert ( RH1: H.Equal cheap cheap0 /\ Bit true = Bit false /\ cacts = cacts0). 
-        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto; econstructor. 
+        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto. econstructor. 
+        admit. constructor.
         destruct RH1 as [? [D ?]]. discriminate D. 
     }
   Case "cond_false".
@@ -666,7 +667,6 @@ Proof.
           eapply IHBS1 with (h_:=h) (ee:=∅); eauto using HFacts.Equal_refl; constructor.
           destruct HD as [? [H_ ?]]; inversion H_; subst.
           apply DAT_Read_Conc. apply In_singleton.
-      - econstructor; inversion HEff; subst; apply PhiInThetaTop.
     }  
     (* start the proof of the "determinism" part *) 
     { inversion BS2; subst.
@@ -703,19 +703,6 @@ Proof.
          rewrite H_ in H0.
          simpl in H10, H. inversion H; inversion H10; subst.
          rewrite H7 in H0. rewrite H11 in H0.
-         inversion H0; subst.
-         intuition.
-      -  inversion HEff; subst.
-         assert ( RH1 : H.Equal h' h'_ /\  
-                       Loc (Rgn2_Const true false s) l =  Loc (Rgn2_Const true false s) l0 /\ 
-                       aacts = aacts0 ) 
-           by (eapply IHBS1 with (ee:=⊤); eauto; econstructor).
-         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1; subst.
-         assert (H_ : forall k, find_H k h' = find_H k h'_)
-           by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
-         rewrite H_ in H0.
-         simpl in H10, H. inversion H; inversion H10; subst. 
-         rewrite H3 in H0. rewrite H11 in H0.
          inversion H0; subst.
          intuition.
     }
@@ -804,9 +791,6 @@ Proof.
           inversion H; subst.
           apply DAT_Write_Conc; apply In_singleton.
           apply Theta_intror. apply Theta_intror. assumption.
-      SCase "Assign w ea0 ev << (⊤)".
-        inversion HEff; subst.   
-        apply PhiInThetaTop.
     }
     (* start the proof of the "determinism" part *) 
     { inversion BS2; subst.
@@ -852,39 +836,11 @@ Proof.
          rewrite H in H11; inversion H11; subst. 
          intuition.
          unfold update_H; simpl. apply HMapP.add_m; auto. 
-        
-      - inversion HEff; subst. 
-        assert ( RH1 : H.Equal heap' heap'0 /\  
-                       Loc (Rgn2_Const true false s) l = Loc (Rgn2_Const true false s) l0 /\ 
-                       aacts = aacts0 ). 
-         eapply IHBS1_1 with (ee:= ⊤); eauto; constructor.
-         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.
-         assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
-         eapply IHBS1_2 ; eauto.
-         + assert (HEq_1 : h'' = heap') by admit.
-           rewrite <- HEq_1. eassumption. 
-         + constructor.
-         + assert (HEq_1 : h'' = heap') by admit.
-           rewrite <- HEq_1. eassumption. 
-
-         + intuition.  
-           * apply PhiInThetaTop.
-           * unfold update_H; simpl. apply HMapP.add_m; auto.
-             rewrite H in H11. inversion H11; auto.
-           * rewrite H in H11. inversion H11; subst.
-             reflexivity.
     }
   Case "nat_plus x y".
     (* left part of the conjunction *)
     assert (HSOUND : (Phi_Seq racts lacts) ⊑ eff ).
-    { inversion HBt; subst.
-      apply PTS_Seq. 
-      SCase "lacts ⊑ eff".
-        inversion HEff; subst. 
-        apply PhiInThetaTop.  
-      SCase "racts ⊑ eff".    
-        inversion HEff; subst.
-        apply PhiInThetaTop. }
+    { inversion HBt; subst. }
     (* start the proof of the "determinism" part *) 
     { inversion BS2; subst.
       inversion HExp; subst.  
@@ -892,22 +848,6 @@ Proof.
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ]; subst.
-      inversion HEff; subst.
-      assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
-      eapply IHBS1_1; eauto. constructor.  
-      destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
-      assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ). 
-      eapply IHBS1_2; eauto.
-      - assert (HEq_1 : h'' = lheap) by admit.
-        rewrite <- HEq_1. eassumption.
-      - constructor. 
-      - assert (HEq_1 : h'' = lheap) by admit.
-        rewrite <- HEq_1. eassumption. 
-      - intuition.
-        * apply PhiInThetaTop.
-        * inversion H3; subst.
-          reflexivity.
-        * subst. reflexivity. }
-    intuition.
+    }
   Case "nat_minus x y".    
 Admitted.
