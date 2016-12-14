@@ -12,3 +12,4 @@ EffectSystem.v
 Determinism.v 
 DeterminismExt.v
 CorrectDeterminism.v
+-R . "Top0"

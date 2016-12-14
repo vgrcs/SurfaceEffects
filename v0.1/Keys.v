@@ -1,12 +1,3 @@
-(** %
-\begin{empheq}[box=\fbox]{align*}
-x , f \in \mathit{Var} &\hspace*{10pt}& \textit{Value, Function Variables}\\
-l \in \mathit{RVar}  && \textit{Static Region Labels}\\  
-a@l \in \mathit{Addr} && \textit{Run-time Addresses}
-\end{empheq}
-% *)
-
-(* begin hide *)
 Require Import Ascii String.
 Require Import Coq.Structures.OrderedTypeEx.
 Require Import Coq.Structures.OrderedType.
@@ -22,7 +13,6 @@ Module Type IndexedType.
 End IndexedType.
 
 
-(* end hide *)
 Module IndexedAscii <: IndexedType.
 
 Definition t := ascii.
@@ -31,8 +21,6 @@ Definition eq := ascii_dec.
 Hypothesis index_inj: forall (x y: t), index x = index y <-> x = y.
 
 End IndexedAscii.
-
-(* begin hide *)
 
 Module OrderedAscii(A: IndexedType) <: OrderedType.
 
@@ -78,9 +66,7 @@ Proof.
 Defined.
 
 End OrderedAscii.
-(* end hide *)
 
-(** printing AsciiVars $\mathit{Var}$ *)
 Module AsciiVars := OrderedAscii (IndexedAscii).
 
 Module RegionVars := PairOrderedType Nat_as_OT Nat_as_OT.

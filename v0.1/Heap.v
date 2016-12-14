@@ -4,10 +4,10 @@ Require Import Coq.FSets.FMapAVL.
 Require Import Coq.Program.Equality.
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Add LoadPath "." as Top.
-Require Import Top.Tactics.
-Require Import Top.Definitions.
-Require Import Top.Keys.
+Add LoadPath "." as Top0.
+Require Import Top0.Tactics.
+Require Import Top0.Definitions.
+Require Import Top0.Keys.
 
 Inductive TcHeap : (Heap * Sigma) -> Prop := 
   | TC_Heap : forall heap store,

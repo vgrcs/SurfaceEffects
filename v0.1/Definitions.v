@@ -19,11 +19,11 @@ Require Import Coq.Bool.Bool.
 Require Import Coq.Strings.String.
 Require Import Ascii.
 
-Add LoadPath "." as Top.
-Require Import Top.Keys.
-Require Import Top.Tactics.
-Require Export Top.Nameless.
-Require Export Top.TypeLemmas.
+Add LoadPath "." as Top0.
+Require Import Top0.Keys.
+Require Import Top0.Tactics.
+Require Export Top0.Nameless.
+Require Export Top0.TypeLemmas.
 
 
 Inductive Expr :=

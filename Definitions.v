@@ -789,8 +789,11 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                          ReadOnlyStatic (fold_subst_eps rho static_e1) ->
                          BackTriangle (stty, ctxt, rgns, rho, 
                                        Assign (Rgn2_Const true false r) e1 e2, eff1 ⊕ (eff2 ⊕ (WriteConc e1)))
-  | BT_Top_Approx    : forall stty ctxt rgns rho (e : Expr),
-                         BackTriangle (stty, ctxt, rgns, rho, e, Top)
+  | BT_Cond_Top      : forall stty ctxt rgns rho (e et ef : Expr),
+                        BackTriangle (stty, ctxt, rgns, rho, e, Top) ->
+                        BackTriangle (stty, ctxt, rgns, rho, et, Top) ->
+                        BackTriangle (stty, ctxt, rgns, rho, ef, Top) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Cond e et ef, Top)
 
 with TcVal : (Sigma * Val * tau) -> Prop :=
   | TC_Num     : forall stty n,

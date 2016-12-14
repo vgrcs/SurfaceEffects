@@ -1,6 +1,8 @@
-Require Import Tactics.
-Require Import Definitions.
-Require Import Keys.
+
+Add LoadPath "." as Top0.
+Require Import Top0.Tactics.
+Require Import Top0.Definitions.
+Require Import Top0.Keys.
 Require Import Coq.FSets.FSetInterface.
 
 Module EMapP := FMapFacts.Facts E.

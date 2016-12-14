@@ -1,7 +1,7 @@
-Add LoadPath "." as Top.
-Require Import Top.Definitions.
-Require Import Top.Heap.
-Require Import Top.Keys.
+Add LoadPath "." as Top0.
+Require Import Top0.Definitions.
+Require Import Top0.Heap.
+Require Import Top0.Keys.
 
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
@@ -27,6 +27,11 @@ Axiom ReadOnlyWalkSameHeap:
     ReadOnlyPhi (Phi_Par acts_mu1 acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
     H.Equal h same_h.
+
+Axiom ReadOnlyTraceSameHeap :
+  forall h'' heap env rho exp eff phi,
+    (h'', env, rho, exp) ⇓ (h'', eff, phi) ->
+    (heap, env, rho, exp) ⇓ (heap, eff, phi).
 
 Axiom EqualHeapsEqualFold :
   forall heap_mu1 heap_mu0 heap_mu2 heap_mu3,

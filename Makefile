@@ -50,8 +50,7 @@ vo_to_obj = $(addsuffix .o,\
 ##########################
 
 COQLIBS?=\
-  -R "." Top\
-  -I "."
+  -R "." Top
 COQDOCLIBS?=\
   -R "." Top
 
@@ -235,8 +234,6 @@ uninstall: uninstall_me.sh
 	@echo "B $(COQLIB) stm" >> .merlin
 	@echo "B $(COQLIB) grammar" >> .merlin
 	@echo "B $(COQLIB) config" >> .merlin
-	@echo "B /home/vitor/Coq/SurfaceEffects" >> .merlin
-	@echo "S /home/vitor/Coq/SurfaceEffects" >> .merlin
 
 clean::
 	rm -f $(OBJFILES) $(OBJFILES:.o=.native) $(NATIVEFILES)

@@ -11,3 +11,4 @@ TypeSystem.v
 EffectSystem.v 
 Determinism.v 
 CorrectDeterminism.v
+-R . "Top"

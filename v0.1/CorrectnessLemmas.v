@@ -2,10 +2,10 @@ Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Lists.List.
 
-Add LoadPath "." as Top.
-Require Import Top.Definitions.
-Require Import Top.Heap.
-Require Import Top.Axioms.
+Add LoadPath "." as Top0.
+Require Import Top0.Definitions.
+Require Import Top0.Heap.
+Require Import Top0.Axioms.
 
 Lemma UnionEmptyWithEffIsEff:
   forall eff,

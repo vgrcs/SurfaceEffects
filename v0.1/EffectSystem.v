@@ -1,15 +1,15 @@
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 
-Add LoadPath "." as Top.
-Require Import Top.Tactics.
-Require Import Top.Keys.
-Require Import Top.Definitions.
-Require Import Top.Environment.
-Require Import Top.TypeSystem.
-Require Import Top.Heap.
-Require Import Top.CorrectnessLemmas.
-Require Import Top.Axioms.
+Add LoadPath "." as Top0.
+Require Import Top0.Tactics.
+Require Import Top0.Keys.
+Require Import Top0.Definitions.
+Require Import Top0.Environment.
+Require Import Top0.TypeSystem.
+Require Import Top0.Heap.
+Require Import Top0.CorrectnessLemmas.
+Require Import Top0.Axioms.
 
 Module EffectSoundness.
 
