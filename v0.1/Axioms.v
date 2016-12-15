@@ -30,6 +30,7 @@ Axiom ReadOnlyWalkSameHeap:
 
 Axiom ReadOnlyTraceSameHeap :
   forall h'' heap env rho exp eff phi,
+    ReadOnlyPhi phi ->
     (h'', env, rho, exp) ⇓ (h'', eff, phi) ->
     (heap, env, rho, exp) ⇓ (heap, eff, phi).
 

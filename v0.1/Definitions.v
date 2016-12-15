@@ -723,7 +723,7 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                         BackTriangle (stty, ctxt, rgns, rho, Mu f x ec ee, ∅)
   | BT_Rgn_Pure     : forall stty ctxt rgns rho (x: ascii) (e: Expr),
                         BackTriangle (stty, ctxt, rgns, rho, Lambda x e, ∅)
-  | BT_App_Conc     : forall  stty ctxt rgns rho (ef ea efff effa: Expr) 
+  | BT_App_Conc     : forall  stty ctxt rgns rho (ef ea: Expr)  (* efff effa*)
                               ty_ef ty_ea  static_ef static_ea,
                         TcExp (stty, ctxt, rgns, ef, ty_ef, static_ef) ->
                         TcExp (stty, ctxt, rgns, ea, ty_ea, static_ea) ->
@@ -789,6 +789,37 @@ with BackTriangle : Sigma * Gamma * Omega * Rho * Expr * Expr -> Prop :=
                          ReadOnlyStatic (fold_subst_eps rho static_e1) ->
                          BackTriangle (stty, ctxt, rgns, rho, 
                                        Assign (Rgn2_Const true false r) e1 e2, eff1 ⊕ (eff2 ⊕ (WriteConc e1)))
+  | BT_Plus           : forall stty ctxt rgns rho (e1 e2 eff1 eff2 : Expr) 
+                               ty_e1 ty_e2 static_e1 static_e2,
+                        TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
+                        TcExp (stty, ctxt, rgns, e2, ty_e2, static_e2) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_e1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e1, eff1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e2, eff2) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Plus e1 e2, eff1 ⊕ eff2)
+  | BT_Minus          : forall stty ctxt rgns rho (e1 e2 eff1 eff2 : Expr) 
+                               ty_e1 ty_e2 static_e1 static_e2,
+                        TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
+                        TcExp (stty, ctxt, rgns, e2, ty_e2, static_e2) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_e1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e1, eff1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e2, eff2) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Minus e1 e2, eff1 ⊕ eff2)                               | BT_Times          : forall stty ctxt rgns rho (e1 e2 eff1 eff2 : Expr) 
+                               ty_e1 ty_e2 static_e1 static_e2,
+                        TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
+                        TcExp (stty, ctxt, rgns, e2, ty_e2, static_e2) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_e1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e1, eff1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e2, eff2) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Times e1 e2, eff1 ⊕ eff2)
+ | BT_Eq           : forall stty ctxt rgns rho (e1 e2 eff1 eff2 : Expr) 
+                               ty_e1 ty_e2 static_e1 static_e2,
+                        TcExp (stty, ctxt, rgns, e1, ty_e1, static_e1) ->
+                        TcExp (stty, ctxt, rgns, e2, ty_e2, static_e2) ->
+                        ReadOnlyStatic (fold_subst_eps rho static_e1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e1, eff1) ->
+                        BackTriangle (stty, ctxt, rgns, rho, e2, eff2) ->
+                        BackTriangle (stty, ctxt, rgns, rho, Eq e1 e2, eff1 ⊕ eff2)
   | BT_Top_Approx    : forall stty ctxt rgns rho (e : Expr),
                          BackTriangle (stty, ctxt, rgns, rho, e, Top)
 
