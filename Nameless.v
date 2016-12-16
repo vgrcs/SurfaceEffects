@@ -4,8 +4,8 @@ Require Import Coq.Sets.Ensembles.
 Require Import Coq.Arith.EqNat.
 Require Import Ascii.
 
-Add LoadPath "." as Top.
-Require Import Top.Keys.
+Add LoadPath "." as Top0.
+Require Import Top0.Keys.
 
 Definition empty_set `{T: Type} := Empty_set T.
 Definition singleton_set `{T: Type} (e: T) := Singleton T e.

@@ -11,18 +11,18 @@ Require Import Coq.Arith.Minus.
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Compare_dec.
 
-Add LoadPath "." as Top.
-Require Import Top.Keys.
-Require Import Top.Heap.
-Require Import Top.Tactics.
-Require Import Top.EffectSystem.
-Require Import Top.Environment.
-Require Import Top.TypeSystem.
-Require Import Top.Determinism.
-Require Import Top.DeterminismExt.
-Require Import Top.Definitions.
-Require Import Top.CorrectnessLemmas.
-Require Import Top.Axioms.
+Add LoadPath "." as Top0.
+Require Import Top0.Keys.
+Require Import Top0.Heap.
+Require Import Top0.Tactics.
+Require Import Top0.EffectSystem.
+Require Import Top0.Environment.
+Require Import Top0.TypeSystem.
+Require Import Top0.Determinism.
+Require Import Top0.DeterminismExt.
+Require Import Top0.Definitions.
+Require Import Top0.CorrectnessLemmas.
+Require Import Top0.Axioms.
 
 Import TypeSoundness.
 Import EffectSoundness.
@@ -151,43 +151,50 @@ Proof.
           apply PTS_Seq.
           SSCase "facts ⊑ eff".
             assert (H_ : facts  ⊑ eff). 
-            { inversion HBt as [ | | | |  
-                                 | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                                 | | | | | | | | |
-                                 ]; subst.
-              SSSCase "Mu_App ef ea0 << Eff_App ef ea0". 
-              inversion HEff; subst.  
-              assert (facts  ⊑ eff)
-                by (eapply IHBS1_1 with (h_:=h'') (p_:=facts); eauto using  HFacts.Equal_refl).  
-              assumption. 
+            {
+              inversion HBt as [ | | | |  
+                                 | ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                                 | | | | | | | | | | | | | ]; subst.
+              SSSCase "Mu_App ef ea0 << (efff0 ⊕ (effa0 ⊕ Eff_App ef ea0))". 
+                inversion HEff; subst.  
+                assert (facts  ⊑ eff).
+                { eapply IHBS1_1 with (h_:=h'') (p_:=facts); eauto.  
+                  - apply HFacts.Equal_refl. } 
+                assumption.
+              SSSCase "Mu_App ef ea0 << (⊤)".  
+                inversion HEff; subst.
+                apply PhiInThetaTop.
             }
             exact H_.    
       SSCase " aacts ⊑ eff".   
         inversion HBt as [ | | | |  
-                           | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | | | | | | | |
-                            ]; subst.
+                           | ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                           | | | | | | | | | | | | | ]; subst.
         SSSCase "Mu_App ef ea0 << Eff_App ef ea0". 
           assert (H_ : aacts  ⊑ eff).
           { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
             - apply ReadOnlyTracePreservesHeap_1 in BS1_1. 
               + symmetry in BS1_1.
                 inversion HEff; subst. 
-                assert (H_ : aacts  ⊑ eff)
-                  by (eapply IHBS1_2 with (h_:=h'') (p_:=aacts); eauto using  HFacts.Equal_refl).
-                exact H_. 
-              + assumption.   
+                assert (aacts  ⊑ eff).
+                eapply IHBS1_2 with (h_:=h'') (p_:=aacts); eauto.
+                * apply HFacts.Equal_refl.  
+                * assumption.
+              + assumption.  
             - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)) by
                   (eapply eff_sound; eauto). 
-              eassumption. 
-          }
-          exact H_.  
-      SSCase "bacts ⊑ eff".       
+              eassumption. }
+          exact H_. 
+        SSSCase "Mu_App ef ea0 << (⊤)".  
+          assert (H_ : aacts  ⊑ eff).
+          { induction eff; inversion HEff; subst. 
+            apply PhiInThetaTop. }
+          exact H_. 
+      SCase "bacts ⊑ eff".       
         inversion HEff; subst; 
         inversion HBt as [ | | | |  
-                           | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | | | | | | | | 
-                           ]; subst. 
+                           | ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                           | | | | | | | | | | | | | ]; subst. 
         SSSCase "Mu_App ef ea0 << Eff_App ef ea0".
           assert (HEq_1 : fheap = h'').  
           { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -232,29 +239,43 @@ Proof.
                   + eassumption.
                   + eapply ext_stores__val with (stty:=sttyb); eauto.
                 - eapply ext_stores__val with (stty:=sttya); eauto. }
-            - eapply ext_stores__exp; eauto. 
-          } 
+            - eapply ext_stores__exp; eauto. } 
           exact H_.
-      } 
+        SSSCase "Mu_App ef ea0 << (⊤)".
+          assert (H_ : bacts ⊑ None).
+          { eapply IHBS1_3 
+            with (stty:=sttya) (ee:=⊤); eauto. 
+            SSSSCase "Equal Heaps".
+              apply HFacts.Equal_refl. 
+            SSSSCase "Effect Evaluation".
+              econstructor.
+            SSSSCase "Back Triangle". 
+              econstructor.
+            SSSSCase "Extended TcEnv".
+              { apply update_env; simpl.  
+                - eapply ext_stores__env; eauto. 
+                  apply update_env.  
+                  + eassumption.
+                  + eapply ext_stores__val with (stty:=sttyb); eauto.
+                - eapply ext_stores__val with (stty:=sttya); eauto. }
+              SSSSCase "Extended TcExp". 
+              eapply ext_stores__exp; eauto. }
+          exact H_. } 
+
       (* Start the proof of the "determinism" part *) 
       { inversion BS2; subst. 
         inversion HBt as [ | | | |  
-                           | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | | | | | | | | 
-                            ]; subst. 
+                                 | ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                                 | | | | | | | | | | | | | ]; subst. 
+     
         - inversion HEff; subst.
           inversion HRonly as [ | | ? ? A B | ]; inversion A.
 
-          assert ( RH1 : H.Equal fheap fheap0 /\ Cls (env', rho', Mu f x ec' ee') = 
-                                           Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).
-          eapply IHBS1_1; eauto.
-          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst. 
-          assert ( RH2 : H.Equal aheap aheap0 /\ v0 = v1 /\ aacts = aacts0).
           assert (HEq_1 : fheap = h'').  
-          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts0) in HR_ef. 
+          { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
             - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1.  
               assumption. assumption.
-            - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts0)) by
+            - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)) by
                   (eapply eff_sound; eauto). 
               eassumption. }
           assert (aacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ea, aacts)) by
@@ -264,12 +285,18 @@ Proof.
             - apply ReadOnlyTracePreservesHeap_1 in BS1_2. symmetry in BS1_2.
               assumption. assumption. 
             - eassumption. }
-          { eapply IHBS1_2 with (p':=Phi_Seq (Phi_Seq facts1 aacts1) bacts1); eauto.
-            - rewrite HEq_1. eassumption.
-            - rewrite HEq_1. eassumption. } 
+
+          assert ( RH1 : H.Equal fheap fheap0 /\ Cls (env', rho', Mu f x ec' ee') = 
+                                           Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).
+          eapply IHBS1_1; eauto.
+          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst. 
+          assert ( RH2 : H.Equal h'' aheap0 /\ v0 = v1 /\ aacts = aacts0).
+          
+          eapply IHBS1_2 with (p':=Phi_Seq (Phi_Seq facts1 aacts1) bacts1); eauto.
           destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst. 
+          
           assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
-          { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya)  (h'':=aheap) (p':=bacts1); eauto.
+          { eapply IHBS1_3 with (ee:=ee'0) (stty:=sttya) (p':=bacts1); eauto.
             - eapply EvaluationMuAppIncludesEffectEvaluation; eauto.
             - eapply ext_stores__bt; eauto.
             - { apply update_env; simpl.  
@@ -281,8 +308,36 @@ Proof.
             - eapply ext_stores__exp; eauto. } 
           destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
           auto.
+       - induction eff; inversion HEff; subst. 
+         assert ( RH1 : H.Equal fheap fheap0 /\ Cls (env', rho', Mu f x ec' ee') = 
+                                           Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).
+         eapply IHBS1_1 with (ee:=⊤); eauto.
+         constructor.
+         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+         assert ( RH2 : H.Equal aheap aheap0 /\ v0 = v1 /\ aacts = aacts0).
+         eapply IHBS1_2 with (ee:=⊤) ; eauto.
+         constructor.
+         constructor.
+         eapply ext_stores__env; eauto.
+         eapply ext_stores__exp; eauto.
+         destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst.
+         assert ( RH3 : H.Equal h' h'_ /\ v = v_ /\ bacts = bacts0).
+         { eapply IHBS1_3 with (stty:=sttya) (ee:=⊤) (eff:=None); eauto. 
+           - constructor.
+           - constructor.
+           - { apply update_env; simpl.  
+                - eapply ext_stores__env; eauto. 
+                  apply update_env.  
+                  + eassumption.
+                  + eapply ext_stores__val with (stty:=sttyb); eauto.
+                - eapply ext_stores__val with (stty:=sttya); eauto. }
+            - eapply ext_stores__exp; eauto.
+         } 
+         destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
+         auto.
       }   
   Case "rgn_app". 
+      
     (* Start the proof of the "type soundness" part *) 
     inversion HExp as  [ | | | | | 
                            | ? ? ? ? ? ? ? ? HTcExp_er HTcRgn_w 
@@ -312,6 +367,7 @@ Proof.
       SCase "facts ⊑ eff".
         eapply IHBS1_1 with (h_:=h); eauto. apply HFacts.Equal_refl. 
         inversion HBt; subst; eauto.
+        econstructor; eauto.
       SCase " bacts ⊑ eff".
         inversion HBt; subst.
         SSCase "Rgn_App er w << (∅)". 
@@ -319,18 +375,25 @@ Proof.
             - inversion HEff; subst. econstructor.
             - inversion HEff; subst. econstructor. 
             - apply update_rho; auto.
-            - eapply extended_rho; eauto. 
+            - eapply extended_rho; eauto. }
+        SSCase "Rgn_App er w << (⊤)".  
+          { eapply IHBS1_2 with (ee:=⊤); eauto using update_rho, extended_rho; 
+            induction eff; 
+            try (solve [ apply HFacts.Equal_refl | constructor ]); inversion HEff.
+            subst. econstructor.
           }
     }      
+
     (* start the proof of the "determinism" part *)
     inversion BS2; subst. 
     { assert ( RH1 : H.Equal fheap fheap0 /\  Cls (env', rho', Lambda x eb) =
                                               Cls (env'0, rho'0, Lambda x0 eb0) /\ facts = facts0 ).
       { eapply IHBS1_1; eauto.
-        inversion HBt as [ | | | | | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | ? ? ? ? ? ? ? ? TcExp_er TcExp_ HBt_ | | | | | | |]; subst.  
-        - assumption. 
-      }
+        inversion HBt as [ | | | | |  
+                           | | ? ? ? ? ? ? ? ? TcExp_er TcExp_ HBt_ 
+                           | | | | | | | | | | | ]; subst. 
+        - assumption.
+        - constructor. }
       destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
       rewrite H in H9. inversion H9; subst.
       
@@ -377,23 +440,54 @@ Proof.
       inversion HSubst as [[H_tyx_tya A C D E]]; clear A C D E.
       rewrite <- H_tyx_tya in TcVal_v'.
 
-      (*  left part of the conjunction *)
-      assert (HSOUND : Phi_Seq (Phi_Seq facts aacts) bacts ⊑ eff).
-      inversion HBt; subst.   
+    (*  left part of the conjunction *)
+    assert (HSOUND : Phi_Seq (Phi_Seq facts aacts) bacts ⊑ eff).
+    
+    { inversion HBt; subst.   
+      apply PTS_Seq.
+      - apply PTS_Seq. 
+        + inversion HEff; subst.
+          apply PhiInThetaTop.
+        +  inversion HEff; subst.
+           apply PhiInThetaTop.
+      - inversion HEff; subst.
+        apply PhiInThetaTop. }
+    
+    (* start the proof of the "determinism" part *)
+    inversion BS2; subst.
+    { inversion HBt; subst.
+      assert ( RH1 : H.Equal h' h'_ /\  Cls (env', rho', Mu f x ec' ee') =
+                                        Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0) /\ facts = facts0 ).
+      eapply IHBS1_1 with (stty:=stty); eauto. constructor. 
+      destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
       
-      (* start the proof of the "determinism" part *)
-      inversion HBt; subst.
+      assert ( RH2 : H.Equal h' h'_ /\  v' = v'0 /\ aacts = aacts0 ).
+      eapply IHBS1_2  with (stty:=stty); eauto. constructor.
+      destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
       
+      assert ( RH3 : H.Equal h' h'_ /\  v = v_ /\ bacts = bacts0 ).
+      { eapply IHBS1_3 with (stty:=sttya) (h_:=h'_) (ee:=⊤); eauto.  
+        - induction eff; try (solve [inversion HEff]). inversion HEff. constructor.
+        - subst. constructor.
+        - apply update_env; simpl.  
+          + eapply ext_stores__env ; eauto. 
+                  apply update_env.  
+                  * eassumption.
+                  * eapply ext_stores__val with (stty:=sttyb); eauto.
+                + eapply ext_stores__val with (stty:=sttya); eauto. 
+        - eapply ext_stores__exp; eauto. }
+      destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3. subst.
+      intuition.
+    }
   Case "par_pair".
     (* Start the proof of the "effect soundness" part *) 
     
     (* left part of the conjunction *)
     assert (HSOUND :  Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2) ⊑ eff).
-    inversion HBt as [ | | | |  
-                       | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+    inversion HBt as [ | | | | |  
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? A B C D HBt_a HBt_b HBt_c HBt_d 
-                       | | | | | | | | ]; subst; 
-    inversion HEff; subst. 
+                       | | | | | | | | | | | |]; subst; 
+    inversion HEff; subst; [ | apply PhiInThetaTop].
      
     clear H2. clear H3.  
     clear H. clear H0.
@@ -472,10 +566,9 @@ Proof.
 
     (* start the proof of the "determinism" part *)
     inversion BS2; subst.
-    { inversion HBt as [ | | | |  
-                       | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+    { inversion HBt as [ | | | | | 
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? A B C D HBt_a HBt_b HBt_c HBt_d 
-                       | | | | | | | | ]; subst.
+                       | | | | | | | | | | | | ]; subst.
       inversion HExp as  [ | | | | | ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
                            | | | 
                            ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? HBt_1 HBt_2 HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
@@ -541,6 +634,29 @@ Proof.
             by (eapply Det_trace_from_theta; eauto; 
                 [ apply Dynamic_DetTrace in BS1_3 | apply Dynamic_DetTrace in BS1_4]; assumption).
         inversion H18. assumption. 
+      - inversion HEff; subst.
+        inversion HExp; subst.
+        assert (HR1 : H.Equal h'' h_ /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0) 
+          by (eapply IHBS1_1 ; eauto; constructor).
+        destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert (HR2 : H.Equal h'' h_ /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3) 
+          by (eapply IHBS1_2 with (ee:=⊤); eauto; constructor).
+        destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0)
+          by (eapply IHBS1_3 with (ee:=⊤) ; eauto; constructor).
+        inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3; subst.
+        assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
+        eapply IHBS1_4 with (ee:=⊤); eauto; constructor.
+        inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4. subst.
+
+        assert (H.Equal (Functional_Map_Union_Heap heap_mu1 heap_mu2) 
+                        (Functional_Map_Union_Heap heap_mu0 heap_mu3)) 
+          by (eapply EqualHeapsEqualFold; eauto).
+        assert (H.Equal h' (Functional_Map_Union_Heap heap_mu0 heap_mu3)).
+        eapply HFacts.Equal_trans; eauto.    
+        apply HFacts.Equal_sym in H25.
+        assert (H.Equal h' h'_) by (eapply HFacts.Equal_trans; eauto).
+        intuition.
     }
   Case "cond_true".
    (* left part of the conjunction *)
@@ -548,7 +664,7 @@ Proof.
     { inversion HBt as [ | | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
                            TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
-                       | | | | | | ]; subst. 
+                       | | | | | | | | | | ]; subst. 
       - assert (H' : cacts ⊑ Some empty_set).
         { eapply IHBS1_1 with (h_:=h) (p':=Phi_Nil); eauto. 
           - apply HFacts.Equal_refl. 
@@ -563,17 +679,8 @@ Proof.
         { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
           assumption.
           constructor. }
-
         rewrite UnionEmptyWithEffIsEff.
-        
-        (*assert (ef_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e, Phi_Nil)) by
-            (eapply eff_sound; eauto).      
-        assert (HEq_1 :  cheap = h). 
-        { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=Phi_Nil) in HR.
-          - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
-            assumption. constructor. 
-          - eassumption. } *)
-        
+ 
         { eapply IHBS1_2 with (ee:=efft)  (h_:=h) ; eauto.
           - apply Equal_heap_equal. auto.
           - subst. eassumption.
@@ -597,7 +704,7 @@ Proof.
       - inversion HBt as [ | | | | | | |   
                          | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
                              TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
-                         | | | | | | ]; subst.
+                         | | | | | | | | | | ]; subst.
         + assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 )
             by (eapply IHBS1_1 with (ee:=∅) (p':=Phi_Nil); eauto; econstructor).
           destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
@@ -616,37 +723,166 @@ Proof.
               subst. assumption.  constructor. }
           destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
           intuition.
-        + induction eff; inversion HEff; subst. 
+        + induction eff; inversion HEff; subst.
       
-          assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 ). 
-          eapply IHBS1_1 ; eauto; econstructor.
+          assert ( RH1 : H.Equal cheap cheap0 /\  Bit true = Bit true /\ cacts = cacts0 ) 
+            by (eapply IHBS1_1 ; eauto; econstructor).
           destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
-           
+          
           assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ tacts = tacts0 ). 
           { eapply IHBS1_2 with (ee:=⊤) (stty:=sttyb) (p':=Phi_Nil); 
-            eauto using ext_stores__env, ext_stores__exp, ext_stores__bt.   
+            eauto using ext_stores__env, ext_stores__exp.   
+            - econstructor.
             - econstructor.
             - symmetry in h_eq_1. eapply EqualHeaps; eauto. }
           destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
-          intuition.         
-        
-      - inversion HExp; subst. 
+          intuition.          
+      - inversion HExp; subst.
         assert ( RH1: H.Equal cheap cheap0 /\ Bit true = Bit false /\ cacts = cacts0). 
-        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto. econstructor. 
-        admit. constructor.
+        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto; econstructor. 
         destruct RH1 as [? [D ?]]. discriminate D. 
     }
   Case "cond_false".
-    admit.
+    (* left part of the conjunction *)
+    assert (HSOUND :  Phi_Seq cacts facts ⊑ eff).
+    { inversion HBt as [ | | | | | | |   
+                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
+                           TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
+                       | | | | | | | | | |]; subst. 
+      - assert (H' : cacts ⊑ Some empty_set).
+        { eapply IHBS1_1 with (h_:=h) (p':=Phi_Nil); eauto. 
+          - apply HFacts.Equal_refl. 
+          - constructor.
+          - constructor. } 
+        
+        apply EmptyUnionIsIdentity.
+        apply EmptyIsNil in H'. subst. 
+        apply PTS_Seq; [apply PTS_Nil |].
+
+        assert (HEq_1 :  cheap = h).
+        { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+          assumption.
+          constructor. }
+        rewrite UnionEmptyWithEffIsEff.
+ 
+        { eapply IHBS1_2 with (ee:=efff)  (h_:=h) ; eauto.
+          - apply Equal_heap_equal. auto.
+          - subst. eassumption.
+          - eapply EvalFalseIsFalse; eauto. 
+          - subst. assumption. }
+      -  inversion HEff; subst.
+         apply PhiInThetaTop. 
+    }
+    (* start the proof of the "determinism" part *) 
+    { inversion HExp; subst.
+      assert (bitVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (cheap, stty')
+                         /\ TcVal (stty', 
+                                   Bit false, 
+                                   subst_rho rho Ty2_Boolean)). 
+      eapply ty_sound; eauto using EqualHeaps.
+      
+      inversion BS2; subst;
+      destruct bitVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+
+      - inversion HExp; subst.
+        assert ( RH1: H.Equal cheap cheap0 /\ Bit false = Bit true /\ cacts = cacts0). 
+        eapply IHBS1_1  with (ee:=⊤) (p':=Phi_Nil); eauto; econstructor. 
+        destruct RH1 as [? [D ?]]. discriminate D.
+
+      - inversion HBt as [ | | | | | | |   
+                         | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
+                             TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
+                         | | | | | | | | | |]; subst. 
+        + assert ( RH1 : H.Equal cheap cheap0 /\  Bit false = Bit false /\ cacts = cacts0 )
+            by (eapply IHBS1_1 with (ee:=∅) (p':=Phi_Nil); eauto; econstructor).
+          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
+          
+          assert (H' : cacts0 ⊑ Some empty_set).
+          { eapply IHBS1_1 with (h_:=h) (p':=Phi_Nil); eauto. 
+            - apply HFacts.Equal_refl. 
+            - constructor.
+            - constructor. } 
+          apply EmptyIsNil in H'. subst.  
+          
+          assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ facts = facts0 ).
+          { eapply IHBS1_2 ; eauto.
+            - eapply EvalFalseIsFalse; eauto. 
+            - apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+              subst. assumption.  constructor. }
+          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
+          intuition.
+        + induction eff; inversion HEff; subst. 
+      
+          assert ( RH1 : H.Equal cheap cheap0 /\  Bit false = Bit false /\ cacts = cacts0 ). 
+          eapply IHBS1_1 ; eauto. econstructor.
+          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
+          
+          assert ( RH2 : H.Equal h' h'_ /\ v = v_ /\ facts = facts0 ). 
+          { eapply IHBS1_2 with (ee:=⊤) (stty:=sttyb) (p':=Phi_Nil); 
+            eauto using ext_stores__env, ext_stores__exp.   
+            - econstructor.
+            - econstructor.
+          }
+          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
+          intuition.          
+    }
   Case "new_ref e".
-    admit.
+    (* left part of the conjunction *)
+    assert (HSOUND : Phi_Seq vacts (Phi_Elem (DA_Alloc r l v0)) ⊑ eff).
+    { inversion HEff; subst; 
+      inversion HBt as [ | | | | | |   
+                         | | | ? ? ? ? ? ? ? ? ? TcExp_e HBt_e
+                         | | | | | | | | | ]; subst.
+      apply EnsembleUnionComp.    
+      SCase "Ref w e << (a ⊕ AllocAbs w)". 
+        eapply IHBS1 with (h_:=h''); eauto using HFacts.Equal_refl. 
+        inversion HRonly; assumption.
+        inversion H9; subst.
+        apply PTS_Elem. apply DAT_Alloc_Abs.
+        rewrite H in H2. inversion H2.
+        apply In_singleton.
+      SCase "Ref w e << (⊤)". 
+        apply PhiInThetaTop.  
+    }
+    (* start the proof of the "determinism" part *) 
+    { inversion BS2; inversion HExp; inversion HBt; subst.
+      
+      - inversion HEff; subst. 
+        assert ( RH1 : H.Equal heap' heap'0 /\  v0 = v /\ vacts = vacts0 ).
+        eapply IHBS1 with (ee:=eff0); eauto. 
+        inversion HRonly; assumption.
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
+        rewrite H in H10. inversion H10; subst.
+        assert (H5 : forall k, find_H k heap' = find_H k heap'0)
+          by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
+        rewrite H5 in H0. 
+        rewrite <-H11 in H0. symmetry in H0.
+        apply AllocAddressIsDeterministic in H0; subst.
+        intuition.
+        unfold update_H; simpl. apply HMapP.add_m; auto.
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal heap' heap'0 /\  v0 = v /\ vacts = vacts0 ).
+        eapply IHBS1 with (ee:=⊤); eauto. 
+        constructor.
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. subst.
+        rewrite H in H10. inversion H10; subst.
+        assert (H5 : forall k, find_H k heap' = find_H k heap'0)
+          by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
+        rewrite H5 in H0. 
+        rewrite <-H11 in H0. symmetry in H0.
+        apply AllocAddressIsDeterministic in H0; subst.
+        intuition.
+        unfold update_H; simpl. apply HMapP.add_m; auto.
+    }
   Case "get_ref e". 
     (* left part of the conjunction *)
     assert (HSOUND : Phi_Seq aacts (Phi_Elem (DA_Read r l v)) ⊑ eff ).
     { inversion HBt as [ | | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef | 
                        | ? ? ? ? ? ? ? ? ? TcExp_ea0 HBt_ea0 | 
-                       | | | ]; subst. 
+                       | | | | | | | ]; subst. 
       - inversion HEff; subst. 
         apply EnsembleUnionComp.
         + eapply IHBS1 with (h_:=h''); eauto using HFacts.Equal_refl.  
@@ -667,6 +903,7 @@ Proof.
           eapply IHBS1 with (h_:=h) (ee:=∅); eauto using HFacts.Equal_refl; constructor.
           destruct HD as [? [H_ ?]]; inversion H_; subst.
           apply DAT_Read_Conc. apply In_singleton.
+      - econstructor; inversion HEff; subst; apply PhiInThetaTop.
     }  
     (* start the proof of the "determinism" part *) 
     { inversion BS2; subst.
@@ -675,7 +912,7 @@ Proof.
       inversion HBt as [ | | | | | | |   
                        | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef | 
                        | ? ? ? ? ? ? ? ? ? TcExp_ea0 HBt_ea0 | 
-                       | | | ]; subst. 
+                       | | | | | | | ]; subst. 
       - inversion HEff; subst.
         assert ( RH1 : H.Equal h' h'_ /\  
                        Loc (Rgn2_Const true false s) l =  Loc (Rgn2_Const true false s) l0 /\ 
@@ -705,6 +942,19 @@ Proof.
          rewrite H7 in H0. rewrite H11 in H0.
          inversion H0; subst.
          intuition.
+      -  inversion HEff; subst.
+         assert ( RH1 : H.Equal h' h'_ /\  
+                       Loc (Rgn2_Const true false s) l =  Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ) 
+           by (eapply IHBS1 with (ee:=⊤); eauto; econstructor).
+         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1; subst.
+         assert (H_ : forall k, find_H k h' = find_H k h'_)
+           by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
+         rewrite H_ in H0.
+         simpl in H10, H. inversion H; inversion H10; subst. 
+         rewrite H3 in H0. rewrite H11 in H0.
+         inversion H0; subst.
+         intuition.
     }
   Case "set_ref e1 e2".
     (* left part of the conjunction *)
@@ -712,7 +962,7 @@ Proof.
     { inversion HBt as [| | | | | | | | | | |
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
-                      | ]; subst. 
+                      | | | | | ]; subst. 
       SCase "Assign w ea0 ev << (eff1 ⊕ (eff2 ⊕ WriteAbs w))".
         inversion HEff; subst.
         apply PTS_Seq. 
@@ -791,15 +1041,28 @@ Proof.
           inversion H; subst.
           apply DAT_Write_Conc; apply In_singleton.
           apply Theta_intror. apply Theta_intror. assumption.
+      SCase "Assign w ea0 ev << (⊤)".
+        inversion HEff; subst.   
+        apply PhiInThetaTop.
     }
     (* start the proof of the "determinism" part *) 
     { inversion BS2; subst.
       inversion HExp; subst. 
       
+      assert (firstVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (heap', stty')
+                         /\ TcVal (stty', 
+                                   Loc (Rgn2_Const true false s) l, 
+                                   subst_rho rho (Ty2_Ref (mk_rgn_type (Rgn2_Const true false s)) t))) 
+        by (eapply ty_sound; eauto).
+
       inversion HBt as [| | | | | | | | | | |
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
-                      | ]; subst. 
+                      | | | | | ]; subst;
+      destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+
       - inversion HEff; subst. 
         inversion H15; subst.
         
@@ -808,13 +1071,12 @@ Proof.
                        aacts = aacts0 ). 
         eapply IHBS1_1 with (ee:=eff1); eauto. inversion HRonly. assumption.
         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.
-        assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
-        eapply IHBS1_2 with (eff:=effa0) (p':=phia0); eauto.
-        assert (HEq_1 : h'' = heap') by admit.
-        rewrite <- HEq_1. eassumption.
-        inversion HRonly as [ | | ? ? A B | ]; inversion B; assumption.
-        assert (HEq_1 : h'' = heap') by admit.
-        rewrite <- HEq_1. assumption.
+     
+        assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ).
+        inversion HRonly as [ | | ? ? A B | ]; inversion B.
+        eapply IHBS1_2 with (stty:=sttyb) (eff:=effa0) (h'':=heap') (p':=phia0); 
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+       
         destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2.
         rewrite H in H11; inversion H11; subst. 
         intuition.
@@ -826,28 +1088,426 @@ Proof.
          eapply IHBS1_1 with (ee:=eff1); eauto. inversion HRonly. assumption.
          destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.
          assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
-         eapply IHBS1_2 with (eff:=effa0) (p':=phia0); eauto.
-         assert (HEq_1 : h'' = heap') by admit.
-         rewrite <- HEq_1. eassumption.  
-         inversion HRonly as [ | | ? ? A B | ]; inversion B; assumption.
-         assert (HEq_1 : h'' = heap') by admit.
-         rewrite <- HEq_1. assumption.
+         
+         inversion HRonly as [ | | ? ? A B | ]; inversion B.
+         eapply IHBS1_2 with (stty:=sttyb) (eff:=effa0) (p':=phia0); 
+           eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
          destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2.
          rewrite H in H11; inversion H11; subst. 
          intuition.
          unfold update_H; simpl. apply HMapP.add_m; auto. 
+      - inversion HEff; subst. 
+        assert ( RH1 : H.Equal heap' heap'0 /\  
+                       Loc (Rgn2_Const true false s) l = Loc (Rgn2_Const true false s) l0 /\ 
+                       aacts = aacts0 ). 
+         eapply IHBS1_1 with (ee:= ⊤); eauto; constructor.
+         destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.
+         assert ( RH2 : H.Equal heap'' heap''0 /\ v0 = v /\ vacts = vacts0 ). 
+         eapply IHBS1_2  with (stty:=sttyb) ;  
+           eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+         + constructor.
+         + intuition.  
+           * apply PhiInThetaTop.
+           * unfold update_H; simpl. apply HMapP.add_m; auto.
+             rewrite H in H11. inversion H11; auto.
+           * rewrite H in H11. inversion H11; subst.
+             reflexivity.
     }
-  Case "nat_plus x y".
+  Case "nat_plus x y". 
     (* left part of the conjunction *)
-    assert (HSOUND : (Phi_Seq racts lacts) ⊑ eff ).
-    { inversion HBt; subst. }
+    assert (HSOUND : Phi_Seq lacts racts  ⊑ eff ).
+    { inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b 
+                      | | | | ]; subst;
+      inversion HEff; subst;
+      [apply EnsembleUnionComp | ]. 
+ 
+      - eapply IHBS1_1 with (ee:=eff1) (h_:=h''); eauto using HFacts.Equal_refl.  
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+      - assert (lacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, lacts)) by
+            (eapply eff_sound; eauto). 
+        assert (HEq_1 : lheap = h'').   
+        eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=lacts) in HR.
+        { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+          - assumption. 
+          - assumption. } 
+        exact lacts_Eff. 
+        
+        eapply IHBS1_2 with (ee:=eff2) (h_:=h'') (p':=phib); eauto using HFacts.Equal_refl.
+        + apply Equal_heap_equal; auto.
+        + rewrite <- HEq_1. eassumption. 
+        + rewrite HEq_1. eassumption. 
+        + inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        + rewrite HEq_1. assumption.
+      - apply PhiInThetaTop.
+    }  
     (* start the proof of the "determinism" part *) 
     { inversion BS2; subst.
-      inversion HExp; subst.  
+      inversion HExp; subst.
+      
+      assert (firstVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (lheap, stty')
+                         /\ TcVal (stty', 
+                                   Num va, 
+                                   subst_rho rho Ty2_Natural)) 
+        by (eapply ty_sound; eauto).
+      
       inversion HBt as [| | | | | | | | | | |
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
-                      | ]; subst.
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b 
+                      | | | | ]; subst.
+      
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=eff0); eauto. 
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (p':=phib) (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=⊤); eauto; constructor.
+
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        constructor.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
+    }  
+  Case "nat_minus x y".   
+     (* left part of the conjunction *)
+    assert (HSOUND : Phi_Seq lacts racts  ⊑ eff ).
+    { inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      |  
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b
+                      | | | ]; subst;
+      inversion HEff; subst;
+      [apply EnsembleUnionComp | ]. 
+ 
+      - eapply IHBS1_1 with (ee:=eff1) (h_:=h''); eauto using HFacts.Equal_refl.  
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+      - assert (lacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, lacts)) by
+            (eapply eff_sound; eauto). 
+        assert (HEq_1 : lheap = h'').   
+        eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=lacts) in HR.
+        { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+          - assumption. 
+          - assumption. } 
+        exact lacts_Eff. 
+        
+        eapply IHBS1_2 with (ee:=eff2) (h_:=h'') (p':=phib); eauto using HFacts.Equal_refl.
+        + apply Equal_heap_equal; auto.
+        + rewrite <- HEq_1. eassumption. 
+        + rewrite HEq_1. eassumption. 
+        + inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        + rewrite HEq_1. assumption.
+      - apply PhiInThetaTop.
+    }  
+    (* start the proof of the "determinism" part *) 
+    { inversion BS2; subst.
+      inversion HExp; subst.
+      
+      assert (firstVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (lheap, stty')
+                         /\ TcVal (stty', 
+                                   Num va, 
+                                   subst_rho rho Ty2_Natural)) 
+        by (eapply ty_sound; eauto).
+      
+      inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | 
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b | | | ]; subst.
+      
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=eff0); eauto. 
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (p':=phib) (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=⊤); eauto; constructor.
+
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        constructor.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
+    }  
+  Case "nat_times x y".
+    (* left part of the conjunction *)
+    assert (HSOUND : Phi_Seq lacts racts  ⊑ eff ).
+    { inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | | 
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b 
+                      | | ]; subst;
+      inversion HEff; subst;
+      [apply EnsembleUnionComp | ]. 
+ 
+      - eapply IHBS1_1 with (ee:=eff1) (h_:=h''); eauto using HFacts.Equal_refl.  
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+      - assert (lacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, lacts)) by
+            (eapply eff_sound; eauto). 
+        assert (HEq_1 : lheap = h'').   
+        eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=lacts) in HR.
+        { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+          - assumption. 
+          - assumption. } 
+        exact lacts_Eff. 
+        
+        eapply IHBS1_2 with (ee:=eff2) (h_:=h'') (p':=phib); eauto using HFacts.Equal_refl.
+        + apply Equal_heap_equal; auto.
+        + rewrite <- HEq_1. eassumption. 
+        + rewrite HEq_1. eassumption. 
+        + inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        + rewrite HEq_1. assumption.
+      - apply PhiInThetaTop.
+    }  
+    (* start the proof of the "determinism" part *) 
+    { inversion BS2; subst.
+      inversion HExp; subst.
+      
+      assert (firstVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (lheap, stty')
+                         /\ TcVal (stty', 
+                                   Num va, 
+                                   subst_rho rho Ty2_Natural)) 
+        by (eapply ty_sound; eauto).
+      
+      inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | | 
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b 
+                      | | ]; subst.
+      
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=eff0); eauto. 
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (p':=phib) (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=⊤); eauto; constructor.
+
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        constructor.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
+    } 
+  Case "bool_eq x y".
+    (* left part of the conjunction *)
+    assert (HSOUND : Phi_Seq lacts racts  ⊑ eff ).
+    { inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | | |  
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b 
+                      | ]; subst;
+      inversion HEff; subst;
+      [apply EnsembleUnionComp | ]. 
+ 
+      - eapply IHBS1_1 with (ee:=eff1) (h_:=h''); eauto using HFacts.Equal_refl.  
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+      - assert (lacts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, lacts)) by
+            (eapply eff_sound; eauto). 
+        assert (HEq_1 : lheap = h'').   
+        eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=lacts) in HR.
+        { apply ReadOnlyTracePreservesHeap_1 in BS1_1. symmetry in BS1_1. 
+          - assumption. 
+          - assumption. } 
+        exact lacts_Eff. 
+        
+        eapply IHBS1_2 with (ee:=eff2) (h_:=h'') (p':=phib); eauto using HFacts.Equal_refl.
+        + apply Equal_heap_equal; auto.
+        + rewrite <- HEq_1. eassumption. 
+        + rewrite HEq_1. eassumption. 
+        + inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        + rewrite HEq_1. assumption.
+      - apply PhiInThetaTop.
+    }  
+    (* start the proof of the "determinism" part *) 
+    { inversion BS2; subst.
+      inversion HExp; subst.
+      
+      assert (firstVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (lheap, stty')
+                         /\ TcVal (stty', 
+                                   Num va, 
+                                   subst_rho rho Ty2_Natural)) 
+        by (eapply ty_sound; eauto).
+      
+      inversion HBt as [| | | | | | | | | | |
+                        | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                        | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                        | | |  
+                        | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b 
+                        | ]; subst.
+      
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=eff0); eauto. 
+        inversion HRonly as [ | | ? ? X Y | ]; assumption.
+        
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (p':=phib) (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
+      - inversion HEff; subst.
+        assert ( RH1 : H.Equal lheap lheap0 /\  Num va = Num va0 /\ lacts = lacts0 ). 
+        eapply IHBS1_1 with (ee:=⊤); eauto; constructor.
+
+        destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+        assert ( RH2 : H.Equal h' h'_ /\ Num vb = Num vb0 /\ racts = racts0 ).
+ 
+        destruct firstVal as [sttyb [Weakb [TcHeapb TcVal_bit]]]; eauto.
+        inversion HRonly as [ | | ? ? X Y | ].
+        eapply IHBS1_2 with (stty:=sttyb) (h'':=lheap);
+          eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+        constructor.
+        destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+        intuition.
     }
-  Case "nat_minus x y".    
-Admitted.
+  Case "alloc_abs".
+    assert (HSOUND: Phi_Nil ⊑ eff ) by (constructor).
+    inversion BS2; subst.
+    inversion HExp; subst.
+    rewrite H in H1. inversion H1; subst. 
+    intuition.
+  Case "read_abs".
+    assert (HSOUND: Phi_Nil ⊑ eff ) by (constructor).
+    inversion BS2; subst.
+    inversion HExp; subst.
+    rewrite H in H1. inversion H1; subst. 
+    intuition.
+  Case "write_abs".            
+    assert (HSOUND: Phi_Nil ⊑ eff ) by (constructor).
+    inversion BS2; subst.
+    inversion HExp; subst.
+    rewrite H in H1. inversion H1; subst. 
+    intuition.
+  Case "read_conc".
+    assert (HSOUND: Phi_Nil ⊑ eff ) by (constructor).
+    inversion BS2; subst.
+    inversion HExp; subst.
+    inversion HBt; subst.
+    assert ( RH1 : H.Equal h' h'_ /\  Loc (Rgn2_Const true false r) l = 
+                                      Loc (Rgn2_Const true false r0) l0 /\ 
+                   Phi_Nil = Phi_Nil ). 
+    eapply IHBS1; eauto.
+    constructor.
+    destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+    intuition.
+  Case "write_conc".
+    assert (HSOUND: Phi_Nil ⊑ eff ) by (constructor).
+    inversion BS2; subst.
+    inversion HExp; subst.
+    inversion HBt; subst.
+    assert ( RH1 : H.Equal h' h'_ /\  Loc (Rgn2_Const true false r) l = 
+                                      Loc (Rgn2_Const true false r0) l0 /\ 
+                   Phi_Nil = Phi_Nil ). 
+    eapply IHBS1; eauto.
+    constructor.
+    destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+    intuition.
+  Case "eff_concat".
+    (* left part of the conjunction *)
+    assert (HSOUND : Phi_Seq phia phib  ⊑ eff ).
+    { inversion HBt as [| | | | | | | | | | |
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
+                      | | |  
+                      | ? ? ? ? ? ? ? ? ? ? ? ? HTcExp_a HTcExp_b HR HBt_a HBt_b 
+                      | ]; subst;
+      inversion HEff; subst.
+      apply PhiInThetaTop.
+    }  
+    (* start the proof of the "determinism" part *) 
+    inversion BS2; subst.
+    inversion HExp; subst.
+    
+    assert (firstVal : exists stty',  
+                         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
+                         /\ TcHeap (h', stty')
+                         /\ TcVal (stty', 
+                                   Eff effa, 
+                                   subst_rho rho Ty2_Effect)) 
+      by (eapply ty_sound; eauto).
+ 
+    inversion HBt; subst.
+    
+    assert ( RH1 : H.Equal h' h'_ /\ Eff effa = Eff effa0 /\ phia = phia0 ). 
+    eapply IHBS1_1 with (ee:=⊤); eauto. constructor.
+    
+    destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
+    assert ( RH2 : H.Equal h' h'_ /\ Eff effb = Eff effb0 /\ phib = phib0 ).
+    
+    destruct firstVal as [sttyb [Weakb [TcHeapb TcVal]]]; eauto. 
+    inversion HEff; subst.
+    
+    eapply IHBS1_2 with (stty:=sttyb) (ee:=⊤) (p':=Phi_Nil);
+      eauto using ReadOnlyTraceSameHeap, ext_stores__bt, ext_stores__exp, ext_stores__env.
+    constructor. 
+    destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
+    intuition.
+Qed.
+
+

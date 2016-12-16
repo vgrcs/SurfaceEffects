@@ -1,4 +1,3 @@
-(* begin hide *)
 Require String. 
 
 Open Scope string_scope.

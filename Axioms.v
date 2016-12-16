@@ -1,7 +1,7 @@
-Add LoadPath "." as Top.
-Require Import Top.Definitions.
-Require Import Top.Heap.
-Require Import Top.Keys.
+Add LoadPath "." as Top0.
+Require Import Top0.Definitions.
+Require Import Top0.Heap.
+Require Import Top0.Keys.
 
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
@@ -9,16 +9,18 @@ Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
 Axiom EvaluationMuAppIncludesEffectEvaluation:
-  forall h'' env rho ef fheap env' rho' f x ec' ee' facts ea aheap v v' aacts h' bacts e eacts, 
+  forall h'' env rho ef fheap env' rho' f x ec' ee' facts ea aheap v v' aacts h' bacts eff
+         facts1 aacts1 bacts1, 
     (h'', env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
     (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
     (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') ⇓ (h', v', bacts)->
-    (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee') ⇓ (aheap, e, eacts).
+    (h'', env, rho, Eff_App ef ea) ⇓ (h'', eff, Phi_Seq (Phi_Seq facts1 aacts1) bacts1) ->
+    (h'', update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee') ⇓ (h'', eff, bacts1).
 
 Axiom EquivalenceUpToPermutations:
   forall (h h' h_: Heap) env rho exp v p,
-    H.Equal h' h_ -> (* assume we can prove this for an hypothetical heap:=h_ *)
-    H.Equal h h'  -> (* read only p *)
+    H.Equal h' h_ ->
+    H.Equal h h'  ->
     (h, env, rho, exp) ⇓ (h', v, p) ->
     h' = h_.
 
@@ -27,6 +29,12 @@ Axiom ReadOnlyWalkSameHeap:
     ReadOnlyPhi (Phi_Par acts_mu1 acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
     H.Equal h same_h.
+
+Axiom ReadOnlyTraceSameHeap :
+  forall h'' heap env rho exp eff phi,
+    ReadOnlyPhi phi ->
+    (h'', env, rho, exp) ⇓ (h'', eff, phi) ->
+    (heap, env, rho, exp) ⇓ (heap, eff, phi).
 
 Axiom EqualHeapsEqualFold :
   forall heap_mu1 heap_mu0 heap_mu2 heap_mu3,

@@ -11,18 +11,18 @@ Require Import Coq.Arith.Minus.
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Compare_dec.
 
-Add LoadPath "." as Top.
-Require Import Top.Keys.
-Require Import Top.Heap.
-Require Import Top.Tactics.
-Require Import Top.EffectSystem.
-Require Import Top.Environment.
-Require Import Top.TypeSystem.
-Require Import Top.Determinism.
-Require Import Top.DeterminismExt.
-Require Import Top.Definitions.
-Require Import Top.CorrectnessLemmas.
-Require Import Top.Axioms.
+Add LoadPath "." as Top0.
+Require Import Top0.Keys.
+Require Import Top0.Heap.
+Require Import Top0.Tactics.
+Require Import Top0.EffectSystem.
+Require Import Top0.Environment.
+Require Import Top0.TypeSystem.
+Require Import Top0.Determinism.
+Require Import Top0.DeterminismExt.
+Require Import Top0.Definitions.
+Require Import Top0.CorrectnessLemmas.
+Require Import Top0.Axioms.
 
 Import TypeSoundness.
 Import EffectSoundness.
@@ -141,14 +141,14 @@ Proof.
         SSCase "facts ⊑ eff".
           assert (H_ : facts  ⊑ eff). 
           { inversion HBt as [ | | | | | 
-                             ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea  HBt_ef HBt_ea HR_ef HR_ea 
-                             | | | | | | | | ]; subst. 
+                             ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea  HBt_ef HBt_ea HR_ef HR_ea 
+                             | | | | | | | | | | | | | ]; subst. 
             SSSCase "Mu_App ef ea0 << Eff_App ef ea0".
               inversion HEff; subst. 
               eapply IHBS1_1; eauto. 
-            (*SSSCase "Mu_App ef ea0 << (⊤)".  
+            SSSCase "Mu_App ef ea0 << (⊤)".  
               inversion HEff; subst.
-              apply PhiInThetaTop.*) }
+              apply PhiInThetaTop. }
           (*{
           inversion HBt as [ | | | | | 
                              ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
@@ -165,9 +165,9 @@ Proof.
           }*)
         exact H_.    
         SSCase " aacts ⊑ eff".   
-          inversion HBt as [ | | | |  
-                             | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                             | | | | | | | | ]; subst.
+          inversion HBt as [ | | | | | 
+                             ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea  HBt_ef HBt_ea HR_ef HR_ea 
+                             | | | | | | | | | | | | | ]; subst. 
           SSSCase "Mu_App ef ea0 << Eff_App ef ea0". 
             assert (H_ : aacts  ⊑ eff).
             { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -196,18 +196,18 @@ Proof.
                     (eapply eff_sound; eauto). 
                 eassumption. }*)
             exact H_. 
-          (*SSSCase "Mu_App ef ea0 << (⊤)".  
+          SSSCase "Mu_App ef ea0 << (⊤)".  
             assert (H_ : aacts  ⊑ eff).
             { induction eff; inversion HEff; subst.
               eapply IHBS1_2 with (h'':=fheap) (ee:=⊤) ; eauto using ext_stores__env,  ext_stores__exp.  
               econstructor.
               econstructor. }
-            exact H_.*)
+            exact H_.
       SCase "bacts ⊑ eff".     
         inversion HEff; subst; 
-        inversion HBt as [ | | | |  
-                           | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
-                           | | | | | | | | ]; subst.
+        inversion HBt as [ | | | | | 
+                             ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea  HBt_ef HBt_ea HR_ef HR_ea 
+                             | | | | | | | | | | | | | ]; subst. 
         SSSCase "Mu_App ef ea0 << Eff_App ef ea0".
           assert (HEq_1 : fheap = h'').  
           { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
@@ -253,7 +253,7 @@ Proof.
                 - eapply ext_stores__val with (stty:=sttya); eauto. }
             - eapply ext_stores__exp; eauto. }  
           exact H_.
-        (*SSSCase "Mu_App ef ea0 << (⊤)".
+        SSSCase "Mu_App ef ea0 << (⊤)".
           assert (H_ : bacts ⊑ None).
           { eapply IHBS1_3 
             with (stty:=sttya) (ee:=⊤); eauto.
@@ -270,7 +270,7 @@ Proof.
                 - eapply ext_stores__val with (stty:=sttya); eauto. }
             SSSSCase "Extended TcExp". 
               eapply ext_stores__exp; eauto. }
-          exact H_.*) 
+          exact H_. 
   Case "rgn_app".
     inversion HExp as  [ | | | | | 
                          | ? ? ? ? ? ? ? ? HTcExp_er HTcRgn_w 
@@ -297,7 +297,7 @@ Proof.
     SCase "facts ⊑ eff".
       eapply IHBS1_1; eauto. 
       inversion HBt; subst; eauto.
-      (*econstructor; eauto.*)
+      econstructor; eauto.
     SCase " bacts ⊑ eff".
       inversion HBt; subst.
       SSCase "Rgn_App er w << (∅)".
@@ -306,7 +306,7 @@ Proof.
         econstructor.
         apply update_rho; auto.
         eapply extended_rho; eauto.
-      (*SSCase "Rgn_App er w << (⊤)".  
+      SSCase "Rgn_App er w << (⊤)".  
         eapply IHBS1_2 with (ee:=⊤); eauto using update_rho, extended_rho. 
         induction eff.
         SSSCase "Top evaluates to None". 
@@ -314,25 +314,23 @@ Proof.
         SSSCase "Top heaps are equal". 
           inversion HEff; subst; econstructor. 
         SSSCase "eb << (⊤)". 
-          econstructor.*) 
+          econstructor. 
   Case "eff_app". 
     inversion HBt; subst.   
-    (*{ apply PTS_Seq.
+    { apply PTS_Seq.
       - apply PTS_Seq. 
         + inversion HEff; subst.
           apply PhiInThetaTop.
         +  inversion HEff; subst.
            apply PhiInThetaTop.
       - inversion HEff; subst.
-        apply PhiInThetaTop. }*)
+        apply PhiInThetaTop. }
   Case "par_pair". 
       admit. 
-    (*SCase "top". 
-      apply PTS_Seq; inversion HEff; subst; apply PhiInThetaTop.*)
   Case "cond_true". 
-    inversion HBt as [ | | | | | | |   
-                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
-                       | | | | | ]; subst.
+    inversion HBt as [ | | | | | 
+                             ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea  HBt_ef HBt_ea HR_ef HR_ea 
+                             | | | | | | | | | | | | | ]; subst. 
     SCase "Cond e et ef << Cond e efft efff". 
       assert (H' : cacts ⊑ Some empty_set) by
           (eapply IHBS1_1 with (p':=Phi_Nil); eauto; constructor).
@@ -356,13 +354,13 @@ Proof.
         eapply EqualHeaps; eauto. 
         apply Equal_heap_equal. symmetry. auto.
         constructor.
-    (*SCase "Cond e et ef << (⊤)". 
+    SCase "Cond e et ef << (⊤)". 
       inversion HEff; subst.  
-      constructor; apply PhiInThetaTop.*)
+      constructor; apply PhiInThetaTop.
   Case "cond_false".    
-  inversion HBt as [ | | | | | | |   
-                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_e TcExp_et TcExp_ef HBt_e HBt_et HBt_ef
-                       | | | | | ]; subst.
+    inversion HBt as [ | | | | | 
+                             ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea  HBt_ef HBt_ea HR_ef HR_ea 
+                             | | | | | | | | | | | | | ]; subst. 
     SCase "Cond e et ef << Cond e efft efff".
       assert (H' :cacts ⊑ Some empty_set) by 
           (eapply IHBS1_1 with (p':=Phi_Nil); eauto; constructor).
@@ -385,14 +383,14 @@ Proof.
       eapply IHBS1_2 with (ee:=efff); eauto; [| rewrite HEq_1; assumption].
       SSCase "Invoke DynamicDeterminism to prove equal heaps".
         eapply EvalFalseIsFalse; eauto. 
-    (*SCase "Cond e et ef << (⊤)".  
+    SCase "Cond e et ef << (⊤)".  
       inversion HEff; subst. 
-      constructor; apply PhiInThetaTop.*)
+      constructor; apply PhiInThetaTop.
   Case "new_ref e".
   inversion HEff; subst; 
   inversion HBt as [ | | | | | |   
                      | | | ? ? ? ? ? ? ? ? ? TcExp_e HBt_e
-                     | | | |  ]; subst.
+                     | | | | | | | | | ]; subst.
     apply EnsembleUnionComp.    
     SCase "Ref w e << (a ⊕ AllocAbs w)". 
      eapply IHBS1; eauto; inversion HRonly; assumption.
@@ -400,12 +398,12 @@ Proof.
      apply PTS_Elem. apply DAT_Alloc_Abs.
      rewrite H in H2. inversion H2.
      apply In_singleton.
-    (*SCase "Ref w e << (⊤)". 
-     apply PhiInThetaTop.*)  
+    SCase "Ref w e << (⊤)". 
+     apply PhiInThetaTop.
   Case "get_ref e".     
    inversion HBt as [ | | | | | | | | | 
                       | ? ? ? ? ? ? ? ? ? TcExp_ea0 HBt_ea0
-                      | | | ]; subst.
+                      | | | | | | | | ]; subst.
    SCase "DeRef w ea0 << (eff0 ⊕ ReadAbs w)".
      inversion HEff; subst. 
      apply EnsembleUnionComp.
@@ -430,7 +428,7 @@ Proof.
         by (eapply DynamicDeterminism_ext; eauto; apply HMapP.Equal_refl).
       destruct HD as [? [H_ ?]]; inversion H_; subst.
       apply DAT_Read_Conc. apply In_singleton.
-   (*SCase "DeRef w ea0 << (⊤)".   
+   SCase "DeRef w ea0 << (⊤)".   
      econstructor.  
      SSCase "aacts ⊑ eff".
        inversion HEff; subst.
@@ -440,12 +438,12 @@ Proof.
      SSCase "Phi_Elem (DA_Read r l v) ⊑ eff".
        inversion HEff; subst.    
        apply PTS_Elem. 
-       apply DAT_Top.*)
+       apply DAT_Top.
   Case "set_ref e1 e2".
     inversion HBt as [| | | | | | | | | | |
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
                       | ? ? ? ? ? ? ? ? ? ? ? HBt_ea0 HBt_ev TcExp_ea0 HR
-                      ]; subst.
+                      | | | | |]; subst.
     SCase "Assign w ea0 ev << (eff1 ⊕ (eff2 ⊕ WriteAbs w))".
       inversion HEff; subst.
       apply PTS_Seq. 
@@ -523,52 +521,17 @@ Proof.
         inversion H; subst.
         apply DAT_Write_Conc; apply In_singleton.
         apply Theta_intror. apply Theta_intror. assumption.
-    (*SCase "Assign w ea0 ev << (⊤)". 
+    SCase "Assign w ea0 ev << (⊤)". 
       inversion HEff; subst.   
-      apply PhiInThetaTop.*)
+      apply PhiInThetaTop.
   Case "nat_plus x y". 
-    inversion HBt; subst.
-    (*apply PTS_Seq. 
-    SCase "lacts ⊑ eff".
-      inversion HEff; subst. 
-      apply PhiInThetaTop.  
-    SCase "racts ⊑ eff".    
-      inversion HEff; subst.
-      apply PhiInThetaTop.*) 
+      admit.
   Case "nat_minus x y".    
-    inversion HBt; subst.
-    (*apply PTS_Seq. 
-    SCase "lacts ⊑ eff".
-      inversion HEff; subst. 
-      apply PhiInThetaTop.  
-    SCase "racts ⊑ eff".    
-      inversion HEff; subst.
-      apply PhiInThetaTop.*)
+      admit.
   Case "nat_times x y".
-    inversion HBt; subst.
-    (*apply PTS_Seq. 
-    SCase "lacts ⊑ eff".
-      inversion HEff; subst. 
-      apply PhiInThetaTop.  
-    SCase "racts ⊑ eff".    
-      inversion HEff; subst.
-      apply PhiInThetaTop.*)
+      admit.
   Case "bool_eq x y".
-    inversion HBt; subst.
-    (*apply PTS_Seq. 
-    SCase "lacts ⊑ eff".
-      inversion HEff; subst. 
-      apply PhiInThetaTop.  
-    SCase "racts ⊑ eff".    
-      inversion HEff; subst.
-      apply PhiInThetaTop.*)
+      admit.
   Case "eff_concat".
-    inversion HBt; subst.
-    (*apply PTS_Seq. 
-    SCase "lacts ⊑ eff".
-      inversion HEff; subst. 
-      apply PhiInThetaTop.  
-    SCase "racts ⊑ eff".    
-      inversion HEff; subst.
-      apply PhiInThetaTop.*) 
+       admit. 
 Admitted.

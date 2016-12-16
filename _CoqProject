@@ -10,5 +10,7 @@ Heap.v
 TypeSystem.v 
 EffectSystem.v 
 Determinism.v 
+DeterminismExt.v
+Correctness.v
 CorrectDeterminism.v
--R . "Top"
+-R . "Top0"
