@@ -9,16 +9,18 @@ Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
 Axiom EvaluationMuAppIncludesEffectEvaluation:
-  forall h'' env rho ef fheap env' rho' f x ec' ee' facts ea aheap v v' aacts h' bacts e eacts, 
+  forall h'' env rho ef fheap env' rho' f x ec' ee' facts ea aheap v v' aacts h' bacts eff
+         facts1 aacts1 bacts1, 
     (h'', env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
     (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
     (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec') ⇓ (h', v', bacts)->
-    (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee') ⇓ (aheap, e, eacts).
+    (h'', env, rho, Eff_App ef ea) ⇓ (h'', eff, Phi_Seq (Phi_Seq facts1 aacts1) bacts1) ->
+    (h'', update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee') ⇓ (h'', eff, bacts1).
 
 Axiom EquivalenceUpToPermutations:
   forall (h h' h_: Heap) env rho exp v p,
-    H.Equal h' h_ -> (* assume we can prove this for an hypothetical heap:=h_ *)
-    H.Equal h h'  -> (* read only p *)
+    H.Equal h' h_ ->
+    H.Equal h h'  ->
     (h, env, rho, exp) ⇓ (h', v, p) ->
     h' = h_.
 
