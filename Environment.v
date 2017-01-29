@@ -4,6 +4,8 @@ Require Import Top0.Tactics.
 Require Import Top0.Definitions.
 Require Import Top0.Keys.
 Require Import Coq.FSets.FSetInterface.
+Require Import Coq.Sets.Ensembles.
+Require Import Coq.Program.Equality.
 
 Module EMapP := FMapFacts.Facts E.
 Module RMapP := FMapFacts.Facts R.

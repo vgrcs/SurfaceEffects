@@ -460,13 +460,12 @@ Proof.
   - inversion H2; subst;
     assert (h=fheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; [reflexivity | reflexivity | assumption]). 
-  - inversion H10; subst. inversion H14; subst. 
+  - inversion H5; subst. inversion H9; subst. 
     assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
     assert (h = heap_mu2) by (eapply IHBigStep4; eauto). 
-    rewrite <- H11 in H4. rewrite <- H12 in H5.
-    assert (H.Equal h same_h) by (eapply ReadOnlyWalkSameHeap; eauto).
-    eapply EquivalenceUpToPermutations; eauto.
-    apply HFacts.Equal_refl.
+    rewrite <- H6 in H2. rewrite <- H7 in H3.
+    assert (h = same_h) by (eapply ReadOnlyWalkSameHeap; eauto).
+    assumption.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; assumption).

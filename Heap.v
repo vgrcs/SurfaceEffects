@@ -23,6 +23,7 @@ Inductive TcHeap : (Heap * Sigma) -> Prop :=
                     TcVal (store, v, t))) ->
                TcHeap (heap, store).
 
+
 Module HMapP := FMapFacts.Facts H.
 Module HRaw := H.Raw.
 Module HProofs := H.Raw.Proofs.
@@ -31,6 +32,32 @@ Module STMapP := FMapFacts.Facts ST.
 Module STRaw := ST.Raw.
 Module STProofs := ST.Raw.Proofs.
 
+Lemma TcHeapEmpty:
+  forall heap stty,
+    H.Empty heap ->
+    ST.Empty stty ->
+    TcHeap (heap, stty).
+Proof.
+ intros heap stty H1 H2. 
+ unfold H.Empty in *.
+ unfold ST.Empty in *.
+ econstructor.
+ - intros. 
+   edestruct H1 with (a:=k) (e:=v).
+   unfold find_H in H.      
+   apply HMapP.find_mapsto_iff.
+   auto.
+ - intros.
+   edestruct H2 with (a:=k) (e:=t).
+   unfold find_ST in H.      
+   apply STMapP.find_mapsto_iff.
+   auto.
+ - intros.
+   edestruct H2 with (a:=k) (e:=t).
+   unfold find_ST in H.      
+   apply STMapP.find_mapsto_iff.
+   auto.
+Qed.
 
 Lemma H_same_key_1: 
   forall t l v h, 

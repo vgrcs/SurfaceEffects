@@ -465,7 +465,7 @@ Lemma ty_sound_closure:
   forall stty rgns env rho ctxt f x ec ee tyx tyc effc effe, 
     TcRho (rho, rgns) -> 
     TcEnv (stty, rho, env, ctxt) ->
-    TcExp (stty, ctxt, rgns,  Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect, Empty_Static_Action) ->  
+    TcExp (ctxt, rgns,  Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect, Empty_Static_Action) ->  
     TcVal (stty, Cls (env, rho,  Mu f x ec ee),  subst_rho rho (Ty2_Arrow tyx effc tyc effe Ty2_Effect)).   
 Proof.
   intros; econstructor; eassumption.
@@ -475,7 +475,7 @@ Lemma ty_sound_region_closure:
   forall stty rgns env rho ctxt x er tyr effr, 
     TcRho (rho, rgns) -> 
     TcEnv (stty, rho, env,ctxt) ->
-    TcExp (stty, ctxt, rgns, Lambda x er, Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr),  Empty_Static_Action) ->
+    TcExp (ctxt, rgns, Lambda x er, Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr),  Empty_Static_Action) ->
     TcVal (stty, Cls (env, rho, Lambda x er), subst_rho rho (Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr))).
 Proof.
   intros. econstructor; eassumption.
@@ -514,7 +514,7 @@ Lemma ty_sound:
       TcHeap (hp, stty) ->
       TcRho (rho, rgns) ->
       TcEnv (stty, rho, env, ctxt) ->
-      TcExp (stty, ctxt, rgns, e, t, static_eff) ->
+      TcExp (ctxt, rgns, e, t, static_eff) ->
       exists stty',
         (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
          /\ TcHeap (hp', stty')
@@ -542,7 +542,7 @@ Proof.
   Case "mu_app".   
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  
-    eapply ext_stores__env; eauto. eapply ext_stores__exp. eassumption. eassumption. 
+    eapply ext_stores__env; eauto.  
     inversion TcVal_mu as [ | | | ? ? ? ? ? ? ?   TcRho_rho' TcEnv_env' TcExp_abs | | |] ; subst.      
     inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst.
     rewrite <- H4 in TcVal_mu. 
@@ -554,13 +554,12 @@ Proof.
     edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
     apply update_env. apply update_env. eapply ext_stores__env; eauto.  
     eapply ext_stores__val; eauto. eassumption.
-    eapply ext_stores__exp; eauto.
     exists sttyb; intuition.  
   Case "rgn_app".     
     edestruct IHD1 as [sttyl [Weak1 [TcHeap1 TcVal_lam]]]; eauto. 
     inversion TcVal_lam as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_lam | | |]; subst.   
     inversion TcExp_lam as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst.  
-    edestruct IHD2 as [sttyr [Weak2 [TcHeap2 TcVal_res]]]; eauto using update_env, ext_stores__env, ext_stores__exp.
+    edestruct IHD2 as [sttyr [Weak2 [TcHeap2 TcVal_res]]]; eauto using update_env, ext_stores__env.
     apply update_rho. assumption. assumption. eapply extended_rho; eauto. 
     exists sttyr; intuition. 
     rewrite subst_rho_forallrgn in H5.
@@ -576,7 +575,7 @@ Proof.
     eapply bound_var_is_fresh; eauto.
   Case "eff_app".
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto.
-    edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto using ext_stores__env, ext_stores__exp.
+    edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto using ext_stores__env.
     inversion TcVal_mu as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst. 
     edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
@@ -589,7 +588,6 @@ Proof.
           inversion H4.
           assert (SubstEq: subst_rho rho' tyx = subst_rho rho tya) by assumption.
           rewrite <- SubstEq in TcVal_arg.  eassumption. 
-    eapply ext_stores__exp; eauto.
     exists sttyb. intuition.
     rewrite subst_rho_effect. rewrite subst_rho_effect in TcVal_res.
     assumption.
@@ -602,18 +600,18 @@ Proof.
     SCase "Weakening".
       apply UnionStoreTyping; [apply Weaka | apply Weak1]; auto.
     SCase "TcHeap".
-      eapply UnionTcHeap; eauto.
+      eapply UnionTcHeap with (theta1:=theta1) (theta2:=theta2); eauto. 
     SCase "TcVal".
       econstructor; [rewrite <- HRApp1 | rewrite <- HRApp2]; constructor.
   Case "cond_true".  
     edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
     edestruct IHD2 as [stty1 [Weak1 [TcHeapv1 TcVal_e1]]]; 
-      eauto using ext_stores__env, ext_stores__exp.
+      eauto using ext_stores__env.
     exists stty1. intuition.
   Case "cond_false".
     edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
     edestruct IHD2 as [stty2 [Weak2 [TcHeapv2 TcVal_e2]]]; 
-      eauto using ext_stores__env, ext_stores__exp.
+      eauto using ext_stores__env.
     exists stty2. intuition.  
   Case "new_ref e".          
     destruct IHD with (stty := stty)
@@ -687,8 +685,7 @@ Proof.
                        (rgns := rgns)  
                        (t := t0)
                        (static_eff := veff)
-      as [sttyv [Weakv [TcHeapv TcVal_v]]];
-      eauto using ext_stores__env, ext_stores__exp.
+      as [sttyv [Weakv [TcHeapv TcVal_v]]]; eauto using ext_stores__env.
     exists sttyv. split; [ | split].
     SCase "HeapTyping extends".
       eapply weakening_trans; eauto.
@@ -705,22 +702,22 @@ Proof.
   Case "nat_plus x y". 
     edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
-      eauto using ext_stores__env, ext_stores__exp. 
+      eauto using ext_stores__env. 
     exists sttyy. intuition. rewrite subst_rho_natural. constructor.
   Case "nat_minus x y". 
     edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
-      eauto using ext_stores__env, ext_stores__exp.
+      eauto using ext_stores__env.
     exists sttyy. intuition. rewrite subst_rho_natural. constructor.
   Case "nat_times x y". 
     edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
-      eauto using ext_stores__env, ext_stores__exp.
+      eauto using ext_stores__env.
     exists sttyy. intuition. rewrite subst_rho_natural. constructor.
   Case "bool_eq x y". 
     edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
-      eauto using ext_stores__env, ext_stores__exp.
+      eauto using ext_stores__env.
     exists sttyy. intuition. rewrite subst_rho_boolean. constructor.
   Case "alloc_abs".
     exists stty. intuition. rewrite subst_rho_effect. constructor.

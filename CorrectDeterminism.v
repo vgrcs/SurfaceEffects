@@ -77,6 +77,125 @@ Proof.
     assumption. 
 Qed.
 
+Theorem Correctness_soundness_ext :
+  forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,
+    (h, env, rho, ea) ⇓ (h', v, p) ->
+    forall h_ h'_ v_ p_,
+      H.Equal h h_ ->
+      (h_, env, rho, ea) ⇓ (h'_, v_, p_) ->
+      (h, env, rho, ee) ⇓ (h'', Eff eff, p') ->
+    BackTriangle (stty, ctxt, rgns, rho, ea, ee) ->
+    forall static ty, 
+      ReadOnlyPhi p' ->
+      TcHeap (h, stty) ->
+      TcRho (rho, rgns) ->
+      TcEnv (stty, rho, env, ctxt) -> 
+      TcExp (stty, ctxt, rgns, ea, ty, static) ->
+      p ⊑ eff.
+Proof.
+  intros h  h'  h'' env rho p  p' v  eff stty ctxt rgns ea ee BS1. 
+  generalize dependent p'. 
+  generalize dependent ee.
+  generalize dependent stty.
+  generalize dependent ctxt.
+  generalize dependent rgns.
+  generalize dependent eff.
+  generalize dependent h''.
+  dependent induction BS1.  
+  Focus 9. 
+    intros h'' eff rgns ctxt stty ee_exp p'; 
+    intros h_ h'_ v_ p_ HEqual BS2;
+    intros HEff HBt static ty HRonly HHeap HRho HEnv HExp;
+    inversion BS2; subst.
+    
+    inversion HBt as [ | | | | |  
+                       | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? A B C D HBt_a HBt_b HBt_c HBt_d 
+                       | | | | | | | | | | | |]; subst; 
+    inversion HEff; subst; [ | apply PhiInThetaTop]. 
+     
+    clear H18. clear H19.  
+    clear H23. clear H24.
+     
+    inversion HExp as  [ | | | | | ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
+                               | | | 
+                               ? ? ? ? ? ? ? ? ? ? ? ? ?  HBt_1 HBt_2 HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
+                               | | | | | | | | | | | | | | | | ]; subst. 
+    inversion HEff; subst. inversion H9; subst. inversion H19; subst.
+
+    assert (H' : acts_eff1 ⊑ effa1).
+    { eapply IHBS1_1; eauto. 
+      inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
+    assert (H'' : acts_eff2 ⊑ effb1).
+    { eapply IHBS1_2; eauto.
+      inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
+    assert (H''' : acts_mu1 ⊑ effa0).
+    { eapply IHBS1_3; eauto.
+      inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
+    assert (H'''' : acts_mu2 ⊑ effb2).
+    { eapply IHBS1_4; eauto.
+      inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption. }
+    
+    assert (H_ : (Phi_Par acts_eff1 acts_eff2) ⊑ (Union_Theta effa1 effb1)). 
+    apply PTS_Par; [ apply Theta_introl | apply Theta_intror ]; eauto.
+
+    assert (H__ : (Phi_Par acts_mu1 acts_mu2) ⊑ (Union_Theta effa0 effb2)). 
+    apply PTS_Par; [ apply Theta_introl | apply Theta_intror ]; eauto.
+
+    assert (_H__ :  ReadOnlyPhi acts_eff1).
+    { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:= acts_eff1) in B; auto.
+      assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ee_1, acts_eff1)) by
+          (eapply eff_sound; eauto). 
+      assumption. }
+    
+    assert (_H_ : acts_mu1 ⊑ theta1). 
+     { induction theta1; [| apply PhiInThetaTop].
+      eapply IHBS1_3; eauto.
+      inversion HExp_mu1; subst. apply H14.
+     } 
+
+    assert (_H____ :  ReadOnlyPhi acts_eff2).
+    { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:= acts_eff2) in D; auto.
+      assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ee_2, acts_eff2)) by
+          (eapply eff_sound; eauto). 
+      assumption. }
+
+    assert (_H___ : acts_mu2 ⊑ theta2).
+    { induction theta2; [| apply PhiInThetaTop].
+      eapply IHBS1_4; eauto.
+      inversion HExp_mu2; subst. apply H14.
+    } 
+    apply PTS_Seq. 
+    apply  Theta_introl. assumption.
+    apply Theta_intror. assumption.
+  Focus 1.
+Admitted.
+
+
+Example test2:
+  forall h'' heap_mu theta env v rho ef ea 
+         acts_eff acts_mu,
+   (h'', env, rho, Mu_App ef ea) ⇓ (heap_mu, Num v, acts_mu) ->
+   (h'', env, rho, Eff_App ef ea) ⇓ (h'', Eff theta, acts_eff) ->
+   forall stty ctxt rgns,
+     TcHeap (h'', stty) ->
+     TcRho (rho, rgns) ->
+     TcEnv (stty, rho, env, ctxt) ->
+     BackTriangle (stty, ctxt, rgns, rho, Mu_App ef ea, Eff_App ef ea) ->
+     acts_mu ⊑ theta /\ ReadOnlyPhi acts_eff.
+Proof.
+  intros.
+  inversion H4; subst.
+  split.
+  - eapply Correctness_soundness_ext with (ea:=Mu_App ef ea); eauto using HFacts.Equal_refl.
+    assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff)) 
+      by (eapply eff_sound; eauto). 
+    eapply ReadOnlyStaticImpliesReadOnlyPhi in H5; eauto.
+ -  assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff)) 
+      by (eapply eff_sound; eauto). 
+    eapply ReadOnlyStaticImpliesReadOnlyPhi in H5; eauto.
+Qed.
+
+
 Definition Correctness_ext :
   forall h h' h'' env rho  p p' v eff stty ctxt rgns ea ee,
     (h, env, rho, ea) ⇓ (h', v, p) ->
@@ -168,7 +287,7 @@ Proof.
             exact H_.    
       SSCase " aacts ⊑ eff".   
         inversion HBt as [ | | | |  
-                           | ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                           | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
                            | | | | | | | | | | | | | ]; subst.
         SSSCase "Mu_App ef ea0 << Eff_App ef ea0". 
           assert (H_ : aacts  ⊑ eff).
@@ -193,7 +312,7 @@ Proof.
       SCase "bacts ⊑ eff".       
         inversion HEff; subst; 
         inversion HBt as [ | | | |  
-                           | ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                           | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
                            | | | | | | | | | | | | | ]; subst. 
         SSSCase "Mu_App ef ea0 << Eff_App ef ea0".
           assert (HEq_1 : fheap = h'').  
@@ -265,7 +384,7 @@ Proof.
       (* Start the proof of the "determinism" part *) 
       { inversion BS2; subst. 
         inversion HBt as [ | | | |  
-                                 | ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
+                                 | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
                                  | | | | | | | | | | | | | ]; subst. 
      
         - inversion HEff; subst.
@@ -494,7 +613,7 @@ Proof.
      
     inversion HExp as  [ | | | | | ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
                                | | | 
-                               ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? HBt_1 HBt_2 HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
+                               ? ? ? ? ? ? ? ? ? ? ? ? ?  HBt_1 HBt_2 HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
                                | | | | | | | | | | | | | | | | ]; subst.  
     inversion HEff; subst. inversion H2; subst. inversion H12; subst.
 
@@ -545,7 +664,8 @@ Proof.
       + assert (HEq_1 : h'' = h_).
         assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
         eapply EquivalenceUpToPermutations; eauto. 
-        rewrite <- HEq_1. eassumption. } 
+        rewrite <- HEq_1. eassumption.
+      + inversion HExp_mu1; subst. apply H10. } 
 
     assert (_H____ :  ReadOnlyPhi acts_eff2).
     { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:= acts_eff2) in D; auto.
@@ -559,7 +679,9 @@ Proof.
       + assert (HEq_1 : h'' = h_).
         assert (H.Equal h'' h'') by (apply HFacts.Equal_refl).
         eapply EquivalenceUpToPermutations; eauto. 
-        rewrite <- HEq_1. eassumption. } 
+        rewrite <- HEq_1. eassumption.
+      + inversion HExp_mu2; subst. apply H10.
+    } 
     apply PTS_Seq. 
     apply  Theta_introl. assumption.
     apply Theta_intror. assumption.
@@ -571,7 +693,7 @@ Proof.
                        | | | | | | | | | | | | ]; subst.
       inversion HExp as  [ | | | | | ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 
                            | | | 
-                           ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? HBt_1 HBt_2 HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
+                           ? ? ? ? ? ? ? ? ? ? ? ? ?  HBt_1 HBt_2 HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
                            | | | | | | | | | | | | | | | | ]; subst.
       inversion HEff; subst. inversion HEff; subst. inversion H28; subst.  inversion H9; subst.
       
@@ -612,7 +734,9 @@ Proof.
         
         assert (_H_ : acts_mu0 ⊑ theta0). 
         { induction theta0; [| apply PhiInThetaTop].
-          eapply IHBS1_3; eauto. }
+          eapply IHBS1_3; eauto. 
+          inversion HExp_mu1; subst. apply H6.
+        }
         
         assert (_H____ :  ReadOnlyPhi acts_eff3).
         { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:= acts_eff3) in D; auto.
@@ -622,7 +746,9 @@ Proof.
         
         assert (_H___ : acts_mu3 ⊑ theta3).
         { induction theta3; [| apply PhiInThetaTop].
-          eapply IHBS1_4; eauto. } 
+          eapply IHBS1_4; eauto. 
+          inversion HExp_mu2; subst. apply H6.
+        } 
         
         intuition. 
         eapply unique_heap_new with (heapa := h'') (heapb := h_) (theta1:=theta0) (theta2:=theta3); eauto.

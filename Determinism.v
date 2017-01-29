@@ -2730,18 +2730,3 @@ Proof.
   eapply Det_trace_from_theta; eauto.
 Qed.
 
-
-Theorem Dynamic_DetTrace :
-  forall heap rgns env exp heap' val' phi',
-    (heap, rgns, env, exp) ⇓ (heap', val', phi') ->
-    Det_Trace phi'.
-Proof.
-  intros heap rgs evn exp heap' val' phi' HStep.
-  dependent induction HStep;
-  try (solve [repeat constructor; try (eapply IHHStep; reflexivity); try (eapply IHHStep1; reflexivity); try (eapply IHHStep2; reflexivity); try (eapply IHHStep3; reflexivity); try assumption]).
-  constructor.
-  * eapply Det_par_trace_from_readonly; try eassumption.
-  * eapply Det_trace_from_theta; try eassumption.
-    + eapply IHHStep3; reflexivity.
-    + eapply IHHStep4; reflexivity.
-Qed.
