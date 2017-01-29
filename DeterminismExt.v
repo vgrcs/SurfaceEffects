@@ -749,15 +749,16 @@ Proof.
 Qed.
 
 Require Import Top0.Heap.
+Require Import Coq.Sets.Ensembles.
 
 Theorem Determinism : 
   forall env rho exp heap1 heap2 val1 val2 acts1 acts2,
     (H.empty Val, env, rho, exp) ⇓ (heap1, val1, acts1) ->
     (H.empty Val, env, rho, exp) ⇓ (heap2, val2, acts2) ->
-    forall rgns ty static,
-      TcRho (rho, rgns) ->
+    forall ty static,
+      TcRho (rho, Empty_set Name) ->
       TcEnv (ST.empty tau, rho, env, E.empty tau) ->
-      TcExp (E.empty tau, rgns, exp, ty, static) ->
+      TcExp (E.empty tau, Empty_set Name, exp, ty, static) ->
       H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
   intros.
