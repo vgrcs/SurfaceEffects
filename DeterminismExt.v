@@ -750,7 +750,7 @@ Qed.
 
 Require Import Top0.Heap.
 
-Theorem DynamicDeterminism : 
+Theorem Determinism : 
   forall env rho exp heap1 heap2 val1 val2 acts1 acts2,
     (H.empty Val, env, rho, exp) ⇓ (heap1, val1, acts1) ->
     (H.empty Val, env, rho, exp) ⇓ (heap2, val2, acts2) ->
