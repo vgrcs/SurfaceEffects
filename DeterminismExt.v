@@ -754,14 +754,14 @@ Theorem DynamicDeterminism :
   forall env rho exp heap1 heap2 val1 val2 acts1 acts2,
     (H.empty Val, env, rho, exp) ⇓ (heap1, val1, acts1) ->
     (H.empty Val, env, rho, exp) ⇓ (heap2, val2, acts2) ->
-    forall ctxt rgns ty static,
+    forall rgns ty static,
       TcRho (rho, rgns) ->
-      TcEnv (ST.empty tau, rho, env, ctxt) ->
-      TcExp (ctxt, rgns, exp, ty, static) ->
+      TcEnv (ST.empty tau, rho, env, E.empty tau) ->
+      TcExp (E.empty tau, rgns, exp, ty, static) ->
       H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
   intros.
-  eapply DynamicDeterminism_ext; eauto.
+  eapply DynamicDeterminism_ext with (ctxt:=E.empty tau); eauto.
   -  unfold H.Equal.
      intros. 
      apply HMapP.find_o. firstorder.
@@ -781,5 +781,5 @@ Proof.
     intros. intro Hneg. 
     apply STMapP.empty_mapsto_iff in Hneg. contradiction.
 
-    apply HH1; auto.
+    apply HH1; eauto.
 Qed.
