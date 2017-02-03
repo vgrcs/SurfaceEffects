@@ -755,16 +755,19 @@ Lemma EmptyTcRho :
     TcRho (R.empty Region, Empty_set Name).
 Proof.
   econstructor; intros.
-  - admit.
-  - admit.
-  - admit.  
+  - apply RMapP.in_find_iff in H.
+    apply RMapP.empty_in_iff in H.
+    contradiction.
+  - apply RMapP.not_find_in_iff. intro.
+    assert ( R.In (elt:=Region) r (R.empty Region) -> False) 
+      by (apply RMapP.empty_in_iff).
+    auto.
+  - unfold set_elem, Complement in *.
+    unfold In in H. contradiction.
   - apply RMapP.in_find_iff in H.
     apply RMapP.empty_in_iff in H.
     contradiction.
   - apply RMapP.in_find_iff in H; [contradiction |].
-    contradict H.
-    apply RMapP.in_find_iff.
-    apply RMapP.empty_in_iff.
     admit.
   - apply RMapP.in_find_iff in H; [contradiction |]. 
     admit.
