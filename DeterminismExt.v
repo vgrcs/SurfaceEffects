@@ -751,6 +751,8 @@ Qed.
 Require Import Top0.Heap.
 Require Import Coq.Sets.Ensembles.
 
+(* not_set_elem_not_in_rho *)
+
 Lemma EmptyTcRho :
     TcRho (R.empty Region, Empty_set Name).
 Proof.
@@ -767,10 +769,8 @@ Proof.
   - apply RMapP.in_find_iff in H.
     apply RMapP.empty_in_iff in H.
     contradiction.
-  - apply RMapP.in_find_iff in H; [contradiction |].
-    admit.
-  - apply RMapP.in_find_iff in H; [contradiction |]. 
-    admit.
+  - admit.
+  - admit.
 Admitted.
 
  
