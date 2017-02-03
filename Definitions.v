@@ -856,15 +856,20 @@ with TcRho : (Rho * Omega) -> Prop :=
                (forall r,
                   (R.find r rho <> None -> set_elem rgns r)) ->
                (forall r,
+                  (not_set_elem rgns r -> R.find r rho = None)) ->
+               (forall r,
                   set_elem rgns r ->
                   R.find r rho <> None) ->
                 (forall stty r v t,
                   R.find r rho <> None -> 
                   set_elem rgns r ->
                   TcVal (stty, v, subst_rho rho t)) ->
-                (forall t x,
-                   not_set_elem rgns x -> x # t) ->
-                (forall stty v r u t,
+                (forall r t x,
+                   R.find r rho = None ->
+                   not_set_elem rgns x -> 
+                   x # t) ->
+                (forall stty v r u t, 
+                   R.find r rho = None ->
                    not_set_elem rgns r ->
                    TcVal (stty, v, subst_rho rho (subst_in_type r u t))) ->
                TcRho (rho, rgns)

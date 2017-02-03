@@ -751,13 +751,33 @@ Qed.
 Require Import Top0.Heap.
 Require Import Coq.Sets.Ensembles.
 
+Lemma EmptyTcRho :
+    TcRho (R.empty Region, Empty_set Name).
+Proof.
+  econstructor; intros.
+  - admit.
+  - admit.
+  - admit.  
+  - apply RMapP.in_find_iff in H.
+    apply RMapP.empty_in_iff in H.
+    contradiction.
+  - apply RMapP.in_find_iff in H; [contradiction |].
+    contradict H.
+    apply RMapP.in_find_iff.
+    apply RMapP.empty_in_iff.
+    admit.
+  - apply RMapP.in_find_iff in H; [contradiction |]. 
+    admit.
+Admitted.
+
+ 
 Theorem Determinism : 
-  forall env rho exp heap1 heap2 val1 val2 acts1 acts2,
-    (H.empty Val, env, rho, exp) ⇓ (heap1, val1, acts1) ->
-    (H.empty Val, env, rho, exp) ⇓ (heap2, val2, acts2) ->
+  forall env exp heap1 heap2 val1 val2 acts1 acts2,
+    (H.empty Val, env, R.empty Region, exp) ⇓ (heap1, val1, acts1) ->
+    (H.empty Val, env, R.empty Region, exp) ⇓ (heap2, val2, acts2) ->
     forall ty static,
-      TcRho (rho, Empty_set Name) ->
-      TcEnv (ST.empty tau, rho, env, E.empty tau) ->
+      (*TcRho (R.empty Region, Empty_set Name) ->*)
+      TcEnv (ST.empty tau, R.empty Region, env, E.empty tau) ->
       TcExp (E.empty tau, Empty_set Name, exp, ty, static) ->
       H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
@@ -783,4 +803,5 @@ Proof.
     apply STMapP.empty_mapsto_iff in Hneg. contradiction.
 
     apply HH1; eauto.
+ - apply EmptyTcRho. 
 Qed.
