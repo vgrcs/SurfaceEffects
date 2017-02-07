@@ -860,18 +860,18 @@ with TcRho : (Rho * Omega) -> Prop :=
                (forall r,
                   set_elem rgns r ->
                   R.find r rho <> None) ->
-                (forall stty r v t,
+               (forall stty r v t,
                   R.find r rho <> None -> 
                   set_elem rgns r ->
                   TcVal (stty, v, subst_rho rho t)) ->
-                (forall r t x,
-                   R.find r rho = None ->
-                   not_set_elem rgns x -> 
-                   x # t) ->
-                (forall stty v r u t, 
-                   R.find r rho = None ->
-                   not_set_elem rgns r ->
-                   TcVal (stty, v, subst_rho rho (subst_in_type r u t))) ->
+               (forall r t x,
+                  R.find r rho = None ->
+                  not_set_elem rgns x -> 
+                  x # t) ->
+               (forall stty v r u t, 
+                  R.find r rho = None ->
+                  not_set_elem rgns r ->
+                  TcVal (stty, v, subst_rho rho (subst_in_type r u t))) ->
                TcRho (rho, rgns)
 where "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, rho, ec, ee)) : type_scope.
 
