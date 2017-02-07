@@ -751,8 +751,6 @@ Qed.
 Require Import Top0.Heap.
 Require Import Coq.Sets.Ensembles.
 
-(* not_set_elem_not_in_rho *)
-
 Lemma EmptyTcRho :
     TcRho (R.empty Region, Empty_set Name).
 Proof.
@@ -767,20 +765,28 @@ Proof.
   - unfold set_elem, Complement in *.
     unfold In in H. contradiction.
   - apply RMapP.in_find_iff in H.
-    apply RMapP.empty_in_iff in H.
+    apply RMapP.empty_in_iff in H. 
     contradiction.
-  - admit.
   - admit.
 Admitted.
 
- 
+
+Lemma EmptyTcEnv :
+    TcEnv (ST.empty tau, R.empty Region, E.Raw.empty Val, E.empty tau).
+Proof.
+  econstructor.
+  - intuition.
+  - intros. inversion H.
+  - intros. inversion H.
+  - intros. inversion H.
+Qed.
+
 Theorem Determinism : 
-  forall env exp heap1 heap2 val1 val2 acts1 acts2,
-    (H.empty Val, env, R.empty Region, exp) ⇓ (heap1, val1, acts1) ->
-    (H.empty Val, env, R.empty Region, exp) ⇓ (heap2, val2, acts2) ->
+  forall exp heap1 heap2 val1 val2 acts1 acts2,
+    (H.empty Val, E.Raw.empty Val, R.empty Region, exp) ⇓ (heap1, val1, acts1) ->
+    (H.empty Val, E.Raw.empty Val, R.empty Region, exp) ⇓ (heap2, val2, acts2) ->
     forall ty static,
       (*TcRho (R.empty Region, Empty_set Name) ->*)
-      TcEnv (ST.empty tau, R.empty Region, env, E.empty tau) ->
       TcExp (E.empty tau, Empty_set Name, exp, ty, static) ->
       H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
@@ -807,4 +813,5 @@ Proof.
 
     apply HH1; eauto.
  - apply EmptyTcRho. 
+ - apply EmptyTcEnv.
 Qed.
