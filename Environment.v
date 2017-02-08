@@ -185,6 +185,13 @@ Proof.
   apply RMapP.in_find_iff. auto.
 Qed.
 
+Axiom subst_rho_fresh_var :
+  forall rho rgns x stty v t r,
+    TcRho (rho, rgns) ->
+    not_set_elem rgns x ->
+    TcVal (stty, v, subst_rho rho t) ->
+    TcVal (stty, v, subst_rho rho (subst_in_type x r t)).
+
 Lemma extended_rho : forall stty rho env ctxt,
                        TcEnv (stty, rho, env, ctxt) ->
                        forall x r rgns,
@@ -194,17 +201,18 @@ Lemma extended_rho : forall stty rho env ctxt,
 Proof.
   intros stty rho env ctxt HEnv x r rgns HRho HRgns.
   inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
-  (*inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh HVal''].*)
-  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh HVal''].
+  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''].
   constructor; auto.
   intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
   rewrite subst_add_comm. 
-  - eapply HVal''. auto.  assumption.
+  - eapply subst_rho_fresh_var; eauto. econstructor; auto. 
   - unfold not_set_elem in HRgns. unfold Ensembles.Complement in HRgns.
     intro. 
     apply RMapP.in_find_iff in H0.
     eapply HRgn' in H0. contradiction.
 Qed.
+
+
 
 Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  TcRho (rho, rgns) ->
@@ -212,12 +220,11 @@ Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  ~ R.In (elt:=Region) x rho.
 Proof.
   intros rho rgns x HRho H .
-  (*inversion_clear HRho as [rho' rgns' HRgn' HRho' HVal' HFresh' HVal''].*)
-  inversion_clear HRho as [rho' rgns' HRgn' HRho' HFresh' HVal''].
+  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''].
   unfold not_set_elem in H. unfold Ensembles.Complement in H.
   intro. 
-  apply RMapP.in_find_iff in H1.
-  eapply HRgn' in H1. contradiction.
+  apply RMapP.in_find_iff in H0.
+  eapply HRgn' in H0. contradiction.
 Qed.
 
 Lemma update_rho: forall rho rgns x v,
@@ -229,7 +236,7 @@ Proof.
   unfold update_R; simpl.
   econstructor.  
   - intros r HF.
-    inversion_clear HRho as [rho' rgns' HRgn' HRho' HVal' HFresh' HVal''].
+    inversion_clear HRho as [rho' rgns' HRgn' HRho' HRho''].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + unfold AsciiVars.eq in c; intros; subst.
       unfold set_elem, set_union, singleton_set.
@@ -239,7 +246,7 @@ Proof.
       apply HRgn' in HF. apply Ensembles.Union_introl. 
       assumption.
   - intros r H. 
-    inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.
+    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + inversion c; subst.
       apply HRgn'' in HFresh.
@@ -259,8 +266,7 @@ Proof.
       apply HRgn' in H.
       intuition.
   - intros r HF.
-    (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal''].*)
-    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'  HFresh' HVal''].
+    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + unfold AsciiVars.eq in c; intros; subst.
       apply RMapP.in_find_iff. apply RMapP.add_in_iff. intuition.
@@ -269,30 +275,6 @@ Proof.
         right. rewrite RMapP.in_find_iff. apply HRho'.
         assumption.
       * inversion H. contradiction.
-  (*- intros stty r v0 t0 H1 H2.
-    rewrite subst_add_comm.
-    +  inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.
-       apply HVal''; auto. 
-    +  eapply not_set_elem_not_in_rho; eauto. *)
-  - (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.*)
-    inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh' HVal'']; subst.
-    intros r t x0 H1 H2. 
-    eapply HFresh'; eauto.
-    unfold not_set_elem, Complement, set_union in *.
-    intuition.
-  - intros stty v0 r u t H1 H2.
-    unfold subst_in_type. rewrite SUBST_FRESH.
-    rewrite subst_add_comm.
-    * (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.*)
-      inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh' HVal'']; subst.
-      apply HVal''; auto. 
-    * eapply not_set_elem_not_in_rho; eauto.
-    * (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.*)
-      inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh' HVal'']; subst.
-      eapply  HFresh'; eauto.
-      unfold not_set_elem in *. unfold Ensembles.Complement in *.
-      unfold not in *. intro. apply H2.
-      apply Ensembles.Union_introl. assumption.  
 Qed.
 
 

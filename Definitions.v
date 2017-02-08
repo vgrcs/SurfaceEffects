@@ -858,27 +858,9 @@ with TcRho : (Rho * Omega) -> Prop :=
                (forall r,
                   (not_set_elem rgns r -> R.find r rho = None)) ->
                (forall r,
-                  set_elem rgns r ->
-                  R.find r rho <> None) ->
-               (*(forall stty r v t,
-                  R.find r rho <> None -> 
-                  set_elem rgns r ->
-                  TcVal (stty, v, subst_rho rho t)) ->*)
-               (forall r t x,
-                  R.find r rho = None ->
-                  not_set_elem rgns x -> 
-                  x # t) ->
-               (forall stty v r u t, 
-                  R.find r rho = None ->
-                  not_set_elem rgns r ->
-                  TcVal (stty, v, subst_rho rho (subst_in_type r u t))) ->
+                  set_elem rgns r -> R.find r rho <> None) ->
                TcRho (rho, rgns)
 where "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, rho, ec, ee)) : type_scope.
-
-
-
-
-
 
 Definition find_type_ext_stores_def  := 
    forall stty stty' l (t' : tau),
@@ -897,15 +879,14 @@ Qed.
 Scheme tc_exp__xind := Induction for TcExp Sort Prop
                         with bt__xind := Induction for BackTriangle Sort Prop
                         with tc_val__xind := Induction for TcVal Sort Prop
-                        with tc_env__xind := Induction for TcEnv Sort Prop
-                        with tc_rho__xind := Induction for TcRho Sort Prop.
+                        with tc_env__xind := Induction for TcEnv Sort Prop.
+                        (*with tc_rho__xind := Induction for TcRho Sort Prop.*)
 
 Combined Scheme tc__xind from 
   tc_exp__xind, 
   bt__xind,
   tc_val__xind, 
-  tc_env__xind, 
-  tc_rho__xind.
+  tc_env__xind.
 
 Definition get_store_typing_val {A B:Type} (p : Sigma * A * B) : Sigma   
   := fst (fst p).
@@ -940,10 +921,7 @@ Lemma ext_stores__exp__bt__aux:
         TcEnv p ->           
         forall stty stty',
         (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
-        get_store_typing_env p = stty -> mk_TcEnv_ext_store_ty p stty') 
-  /\
-     (forall p,
-        TcRho p -> TcRho p) . 
+        get_store_typing_env p = stty -> mk_TcEnv_ext_store_ty p stty').
 Proof.
   apply tc__xind; try (solve [econstructor;eauto] ).
   - intros. 
@@ -976,28 +954,6 @@ Proof.
     econstructor; eauto.
 Qed.
 
-(*Lemma ext_stores__exp:
-   forall (stty stty' : Sigma),
-     (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
-     (forall ctxt rgns e t eff, TcExp (ctxt, rgns, e, t, eff) -> 
-        TcExp (ctxt, rgns, e, t, eff)).
-Proof.
-  intros.
-  apply (match ext_stores__exp__bt__aux with conj F _ => 
-    F (ctxt, rgns, e, t, eff) end); auto.
-Qed.
-
-Lemma ext_stores__bt:
-   forall (stty stty' : Sigma),
-     (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t') -> 
-     (forall ctxt rgns rho ec ee, BackTriangle (ctxt, rgns, rho, ec, ee) -> 
-      BackTriangle (ctxt, rgns, rho, ec, ee)).
-Proof.
-  intros.
-  apply (match ext_stores__exp__bt__aux with conj _ (conj F _) => 
-    F (ctxt, rgns, rho, ec, ee) end); auto.
-Qed.*)
-
 Lemma ext_stores__val:
    forall stty stty',
      (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t') -> 
@@ -1016,6 +972,7 @@ Lemma ext_stores__env:
       TcEnv (stty', rho, env, ctxt)).
 Proof.
   intros.
-  eapply (match ext_stores__exp__bt__aux with conj _ (conj _ (conj _ (conj F _))) =>
-   F (stty, rho, env, ctxt) end); eauto.
+  eapply (match ext_stores__exp__bt__aux 
+          with conj _ (conj _ (conj _ F)) =>
+               F (stty, rho, env, ctxt) end); eauto.
 Qed.

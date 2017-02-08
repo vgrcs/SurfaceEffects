@@ -764,9 +764,7 @@ Proof.
     auto.
   - unfold set_elem, Complement in *.
     unfold In in H. contradiction.
-  - admit.
-  - admit. 
-Admitted.
+Qed.
 
 
 Lemma EmptyTcEnv :
