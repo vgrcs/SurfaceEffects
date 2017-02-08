@@ -764,10 +764,8 @@ Proof.
     auto.
   - unfold set_elem, Complement in *.
     unfold In in H. contradiction.
-  - apply RMapP.in_find_iff in H.
-    apply RMapP.empty_in_iff in H. 
-    contradiction.
   - admit.
+  - admit. 
 Admitted.
 
 

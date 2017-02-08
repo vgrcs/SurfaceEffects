@@ -860,10 +860,10 @@ with TcRho : (Rho * Omega) -> Prop :=
                (forall r,
                   set_elem rgns r ->
                   R.find r rho <> None) ->
-               (forall stty r v t,
+               (*(forall stty r v t,
                   R.find r rho <> None -> 
                   set_elem rgns r ->
-                  TcVal (stty, v, subst_rho rho t)) ->
+                  TcVal (stty, v, subst_rho rho t)) ->*)
                (forall r t x,
                   R.find r rho = None ->
                   not_set_elem rgns x -> 

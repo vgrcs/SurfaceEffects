@@ -192,9 +192,10 @@ Lemma extended_rho : forall stty rho env ctxt,
                          not_set_elem rgns x -> 
                          TcEnv (stty, update_R (x, r) rho, env, ctxt). 
 Proof.
-  intros stty rho env ctxt HEnv x r rgns HRho HRgns. (*HTcVal.*)
+  intros stty rho env ctxt HEnv x r rgns HRho HRgns.
   inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
-  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh HVal''].
+  (*inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh HVal''].*)
+  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh HVal''].
   constructor; auto.
   intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
   rewrite subst_add_comm. 
@@ -211,7 +212,8 @@ Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  ~ R.In (elt:=Region) x rho.
 Proof.
   intros rho rgns x HRho H .
-  inversion_clear HRho as [rho' rgns' HRgn' HRho' HVal' HFresh' HVal''].
+  (*inversion_clear HRho as [rho' rgns' HRgn' HRho' HVal' HFresh' HVal''].*)
+  inversion_clear HRho as [rho' rgns' HRgn' HRho' HFresh' HVal''].
   unfold not_set_elem in H. unfold Ensembles.Complement in H.
   intro. 
   apply RMapP.in_find_iff in H1.
@@ -257,7 +259,8 @@ Proof.
       apply HRgn' in H.
       intuition.
   - intros r HF.
-    inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal''].
+    (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal''].*)
+    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'  HFresh' HVal''].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + unfold AsciiVars.eq in c; intros; subst.
       apply RMapP.in_find_iff. apply RMapP.add_in_iff. intuition.
@@ -265,13 +268,14 @@ Proof.
       * rewrite <- RMapP.in_find_iff.  rewrite RMapP.add_in_iff.
         right. rewrite RMapP.in_find_iff. apply HRho'.
         assumption.
-      * inversion H1. contradiction.
-  - intros stty r v0 t0 H1 H2.
+      * inversion H. contradiction.
+  (*- intros stty r v0 t0 H1 H2.
     rewrite subst_add_comm.
     +  inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.
        apply HVal''; auto. 
-    +  eapply not_set_elem_not_in_rho; eauto. 
-  - inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst. 
+    +  eapply not_set_elem_not_in_rho; eauto. *)
+  - (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.*)
+    inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh' HVal'']; subst.
     intros r t x0 H1 H2. 
     eapply HFresh'; eauto.
     unfold not_set_elem, Complement, set_union in *.
@@ -279,10 +283,12 @@ Proof.
   - intros stty v0 r u t H1 H2.
     unfold subst_in_type. rewrite SUBST_FRESH.
     rewrite subst_add_comm.
-    * inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.
+    * (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.*)
+      inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh' HVal'']; subst.
       apply HVal''; auto. 
     * eapply not_set_elem_not_in_rho; eauto.
-    * inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.
+    * (*inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal' HFresh' HVal'']; subst.*)
+      inversion HRho as [rho' rgns' HRgn' HRgn'' HRho' HFresh' HVal'']; subst.
       eapply  HFresh'; eauto.
       unfold not_set_elem in *. unfold Ensembles.Complement in *.
       unfold not in *. intro. apply H2.
