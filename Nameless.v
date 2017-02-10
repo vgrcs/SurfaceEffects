@@ -674,8 +674,9 @@ Proof.
                                      destruct (AsciiVars.eq_dec x n); [inversion e; contradiction | reflexivity]]). 
 Qed.
 
-Lemma subst_fresh_sa_ext :forall (e : Epsilon2) sa x u, e sa -> not_set_elem (free_rgn_vars_in_sa2 sa) x ->
-                                                        (exists sa' : StaticAction2, e sa' /\ subst_sa x u sa' = sa).
+Lemma subst_fresh_sa_ext :forall (e : Epsilon2) sa x u, 
+                            e sa -> not_set_elem (free_rgn_vars_in_sa2 sa) x ->
+                            (exists sa' : StaticAction2, e sa' /\ subst_sa x u sa' = sa).
 Proof.
   intros e sa x u H.
   exists sa. intuition.

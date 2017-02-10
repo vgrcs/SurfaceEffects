@@ -6,6 +6,7 @@ Require Import Top0.Keys.
 Require Import Coq.FSets.FSetInterface.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Program.Equality.
+Require Import Top0.Axioms.
 
 Module EMapP := FMapFacts.Facts E.
 Module RMapP := FMapFacts.Facts R.
@@ -211,8 +212,6 @@ Proof.
     apply RMapP.in_find_iff in H0.
     eapply HRgn' in H0. contradiction.
 Qed.
-
-
 
 Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  TcRho (rho, rgns) ->

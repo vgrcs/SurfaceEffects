@@ -781,9 +781,8 @@ Theorem Determinism :
   forall exp heap1 heap2 val1 val2 acts1 acts2,
     (H.empty Val, E.Raw.empty Val, R.empty Region, exp) ⇓ (heap1, val1, acts1) ->
     (H.empty Val, E.Raw.empty Val, R.empty Region, exp) ⇓ (heap2, val2, acts2) ->
-    forall ty static,
-      (*TcRho (R.empty Region, Empty_set Name) ->*)
-      TcExp (E.empty tau, Empty_set Name, exp, ty, static) ->
+    forall ty eff,
+      TcExp (E.empty tau, Empty_set Name, exp, ty, eff) ->
       H.Equal heap1 heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
   intros.
