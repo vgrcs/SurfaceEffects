@@ -758,7 +758,8 @@ Proof.
   - apply RMapP.in_find_iff in H.
     apply RMapP.empty_in_iff in H.
     contradiction.
-  - apply FreeVariables2. 
+  - clear H. (* problem *)
+    apply FreeVariables2. 
     induction t; try (solve [econstructor]).
     + econstructor. 
       * apply FreeVariables2. apply IHt1; auto.
