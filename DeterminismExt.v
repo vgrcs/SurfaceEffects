@@ -758,14 +758,25 @@ Proof.
   - apply RMapP.in_find_iff in H.
     apply RMapP.empty_in_iff in H.
     contradiction.
-  - apply RMapP.not_find_in_iff. intro.
-    assert ( R.In (elt:=Region) r (R.empty Region) -> False) 
-      by (apply RMapP.empty_in_iff).
-    auto.
+  - apply FreeVariables2. 
+    induction t; try (solve [econstructor]).
+    + econstructor. 
+      * apply FreeVariables2. apply IHt1; auto.
+      * apply FreeVariables2. apply IHt2; auto.
+    + simpl. split; [|apply FreeVariables2]; auto.
+      admit.
+    + econstructor.
+      * apply FreeVariables2; auto.
+      * { repeat split.
+          - admit.
+          - admit.
+          - apply FreeVariables2; auto.
+          - apply FreeVariables2; auto. }
+    + econstructor; [| apply FreeVariables2; auto].
+      admit.
   - unfold set_elem, Complement in *.
     unfold In in H. contradiction.
-Qed.
-
+Admitted.
 
 Lemma EmptyTcEnv :
     TcEnv (ST.empty tau, R.empty Region, E.Raw.empty Val, E.empty tau).

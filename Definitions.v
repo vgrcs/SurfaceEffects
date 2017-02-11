@@ -855,8 +855,9 @@ with TcRho : (Rho * Omega) -> Prop :=
   | TC_Rho : forall rho rgns,
                (forall r,
                   (R.find r rho <> None -> set_elem rgns r)) ->
-               (forall r,
-                  (not_set_elem rgns r -> R.find r rho = None)) ->
+               (forall t r,
+                   not_set_elem rgns r -> 
+                   r # t) ->
                (forall r,
                   set_elem rgns r -> R.find r rho <> None) ->
                TcRho (rho, rgns)

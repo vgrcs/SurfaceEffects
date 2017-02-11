@@ -170,9 +170,59 @@ Fixpoint frv (t: type2) : Ensemble Name :=
                                        (frv rty)
   end.
 
+Fixpoint not_set_elem_frv (t: type2) x : Prop :=
+  match t with
+    | Ty2_Natural    => True
+    | Ty2_Boolean    => True 
+    | Ty2_Effect     => True
+    | Ty2_Unit       => True
+    | Ty2_Pair t1 t2 => (not_set_elem (frv t1) x) /\ (not_set_elem (frv t2) x)  
+    | Ty2_Ref rgn ty => (not_set_elem (free_rgn_vars_in_rgn2 rgn) x) /\ 
+                        (not_set_elem (frv ty) x)
+    | Ty2_Arrow aty ceff crty eeff erty 
+      => (not_set_elem (frv aty) x) /\
+         (not_set_elem (free_rgn_vars_in_eps2 ceff) x) /\
+         (not_set_elem (free_rgn_vars_in_eps2 eeff) x) /\
+         (not_set_elem (frv crty) x) /\
+         (not_set_elem (frv erty) x)
+    | Ty2_ForallRgn eff rty => (not_set_elem (free_rgn_vars_in_eps2 eff) x) /\
+                               (not_set_elem (frv rty) x)
+  end.
+
+
 Notation "x '#' t" := (not_set_elem (frv t) x) (at level 60).
 
-(** end of free regions **)
+Lemma FreeVariables1 :
+ forall x t, x # t ->  not_set_elem_frv t x .
+Proof.
+ intro x. induction t; intro; unfold not_set_elem, Complement in *; simpl in *; auto;
+ split; unfold not_set_elem, Complement in *; intuition.
+Qed.
+
+Lemma FreeVariables2 :
+ forall x t,  not_set_elem_frv t x -> x # t.
+Proof.
+ intro x. induction t; intro; unfold not_set_elem, Complement in *; simpl in *; auto.
+ - intro. contradict H0.
+ - intro. contradict H0.
+ - intro. contradict H0.
+ - intro. contradict H0.
+ - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
+   intuition.
+   destruct H1; intuition. 
+ - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
+   intuition.
+   destruct H1; intuition.
+ - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
+   intuition.
+   destruct H1; [apply H; auto |]. 
+   do 2 destruct H1; [apply H2 | apply H0 | apply H3 | apply H5]; auto.
+ - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
+   intuition.
+   destruct H1; intuition.
+Qed.
+
+ (** end of free regions **)
 
 
 (** begin of closings **)

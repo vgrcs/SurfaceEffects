@@ -5,22 +5,6 @@ Require Import Top0.Keys.
 Require Import Top0.Nameless.
 Require Import Coq.Program.Equality.
 
-Lemma subst_rho_fresh_var_ :
-  forall rho rgns x stty v t r,
-    TcRho (rho, rgns) ->
-    not_set_elem rgns x ->
-    TcVal (stty, v, subst_rho rho t) ->
-    TcVal (stty, v, subst_rho rho (subst_in_type x r t)).
-Proof.
-  intros rho rgns x stty v t r HTcRho H_not_set HTcVal.
-  generalize dependent rgns.
-  generalize dependent r.
-  generalize dependent x. 
-  dependent induction HTcVal; intros;
-  try (unfold subst_in_type; rewrite  SUBST_FRESH; [rewrite <- x; econstructor; eauto |]).   
-Admitted.
-
-
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
