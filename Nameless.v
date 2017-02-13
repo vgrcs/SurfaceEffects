@@ -192,6 +192,18 @@ Fixpoint not_set_elem_frv (t: type2) x : Prop :=
 
 Notation "x '#' t" := (not_set_elem (frv t) x) (at level 60).
 
+Lemma ClosedType :
+ forall t x,
+   frv t = empty_set ->
+   x # t.
+Proof.
+  intros.
+  unfold not_set_elem, Complement.
+  rewrite H.
+  intuition.
+  contradiction.
+Qed.
+
 Lemma FreeVariables1 :
  forall x t, x # t ->  not_set_elem_frv t x .
 Proof.
