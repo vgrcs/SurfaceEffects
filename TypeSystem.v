@@ -495,7 +495,7 @@ Proof.
 Qed.
 
 Lemma bound_var_is_fresh :
-  forall rho rgns x,
+  forall rho rgns  x,
     TcRho (rho, rgns) -> not_set_elem rgns x -> ~ R.In (elt:=Region) x rho.
 Proof.
   intros rho rgns x H1 H2.
@@ -544,7 +544,7 @@ Proof.
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  
     eapply ext_stores__env; eauto.  
     inversion TcVal_mu as [ | | | ? ? ? ? ? ? ?   TcRho_rho' TcEnv_env' TcExp_abs | | |] ; subst.      
-    inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst.
+    inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst. 
     rewrite <- H4 in TcVal_mu. 
     do 2 rewrite subst_rho_arrow in H4. inversion H4.
     assert (SubstEq1: subst_rho rho' tyx = subst_rho rho tya) by assumption. 
@@ -552,9 +552,10 @@ Proof.
     rewrite <- SubstEq1 in TcVal_arg.
     unfold update_rec_E, update_rec_T in *. 
     edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
-    apply update_env. apply update_env. eapply ext_stores__env; eauto.  
-    eapply ext_stores__val; eauto. eassumption.
-    exists sttyb; intuition.  
+    SCase "TcEnv". 
+     apply update_env. apply update_env. eapply ext_stores__env; eauto.  
+     eapply ext_stores__val; eauto. eassumption.
+     exists sttyb; intuition.  
   Case "rgn_app".     
     edestruct IHD1 as [sttyl [Weak1 [TcHeap1 TcVal_lam]]]; eauto. 
     inversion TcVal_lam as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_lam | | |]; subst.   

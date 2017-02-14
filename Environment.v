@@ -207,7 +207,7 @@ Qed.
 Lemma subst_rho_fresh_var :
   forall rho rgns ctxt k x stty v t r,
     find_T k ctxt = Some t ->
-    TcRho (rho, rgns, ctxt) ->
+    TcRho (rho, rgns) ->
     not_set_elem rgns x ->
     TcVal (stty, v, subst_rho rho t) ->
     TcVal (stty, v, subst_rho rho (subst_in_type x r t)).
@@ -217,7 +217,7 @@ Proof.
   generalize dependent r.
   generalize dependent x. 
   dependent induction HTcVal; intros;
-  inversion_clear HTcRho as [rho' rgns' ctxt'  HRgn' HRgn'' HRho' HVal''];
+  inversion_clear HTcRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''];
   try (solve [unfold subst_in_type; 
               rewrite  SUBST_FRESH; [rewrite <- x; econstructor |  
                                      eapply HRgn''; eauto ]; eauto ]).
@@ -226,13 +226,13 @@ Qed.
 Lemma extended_rho : forall stty rho env ctxt,
                        TcEnv (stty, rho, env, ctxt) ->
                        forall x r rgns,
-                         TcRho (rho, rgns, ctxt) ->
+                         TcRho (rho, rgns) ->
                          not_set_elem rgns x -> 
                          TcEnv (stty, update_R (x, r) rho, env, ctxt). 
 Proof.
   intros stty rho env ctxt HEnv x r rgns HRho HRgns. 
   inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
-  inversion_clear HRho as [rho' rgns' ctxt' HRgn' HRgn'' HRho' HVal''].
+  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''].
   constructor; auto.
   intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
   rewrite subst_add_comm. 
@@ -243,30 +243,29 @@ Proof.
     eapply HRgn' in H0. contradiction.
 Qed.
 
-Lemma not_set_elem_not_in_rho: forall rho rgns ctxt x,
-                                 TcRho (rho, rgns, ctxt) ->
+Lemma not_set_elem_not_in_rho: forall rho rgns x,
+                                 TcRho (rho, rgns) ->
                                  not_set_elem rgns x ->
                                  ~ R.In (elt:=Region) x rho.
 Proof.
-  intros rho rgns ctxt x HRho H .
-  inversion_clear HRho as [rho' rgns' ctxt' HRgn' HRgn'' HRho' HVal''].
+  intros rho rgns  x HRho H .
+  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''].
   unfold not_set_elem in H. unfold Ensembles.Complement in H.
   intro. 
   apply RMapP.in_find_iff in H0.
   eapply HRgn' in H0. contradiction.
 Qed.
 
-Lemma update_rho: forall rho rgns (ctxt : Gamma) x v,
-                    TcRho (rho, rgns, ctxt) ->
+Lemma update_rho: forall rho rgns x v,
+                    TcRho (rho, rgns) ->
                     not_set_elem rgns x ->
-                    (exists k, find_T k ctxt <> None) ->
-                    TcRho (update_R (x, v) rho, set_union rgns (singleton_set x), ctxt).
+                    TcRho (update_R (x, v) rho, set_union rgns (singleton_set x)).
 Proof.
-  intros rho rgns ctxt x v HRho HFresh HEx.
+  intros rho rgns x v HRho HFresh.
   unfold update_R; simpl. 
   econstructor.  
   - intros r HF.
-    inversion_clear HRho as [rho' rgns' ctxt' HRgn' HRho' HRho''].
+    inversion_clear HRho as [rho' rgns' HRgn' HRho' HRho''].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + unfold AsciiVars.eq in c; intros; subst.
       unfold set_elem, set_union, singleton_set.
@@ -275,13 +274,12 @@ Proof.
     + eapply R_diff_key_3 in HF; auto.  
       apply HRgn' in HF. apply Ensembles.Union_introl. 
       assumption.
-  - intros t x0 k H.
-    inversion_clear HRho as [rho' rgns' ctxt' HRgn' HRgn'' HRho'].  
+  - intros t x0 k ctxt  H.
+    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'].  
     destruct (AsciiVars.eq_dec x x0) as [c | c].
-    + inversion c; subst.
-       edestruct HEx. 
-       eapply HRgn'' with (k:=x) in HFresh; eauto.  
-       apply EMapP.in_find_iff in H0. intuition.
+    +  inversion c; subst.
+       unfold AsciiVars.eq in c.
+       apply HRgn''; auto.
     +  assert ( R.find (elt:=nat) x0 rho = None)
         by (eapply contrapositiveTcRho; eauto; 
             unfold not_set_elem, Complement in *; intuition).
@@ -291,7 +289,7 @@ Proof.
        apply Ensembles.Union_introl. 
        assumption.
   - intros r HF.
-    inversion_clear HRho as [rho' rgns' ctxt' HRgn' HRgn'' HRho'].
+    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + unfold AsciiVars.eq in c; intros; subst.
       apply RMapP.in_find_iff. apply RMapP.add_in_iff. intuition.

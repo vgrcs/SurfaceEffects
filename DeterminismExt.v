@@ -751,6 +751,7 @@ Qed.
 Require Import Top0.Heap.
 Require Import Coq.Sets.Ensembles.
 
+
 Lemma EmptyTcRho :
     TcRho (R.empty Region, Empty_set Name).
 Proof.
@@ -758,23 +759,7 @@ Proof.
   - apply RMapP.in_find_iff in H.
     apply RMapP.empty_in_iff in H.
     contradiction.
-  - clear H. (* problem *)
-    apply FreeVariables2. 
-    induction t; try (solve [econstructor]).
-    + econstructor. 
-      * apply FreeVariables2. apply IHt1; auto.
-      * apply FreeVariables2. apply IHt2; auto.
-    + simpl. split; [|apply FreeVariables2]; auto.
-      admit.
-    + econstructor.
-      * apply FreeVariables2; auto.
-      * { repeat split.
-          - admit.
-          - admit.
-          - apply FreeVariables2; auto.
-          - apply FreeVariables2; auto. }
-    + econstructor; [| apply FreeVariables2; auto].
-      admit.
+  - admit.
   - unfold set_elem, Complement in *.
     unfold In in H. contradiction.
 Admitted.

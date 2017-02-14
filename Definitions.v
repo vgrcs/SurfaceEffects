@@ -822,7 +822,7 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
                    ST.find (s, l) stty = Some ty ->
                    TcVal (stty, Loc (Rgn2_Const true false s) l, Ty2_Ref (Rgn2_Const true true s) ty)
   | TC_Cls     : forall stty env rho e rgns ctxt t,
-                   TcRho (rho, rgns, ctxt) ->
+                   TcRho (rho, rgns) ->
                    TcEnv (stty, rho, env, ctxt) ->
                    TcExp (ctxt, rgns, e, t, Empty_Static_Action) ->
                    TcVal (stty, Cls (env, rho, e), subst_rho rho t) 
@@ -851,17 +851,17 @@ with TcEnv : (Sigma * Rho * Env * Gamma) -> Prop :=
                   TcVal (stty, v, subst_rho rho t)) ->
                TcEnv (stty, rho, env, ctxt)
                      
-with TcRho : (Rho * Omega * Gamma) -> Prop :=
-  | TC_Rho : forall rho rgns ctxt,
+with TcRho : (Rho * Omega) -> Prop :=
+  | TC_Rho : forall rho rgns,
                (forall r,
                   (R.find r rho <> None -> set_elem rgns r)) ->
-               (forall t r k,
+               (forall t r k ctxt,
                    not_set_elem rgns r -> 
                    find_T k ctxt = Some t ->
                    r # t) ->
                (forall r,
                   set_elem rgns r -> R.find r rho <> None) ->
-               TcRho (rho, rgns, ctxt)
+               TcRho (rho, rgns)
 where "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, rho, ec, ee)) : type_scope.
 
 Definition find_type_ext_stores_def  := 
