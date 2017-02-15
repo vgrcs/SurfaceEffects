@@ -204,23 +204,62 @@ Proof.
   assumption.
 Qed.
 
+Axiom subst_rho_free_vars :
+  forall x rho t,
+    x # subst_rho rho t ->
+    R.find (elt:=nat) x rho = None ->
+    x # t.
+
 Lemma subst_rho_fresh_var :
-  forall rho rgns ctxt k x stty v t r,
-    find_T k ctxt = Some t ->
+  forall rho rgns x stty v t r,
     TcRho (rho, rgns) ->
     not_set_elem rgns x ->
     TcVal (stty, v, subst_rho rho t) ->
     TcVal (stty, v, subst_rho rho (subst_in_type x r t)).
 Proof.
-  intros rho rgns ctxt k x stty v t r HTcEnv HTcRho H_not_set HTcVal.
+  intros rho rgns x stty v t r HTcRho H_not_set HTcVal.
+  assert ( x # (subst_rho rho t)) by (eapply TcVal_implies_closed; eauto).
   generalize dependent rgns.
   generalize dependent r.
-  generalize dependent x. 
+  generalize dependent x.  
   dependent induction HTcVal; intros;
-  inversion_clear HTcRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''];
-  try (solve [unfold subst_in_type; 
-              rewrite  SUBST_FRESH; [rewrite <- x; econstructor |  
-                                     eapply HRgn''; eauto ]; eauto ]).
+  inversion_clear HTcRho as [rho' rgns' HRgn HVal''].
+  - unfold subst_in_type. 
+    rewrite  SUBST_FRESH. rewrite <- x. constructor.
+    assert (R.find (elt:=nat) x0 rho = None).    
+    eapply contrapositiveTcRho; eauto.
+    eapply subst_rho_free_vars; eauto.
+  - unfold subst_in_type. 
+    rewrite  SUBST_FRESH. rewrite <- x. constructor.
+    assert (R.find (elt:=nat) x0 rho = None).    
+    eapply contrapositiveTcRho; eauto.
+    eapply subst_rho_free_vars; eauto.
+  - unfold subst_in_type. 
+    rewrite  SUBST_FRESH. rewrite <- x. constructor.
+    assumption. assumption.
+    assert (R.find (elt:=nat) x0 rho = None).    
+    eapply contrapositiveTcRho; eauto. 
+    eapply subst_rho_free_vars; eauto.
+  - unfold subst_in_type. 
+    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
+    assert (R.find (elt:=nat) x0 rho = None).    
+    eapply contrapositiveTcRho; eauto.
+    eapply subst_rho_free_vars; eauto.
+  - unfold subst_in_type. 
+    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
+    assert (R.find (elt:=nat) x0 rho = None).    
+    eapply contrapositiveTcRho; eauto.
+    eapply subst_rho_free_vars; eauto.
+  - unfold subst_in_type. 
+    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
+    assert (R.find (elt:=nat) x0 rho = None).    
+    eapply contrapositiveTcRho; eauto.
+    eapply subst_rho_free_vars; eauto.
+  - unfold subst_in_type. 
+    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
+    assert (R.find (elt:=nat) x0 rho = None).    
+    eapply contrapositiveTcRho; eauto.
+    eapply subst_rho_free_vars; eauto.
 Qed.
 
 Lemma extended_rho : forall stty rho env ctxt,
@@ -232,7 +271,7 @@ Lemma extended_rho : forall stty rho env ctxt,
 Proof.
   intros stty rho env ctxt HEnv x r rgns HRho HRgns. 
   inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
-  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''].
+  inversion_clear HRho as [rho' rgns' HRgn' HVal''].
   constructor; auto.
   intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
   rewrite subst_add_comm. 
@@ -249,7 +288,7 @@ Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  ~ R.In (elt:=Region) x rho.
 Proof.
   intros rho rgns  x HRho H .
-  inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho' HVal''].
+  inversion_clear HRho as [rho' rgns' HRgn' HVal''].
   unfold not_set_elem in H. unfold Ensembles.Complement in H.
   intro. 
   apply RMapP.in_find_iff in H0.
@@ -265,7 +304,7 @@ Proof.
   unfold update_R; simpl. 
   econstructor.  
   - intros r HF.
-    inversion_clear HRho as [rho' rgns' HRgn' HRho' HRho''].
+    inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + unfold AsciiVars.eq in c; intros; subst.
       unfold set_elem, set_union, singleton_set.
@@ -274,30 +313,6 @@ Proof.
     + eapply R_diff_key_3 in HF; auto.  
       apply HRgn' in HF. apply Ensembles.Union_introl. 
       assumption.
-  - intros t x0 k ctxt  H.
-    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'].  
-    destruct (AsciiVars.eq_dec x x0) as [c | c].
-    +  inversion c; subst.
-       unfold AsciiVars.eq in c.
-       apply HRgn''; auto.
-    +  assert ( R.find (elt:=nat) x0 rho = None)
-        by (eapply contrapositiveTcRho; eauto; 
-            unfold not_set_elem, Complement in *; intuition).
-       apply HRgn''. 
-       unfold not_set_elem, Complement in *.
-       intro. apply H.
-       apply Ensembles.Union_introl. 
-       assumption.
-  - intros r HF.
-    inversion_clear HRho as [rho' rgns' HRgn' HRgn'' HRho'].
-    destruct (AsciiVars.eq_dec x r) as [c | c].
-    + unfold AsciiVars.eq in c; intros; subst.
-      apply RMapP.in_find_iff. apply RMapP.add_in_iff. intuition.
-    + inversion HF; subst.
-      * rewrite <- RMapP.in_find_iff.  rewrite RMapP.add_in_iff.
-        right. rewrite RMapP.in_find_iff. apply HRho'.
-        assumption.
-      * inversion H. contradiction.
 Qed.
 
 

@@ -753,11 +753,14 @@ Require Import Coq.Sets.Ensembles.
 
 
 Lemma EmptyTcRho :
+    TcEnv (ST.empty tau, R.empty Region, E.Raw.empty Val, E.empty tau) ->
     TcRho (R.empty Region, Empty_set Name).
 Proof.
+  intros. 
+  dependent induction H.
   econstructor; intros.
-  - apply RMapP.in_find_iff in H.
-    apply RMapP.empty_in_iff in H.
+  - apply RMapP.in_find_iff in H3.
+    apply RMapP.empty_in_iff in H3.
     contradiction.
   - admit.
   - unfold set_elem, Complement in *.

@@ -820,17 +820,22 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
                    TcVal (stty, Bit b, Ty2_Boolean)
   | TC_Loc     : forall stty s l ty,
                    ST.find (s, l) stty = Some ty ->
-                   TcVal (stty, Loc (Rgn2_Const true false s) l, Ty2_Ref (Rgn2_Const true true s) ty)
+                   frv ty = empty_set ->
+                   TcVal (stty, Loc (Rgn2_Const true false s) l, 
+                          Ty2_Ref (Rgn2_Const true true s) ty)
   | TC_Cls     : forall stty env rho e rgns ctxt t,
                    TcRho (rho, rgns) ->
                    TcEnv (stty, rho, env, ctxt) ->
                    TcExp (ctxt, rgns, e, t, Empty_Static_Action) ->
+                   frv (subst_rho rho t) = empty_set ->
                    TcVal (stty, Cls (env, rho, e), subst_rho rho t) 
   | TC_Unit    : forall stty, 
                    TcVal (stty, Unit, Ty2_Unit)
   | TC_Pair    : forall stty v1 v2 rho ty1 ty2,
                    TcVal (stty, Num v1, subst_rho rho ty1) ->
                    TcVal (stty, Num v2, subst_rho rho ty2) ->
+                   frv (subst_rho rho ty1) = empty_set ->
+                   frv (subst_rho rho ty2) = empty_set ->
                    TcVal (stty, Pair (v1, v2), subst_rho rho (Ty2_Pair ty1 ty2))
   | TC_Eff     : forall stty e, 
                    TcVal (stty, Eff e, Ty2_Effect)
@@ -853,16 +858,34 @@ with TcEnv : (Sigma * Rho * Env * Gamma) -> Prop :=
                      
 with TcRho : (Rho * Omega) -> Prop :=
   | TC_Rho : forall rho rgns,
-               (forall r,
-                  (R.find r rho <> None -> set_elem rgns r)) ->
-               (forall t r k ctxt,
-                   not_set_elem rgns r -> 
-                   find_T k ctxt = Some t ->
-                   r # t) ->
-               (forall r,
-                  set_elem rgns r -> R.find r rho <> None) ->
+               (forall r, R.find r rho <> None -> set_elem rgns r) ->
                TcRho (rho, rgns)
 where "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, rho, ec, ee)) : type_scope.
+
+Axiom subst_rho_pair:
+  forall rho ty1 ty2,
+    frv (subst_rho rho (Ty2_Pair ty1 ty2)) = 
+         set_union (frv (subst_rho rho ty1)) 
+                   (frv (subst_rho rho ty2)).
+
+Theorem TcVal_implies_closed :
+  forall stty v t,
+    TcVal (stty, v, t) ->
+    (forall r, r # t).
+Proof.
+  intros.
+  generalize dependent r.
+  dependent induction H; intros;
+  try ( solve [ unfold not_set_elem, Complement; simpl;
+                intro; unfold Ensembles.In, empty_set in H; contradiction] ).
+  - unfold not_set_elem, Complement; simpl.
+    intro. destruct H1; [contradiction | rewrite H0 in H1; contradiction ].
+  - unfold not_set_elem, Complement; simpl.
+    intro. rewrite H2 in H3. contradiction.
+  - unfold not_set_elem, Complement; simpl. 
+    intro. rewrite subst_rho_pair in H3.
+    destruct H3; contradict H3; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
+Qed.
 
 Definition find_type_ext_stores_def  := 
    forall stty stty' l (t' : tau),
@@ -889,6 +912,7 @@ Combined Scheme tc__xind from
   bt__xind,
   tc_val__xind, 
   tc_env__xind.
+  (*tc_rho__xind.*)
 
 Definition get_store_typing_val {A B:Type} (p : Sigma * A * B) : Sigma   
   := fst (fst p).

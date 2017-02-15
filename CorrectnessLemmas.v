@@ -22,6 +22,7 @@ Proof.
   - assumption.    
 Qed.
 
+
 Lemma PhiInThetaTop:
   forall phi, phi ⊑ Theta_Top.
 Proof.  
