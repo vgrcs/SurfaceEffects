@@ -86,10 +86,6 @@ Proof.
 Qed.
 
 
-
-
-
-
 Lemma subst_type_rgn_comm: forall r k1 k2 v1 v2, 
    not_set_elem (free_rgn_vars_in_rgn2 r) k1 ->
    not_set_elem (free_rgn_vars_in_rgn2 r) k2 ->

@@ -593,7 +593,7 @@ Inductive TcRgn : (Omega * rgn2_in_exp) -> Prop :=
                       set_elem rgns r ->
                       TcRgn (rgns, Rgn2_FVar true false r).      
 
-Reserved Notation "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" (at level 50, left associativity).
+Reserved Notation "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" (at level 50, left associativity).
 Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
   | TC_Nat_Cnt     : forall ctxt rgns n,
                         TcExp (ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action) 
@@ -603,20 +603,34 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                         find_T x ctxt = Some ty ->
                         TcExp (ctxt, rgns, Var x, ty, Empty_Static_Action)
   | TC_Mu_Abs      : forall ctxt rgns f x ec ee tyx effc tyc effe,
-                        (forall rho, 
-                           BackTriangle (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, rho, ec, ee)) ->
-                        TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, ec, tyc, effc) ->
-                        TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns, ee, Ty2_Effect, effe) ->
-                        TcExp (ctxt, rgns, Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect, Empty_Static_Action)
+                        (forall rho,
+                          (BackTriangle 
+                             (update_rec_T 
+                                (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt,
+                              rgns, rho, ec, ee))) ->
+                        (forall r rho, 
+                           r # (subst_rho rho (Ty2_Arrow tyx effc tyc effe Ty2_Effect))) ->
+                        TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) 
+                                            (x, tyx) ctxt, 
+                               rgns, ec, tyc, effc) ->
+                        TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) 
+                                            (x, tyx) ctxt, 
+                               rgns, ee, Ty2_Effect, effe) ->
+                        TcExp (ctxt, rgns, Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect,
+                               Empty_Static_Action)
   | TC_Rgn_Abs     : forall ctxt rgns x er effr tyr,
                        not_set_elem rgns x ->
                        lc_type tyr ->
                        lc_type_eps effr ->
+                       (forall r, r # (Ty2_ForallRgn (close_var_eff x effr) 
+                                                     (close_var x tyr))) ->
                        (forall rho, 
                           BackTriangle (ctxt, set_union rgns (singleton_set x), rho, er, ∅)) ->
                        TcExp (ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
-                       TcExp (ctxt, rgns, Lambda x er, 
-                              Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr), Empty_Static_Action)
+                       TcExp (ctxt, rgns, Lambda x er, Ty2_ForallRgn 
+                                                         (close_var_eff x effr) 
+                                                         (close_var x tyr), 
+                              Empty_Static_Action)
   | TC_Mu_App      : forall ctxt rgns ef ea tya effc tyc effe efff effa,
                        (forall rho, BackTriangle (ctxt, rgns, rho, Mu_App ef ea, Eff_App ef ea)) ->
                        TcExp (ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
@@ -639,29 +653,41 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        TcExp (ctxt, rgns, Eff_App ef1 ea1, ty3, eff3) ->
                        TcExp (ctxt, rgns, Eff_App ef2 ea2, ty4, eff4) ->
                        TcExp (ctxt, rgns, Pair_Par ef1 ea1 ef2 ea2, Ty2_Pair ty1 ty2, 
-                             Union_Static_Action (Union_Static_Action (Union_Static_Action eff3 eff4) eff2) eff1)
+                             Union_Static_Action 
+                               (Union_Static_Action 
+                                  (Union_Static_Action eff3 eff4) eff2) eff1)
   | TC_New_Ref     : forall ctxt rgns e t veff w s,      
                        TcExp (ctxt, rgns, e, t, veff) -> 
                        w = Rgn2_Const true false s ->
                        TcExp (ctxt, rgns, Ref w e, Ty2_Ref (mk_rgn_type w) t,
-                              Union_Static_Action veff (Singleton_Static_Action (SA_Alloc(mk_rgn_type w))))
+                              Union_Static_Action veff 
+                                                  (Singleton_Static_Action 
+                                                     (SA_Alloc(mk_rgn_type w))))
   | TC_Get_Ref     : forall ctxt rgns e t aeff w s,
                        w = Rgn2_Const true false s ->
                        TcExp (ctxt, rgns, e, Ty2_Ref (mk_rgn_type w) t, aeff) ->
                        TcRgn (rgns, w) ->
-                       TcExp (ctxt, rgns, DeRef w e, t, Union_Static_Action aeff (Singleton_Static_Action (SA_Read  (mk_rgn_type w))))
+                       TcExp (ctxt, rgns, DeRef w e, t, 
+                              Union_Static_Action aeff 
+                                                  (Singleton_Static_Action 
+                                                     (SA_Read  (mk_rgn_type w))))
   | TC_Set_Ref     : forall ctxt rgns ea ev t aeff veff w s,
                        w = Rgn2_Const true false s -> 
                        TcExp (ctxt, rgns, ea, Ty2_Ref (mk_rgn_type w) t, aeff) ->
                        TcExp (ctxt, rgns, ev, t, veff) ->
                        TcRgn (rgns, w) ->
                        TcExp (ctxt, rgns, Assign w ea ev, Ty2_Unit,
-                              Union_Static_Action (Union_Static_Action aeff veff) (Singleton_Static_Action (SA_Write  (mk_rgn_type w))))
+                              Union_Static_Action (
+                                  Union_Static_Action aeff veff) 
+                                                  (Singleton_Static_Action 
+                                                     (SA_Write  (mk_rgn_type w))))
   | TC_Conditional : forall ctxt rgns b e1 e2 te eff eff1 eff2,     
                        TcExp (ctxt, rgns, b, Ty2_Boolean, eff) ->         
                        TcExp (ctxt, rgns, e1, te, eff1) -> 
                        TcExp (ctxt, rgns, e2, te, eff2) -> 
-                       TcExp (ctxt, rgns, Cond b e1 e2, te, Union_Static_Action eff (Union_Static_Action eff1 eff2))
+                       TcExp (ctxt, rgns, Cond b e1 e2, te, 
+                              Union_Static_Action eff 
+                                                  (Union_Static_Action eff1 eff2))
   | TC_Nat_Plus    : forall ctxt rgns e1 e2 eff1 eff2,   
                        TcExp (ctxt, rgns, e1, Ty2_Natural, eff1) ->
                        TcExp (ctxt, rgns, e2, Ty2_Natural, eff2) -> 
@@ -820,23 +846,21 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
                    TcVal (stty, Bit b, Ty2_Boolean)
   | TC_Loc     : forall stty s l ty,
                    ST.find (s, l) stty = Some ty ->
-                   frv ty = empty_set ->
+                   (forall r, r # ty) ->
                    TcVal (stty, Loc (Rgn2_Const true false s) l, 
                           Ty2_Ref (Rgn2_Const true true s) ty)
   | TC_Cls     : forall stty env rho e rgns ctxt t,
                    TcRho (rho, rgns) ->
                    TcEnv (stty, rho, env, ctxt) ->
                    TcExp (ctxt, rgns, e, t, Empty_Static_Action) ->
-                   frv (subst_rho rho t) = empty_set ->
+                   (forall r, r # (subst_rho rho t)) ->
                    TcVal (stty, Cls (env, rho, e), subst_rho rho t) 
   | TC_Unit    : forall stty, 
                    TcVal (stty, Unit, Ty2_Unit)
-  | TC_Pair    : forall stty v1 v2 rho ty1 ty2,
-                   TcVal (stty, Num v1, subst_rho rho ty1) ->
-                   TcVal (stty, Num v2, subst_rho rho ty2) ->
-                   frv (subst_rho rho ty1) = empty_set ->
-                   frv (subst_rho rho ty2) = empty_set ->
-                   TcVal (stty, Pair (v1, v2), subst_rho rho (Ty2_Pair ty1 ty2))
+  | TC_Pair    : forall stty v1 v2 ty1 ty2,
+                   TcVal (stty, Num v1, ty1) ->
+                   TcVal (stty, Num v2, ty2) ->
+                   TcVal (stty, Pair (v1, v2), Ty2_Pair ty1 ty2)
   | TC_Eff     : forall stty e, 
                    TcVal (stty, Eff e, Ty2_Effect)
        
@@ -860,13 +884,7 @@ with TcRho : (Rho * Omega) -> Prop :=
   | TC_Rho : forall rho rgns,
                (forall r, R.find r rho <> None -> set_elem rgns r) ->
                TcRho (rho, rgns)
-where "stty ';;' ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (stty, ctxt, rgns, rho, ec, ee)) : type_scope.
-
-Axiom subst_rho_pair:
-  forall rho ty1 ty2,
-    frv (subst_rho rho (Ty2_Pair ty1 ty2)) = 
-         set_union (frv (subst_rho rho ty1)) 
-                   (frv (subst_rho rho ty2)).
+where "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (ctxt, rgns, rho, ec, ee)) : type_scope.
 
 Theorem TcVal_implies_closed :
   forall stty v t,
@@ -879,12 +897,11 @@ Proof.
   try ( solve [ unfold not_set_elem, Complement; simpl;
                 intro; unfold Ensembles.In, empty_set in H; contradiction] ).
   - unfold not_set_elem, Complement; simpl.
-    intro. destruct H1; [contradiction | rewrite H0 in H1; contradiction ].
+    intro. destruct H1; [contradiction |contradict H1; apply H0].
   - unfold not_set_elem, Complement; simpl.
-    intro. rewrite H2 in H3. contradiction.
+    intro. contradict H3. apply H2.
   - unfold not_set_elem, Complement; simpl. 
-    intro. rewrite subst_rho_pair in H3.
-    destruct H3; contradict H3; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
+    intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
 Qed.
 
 Definition find_type_ext_stores_def  := 

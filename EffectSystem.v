@@ -123,12 +123,12 @@ Proof.
     inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | | ]; subst.  
 
-    rewrite <- H4 in TcVal_cls. 
-    do 2 rewrite subst_rho_arrow in H4. inversion H4. 
-    rewrite <- H5 in TcVal_v'.
+    rewrite <- H5 in TcVal_cls. 
+    do 2 rewrite subst_rho_arrow in H5. inversion H5. 
+    rewrite <- H9 in TcVal_v'.
     
     assert (Sb : Epsilon_Phi_Soundness (fold_subst_eps rho effc, bacts)).
-    rewrite <- H8; eapply IHD3 with (stty := sttya) (rho:=rho'); eauto.
+    rewrite <- H10; eapply IHD3 with (stty := sttya) (rho:=rho'); eauto.
     SCase "Extended Env".
       apply update_env.
       SSCase "TcEnv". apply update_env.
@@ -153,7 +153,7 @@ Proof.
     eapply IHD1; eauto.
     inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | | ]; subst. 
-    do 2 rewrite subst_rho_forallrgn in H5. inversion H5. clear H5.
+    do 2 rewrite subst_rho_forallrgn in H6. inversion H6. clear H6.
     unfold open_rgn_eff.
     erewrite <- subst_rho_open_close_eps; eauto. 
     replace (Rgn2_Const true true v') with  (mk_rgn_type (Rgn2_Const true false v')) by (simpl; reflexivity).
@@ -185,12 +185,12 @@ Proof.
     inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | | ]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |]; subst.
 
-    rewrite <- H4 in TcVal_cls. 
-    do 2 rewrite subst_rho_arrow in H4. inversion H4. 
-    rewrite <- H5 in TcVal_v'.
+    rewrite <- H5 in TcVal_cls. 
+    do 2 rewrite subst_rho_arrow in H5. inversion H5. 
+    rewrite <- H8 in TcVal_v'.
     
     assert (Sb : Epsilon_Phi_Soundness (fold_subst_eps rho effe, bacts)).
-    rewrite <- H9.
+    rewrite <- H11.
     eapply IHD3 with (stty := sttya); eauto.
     apply update_env.
     SCase "TcEnv". apply update_env.
