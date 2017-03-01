@@ -510,15 +510,31 @@ Proof.
   eapply H0; eassumption.
 Qed.  
 
-Axiom subst_rho_close_var:
-  forall x rho tyr,
-     R.find (elt:=nat) x rho = None ->
-     (subst_rho rho (close_var x tyr) = (close_var x tyr)).
-
-Axiom subst_rho_close_var_eff :
-  forall x rho effr,
+Lemma subst_rho_close_var:
+  forall x x0 rho tyr,
+    frv (subst_rho rho (close_var x tyr)) x0 ->
     R.find (elt:=nat) x rho = None ->
-    fold_subst_eps rho (close_var_eff x effr) = (close_var_eff x effr).
+    In Name (frv (close_var x tyr)) x0.
+Proof. 
+  intros. 
+  contradict H.
+  destruct rho; induction this.
+  - intro. inversion is_bst. admit.
+  - inversion is_bst.
+    eapply frv_in_subst_rho.
+    repeat split.
+    + apply IHthis1. admit.
+    + intro. 
+      admit.
+    + apply IHthis2. admit.  
+    Unshelve. subst. auto. subst. auto.
+Admitted.
+ 
+Axiom subst_rho_close_var_eff :
+  forall x x0 rho effr,
+    R.find (elt:=nat) x rho = None ->
+    In Name (free_rgn_vars_in_eps2 (fold_subst_eps rho (close_var_eff x effr))) x0 ->
+    In Name (free_rgn_vars_in_eps2 (close_var_eff x effr)) x0.
 
 Lemma ty_sound:
   forall e env rho hp hp' v dynamic_eff,
@@ -552,11 +568,23 @@ Proof.
   Case "rgn_abs". 
     exists stty;  (split; [| split]; auto). 
     eapply ty_sound_region_closure; try (solve [eassumption]). 
-    assert (R.find (elt:=nat) x rho = None) by 
+    rewrite subst_rho_forallrgn.
+    unfold not_set_elem, Complement in *. intuition.
+    destruct H.  
+    SCase "free_rgn_vars_in_eps2".
+      assert (R.find (elt:=nat) x rho = None) by 
         (inversion Hrho; eapply contrapositiveTcRho; eauto).
-    rewrite subst_rho_forallrgn. 
-    rewrite subst_rho_close_var; auto. 
-    rewrite subst_rho_close_var_eff; auto. 
+      unfold In in H.
+      apply H8 with  (r:=x0). simpl in *.
+      apply Union_introl.
+      eapply subst_rho_close_var_eff; eauto.
+    SCase "frv".
+      assert (R.find (elt:=nat) x rho = None) by 
+        (inversion Hrho; eapply contrapositiveTcRho; eauto).
+      unfold In in H.
+      apply H8 with  (r:=x0). simpl in *.
+      apply Union_intror.
+      eapply subst_rho_close_var; eauto. 
   Case "mu_app".   
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  

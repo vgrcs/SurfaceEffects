@@ -167,7 +167,7 @@ Fixpoint frv (t: type2) : Ensemble Name :=
                                            (set_union (frv crty)
                                                       (frv erty)))
   | Ty2_ForallRgn eff rty => set_union (free_rgn_vars_in_eps2 eff)
-                                       (frv rty)                                     
+                                       (frv rty)                                      
   end.
 
 Fixpoint not_set_elem_frv (t: type2) x : Prop :=

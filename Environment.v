@@ -204,14 +204,70 @@ Proof.
   assumption.
 Qed.
 
-Axiom subst_rho_free_vars :
+Lemma not_in_raw_rho:
+  forall x this1 this2 k e  t0 He Hl Hr, 
+    ~ R.In (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := He |} ->
+    ~ R.In (elt:=nat) x {| R.this := this1 ; R.is_bst := Hl |}  /\ 
+    ~ R.In (elt:=nat) x {| R.this := this2; R.is_bst := Hr |}.
+Proof. 
+  intros. intuition.
+  - apply H. 
+    apply RMapProp.F.elements_in_iff.  
+    apply RMapProp.F.elements_in_iff in H0. destruct H0.
+    exists x0. 
+    apply R.elements_2 in H0. 
+    apply R.elements_1.   
+    apply RMapProp.F.find_mapsto_iff in H0.
+    apply RMapProp.F.find_mapsto_iff.  
+    rewrite <- H0.    
+    apply RMapP.not_find_in_iff in H.
+    rewrite H0. rewrite H.
+    admit.
+  - admit.
+Admitted. 
+
+Axiom frv_in_subst_rho:
+  forall this1 this2 Hl Hr k e t x,
+        ~ frv
+          (subst_rho {| R.this := this2; R.is_bst := Hr |}
+                     (subst_in_type k e
+                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x <->
+        ~ frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x /\
+        ~ frv (subst_in_type k e t) x /\
+        ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
+
+Lemma subst_rho_free_vars :
   forall x rho t,
     x # subst_rho rho t ->
     R.find (elt:=nat) x rho = None ->
     x # t.
+Proof.
+  intros. 
+  apply RMapP.not_find_in_iff in H0. 
+  unfold not_set_elem in *. unfold Ensembles.Complement in *. 
+  destruct rho; induction this.
+  - unfold subst_rho, R.fold, R.Raw.fold in *; simpl in *; auto.
+  - inversion is_bst; subst.  
+    replace 
+      (subst_rho {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := is_bst |} t)
+    with (subst_rho {| R.this := this2; R.is_bst := H7 |} 
+                    (subst_in_type k e (subst_rho {| R.this := this1; R.is_bst := H5 |} t)))
+      in * by (unfold subst_rho, R.fold, R.Raw.fold in *; simpl; reflexivity).
+    
+    unfold In in *. 
+    eapply not_in_raw_rho in H0; eauto. 
+    
+    destruct H0;
+    eapply frv_in_subst_rho in H; eauto;
+    destruct H. destruct H2.
+    apply IHthis1 with (is_bst:=H5); auto. 
+
+    Unshelve. auto. auto.
+Qed.
 
 Lemma subst_rho_fresh_var :
   forall rho rgns x stty v t r,
+
     TcRho (rho, rgns) ->
     not_set_elem rgns x ->
     TcVal (stty, v, subst_rho rho t) ->
