@@ -512,34 +512,30 @@ Qed.
 
 Lemma subst_rho_close_var:
   forall x x0 rho tyr,
-    frv (subst_rho rho (close_var x tyr)) x0 ->
     R.find (elt:=nat) x rho = None ->
+    In Name (frv (subst_rho rho (close_var x tyr))) x0 ->
     In Name (frv (close_var x tyr)) x0.
 Proof. 
   intros.  
   destruct rho; induction this.
-  - clear H0. unfold In. unfold subst_rho, R.fold in H; simpl in H. assumption.
-  - inversion is_bst; subst. 
-    eapply frv_in_subst_rho in H.
-    destruct H. 
-    + eapply IHthis1; eauto.
-      admit.
-    + destruct H. 
-      * unfold In. unfold subst_in_type in H.
+  - clear H. unfold In. unfold subst_rho, R.fold in H0; simpl in H0. assumption.
+  - inversion is_bst; subst.  
+    eapply frv_in_subst_rho in H0.
+    destruct H0. 
+    + eapply IHthis1. 
+      * eapply find_rho_1; eauto.
+      * unfold In. assumption.
+    + destruct H0. 
+      * unfold In. unfold subst_in_type in H0.
         assert (k # (close_var x tyr)) by admit.
         assert ([k := Rgn2_Const true false e] close_var x tyr = close_var x tyr).
         apply SUBST_FRESH; auto.
-        rewrite H2 in H.
+        rewrite H2 in H0.
         assumption.
-      * eapply IHthis2; eauto. admit.  
-    Unshelve. auto. auto.
+      * eapply IHthis2; eauto.
+        eapply find_rho_2; eauto.  
+    Unshelve. auto. auto. auto. auto.
 Admitted.
- 
-Axiom subst_rho_close_var_eff :
-  forall x x0 rho effr,
-    R.find (elt:=nat) x rho = None ->
-    In Name (free_rgn_vars_in_eps2 (fold_subst_eps rho (close_var_eff x effr))) x0 ->
-    In Name (free_rgn_vars_in_eps2 (close_var_eff x effr)) x0.
 
 Lemma ty_sound:
   forall e env rho hp hp' v dynamic_eff,
@@ -569,26 +565,23 @@ Proof.
     eapply ty_sound_var; eassumption. 
   Case "mu_abs". 
     exists stty; (split; [| split]; auto).
-    eapply ty_sound_closure; try (solve [eassumption]); auto.
+    eapply ty_sound_closure; try (solve [eassumption]). auto.
   Case "rgn_abs". 
     exists stty;  (split; [| split]; auto). 
     eapply ty_sound_region_closure; try (solve [eassumption]). 
-    rewrite subst_rho_forallrgn.
+    rewrite subst_rho_forallrgn. intro. simpl.
+    simpl in H8. 
+    assert (R.find (elt:=nat) x rho = None) by 
+        (inversion Hrho; eapply contrapositiveTcRho; eauto).
     unfold not_set_elem, Complement in *. intuition.
-    destruct H.  
-    SCase "free_rgn_vars_in_eps2".
-      assert (R.find (elt:=nat) x rho = None) by 
-        (inversion Hrho; eapply contrapositiveTcRho; eauto).
-      unfold In in H.
-      apply H8 with  (r:=x0). simpl in *.
-      apply Union_introl.
+    destruct H0.  
+    SCase "case1".
+      apply H8 with  (r:=x0). unfold In in *; simpl in *.
+      apply Union_introl. unfold In.
       eapply subst_rho_close_var_eff; eauto.
-    SCase "frv".
-      assert (R.find (elt:=nat) x rho = None) by 
-        (inversion Hrho; eapply contrapositiveTcRho; eauto).
-      unfold In in H.
-      apply H8 with  (r:=x0). simpl in *.
-      apply Union_intror.
+    SCase "case2".
+      apply H8 with  (r:=x0); unfold In in *; simpl in *.
+      apply Union_intror. unfold In.
       eapply subst_rho_close_var; eauto. 
   Case "mu_app".   
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
