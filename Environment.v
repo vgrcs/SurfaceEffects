@@ -226,15 +226,50 @@ Proof.
   - admit.
 Admitted. 
 
-Axiom frv_in_subst_rho:
+Lemma in_raw_rho_1:
+  forall x this1 this2 k e  t0 He Hl, 
+    R.In (elt:=nat) x {| R.this := this1 ; R.is_bst := Hl |}  ->
+    R.In (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := He |}.
+Proof.
+  intros. 
+  unfold R.In, R.Raw.In0 in *.
+  destruct H.
+  exists x0.
+  econstructor. assumption.
+Qed.
+
+
+Lemma in_raw_rho_2:
+  forall x this1 this2 k e  t0 He Hr, 
+    R.In (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} ->
+    R.In (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := He |}.
+Proof.
+  intros. 
+  unfold R.In, R.Raw.In0 in *. 
+  destruct H.
+  exists x0.
+Admitted.
+
+Axiom not_frv_in_subst_rho:
   forall this1 this2 Hl Hr k e t x,
         ~ frv
           (subst_rho {| R.this := this2; R.is_bst := Hr |}
                      (subst_in_type k e
-                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x <->
+                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x ->
         ~ frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x /\
         ~ frv (subst_in_type k e t) x /\
         ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
+
+Axiom frv_in_subst_rho:
+  forall this1 this2 Hl Hr k e t x,
+          frv
+          (subst_rho {| R.this := this2; R.is_bst := Hr |}
+                     (subst_in_type k e
+                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x ->
+          frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x \/
+          frv (subst_in_type k e t) x \/
+          frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
+
 
 Lemma subst_rho_free_vars :
   forall x rho t,
@@ -258,7 +293,7 @@ Proof.
     eapply not_in_raw_rho in H0; eauto. 
     
     destruct H0;
-    eapply frv_in_subst_rho in H; eauto;
+    eapply not_frv_in_subst_rho in H; eauto;
     destruct H. destruct H2.
     apply IHthis1 with (is_bst:=H5); auto. 
 

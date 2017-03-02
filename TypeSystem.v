@@ -516,18 +516,23 @@ Lemma subst_rho_close_var:
     R.find (elt:=nat) x rho = None ->
     In Name (frv (close_var x tyr)) x0.
 Proof. 
-  intros. 
-  contradict H.
+  intros.  
   destruct rho; induction this.
-  - intro. inversion is_bst. admit.
-  - inversion is_bst.
-    eapply frv_in_subst_rho.
-    repeat split.
-    + apply IHthis1. admit.
-    + intro. 
+  - clear H0. unfold In. unfold subst_rho, R.fold in H; simpl in H. assumption.
+  - inversion is_bst; subst. 
+    eapply frv_in_subst_rho in H.
+    destruct H. 
+    + eapply IHthis1; eauto.
       admit.
-    + apply IHthis2. admit.  
-    Unshelve. subst. auto. subst. auto.
+    + destruct H. 
+      * unfold In. unfold subst_in_type in H.
+        assert (k # (close_var x tyr)) by admit.
+        assert ([k := Rgn2_Const true false e] close_var x tyr = close_var x tyr).
+        apply SUBST_FRESH; auto.
+        rewrite H2 in H.
+        assumption.
+      * eapply IHthis2; eauto. admit.  
+    Unshelve. auto. auto.
 Admitted.
  
 Axiom subst_rho_close_var_eff :
