@@ -16,29 +16,6 @@ Axiom find_rho_2:
     R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
     R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None.
 
-Axiom find_rho_3:
-  forall x this1 this2 k e t He,
-    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
-    ~ R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} 
-    = Some e.
-
-Lemma not_in_raw_rho:
-  forall x this1 this2 k e  t0 He Hl Hr, 
-    ~ R.In (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := He |} ->
-    ~ R.In (elt:=nat) x {| R.this := this1 ; R.is_bst := Hl |}  /\ 
-    ~ R.In (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} /\
-    ~ R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := He |} = Some e.
-Proof.
-  intros; repeat split; 
-  try (intro; apply H; apply RMapP.in_find_iff in H0; apply RMapP.in_find_iff; 
-                               contradict H0). 
-  - eapply find_rho_1; eassumption. 
-  - eapply find_rho_2; eassumption. 
-  - apply find_rho_3.
-    apply RMapP.not_find_in_iff.
-    assumption.
-Qed.
-
 Axiom frv_in_subst_rho:
   forall this1 this2 Hl Hr k e t x,
           frv

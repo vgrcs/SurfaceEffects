@@ -881,6 +881,12 @@ with TcRho : (Rho * Omega) -> Prop :=
                TcRho (rho, rgns)
 where "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (ctxt, rgns, rho, ec, ee)) : type_scope.
 
+
+Axiom TypedExpressionFrv :
+  forall ctxt rgns e t eff,
+  TcExp (ctxt, rgns, e, t, eff) ->
+  included (frv t) rgns.
+
 Theorem TcVal_implies_closed :
   forall stty v t,
     TcVal (stty, v, t) ->
@@ -893,7 +899,12 @@ Proof.
                 intro; unfold Ensembles.In, empty_set in H; contradiction] ).
   - unfold not_set_elem, Complement; simpl.
     intro. destruct H1; [contradiction |contradict H1; apply H0].
-  - admit.
+  - apply TypedExpressionFrv in H1.
+    unfold included, Included, Ensembles.In in H1.
+    unfold not_set_elem, Complement, Ensembles.In.
+    inversion H; subst.
+    unfold set_elem, Ensembles.In in H3.
+    admit.
   - unfold not_set_elem, Complement; simpl. 
     intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
 Admitted.
