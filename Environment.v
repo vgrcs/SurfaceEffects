@@ -223,13 +223,12 @@ Proof.
       in * by (unfold subst_rho, R.fold, R.Raw.fold in *; simpl; reflexivity).
     
     unfold In in *. 
-    eapply not_in_raw_rho in H0; eauto. 
-    
-    destruct H0;
-    eapply not_frv_in_subst_rho in H; eauto;
-    destruct H. destruct H2.
+    eapply not_in_raw_rho in H0; eauto.
+    destruct H0.  
     apply IHthis1 with (is_bst:=H5); auto. 
-
+ 
+    intro. apply H.  
+    apply frv_in_subst_rho. left. assumption.
     Unshelve. auto. auto.
 Qed.
 

@@ -608,8 +608,6 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                              (update_rec_T 
                                 (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt,
                               rgns, rho, ec, ee))) ->
-                        (forall r rho, 
-                           r # (subst_rho rho (Ty2_Arrow tyx effc tyc effe Ty2_Effect))) ->
                         TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) 
                                             (x, tyx) ctxt, 
                                rgns, ec, tyc, effc) ->
@@ -622,8 +620,6 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        not_set_elem rgns x ->
                        lc_type tyr ->
                        lc_type_eps effr ->
-                       (forall r, r # (Ty2_ForallRgn (close_var_eff x effr) 
-                                                     (close_var x tyr))) ->
                        (forall rho, 
                           BackTriangle (ctxt, set_union rgns (singleton_set x), rho, er, ∅)) ->
                        TcExp (ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
@@ -853,7 +849,6 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
                    TcRho (rho, rgns) ->
                    TcEnv (stty, rho, env, ctxt) ->
                    TcExp (ctxt, rgns, e, t, Empty_Static_Action) ->
-                   (forall r, r # (subst_rho rho t)) ->
                    TcVal (stty, Cls (env, rho, e), subst_rho rho t) 
   | TC_Unit    : forall stty, 
                    TcVal (stty, Unit, Ty2_Unit)
@@ -898,11 +893,10 @@ Proof.
                 intro; unfold Ensembles.In, empty_set in H; contradiction] ).
   - unfold not_set_elem, Complement; simpl.
     intro. destruct H1; [contradiction |contradict H1; apply H0].
-  - unfold not_set_elem, Complement; simpl.
-    intro. contradict H3. apply H2.
+  - admit.
   - unfold not_set_elem, Complement; simpl. 
     intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
-Qed.
+Admitted.
 
 Definition find_type_ext_stores_def  := 
    forall stty stty' l (t' : tau),

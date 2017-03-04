@@ -6,12 +6,6 @@ Require Import Top0.Nameless.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 
-Axiom not_in_raw_rho:
-  forall x this1 this2 k e  t0 He Hl Hr, 
-    ~ R.In (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := He |} ->
-    ~ R.In (elt:=nat) x {| R.this := this1 ; R.is_bst := Hl |}  /\ 
-    ~ R.In (elt:=nat) x {| R.this := this2; R.is_bst := Hr |}.
-
 Axiom find_rho_1:
   forall x this1 this2 k e t He Hl,
     R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
@@ -22,31 +16,28 @@ Axiom find_rho_2:
     R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
     R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None.
 
-Axiom not_frv_in_subst_rho:
-  forall this1 this2 Hl Hr k e t x,
-        ~ frv
-          (subst_rho {| R.this := this2; R.is_bst := Hr |}
-                     (subst_in_type k e
-                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x ->
-        ~ frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x /\
-        ~ frv (subst_in_type k e t) x /\
-        ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
+Lemma not_in_raw_rho:
+  forall x this1 this2 k e  t0 He Hl Hr, 
+    ~ R.In (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := He |} ->
+    ~ R.In (elt:=nat) x {| R.this := this1 ; R.is_bst := Hl |}  /\ 
+    ~ R.In (elt:=nat) x {| R.this := this2; R.is_bst := Hr |}.
+Proof.
+  intros; split; intro; apply H;
+  try ( solve [apply RMapP.in_find_iff in H0; apply RMapP.in_find_iff; contradict H0;
+               eapply find_rho_1; eassumption] ). 
+  try ( solve [apply RMapP.in_find_iff in H0; apply RMapP.in_find_iff; contradict H0;
+               eapply find_rho_2; eassumption] ). 
+Qed.
 
 Axiom frv_in_subst_rho:
   forall this1 this2 Hl Hr k e t x,
           frv
           (subst_rho {| R.this := this2; R.is_bst := Hr |}
                      (subst_in_type k e
-                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x ->
+                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x <->
           frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x \/
           frv (subst_in_type k e t) x \/
           frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
-
-Axiom subst_rho_close_var_eff :
-  forall x x0 rho effr,
-    R.find (elt:=nat) x rho = None ->
-    In Name (free_rgn_vars_in_eps2 (fold_subst_eps rho (close_var_eff x effr))) x0 ->
-    In Name (free_rgn_vars_in_eps2 (close_var_eff x effr)) x0.
 
 
 
