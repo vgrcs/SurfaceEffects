@@ -885,7 +885,7 @@ where "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (ctxt, rgns, rh
 Axiom TypedExpressionFrv :
   forall ctxt rgns e t eff,
   TcExp (ctxt, rgns, e, t, eff) ->
-  included (frv t) rgns.
+  included rgns (frv t).
 
 Theorem TcVal_implies_closed :
   forall stty v t,
@@ -903,8 +903,9 @@ Proof.
     unfold included, Included, Ensembles.In in H1.
     unfold not_set_elem, Complement, Ensembles.In.
     inversion H; subst.
-    unfold set_elem, Ensembles.In in H3.
-    admit.
+    apply H1 with (x:=r) in H3 .
+    + admit. (* case of interest *) 
+    + admit.
   - unfold not_set_elem, Complement; simpl. 
     intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
 Admitted.
