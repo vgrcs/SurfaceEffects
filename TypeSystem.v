@@ -226,7 +226,8 @@ Qed.
 
 Lemma subst_rho_fvar_1:
   forall rho x,
-    (exists v, fold_subst_rgn rho (Rgn2_FVar true true x) = Rgn2_Const true true v) \/ fold_subst_rgn rho (Rgn2_FVar true true x) = Rgn2_FVar true true x.
+    (exists v, fold_subst_rgn rho (Rgn2_FVar true true x) = Rgn2_Const true true v) \/ 
+    fold_subst_rgn rho (Rgn2_FVar true true x) = Rgn2_FVar true true x.
 Proof.
   intro rho. destruct rho. induction this; intros x.
   - unfold fold_subst_rgn, R.fold, R.Raw.fold; simpl. right. reflexivity.
@@ -506,6 +507,92 @@ Proof.
   apply H2. 
   eapply H0; eassumption.
 Qed.  
+
+Axiom fold_subst_rgn_eq:
+  forall k rho e,
+    R.find k rho  = Some e ->
+    fold_subst_rgn rho (Rgn2_FVar true true k) = Rgn2_Const true true e.
+
+Axiom TypedExpressionFrv :
+  forall ctxt rgns e t eff,
+  TcExp (ctxt, rgns, e, t, eff) ->
+  included (frv t) rgns.
+
+Lemma NotNoneIsSome:
+  forall {A} x,
+    x <> None <-> exists a : A, x = Some a.
+Proof.
+  intuition.
+  - destruct x.
+    + exists a. reflexivity.
+    + contradict H. reflexivity.
+  - subst. destruct H. inversion H.          
+Qed.
+
+Lemma FindInRhoNotFreeInType:
+  forall r rho x t,
+    R.find (elt:=nat) r rho = Some x ->
+    ~ frv (subst_rho rho t) r.
+Proof.
+  intros.  
+  induction t.
+  - rewrite subst_rho_natural; simpl. intro. contradiction.
+  - rewrite subst_rho_boolean; simpl. intro. contradiction.
+  - rewrite subst_rho_effect; simpl. intro. contradiction.
+  - rewrite subst_rho_unit; simpl. intro. contradiction.
+  - rewrite subst_rho_pair; simpl. intuition.
+    destruct H0; intuition.
+  - rewrite subst_rho_tyref; simpl. intuition.
+    destruct H0. 
+    + apply IHt.  
+      contradict H0.
+      unfold In. 
+      unfold rgn2_in_typ in r0.
+      dependent induction r0.
+      * rewrite subst_rho_rgn_const. simpl. intro. contradiction.
+      * { destruct (AsciiVars.eq_dec n x0). 
+          - inversion e; subst.      
+            rewrite  fold_subst_rgn_eq with (e:=x); eauto.
+            unfold free_rgn_vars_in_rgn2.
+            intro. contradiction.
+          - admit. }
+      * rewrite subst_rho_index.
+        unfold free_rgn_vars_in_rgn2. intro. contradiction.
+    + apply IHt. auto.
+  - admit.
+  - rewrite subst_rho_forallrgn; simpl. intuition.
+    apply IHt.
+    destruct H0.
+    * admit.
+    * auto.
+Admitted.
+
+Theorem TcVal_implies_closed_2 :
+  forall stty v t,
+    TcVal (stty, v, t) ->
+    (forall r, r # t).
+Proof.
+  intros.
+  generalize dependent r.
+  dependent induction H; intros;
+  try ( solve [ unfold not_set_elem, Complement; simpl;
+                intro; unfold Ensembles.In, empty_set in H; contradiction] ).
+  - unfold not_set_elem, Complement; simpl.
+    intro. destruct H1; [contradiction |contradict H1; apply H0].
+  - apply TypedExpressionFrv in H1.
+    unfold included, Included, Ensembles.In in H1.
+    unfold not_set_elem, Complement, Ensembles.In.
+    inversion H; subst.
+    unfold set_elem, Ensembles.In in H3.
+    assert (forall r, set_elem rgns r -> R.find r rho <> None) by admit.
+    eapply H2 in H1 .
+    + apply NotNoneIsSome in H1. 
+      destruct H1.  
+      eapply FindInRhoNotFreeInType; eauto.
+    + admit.
+  - unfold not_set_elem, Complement; simpl. 
+    intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
+Admitted.
 
 Lemma ty_sound:
   forall e env rho hp hp' v dynamic_eff,
