@@ -893,11 +893,47 @@ Lemma TcRhoIncludedNoFreeVars:
     r # subst_rho rho t.
 Proof.
   intros.
-  inversion H; subst.
-  eapply FindInRhoNotFreeInType; eauto.  
-  edestruct H2.
-  unfold included, Included, Ensembles.In in H0.
-  unfold set_elem, Ensembles.In in H3.
+  generalize dependent t.
+  dependent induction t; intro HInc; simpl in HInc.
+  - rewrite subst_rho_natural; simpl. intro. contradiction. 
+  - rewrite subst_rho_boolean; simpl. intro. contradiction.
+  - rewrite subst_rho_effect; simpl. intro. contradiction.
+  - rewrite subst_rho_unit; simpl. intro. contradiction.
+  - rewrite subst_rho_pair; simpl.
+    unfold not_set_elem, Complement. intro.
+    destruct H0.
+    + contradict H0. apply IHt1. 
+      unfold included, Included in *.
+      intros. apply HInc.
+      apply Ensembles.Union_introl.
+      assumption.
+    + contradict H0. apply IHt2. 
+      unfold included, Included in *.
+      intros. apply HInc.
+      apply Ensembles.Union_intror.
+      assumption.
+  - rewrite subst_rho_tyref; simpl. 
+    unfold not_set_elem, Complement. intro.
+    destruct H0.
+    + apply IHt.   
+      * unfold included, Included in *.
+        intros. apply HInc.
+        apply Ensembles.Union_intror.
+        assumption.
+      * unfold included, Included, Ensembles.In in *. 
+        contradict H0.
+        inversion H; subst.
+        unfold set_elem, Ensembles.In in H1.
+        { eapply H1 in HInc.
+          - apply NotNoneIsSome in HInc. destruct HInc.
+            eapply FindInRhoNotFreeInRgn; eauto.
+          - admit. }
+    + unfold included, Included, Ensembles.In in *.
+      apply IHt.
+      * intros. apply HInc. apply Ensembles.Union_intror. assumption.
+      * assumption.
+  - admit.
+  - admit.
 Admitted.
 
 Theorem TcVal_implies_closed :
