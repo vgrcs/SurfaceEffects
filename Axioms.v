@@ -16,6 +16,16 @@ Axiom find_rho_2:
     R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
     R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None.
 
+Axiom frv_in_subst_rho:
+  forall this1 this2 Hl Hr k e t x,
+          frv
+          (subst_rho {| R.this := this2; R.is_bst := Hr |}
+                     (subst_in_type k e
+                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x ->
+          frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x \/
+          frv (subst_in_type k e t) x \/
+          frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
+
 Axiom not_frv_in_subst_rho:
   forall this1 this2 Hl Hr k e t x,
         ~ frv
@@ -25,6 +35,17 @@ Axiom not_frv_in_subst_rho:
         ~ frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x \/
         (k <> x -> ~ frv t x) \/
         ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
+
+Axiom not_frv_in_subst_eps:
+  forall this1 this2 Hr Hl k e x r,
+    free_rgn_vars_in_eps2
+      (fold_subst_eps {| R.this := this2; R.is_bst := Hr |}
+            (subst_eps k (Rgn2_Const true false r)
+                       (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e))) x ->
+    free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this2; R.is_bst := Hr |} e) x \/
+    free_rgn_vars_in_eps2 (subst_in_eff k r e) x \/
+    free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e) x.
+
 
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.

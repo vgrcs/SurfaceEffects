@@ -364,13 +364,18 @@ Proof.
       unfold R.find, R.Raw.find in H3. simpl in H3. inversion H3.
     + apply Union_introl. assumption.
   - inversion is_bst; subst.
+    inversion HRho; subst.
     replace (fold_subst_eps
                {| R.this := R.Raw.Node this1 k e0 this2 t0; R.is_bst := is_bst |} e)
     with (fold_subst_eps {| R.this := this2; R.is_bst := H5 |}
                          (subst_eps k (Rgn2_Const true false e0)
                                     (fold_subst_eps {| R.this := this1; R.is_bst := H3 |} e)))
     by (rewrite <- fold_eps_node with (Hr:=H5) (Hl:=H3); reflexivity).
-    simpl.
+    intro.
+    apply not_frv_in_subst_eps in H.
+    destruct H.
+    * contradict H.
+      apply IHthis2.
 Admitted.
 
 Lemma TcRhoIncludedNoFreeVars:
@@ -415,20 +420,33 @@ Proof.
       * assumption.
   - rewrite subst_rho_arrow; simpl.
     unfold not_set_elem, Complement. intro.
-    repeat destruct H0. 
+    destruct H0. 
     + apply IHt1; auto. 
       unfold included, Included in *. 
       intros. apply HInc. apply Union_introl. assumption.
-    + admit.
-    + admit.
-    + apply IHt2; auto. 
-      unfold included, Included in *. 
-      intros. apply HInc. 
-      apply Union_intror. apply Union_intror. apply Union_introl. assumption.
-    + apply IHt3; auto. 
-      unfold included, Included in *. 
-      intros. apply HInc. 
-      apply Union_intror. apply Union_intror. apply Union_intror. assumption.
+    + destruct H0.
+      * { destruct H0.
+          - eapply TcRhoIncludedNoFreeVarsEps with (e:=e) (t:=t1); eauto.
+            unfold included, Included, Ensembles.In in *.
+            intro. intro. apply HInc.
+            destruct H1; [ | apply Ensembles.Union_introl; assumption]. 
+            apply Ensembles.Union_intror. apply Ensembles.Union_introl.
+            apply Ensembles.Union_introl. assumption.
+          - eapply TcRhoIncludedNoFreeVarsEps with (e:=e0) (t:=t1); eauto.
+            unfold included, Included, Ensembles.In in *.
+            intro. intro. apply HInc.
+            destruct H1; [ | apply Ensembles.Union_introl; assumption]. 
+            apply Ensembles.Union_intror. apply Ensembles.Union_introl.
+            apply Ensembles.Union_intror. assumption. }
+      * { repeat destruct H0.
+          - apply IHt2; auto. 
+            unfold included, Included in *. 
+            intros. apply HInc. 
+            apply Union_intror. apply Union_intror. apply Union_introl. assumption.
+          - apply IHt3; auto. 
+            unfold included, Included in *. 
+            intros. apply HInc. 
+            apply Union_intror. apply Union_intror. apply Union_intror. assumption. }
   - rewrite subst_rho_forallrgn; simpl.
     unfold not_set_elem, Complement. intro.
     destruct H0.
@@ -438,7 +456,7 @@ Proof.
       unfold included, Included in *. 
       intros. apply HInc. 
       apply Union_intror. assumption.
-Admitted.
+Qed.
 
 Theorem TcVal_implies_closed :
   forall stty v t,
