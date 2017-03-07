@@ -4,6 +4,7 @@ Nameless.v
 TypeLemmas.v 
 Definitions.v
 Axioms.v 
+AdditionalLemmas.v
 Environment.v 
 CorrectnessLemmas.v 
 Heap.v 

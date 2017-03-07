@@ -18,6 +18,7 @@ Require Import Top0.Tactics.
 Require Import Top0.Environment.
 Require Import Top0.Definitions.
 Require Import Top0.CorrectnessLemmas.
+Require Import Top0.AdditionalLemmas.
 Require Import Top0.Determinism.
 Require Import Top0.TypeSystem.
 Require Import Top0.EffectSystem.

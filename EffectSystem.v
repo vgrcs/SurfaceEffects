@@ -9,6 +9,7 @@ Require Import Top0.Environment.
 Require Import Top0.TypeSystem.
 Require Import Top0.Heap.
 Require Import Top0.CorrectnessLemmas.
+Require Import Top0.AdditionalLemmas.
 Require Import Top0.Axioms.
 
 Module EffectSoundness.

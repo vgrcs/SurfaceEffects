@@ -8,6 +8,7 @@ Require Import Coq.Sets.Ensembles.
 Require Import Coq.Program.Equality.
 Require Import Top0.Axioms.
 Require Import Top0.TypeLemmas.
+Require Import Top0.AdditionalLemmas.
 
 
 Module STMapP := FMapFacts.Facts ST.

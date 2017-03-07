@@ -12,6 +12,7 @@ Require Import Top0.Keys.
 Require Import Top0.Definitions.
 Require Import Top0.Nameless.
 Require Import Top0.CorrectnessLemmas.
+Require Import Top0.AdditionalLemmas.
 Require Import Top0.Environment.
 Require Import Top0.Heap. 
 Require Import Top0.Determinism.
@@ -25,49 +26,6 @@ Module TypeSoundness.
   Import Environment.
 
 Module RMapOrdProp := FMapFacts.OrdProperties R.
-
-Lemma subst_rho_fvar_2:
-  forall rho x v,
-   find_R (Rgn2_FVar true false x) rho = Some v ->
-   fold_subst_rgn rho (Rgn2_FVar true true x) = Rgn2_Const true true v.
-Proof.
-  intro rho.
-  destruct rho. 
-  induction this; intros x v H.
-  - unfold fold_subst_rgn, R.fold, R.Raw.fold; simpl.
-    inversion H.
-  - assert (Hl: R.Raw.bst this1) by (inversion is_bst; auto).
-    assert (Hr: R.Raw.bst this2) by (inversion is_bst; auto).
-    replace (fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst |} (Rgn2_FVar true true x))
-    with
-    (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |}
-                    (subst_rgn k (Rgn2_Const true false e)
-                               (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true x)))
-    ) by (unfold fold_subst_rgn, R.fold, R.Raw.fold in *; reflexivity).
-    apply  RMapP.find_mapsto_iff in H.    
-    inversion H; subst. 
-    + (* x = k *)
-      destruct (AsciiVars.compare k k); try (solve [unfold AsciiVars.lt in l; omega]).
-      replace (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} 
-                              (subst_rgn k (Rgn2_Const true false e)
-                              (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true k))))
-      with (fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst |} 
-                           (Rgn2_FVar true true k)) by
-          (unfold fold_subst_rgn, R.fold, R.Raw.fold in *; reflexivity).  
-      eapply R.Raw.Proofs.find_1 in H; auto.
-      apply fold_subst_rgn_eq_1; auto.
-    + apply R.Raw.Proofs.find_1 in H1; auto.
-      apply IHthis1 with (is_bst := Hl) in H1. rewrite H1. simpl.
-      rewrite subst_rho_rgn_const. reflexivity.
-    + apply R.Raw.Proofs.find_1 in H1; auto.
-      assert (R.Raw.In x this2) by (apply R.Raw.Proofs.find_iff in H1; 
-                                    [ eapply R.Raw.Proofs.MapsTo_In; eassumption | assumption]).
-      apply IHthis2 with (is_bst := Hr) in H1.
-      erewrite fold_subst_rgn_left_1; eauto; simpl.
-      assert (AsciiVars.lt k x) by (eapply fold_subst_rgn_left_2; eauto).
-      apply AsciiVars.lt_not_eq in H2.
-      destruct (RMapP.eq_dec k x); subst; [contradict H0; auto | assumption].
-Qed.
 
 Lemma subst_rho_open_close_rgn :
   forall rho n w v' rho' r r0 x,
