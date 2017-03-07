@@ -877,26 +877,28 @@ with TcEnv : (Sigma * Rho * Env * Gamma) -> Prop :=
                      
 with TcRho : (Rho * Omega) -> Prop :=
   | TC_Rho : forall rho rgns,
-               (forall r, R.find r rho <> None -> set_elem rgns r) ->
+               (forall r, R.find r rho <> None <-> set_elem rgns r) ->
                TcRho (rho, rgns)
 where "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (ctxt, rgns, rho, ec, ee)) : type_scope.
-
 
 Axiom TypedExpressionFrv :
   forall ctxt rgns e t eff,
   TcExp (ctxt, rgns, e, t, eff) ->
   included (frv t) rgns.
 
-Lemma NotNoneIsSome:
-  forall {A} x,
-    x <> None <-> exists a : A, x = Some a.
+Lemma TcRhoIncludedNoFreeVars:
+  forall rho rgns t r, 
+    TcRho (rho, rgns) ->
+    included (frv t) rgns ->
+    r # subst_rho rho t.
 Proof.
-  intuition.
-  - destruct x.
-    + exists a. reflexivity.
-    + contradict H. reflexivity.
-  - subst. destruct H. inversion H.          
-Qed.
+  intros.
+  inversion H; subst.
+  eapply FindInRhoNotFreeInType; eauto.  
+  edestruct H2.
+  unfold included, Included, Ensembles.In in H0.
+  unfold set_elem, Ensembles.In in H3.
+Admitted.
 
 Theorem TcVal_implies_closed :
   forall stty v t,
@@ -910,20 +912,11 @@ Proof.
                 intro; unfold Ensembles.In, empty_set in H; contradiction] ).
   - unfold not_set_elem, Complement; simpl.
     intro. destruct H1; [contradiction |contradict H1; apply H0].
-  - apply TypedExpressionFrv in H1.
-    unfold included, Included, Ensembles.In in H1.
-    unfold not_set_elem, Complement, Ensembles.In.
-    inversion H; subst.
-    unfold set_elem, Ensembles.In in H3.
-    assert (forall r, set_elem rgns r -> R.find r rho <> None) by admit.
-    eapply H2 in H1 .
-    + apply NotNoneIsSome in H1. 
-      destruct H1. 
-      admit.
-    + admit.
+  - apply TypedExpressionFrv in H1.  
+    eapply TcRhoIncludedNoFreeVars; eauto.
   - unfold not_set_elem, Complement; simpl. 
     intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
-Admitted.
+Qed.
 
 Definition find_type_ext_stores_def  := 
    forall stty stty' l (t' : tau),

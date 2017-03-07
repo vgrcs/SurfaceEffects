@@ -755,10 +755,12 @@ Require Import Coq.Sets.Ensembles.
 Lemma EmptyTcRho :
   TcRho (R.empty Region, Empty_set Name).
 Proof.
-  econstructor; intros.
+  econstructor. intro.
+  split; intros.
   - apply RMapP.in_find_iff in H.
     apply RMapP.empty_in_iff in H.
     contradiction.
+  - contradiction.
 Qed.
  
 Lemma EmptyTcEnv :

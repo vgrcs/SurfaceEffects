@@ -7,6 +7,8 @@ Require Import Coq.FSets.FSetInterface.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Program.Equality.
 Require Import Top0.Axioms.
+Require Import Top0.TypeLemmas.
+
 
 Module STMapP := FMapFacts.Facts ST.
 Module EMapP := FMapFacts.Facts E.
@@ -168,17 +170,6 @@ Proof.
       eapply HV; eauto.
 Qed.
 
-Lemma zzz:
-  forall {A} x,
-    x <> None <-> exists a : A, x = Some a.
-Proof.
-  intuition.
-  - destruct x.
-    + exists a. reflexivity.
-    + contradict H. reflexivity.
-  - subst. destruct H. inversion H.          
-Qed.
-
 Lemma yyy :
   forall t r rho,
     R.In (elt:=t) r rho -> R.find (elt:=t) r rho <> None.
@@ -279,43 +270,12 @@ Proof.
   generalize dependent r.
   generalize dependent x.  
   dependent induction HTcVal; intros;
-  inversion_clear HTcRho as [rho' rgns' HRgn HVal''].
-  - unfold subst_in_type. 
-    rewrite  SUBST_FRESH. rewrite <- x. constructor.
-    assert (R.find (elt:=nat) x0 rho = None).    
-    eapply contrapositiveTcRho; eauto.
-    eapply subst_rho_free_vars; eauto.
-  - unfold subst_in_type. 
-    rewrite  SUBST_FRESH. rewrite <- x. constructor.
-    assert (R.find (elt:=nat) x0 rho = None).    
-    eapply contrapositiveTcRho; eauto.
-    eapply subst_rho_free_vars; eauto.
-  - unfold subst_in_type. 
-    rewrite  SUBST_FRESH. rewrite <- x. constructor.
-    assumption. assumption.
-    assert (R.find (elt:=nat) x0 rho = None).    
-    eapply contrapositiveTcRho; eauto. 
-    eapply subst_rho_free_vars; eauto.
-  - unfold subst_in_type. 
-    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
-    assert (R.find (elt:=nat) x0 rho = None).    
-    eapply contrapositiveTcRho; eauto.
-    eapply subst_rho_free_vars; eauto.
-  - unfold subst_in_type. 
-    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
-    assert (R.find (elt:=nat) x0 rho = None).    
-    eapply contrapositiveTcRho; eauto.
-    eapply subst_rho_free_vars; eauto.
-  - unfold subst_in_type. 
-    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
-    assert (R.find (elt:=nat) x0 rho = None).    
-    eapply contrapositiveTcRho; eauto.
-    eapply subst_rho_free_vars; eauto.
-  - unfold subst_in_type. 
-    rewrite  SUBST_FRESH. rewrite <- x. econstructor; eauto.
-    assert (R.find (elt:=nat) x0 rho = None).    
-    eapply contrapositiveTcRho; eauto.
-    eapply subst_rho_free_vars; eauto.
+  inversion HTcRho as [rho' rgns' HRgn HVal'']; subst;
+  try (solve [ unfold subst_in_type;
+               assert (R.find (elt:=nat) x0 rho = None) 
+                 by (eapply contrapositiveTcRho; eauto; apply HRgn);
+               rewrite  SUBST_FRESH; [rewrite <- x; econstructor; eauto | 
+                                      eapply subst_rho_free_vars; eauto]  ] ).
 Qed.
 
 Lemma extended_rho : forall stty rho env ctxt,
@@ -359,16 +319,30 @@ Proof.
   intros rho rgns x v HRho HFresh.
   unfold update_R; simpl. 
   econstructor.  
-  - intros r HF.
-    inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
+  intro r. split.
+  - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
     destruct (AsciiVars.eq_dec x r) as [c | c].
     + unfold AsciiVars.eq in c; intros; subst.
       unfold set_elem, set_union, singleton_set.
       apply Ensembles.Union_intror.
       apply Ensembles.In_singleton.
-    + eapply R_diff_key_3 in HF; auto.  
-      apply HRgn' in HF. apply Ensembles.Union_introl. 
-      assumption.
+    + destruct (HRgn' r).
+      intro. 
+      apply H0 in H. 
+      * eapply R_diff_key_3 in H1; auto.  
+        apply Ensembles.Union_introl. 
+        apply HRgn'. assumption.
+      * eapply R_diff_key_3 in H1; auto.  
+  - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
+    destruct (AsciiVars.eq_dec x r) as [c | c].
+    + unfold AsciiVars.eq in c; intros; subst.
+      apply RMapP.in_find_iff. apply RMapP.add_in_iff. intuition.
+    + destruct (HRgn' r).
+      intro. apply H0 in H. 
+      * rewrite <- RMapP.in_find_iff.  rewrite RMapP.add_in_iff.
+        right. rewrite RMapP.in_find_iff. 
+        assumption.
+      * destruct H1; [apply H0; assumption | inversion H1; subst; intuition]. 
 Qed.
 
 
