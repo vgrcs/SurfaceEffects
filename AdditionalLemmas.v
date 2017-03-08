@@ -312,7 +312,7 @@ Proof.
     eapply H6; eauto.
     destruct H0 as [v H0].
     eapply H7 in H; eauto.
-    inversion HRho; subst. 
+    inversion HRho; subst.  
     eapply H2.
     admit.
 Admitted.
@@ -390,6 +390,10 @@ Proof.
     destruct H.
     * contradict H.
       apply IHthis2.
+      econstructor. intros. 
+      { split.
+        - intros. eapply H0. contradict H. eapply find_rho_2; eauto.
+        - intro.  apply H0 in H. contradict H.
 Admitted.
 
 Lemma TcRhoIncludedNoFreeVars:
