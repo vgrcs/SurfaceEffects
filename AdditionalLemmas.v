@@ -281,11 +281,6 @@ Proof.
       destruct (RMapP.eq_dec k x); subst; [contradict H0; auto | assumption].
 Qed.
 
-Axiom fold_subst_rgn_eq:
-  forall k rho e,
-    R.find k rho  = Some e ->
-    fold_subst_rgn rho (Rgn2_FVar true true k) = Rgn2_Const true true e.
-
 Lemma NotNoneIsSome:
   forall {A} x,
     x <> None <-> exists a : A, x = Some a.
@@ -297,12 +292,31 @@ Proof.
   - subst. destruct H. inversion H.          
 Qed.
 
-Axiom TypedExpressionFrv :
-  forall ctxt rgns e t eff,
+Lemma TypedExpressionFrv :
+  forall stty rho env ctxt rgns e t eff,
+  TcEnv (stty, rho, env, ctxt) ->
+  TcRho (rho, rgns) ->
   TcExp (ctxt, rgns, e, t, eff) ->
   included (frv t) rgns.
-
-
+Proof.
+  intros stty rho env ctxt rgns e t eff HEnv HRho HExp.
+  generalize dependent stty.
+  generalize dependent env.
+  generalize dependent rho.
+  dependent induction HExp; 
+  unfold included, Included, In;
+  try (solve [intros rho HRho env stty HEnv x HFrv; inversion HFrv]).
+  - intros rho HRho env stty HEnv x0 HFrv.
+    inversion HEnv; subst.
+    assert (exists v : Val, find_E x env = Some v).
+    eapply H6; eauto.
+    destruct H0 as [v H0].
+    eapply H7 in H; eauto.
+    inversion HRho; subst. 
+    eapply H2.
+    admit.
+Admitted.
+   
 Lemma TcRhoIncludedNoFreeVarsTyRef:
   forall rho rgns r0 t x,
     TcRho (rho, rgns) ->
@@ -470,7 +484,7 @@ Proof.
                 intro; unfold Ensembles.In, empty_set in H; contradiction] ).
   - unfold not_set_elem, Complement; simpl.
     intro. destruct H1; [contradiction |contradict H1; apply H0].
-  - apply TypedExpressionFrv in H1.  
+  - eapply TypedExpressionFrv in H1; eauto.  
     eapply TcRhoIncludedNoFreeVars; eauto.
   - unfold not_set_elem, Complement; simpl. 
     intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
