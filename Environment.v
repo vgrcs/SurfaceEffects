@@ -9,7 +9,7 @@ Require Import Coq.Program.Equality.
 Require Import Top0.Axioms.
 Require Import Top0.TypeLemmas.
 Require Import Top0.AdditionalLemmas.
-
+Require Import Top0.Heap.
 
 Module STMapP := FMapFacts.Facts ST.
 Module EMapP := FMapFacts.Facts E.
@@ -171,6 +171,7 @@ Proof.
       eapply HV; eauto.
 Qed.
 
+
 Lemma yyy :
   forall t r rho,
     R.In (elt:=t) r rho -> R.find (elt:=t) r rho <> None.
@@ -257,47 +258,6 @@ Proof.
     Unshelve. auto. auto.
 Qed.
 
-Lemma subst_rho_fresh_var :
-  forall rho rgns x stty v t r,
-
-    TcRho (rho, rgns) ->
-    not_set_elem rgns x ->
-    TcVal (stty, v, subst_rho rho t) ->
-    TcVal (stty, v, subst_rho rho (subst_in_type x r t)).
-Proof.
-  intros rho rgns x stty v t r HTcRho H_not_set HTcVal.
-  assert ( x # (subst_rho rho t)) by (eapply TcVal_implies_closed; eauto).
-  generalize dependent rgns.
-  generalize dependent r.
-  generalize dependent x.  
-  dependent induction HTcVal; intros;
-  inversion HTcRho as [rho' rgns' HRgn HVal'']; subst;
-  try (solve [ unfold subst_in_type;
-               assert (R.find (elt:=nat) x0 rho = None) 
-                 by (eapply contrapositiveTcRho; eauto; apply HRgn);
-               rewrite  SUBST_FRESH; [rewrite <- x; econstructor; eauto | 
-                                      eapply subst_rho_free_vars; eauto]  ] ).
-Qed.
-
-Lemma extended_rho : forall stty rho env ctxt,
-                       TcEnv (stty, rho, env, ctxt) ->
-                       forall x r rgns,
-                         TcRho (rho, rgns) ->
-                         not_set_elem rgns x -> 
-                         TcEnv (stty, update_R (x, r) rho, env, ctxt). 
-Proof.
-  intros stty rho env ctxt HEnv x r rgns HRho HRgns. 
-  inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
-  inversion_clear HRho as [rho' rgns' HRgn' HVal''].
-  constructor; auto.
-  intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
-  rewrite subst_add_comm. 
-  - eapply subst_rho_fresh_var; eauto. econstructor; auto. 
-  - unfold not_set_elem in HRgns. unfold Ensembles.Complement in HRgns.
-    intro. 
-    apply RMapP.in_find_iff in H0.
-    eapply HRgn' in H0. contradiction.
-Qed.
 
 Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  TcRho (rho, rgns) ->
@@ -347,4 +307,103 @@ Proof.
 Qed.
 
 
-  
+Lemma TypedExpressionFrv :
+  forall stty rho env ctxt rgns e t eff,
+  TcEnv (stty, rho, env, ctxt) ->
+  (forall ctxt rgns x t, 
+     find_T x ctxt = Some t ->
+     included (frv t) rgns) ->
+  TcExp (ctxt, rgns, e, t, eff) ->
+  included (frv t) rgns.
+Proof.
+  intros stty rho env ctxt rgns e t eff HEnv HNew HExp.
+  generalize dependent stty.
+  generalize dependent env.
+  generalize dependent rho.
+  dependent induction HExp; 
+  unfold included, Included, In;
+  try (solve [intros rho env stty HEnv x HFrv; inversion HFrv]).
+  - intros rho env stty HEnv x0 HFrv.
+    eapply HNew; eauto.
+  - intros rho env stty HEnv x0 HFrv. 
+    inversion HEnv; subst.  
+    assert (H' : included (frv tyc) rgns). 
+    { eapply IHHExp1; eauto.
+      - apply update_env. simpl. apply update_env; eauto.
+        + eapply H7; eauto. admit. admit.
+        + eapply H7; eauto. admit. admit. } 
+
+    assert (H'' : included (frv Ty2_Effect) rgns). 
+    { eapply IHHExp2; eauto.
+      - apply update_env. simpl. apply update_env; eauto.
+        + eapply H7; eauto. admit. admit.
+        + eapply H7; eauto. admit. admit. } 
+
+    inversion HFrv; subst.
+    +  admit.
+    + inversion H0; subst.
+      * admit.
+      * inversion H1; subst.
+        eapply H'; eauto. 
+        eapply H''; eauto.
+Admitted.
+
+Theorem TcVal_implies_closed :
+  forall stty v t,
+    TcVal (stty, v, t) ->
+    (forall r, r # t).
+Proof.
+  intros stty v t  HTcVal.
+  dependent induction HTcVal; intros;
+  try ( solve [ unfold not_set_elem, Complement; simpl;
+                intro; unfold Ensembles.In, empty_set in H; contradiction] ).
+  - unfold not_set_elem, Complement; simpl.
+    intro. destruct H1; [contradiction |contradict H1; apply H0].
+  - assert (forall ctxt rgns x t, find_T x ctxt = Some t -> included (frv t) rgns) by admit.
+    eapply TypedExpressionFrv in H1; eauto.  
+    eapply TcRhoIncludedNoFreeVars; eauto.
+  - unfold not_set_elem, Complement; simpl. 
+    intro. destruct H; contradict H; [eapply IHHTcVal1 | eapply IHHTcVal2]; eauto.
+Admitted.  
+
+Lemma subst_rho_fresh_var :
+  forall rho rgns x stty v t r,
+
+    TcRho (rho, rgns) ->
+    not_set_elem rgns x ->
+    TcVal (stty, v, subst_rho rho t) ->
+    TcVal (stty, v, subst_rho rho (subst_in_type x r t)).
+Proof.
+  intros rho rgns x stty v t r HTcRho H_not_set HTcVal.
+  assert ( x # (subst_rho rho t)) by (eapply TcVal_implies_closed; eauto).
+  generalize dependent rgns.
+  generalize dependent r.
+  generalize dependent x.  
+  dependent induction HTcVal; intros;
+  inversion HTcRho as [rho' rgns' HRgn HVal'']; subst;
+  try (solve [ unfold subst_in_type;
+               assert (R.find (elt:=nat) x0 rho = None) 
+                 by (eapply contrapositiveTcRho; eauto; apply HRgn);
+               rewrite  SUBST_FRESH; [rewrite <- x; econstructor; eauto | 
+                                      eapply subst_rho_free_vars; eauto]  ] ).
+Qed.
+
+Lemma extended_rho : forall stty rho env ctxt,
+                       TcEnv (stty, rho, env, ctxt) ->
+                       forall x r rgns,
+                         TcRho (rho, rgns) ->
+                         not_set_elem rgns x -> 
+                         TcEnv (stty, update_R (x, r) rho, env, ctxt). 
+Proof.
+  intros stty rho env ctxt HEnv x r rgns HRho HRgns. 
+  inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
+  inversion_clear HRho as [rho' rgns' HRgn' HVal''].
+  constructor; auto.
+  intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
+  rewrite subst_add_comm. 
+  - eapply subst_rho_fresh_var; eauto. econstructor; auto. 
+  - unfold not_set_elem in HRgns. unfold Ensembles.Complement in HRgns.
+    intro. 
+    apply RMapP.in_find_iff in H0.
+    eapply HRgn' in H0. contradiction.
+Qed.

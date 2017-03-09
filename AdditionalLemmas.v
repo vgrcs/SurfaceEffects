@@ -3,6 +3,7 @@ Require Import Coq.Sets.Ensembles.
 Require Import Omega.
 
 Add LoadPath "." as Top0.
+Require Import Top0.Tactics.
 Require Import Top0.Keys.
 Require Import Top0.Nameless.
 Require Import Top0.Definitions.
@@ -292,32 +293,6 @@ Proof.
   - subst. destruct H. inversion H.          
 Qed.
 
-Lemma TypedExpressionFrv :
-  forall stty rho env ctxt rgns e t eff,
-  TcEnv (stty, rho, env, ctxt) ->
-  TcRho (rho, rgns) ->
-  TcExp (ctxt, rgns, e, t, eff) ->
-  included (frv t) rgns.
-Proof.
-  intros stty rho env ctxt rgns e t eff HEnv HRho HExp.
-  generalize dependent stty.
-  generalize dependent env.
-  generalize dependent rho.
-  dependent induction HExp; 
-  unfold included, Included, In;
-  try (solve [intros rho HRho env stty HEnv x HFrv; inversion HFrv]).
-  - intros rho HRho env stty HEnv x0 HFrv.
-    inversion HEnv; subst.
-    assert (exists v : Val, find_E x env = Some v).
-    eapply H6; eauto.
-    destruct H0 as [v H0].
-    eapply H7 in H; eauto.
-    inversion HRho; subst.  
-    eapply H2.
-    admit.
-Admitted.
-
-   
 Lemma TcRhoIncludedNoFreeVarsTyRef:
   forall rho rgns r0 t x,
     TcRho (rho, rgns) ->
@@ -564,22 +539,4 @@ Proof.
       unfold included, Included in *. 
       intros. apply HInc. 
       apply Union_intror. assumption.
-Qed.
-
-Theorem TcVal_implies_closed :
-  forall stty v t,
-    TcVal (stty, v, t) ->
-    (forall r, r # t).
-Proof.
-  intros.
-  generalize dependent r.
-  dependent induction H; intros;
-  try ( solve [ unfold not_set_elem, Complement; simpl;
-                intro; unfold Ensembles.In, empty_set in H; contradiction] ).
-  - unfold not_set_elem, Complement; simpl.
-    intro. destruct H1; [contradiction |contradict H1; apply H0].
-  - eapply TypedExpressionFrv in H1; eauto.  
-    eapply TcRhoIncludedNoFreeVars; eauto.
-  - unfold not_set_elem, Complement; simpl. 
-    intro. destruct H1; contradict H1; [eapply IHTcVal1 | eapply IHTcVal2]; eauto.
 Qed.
