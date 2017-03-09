@@ -22,8 +22,8 @@ Axiom frv_in_subst_rho:
           (subst_rho {| R.this := this2; R.is_bst := Hr |}
                      (subst_in_type k e
                                     (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x ->
-          frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x \/
-          frv (subst_in_type k e t) x \/
+          frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x /\
+          frv (subst_in_type k e t) x /\
           frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
 
 Axiom not_frv_in_subst_rho:
