@@ -358,37 +358,74 @@ Qed.
 
 Lemma no_free_vars_subst_sa_const:
   forall x e0 sa,
-    ~ free_rgn_vars_in_sa2 (subst_sa x (Rgn2_Const true false e0) sa) x.
+    free_rgn_vars_in_sa2 (subst_sa x (Rgn2_Const true false e0) sa) x -> 
+    empty_set x.
+Proof.
+  intros.
+  induction sa; contradict H; 
+  unfold free_rgn_vars_in_sa2, subst_sa;
+  unfold free_rgn_vars_in_rgn2, subst_rgn;
+  unfold rgn2_in_typ in r;
+  dependent induction r; try (solve [intro; contradiction]).
+  + destruct (RMapProp.F.eq_dec x n); subst.
+    * simpl. intro. contradiction.
+    * intro. inversion H. unfold not in n0. apply n0. auto.
+  + destruct (RMapProp.F.eq_dec x n); subst.
+    * simpl. intro. contradiction.
+    * intro. inversion H. unfold not in n0. apply n0. auto.
+  + destruct (RMapProp.F.eq_dec x n); subst.
+    * simpl. intro. contradiction.
+    * intro. inversion H. unfold not in n0. apply n0. auto.
+Qed.
+
+Lemma free_vars_subst_sa_diff:
+  forall x k e0 sa,
+    k <> x ->
+    free_rgn_vars_in_sa2 (subst_sa k (Rgn2_Const true false e0) sa) x -> 
+    empty_set x \/ exists n, singleton_set n x.
 Proof.
   intros. 
-  induction sa; intro.
-  - unfold free_rgn_vars_in_sa2, subst_sa in H.
-    unfold free_rgn_vars_in_rgn2, subst_rgn in H.
+  induction sa. 
+  - unfold free_rgn_vars_in_sa2, subst_sa in H0.
+    unfold free_rgn_vars_in_rgn2, subst_rgn in H0.
+    unfold rgn2_in_typ in r.
+    dependent induction r.
+    + left. assumption. 
+    + destruct (RMapProp.F.eq_dec k n); subst.
+      * simpl in H0. left. assumption.
+      * right. exists n. assumption.
+    + left. assumption.
+  - unfold free_rgn_vars_in_sa2, subst_sa in H0.
+    unfold free_rgn_vars_in_rgn2, subst_rgn in H0.
+    unfold rgn2_in_typ in r.
+    dependent induction r.
+    + left. assumption. 
+    + destruct (RMapProp.F.eq_dec k n); subst.
+      * simpl in H0. left. assumption.
+      * right. exists n. assumption.
+    + left. assumption.
+  - unfold free_rgn_vars_in_sa2, subst_sa in H0.
+    unfold free_rgn_vars_in_rgn2, subst_rgn in H0.
     unfold rgn2_in_typ in r.
     dependent induction r.
     + contradiction.
-    + destruct (RMapProp.F.eq_dec x n); subst.
-      * simpl in H. contradiction.
-      * inversion H. subst. unfold not in n0. apply n0. reflexivity.
+    + destruct (RMapProp.F.eq_dec k n); subst.
+      * simpl in H0. contradiction.
+      * right. exists n. assumption.
     + contradiction.
-  - unfold free_rgn_vars_in_sa2, subst_sa in H.
-    unfold free_rgn_vars_in_rgn2, subst_rgn in H.
-    unfold rgn2_in_typ in r.
-    dependent induction r.
-    + contradiction.
-    + destruct (RMapProp.F.eq_dec x n); subst.
-      * simpl in H. contradiction.
-      * inversion H. subst. unfold not in n0. apply n0. reflexivity.
-    + contradiction.
-  - unfold free_rgn_vars_in_sa2, subst_sa in H.
-    unfold free_rgn_vars_in_rgn2, subst_rgn in H.
-    unfold rgn2_in_typ in r.
-    dependent induction r.
-    + contradiction.
-    + destruct (RMapProp.F.eq_dec x n); subst.
-      * simpl in H. contradiction.
-      * inversion H. subst. unfold not in n0. apply n0. reflexivity.
-    + contradiction.
+Qed.
+
+Lemma free_vars_subst_sa:
+  forall k x e0 sa,
+    free_rgn_vars_in_sa2 (subst_sa k (Rgn2_Const true false e0) sa) x ->
+    empty_set x \/ (exists n, singleton_set n x).
+Proof.
+  intros.
+  destruct (AsciiVars.eq_dec k x) as [c | c].
+  - inversion c; subst.
+    left; eapply no_free_vars_subst_sa_const; eauto.
+  - unfold AsciiVars.eq in c. 
+    eapply free_vars_subst_sa_diff in c; eauto.
 Qed.
 
 Lemma TcRhoIncludedNoFreeVarsEps_aux:
@@ -404,74 +441,11 @@ Proof.
   - inversion c. subst.   
     unfold free_rgn_vars_in_eps2. intro.
     destruct H1. 
-    unfold included, Included, In in H0.
     admit.
   - unfold AsciiVars.eq in c.  
-Admitted.
-
-Lemma subst_eps_const:
-  forall k e0 e,
-    subst_eps k (Rgn2_Const true false e0) e = e.
-Proof.
-  intros.
-  unfold subst_eps.  
-  apply Extensionality_Ensembles;
-  unfold Same_set, Included.  
-  split. 
-  - intros x H; unfold In in *.
-    destruct H as [sa [H1 H2]].
-    induction sa. 
-    * simpl in H2.
-      unfold rgn2_in_typ in r.
-      { dependent induction r.
-        - simpl  in H2. subst. assumption.
-        - simpl  in H2. subst. 
-          destruct ( RMapProp.F.eq_dec k n); subst.
-          admit. assumption. 
-        - simpl  in H2. subst. assumption. }
-    * simpl in H2.
-      unfold rgn2_in_typ in r.
-      { dependent induction r.
-        - simpl  in H2. subst. assumption.
-        - simpl  in H2. subst. 
-          destruct ( RMapProp.F.eq_dec k n); subst.
-          admit. assumption. 
-        - simpl  in H2. subst. assumption. }
-    * simpl in H2.
-      unfold rgn2_in_typ in r.
-      { dependent induction r.
-        - simpl  in H2. subst. assumption.
-        - simpl  in H2. subst. 
-          destruct ( RMapProp.F.eq_dec k n); subst.
-          admit. assumption. 
-        - simpl  in H2. subst. assumption. }
-  - intros x H; unfold In in *.
-    exists x. intuition.
-    induction x. 
-    + simpl. 
-      unfold rgn2_in_typ in r.
-      * { dependent induction r.
-          - simpl. reflexivity.
-          - simpl. destruct ( RMapProp.F.eq_dec k n); subst.
-            + admit.
-            + reflexivity.
-          - simpl. reflexivity. }
-    + simpl. 
-      unfold rgn2_in_typ in r.
-      * { dependent induction r.
-          - simpl. reflexivity.
-          - simpl. destruct ( RMapProp.F.eq_dec k n); subst.
-            + admit.
-            + reflexivity.
-          - simpl. reflexivity. }
-    + simpl. 
-      unfold rgn2_in_typ in r.
-      * { dependent induction r.
-          - simpl. reflexivity.
-          - simpl. destruct ( RMapProp.F.eq_dec k n); subst.
-            + admit.
-            + reflexivity.
-          - simpl. reflexivity. }
+    unfold free_rgn_vars_in_eps2. intro.
+    destruct H1.
+    admit.
 Admitted.
         
 Lemma TcRhoIncludedNoFreeVarsEps:
@@ -510,9 +484,7 @@ Proof.
     destruct H. destruct H1.  
     contradict H1.
     eapply TcRhoIncludedNoFreeVarsEps_aux; eauto.
-Admitted.
-
-
+Qed.
 
 Lemma TcRhoIncludedNoFreeVars:
   forall rho rgns t r, 
