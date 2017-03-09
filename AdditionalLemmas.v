@@ -316,6 +316,7 @@ Proof.
     eapply H2.
     admit.
 Admitted.
+
    
 Lemma TcRhoIncludedNoFreeVarsTyRef:
   forall rho rgns r0 t x,
@@ -355,6 +356,124 @@ Proof.
     simpl in H. contradiction. 
 Qed.
 
+Lemma no_free_vars_subst_sa_const:
+  forall x e0 sa,
+    ~ free_rgn_vars_in_sa2 (subst_sa x (Rgn2_Const true false e0) sa) x.
+Proof.
+  intros. 
+  induction sa; intro.
+  - unfold free_rgn_vars_in_sa2, subst_sa in H.
+    unfold free_rgn_vars_in_rgn2, subst_rgn in H.
+    unfold rgn2_in_typ in r.
+    dependent induction r.
+    + contradiction.
+    + destruct (RMapProp.F.eq_dec x n); subst.
+      * simpl in H. contradiction.
+      * inversion H. subst. unfold not in n0. apply n0. reflexivity.
+    + contradiction.
+  - unfold free_rgn_vars_in_sa2, subst_sa in H.
+    unfold free_rgn_vars_in_rgn2, subst_rgn in H.
+    unfold rgn2_in_typ in r.
+    dependent induction r.
+    + contradiction.
+    + destruct (RMapProp.F.eq_dec x n); subst.
+      * simpl in H. contradiction.
+      * inversion H. subst. unfold not in n0. apply n0. reflexivity.
+    + contradiction.
+  - unfold free_rgn_vars_in_sa2, subst_sa in H.
+    unfold free_rgn_vars_in_rgn2, subst_rgn in H.
+    unfold rgn2_in_typ in r.
+    dependent induction r.
+    + contradiction.
+    + destruct (RMapProp.F.eq_dec x n); subst.
+      * simpl in H. contradiction.
+      * inversion H. subst. unfold not in n0. apply n0. reflexivity.
+    + contradiction.
+Qed.
+
+Lemma TcRhoIncludedNoFreeVarsEps_aux:
+  forall x this1 this2 k e0 t0 is_bst e t rgns,
+    TcRho ({| R.this := R.Raw.Node this1 k e0 this2 t0; R.is_bst := is_bst |}, rgns) ->
+    included (set_union (free_rgn_vars_in_eps2 e) (frv t)) rgns ->
+    ~ free_rgn_vars_in_eps2 (subst_in_eff k e0 e) x.
+Proof.
+  intros. 
+  unfold subst_in_eff.
+  unfold subst_eps.
+  destruct (AsciiVars.eq_dec k x) as [c | c].
+  - inversion c. subst.   
+    unfold free_rgn_vars_in_eps2. intro.
+    destruct H1. 
+    unfold included, Included, In in H0.
+    admit.
+  - unfold AsciiVars.eq in c.  
+Admitted.
+
+Lemma subst_eps_const:
+  forall k e0 e,
+    subst_eps k (Rgn2_Const true false e0) e = e.
+Proof.
+  intros.
+  unfold subst_eps.  
+  apply Extensionality_Ensembles;
+  unfold Same_set, Included.  
+  split. 
+  - intros x H; unfold In in *.
+    destruct H as [sa [H1 H2]].
+    induction sa. 
+    * simpl in H2.
+      unfold rgn2_in_typ in r.
+      { dependent induction r.
+        - simpl  in H2. subst. assumption.
+        - simpl  in H2. subst. 
+          destruct ( RMapProp.F.eq_dec k n); subst.
+          admit. assumption. 
+        - simpl  in H2. subst. assumption. }
+    * simpl in H2.
+      unfold rgn2_in_typ in r.
+      { dependent induction r.
+        - simpl  in H2. subst. assumption.
+        - simpl  in H2. subst. 
+          destruct ( RMapProp.F.eq_dec k n); subst.
+          admit. assumption. 
+        - simpl  in H2. subst. assumption. }
+    * simpl in H2.
+      unfold rgn2_in_typ in r.
+      { dependent induction r.
+        - simpl  in H2. subst. assumption.
+        - simpl  in H2. subst. 
+          destruct ( RMapProp.F.eq_dec k n); subst.
+          admit. assumption. 
+        - simpl  in H2. subst. assumption. }
+  - intros x H; unfold In in *.
+    exists x. intuition.
+    induction x. 
+    + simpl. 
+      unfold rgn2_in_typ in r.
+      * { dependent induction r.
+          - simpl. reflexivity.
+          - simpl. destruct ( RMapProp.F.eq_dec k n); subst.
+            + admit.
+            + reflexivity.
+          - simpl. reflexivity. }
+    + simpl. 
+      unfold rgn2_in_typ in r.
+      * { dependent induction r.
+          - simpl. reflexivity.
+          - simpl. destruct ( RMapProp.F.eq_dec k n); subst.
+            + admit.
+            + reflexivity.
+          - simpl. reflexivity. }
+    + simpl. 
+      unfold rgn2_in_typ in r.
+      * { dependent induction r.
+          - simpl. reflexivity.
+          - simpl. destruct ( RMapProp.F.eq_dec k n); subst.
+            + admit.
+            + reflexivity.
+          - simpl. reflexivity. }
+Admitted.
+        
 Lemma TcRhoIncludedNoFreeVarsEps:
   forall rho rgns e t x,
     TcRho (rho, rgns) ->
@@ -386,15 +505,14 @@ Proof.
                                     (fold_subst_eps {| R.this := this1; R.is_bst := H3 |} e)))
     by (rewrite <- fold_eps_node with (Hr:=H5) (Hl:=H3); reflexivity).
     intro.
-    apply not_frv_in_subst_eps in H.
-    destruct H.
-    * contradict H.
-      apply IHthis2.
-      econstructor. intros. 
-      { split.
-        - intros. eapply H0. contradict H. eapply find_rho_2; eauto.
-        - intro.  apply H0 in H. contradict H.
+    apply frv_in_subst_eps in H.
+
+    destruct H. destruct H1.  
+    contradict H1.
+    eapply TcRhoIncludedNoFreeVarsEps_aux; eauto.
 Admitted.
+
+
 
 Lemma TcRhoIncludedNoFreeVars:
   forall rho rgns t r, 

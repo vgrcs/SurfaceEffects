@@ -36,14 +36,14 @@ Axiom not_frv_in_subst_rho:
         (k <> x -> ~ frv t x) \/
         ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
 
-Axiom not_frv_in_subst_eps:
+Axiom frv_in_subst_eps:
   forall this1 this2 Hr Hl k e x r,
     free_rgn_vars_in_eps2
       (fold_subst_eps {| R.this := this2; R.is_bst := Hr |}
             (subst_eps k (Rgn2_Const true false r)
                        (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e))) x ->
-    free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this2; R.is_bst := Hr |} e) x \/
-    free_rgn_vars_in_eps2 (subst_in_eff k r e) x \/
+    free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this2; R.is_bst := Hr |} e) x /\
+    free_rgn_vars_in_eps2 (subst_in_eff k r e) x /\
     free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e) x.
 
 
