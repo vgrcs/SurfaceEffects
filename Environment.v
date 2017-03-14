@@ -315,37 +315,45 @@ Lemma TypedExpressionFrv :
      included (frv t) rgns) ->
   TcExp (ctxt, rgns, e, t, eff) ->
   included (frv t) rgns.
-Proof.
-  intros stty rho env ctxt rgns e t eff HEnv HNew HExp.
+Proof. 
+  intros stty rho env ctxt rgns e t eff HEnv HNew HExp.  
   generalize dependent stty.
   generalize dependent env.
-  generalize dependent rho.
+  generalize dependent rho.  
   dependent induction HExp; 
   unfold included, Included, In;
   try (solve [intros rho env stty HEnv x HFrv; inversion HFrv]).
   - intros rho env stty HEnv x0 HFrv.
     eapply HNew; eauto.
-  - intros rho env stty HEnv x0 HFrv. 
-    inversion HEnv; subst.  
-    assert (H' : included (frv tyc) rgns). 
-    { eapply IHHExp1; eauto.
-      - apply update_env. simpl. apply update_env; eauto.
-        + eapply H7; eauto. admit. admit.
-        + eapply H7; eauto. admit. admit. } 
-
-    assert (H'' : included (frv Ty2_Effect) rgns). 
-    { eapply IHHExp2; eauto.
-      - apply update_env. simpl. apply update_env; eauto.
-        + eapply H7; eauto. admit. admit.
-        + eapply H7; eauto. admit. admit. } 
-
-    inversion HFrv; subst.
-    +  admit.
-    + inversion H0; subst.
-      * admit.
-      * inversion H1; subst.
-        eapply H'; eauto. 
-        eapply H''; eauto.
+  - intros rho env stty HEnv x0 HFrv.
+    inversion_clear HFrv as [? A | ?  B]; subst. 
+    + assert (H_ : included (frv tyx) rgns) by admit.
+      apply H_; auto.
+    + inversion B as [? C | ? D]; subst.
+      * { inversion C as [ ? X | ? Y ]; subst.
+          - assert (H_ : included (free_rgn_vars_in_eps2 effc) rgns) by admit.
+            apply H_; auto.
+          - assert (H_ : included (free_rgn_vars_in_eps2 effe) rgns) by admit.
+            apply H_; auto. } 
+      * { inversion D as [ ? X | ? Y ]; subst.
+          - assert (H_ : included (frv tyc) rgns) by admit.
+            apply H_; auto.
+          - assert (H_ : included (frv Ty2_Effect) rgns) by admit.
+            apply H_; auto. }
+  - intros rho env stty HEnv x0 HFrv.
+    inversion_clear HFrv as [? A | ?  B]; subst. 
+    + assert (H_ : included (frv tyr) (set_union rgns (singleton_set x))).
+      eapply IHHExp; eauto.
+      assert (H__ : included (free_rgn_vars_in_eps2 (close_var_eff x effr)) rgns) by admit.
+      apply H__; auto.
+    + unfold In in B.
+      assert (H_ : included (frv (close_var x tyr)) rgns) by admit.
+      apply H_; auto.
+  - intros rho env stty HEnv x0 HFrv.
+    assert (H_ : included (frv (Ty2_Arrow tya effc t effe Ty2_Effect)) rgns).
+    eapply IHHExp1; eauto.
+    assert (H__ : included (frv tya) rgns).
+    eapply IHHExp2; eauto.
 Admitted.
 
 Theorem TcVal_implies_closed :

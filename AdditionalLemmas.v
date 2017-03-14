@@ -404,23 +404,13 @@ Proof.
 Qed.
 
 Lemma TcRhoIncludedNoFreeVarsEps_aux:
-  forall x this1 this2 k e0 t0 is_bst e t rgns,
+  forall x this1 this2 k e0 t0 is_bst e rgns,
     TcRho ({| R.this := R.Raw.Node this1 k e0 this2 t0; R.is_bst := is_bst |}, rgns) ->
-    included (set_union (free_rgn_vars_in_eps2 e) (frv t)) rgns ->
-    ~ free_rgn_vars_in_eps2 (subst_in_eff k e0 e) x.
+    ~ free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const true false e0) e) x.
 Proof.
   intros. 
-  unfold subst_in_eff.
   unfold subst_eps.
-  destruct (AsciiVars.eq_dec k x) as [c | c].
-  - inversion c. subst.   
-    unfold free_rgn_vars_in_eps2. intro.
-    destruct H1. 
-    admit.
-  - unfold AsciiVars.eq in c.  
-    unfold free_rgn_vars_in_eps2. intro.
-    destruct H1.
-    admit.
+  unfold free_rgn_vars_in_eps2. 
 Admitted.
         
 Lemma TcRhoIncludedNoFreeVarsEps:
@@ -456,8 +446,8 @@ Proof.
     intro.
     apply frv_in_subst_eps in H.
 
-    destruct H. destruct H1.  
-    contradict H1.
+    destruct H as [Hl [Hc  Hr]].  
+    contradict Hc. unfold subst_in_eff.
     eapply TcRhoIncludedNoFreeVarsEps_aux; eauto.
 Qed.
 
