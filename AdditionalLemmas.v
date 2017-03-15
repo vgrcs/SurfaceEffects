@@ -403,23 +403,26 @@ Proof.
     eapply free_vars_subst_sa_diff in c; eauto.
 Qed.
 
-Lemma TcRhoIncludedNoFreeVarsEps_aux:
-  forall x this1 this2 k e0 t0 is_bst e rgns,
+Lemma TcRhoIncludedNoFreeVarsEps_aux_eq:
+  forall this1 this2 k e0 t0 is_bst e rgns,
     TcRho ({| R.this := R.Raw.Node this1 k e0 this2 t0; R.is_bst := is_bst |}, rgns) ->
-    ~ free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const true false e0) e) x.
+    included (free_rgn_vars_in_eps2 e) rgns ->
+    ~ free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const true false e0) e) k.
 Proof.
   intros. 
   unfold subst_eps.
-  unfold free_rgn_vars_in_eps2. 
+  unfold free_rgn_vars_in_eps2 in *.
+  unfold included, Included, In in *. 
+  intro. destruct H1 as [sa]. 
 Admitted.
         
 Lemma TcRhoIncludedNoFreeVarsEps:
-  forall rho rgns e t x,
+  forall rho rgns e x,
     TcRho (rho, rgns) ->
-    included (set_union (free_rgn_vars_in_eps2 e) (frv t)) rgns ->
+    included (free_rgn_vars_in_eps2 e) rgns ->
     ~ (free_rgn_vars_in_eps2 (fold_subst_eps rho e)) x.
 Proof.
-  intros rho rgns e t x HRho HInc. 
+  intros rho rgns e x HRho HInc. 
   destruct rho. induction this.
   - unfold fold_subst_eps.  
     replace (fun sa : StaticAction2 =>
@@ -434,11 +437,11 @@ Proof.
     + apply NotNoneIsSome in HInc.
       destruct HInc. 
       unfold R.find, R.Raw.find in H3. simpl in H3. inversion H3.
-    + apply Union_introl. assumption.
+    + auto.
   - inversion is_bst; subst.
     inversion HRho; subst.
     replace (fold_subst_eps
-               {| R.this := R.Raw.Node this1 k e0 this2 t0; R.is_bst := is_bst |} e)
+               {| R.this := R.Raw.Node this1 k e0 this2 t; R.is_bst := is_bst |} e)
     with (fold_subst_eps {| R.this := this2; R.is_bst := H5 |}
                          (subst_eps k (Rgn2_Const true false e0)
                                     (fold_subst_eps {| R.this := this1; R.is_bst := H3 |} e)))
@@ -447,9 +450,13 @@ Proof.
     apply frv_in_subst_eps in H.
 
     destruct H as [Hl [Hc  Hr]].  
-    contradict Hc. unfold subst_in_eff.
-    eapply TcRhoIncludedNoFreeVarsEps_aux; eauto.
-Qed.
+    destruct (AsciiVars.eq_dec k x) as [c | c].
+    + contradict Hc. 
+      inversion c; subst. simpl.
+      unfold subst_in_eff.
+      eapply TcRhoIncludedNoFreeVarsEps_aux_eq; eauto.
+    + admit. 
+Admitted.
 
 Lemma TcRhoIncludedNoFreeVars:
   forall rho rgns t r, 
@@ -499,16 +506,15 @@ Proof.
       intros. apply HInc. apply Union_introl. assumption.
     + destruct H0.
       * { destruct H0.
-          - eapply TcRhoIncludedNoFreeVarsEps with (e:=e) (t:=t1); eauto.
+          - unfold In in H0.
+            eapply TcRhoIncludedNoFreeVarsEps with (e:=e); eauto.
             unfold included, Included, Ensembles.In in *.
             intro. intro. apply HInc.
-            destruct H1; [ | apply Ensembles.Union_introl; assumption]. 
             apply Ensembles.Union_intror. apply Ensembles.Union_introl.
             apply Ensembles.Union_introl. assumption.
-          - eapply TcRhoIncludedNoFreeVarsEps with (e:=e0) (t:=t1); eauto.
+          - eapply TcRhoIncludedNoFreeVarsEps with (e:=e0); eauto.
             unfold included, Included, Ensembles.In in *.
             intro. intro. apply HInc.
-            destruct H1; [ | apply Ensembles.Union_introl; assumption]. 
             apply Ensembles.Union_intror. apply Ensembles.Union_introl.
             apply Ensembles.Union_intror. assumption. }
       * { repeat destruct H0.
@@ -525,6 +531,9 @@ Proof.
     destruct H0.
     + contradict H0. 
       eapply TcRhoIncludedNoFreeVarsEps; eauto.
+      unfold included, Included, In in *. intro. intro.
+      apply HInc.
+      apply Union_introl. assumption.
     + apply IHt; auto. 
       unfold included, Included in *. 
       intros. apply HInc. 
