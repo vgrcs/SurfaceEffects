@@ -42,7 +42,7 @@ Inductive StaticAction2 : Set :=
 | SA2_Read  : rgn2_in_typ -> StaticAction2
 | SA2_Write : rgn2_in_typ -> StaticAction2.
 
-Definition Epsilon2 := Ensemble StaticAction2. (* FSetWeakList.Make (Epsilon2Decidable). *)
+Definition Epsilon2 := Ensemble StaticAction2.
 
 (* substitute for type *)
 Inductive type2 :=
@@ -150,7 +150,9 @@ Definition free_rgn_vars_in_sa2 (sa: StaticAction2) : Ensemble Name :=
   end.
 
 Definition free_rgn_vars_in_eps2 (eps: Epsilon2) : Ensemble Name := 
-  fun n => exists sa, eps sa -> (free_rgn_vars_in_sa2 sa) n.
+  fun n => exists sa,
+             ~ eps = Empty_set StaticAction2 /\
+             (eps sa -> (free_rgn_vars_in_sa2 sa) n).
  
 Fixpoint frv (t: type2) : Ensemble Name :=
   match t with
@@ -442,6 +444,8 @@ Proof.
     intro. apply H.
     unfold free_rgn_vars_in_eps2; unfold In.
     exists sa''; auto.
+    split; intuition. 
+    * subst. inversion H2.
   + intro sa. unfold In in *.
     unfold closing_rgn_in_eps2; unfold opening_rgn_in_eps2; simpl.
     intro H1.
@@ -451,6 +455,8 @@ Proof.
     intro. apply H.
     unfold free_rgn_vars_in_eps2; unfold In.
     exists sa; auto.
+    split; intuition.
+    - subst. inversion H1.  
 Qed.
 
 Lemma CLOSE_OPEN_VAR : close_open_var. 
@@ -757,12 +763,16 @@ Proof.
     intros [sa' [H1 H2]]. subst.
     rewrite subst_fresh_sa; auto.
     unfold not_set_elem, Complement, In, not in *.
-    intros. apply H. exists sa'. intuition.
+    intros. apply H. exists sa'. 
+    split; intuition.
+    + subst. inversion H1.
   - unfold In.   intros x0 H0.
     exists x0. intuition.
     rewrite subst_fresh_sa; auto.
     unfold not_set_elem, Complement, In, not in *.
-    intros. apply H. exists x0. intuition.
+    intros. apply H. exists x0. 
+    split; intuition.
+    + subst. inversion H0.
 Qed.
 
 Lemma SUBST_FRESH : subst_fresh.

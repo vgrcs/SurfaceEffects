@@ -126,10 +126,10 @@ Proof.
 
     rewrite <- H4 in TcVal_cls. 
     do 2 rewrite subst_rho_arrow in H4. inversion H4. 
-    rewrite <- H5 in TcVal_v'.
+    rewrite <- H8 in TcVal_v'.
     
     assert (Sb : Epsilon_Phi_Soundness (fold_subst_eps rho effc, bacts)).
-    rewrite <- H8; eapply IHD3 with (stty := sttya) (rho:=rho'); eauto.
+    rewrite <- H9; eapply IHD3 with (stty := sttya) (rho:=rho'); eauto.
     SCase "Extended Env".
       apply update_env.
       SSCase "TcEnv". apply update_env.
@@ -188,10 +188,10 @@ Proof.
 
     rewrite <- H4 in TcVal_cls. 
     do 2 rewrite subst_rho_arrow in H4. inversion H4. 
-    rewrite <- H5 in TcVal_v'.
+    rewrite <- H7 in TcVal_v'.
     
     assert (Sb : Epsilon_Phi_Soundness (fold_subst_eps rho effe, bacts)).
-    rewrite <- H9.
+    rewrite <- H10.
     eapply IHD3 with (stty := sttya); eauto.
     apply update_env.
     SCase "TcEnv". apply update_env.

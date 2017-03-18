@@ -306,54 +306,80 @@ Proof.
       * destruct H1; [apply H0; assumption | inversion H1; subst; intuition]. 
 Qed.
 
+Lemma EmptySetImpliesFalse_1:
+  forall (sa : Name), 
+    empty_set sa -> False.
+Proof.
+  intro. intro. inversion H.
+Qed.
+
+Lemma EmptySetImpliesFalse_2:
+  forall (sa : StaticAction2), 
+    empty_set sa -> False.
+Proof.
+  intro. intro. inversion H.
+Qed.
+
+Lemma NotFreeInEmptyEps:
+  forall x,
+    ~ free_rgn_vars_in_eps2 (Empty_set StaticAction) x.
+Proof.
+  intro x. intro. 
+  unfold free_rgn_vars_in_eps2, empty_set in H.
+  destruct H as [sa]. destruct H.
+  contradict H. reflexivity.
+Qed.
 
 Lemma TypedExpressionFrv :
   forall stty rho env ctxt rgns e t eff,
   TcEnv (stty, rho, env, ctxt) ->
-  (forall ctxt rgns x t, 
+  (forall x t, 
      find_T x ctxt = Some t ->
      included (frv t) rgns) ->
   TcExp (ctxt, rgns, e, t, eff) ->
-  included (frv t) rgns.
+  included (frv t) rgns /\ included (free_rgn_vars_in_eps2 eff) rgns.
 Proof. 
   intros stty rho env ctxt rgns e t eff HEnv HNew HExp.  
   generalize dependent stty.
   generalize dependent env.
   generalize dependent rho.  
-  dependent induction HExp; 
-  unfold included, Included, In;
-  try (solve [intros rho env stty HEnv x HFrv; inversion HFrv]).
-  - intros rho env stty HEnv x0 HFrv.
-    eapply HNew; eauto.
-  - intros rho env stty HEnv x0 HFrv.
-    inversion_clear HFrv as [? A | ?  B]; subst. 
-    + assert (H_ : included (frv tyx) rgns) by admit.
-      apply H_; auto.
-    + inversion B as [? C | ? D]; subst.
-      * { inversion C as [ ? X | ? Y ]; subst.
-          - assert (H_ : included (free_rgn_vars_in_eps2 effc) rgns) by admit.
-            apply H_; auto.
-          - assert (H_ : included (free_rgn_vars_in_eps2 effe) rgns) by admit.
-            apply H_; auto. } 
-      * { inversion D as [ ? X | ? Y ]; subst.
-          - assert (H_ : included (frv tyc) rgns) by admit.
-            apply H_; auto.
-          - assert (H_ : included (frv Ty2_Effect) rgns) by admit.
-            apply H_; auto. }
-  - intros rho env stty HEnv x0 HFrv.
-    inversion_clear HFrv as [? A | ?  B]; subst. 
-    + assert (H_ : included (frv tyr) (set_union rgns (singleton_set x))).
-      eapply IHHExp; eauto.
-      assert (H__ : included (free_rgn_vars_in_eps2 (close_var_eff x effr)) rgns) by admit.
-      apply H__; auto.
-    + unfold In in B.
-      assert (H_ : included (frv (close_var x tyr)) rgns) by admit.
-      apply H_; auto.
-  - intros rho env stty HEnv x0 HFrv.
-    assert (H_ : included (frv (Ty2_Arrow tya effc t effe Ty2_Effect)) rgns).
-    eapply IHHExp1; eauto.
-    assert (H__ : included (frv tya) rgns).
-    eapply IHHExp2; eauto.
+  generalize dependent HNew.  
+  dependent induction HExp;
+    intros HFrv rho env stty TcEnv; 
+    unfold included, Included, In;
+  try (solve [intuition; [inversion H | contradict H; apply NotFreeInEmptyEps] ]). 
+  - intuition; eapply HFrv; eauto. contradict H0; apply NotFreeInEmptyEps.
+  - assert (H' : included (frv tyc) rgns /\ included (free_rgn_vars_in_eps2 effc) rgns).
+    { eapply IHHExp1; eauto.
+      - intros. eapply HFrv with (x:=x0); eauto. admit.
+      - eapply update_env. simpl.  
+        + eapply update_env; eauto.
+          inversion TcEnv as [? ? ? ? ? FindE_T FindT_E FindET_TcVal]; subst. 
+          eapply FindET_TcVal. admit. admit.
+        + inversion TcEnv as [? ? ? ? ? FindE_T FindT_E FindET_TcVal]; subst. 
+          eapply FindET_TcVal. admit. admit. }
+    assert (H'' : included (frv Ty2_Effect) rgns /\ 
+                  included (free_rgn_vars_in_eps2 effe) rgns).
+    { eapply IHHExp2; eauto.
+      - intros. admit.
+      -  eapply update_env. simpl.  
+        + eapply update_env; eauto.
+          inversion TcEnv as [? ? ? ? ? FindE_T FindT_E FindET_TcVal]; subst. 
+          eapply FindET_TcVal. admit. admit.
+        + inversion TcEnv as [? ? ? ? ? FindE_T FindT_E FindET_TcVal]; subst. 
+          eapply FindET_TcVal. admit. admit. } 
+    split.
+    + intro. intro.
+      destruct H1.
+      * inversion H0; subst. apply H6; auto.
+      * intuition. 
+        { do 2 destruct H1.
+          - apply H3; auto.
+          - apply H5; auto.
+          - apply H2; auto.
+          - apply H4; auto. }  
+    + intro. intro. contradict H1. apply NotFreeInEmptyEps.
+  -
 Admitted.
 
 Theorem TcVal_implies_closed :
@@ -367,7 +393,7 @@ Proof.
                 intro; unfold Ensembles.In, empty_set in H; contradiction] ).
   - unfold not_set_elem, Complement; simpl.
     intro. destruct H1; [contradiction |contradict H1; apply H0].
-  - assert (forall ctxt rgns x t, find_T x ctxt = Some t -> included (frv t) rgns) by admit.
+  - assert (forall t, included (frv t) rgns) by admit.
     eapply TypedExpressionFrv in H1; eauto.  
     eapply TcRhoIncludedNoFreeVars; eauto.
   - unfold not_set_elem, Complement; simpl. 

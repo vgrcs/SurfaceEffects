@@ -608,6 +608,7 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                              (update_rec_T 
                                 (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt,
                               rgns, rho, ec, ee))) ->
+                        TcInc (ctxt, rgns, tyx) ->
                         TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) 
                                             (x, tyx) ctxt, 
                                rgns, ec, tyc, effc) ->
@@ -858,7 +859,6 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
                    TcVal (stty, Pair (v1, v2), Ty2_Pair ty1 ty2)
   | TC_Eff     : forall stty e, 
                    TcVal (stty, Eff e, Ty2_Effect)
-       
                         
 with TcEnv : (Sigma * Rho * Env * Gamma) -> Prop :=
   | TC_Env : forall stty rho env ctxt, 
@@ -879,6 +879,13 @@ with TcRho : (Rho * Omega) -> Prop :=
   | TC_Rho : forall rho rgns,
                (forall r, R.find r rho <> None <-> set_elem rgns r) ->
                TcRho (rho, rgns)
+
+with TcInc : (Gamma * Omega * tau) -> Prop :=
+     | Tc_Inc : forall ctxt rgns x t, 
+                  find_T x ctxt = Some t ->
+                  included (frv t) rgns ->
+                  TcInc (ctxt, rgns, t) 
+
 where "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (ctxt, rgns, rho, ec, ee)) : type_scope.
 
 Definition find_type_ext_stores_def  := 
@@ -896,17 +903,17 @@ Proof.
 Qed.
 
 Scheme tc_exp__xind := Induction for TcExp Sort Prop
-                        with bt__xind := Induction for BackTriangle Sort Prop
-                        with tc_val__xind := Induction for TcVal Sort Prop
-                        with tc_env__xind := Induction for TcEnv Sort Prop.
-                        (*with tc_rho__xind := Induction for TcRho Sort Prop.*)
+  with bt__xind     := Induction for BackTriangle Sort Prop
+  with tc_val__xind := Induction for TcVal Sort Prop
+  with tc_env__xind := Induction for TcEnv Sort Prop.
+  (*with tc_inc__xind := Induction for TcInc Sort Prop.*)
 
 Combined Scheme tc__xind from 
   tc_exp__xind, 
   bt__xind,
   tc_val__xind, 
   tc_env__xind.
-  (*tc_rho__xind.*)
+  (*tc_inc__xind.*)
 
 Definition get_store_typing_val {A B:Type} (p : Sigma * A * B) : Sigma   
   := fst (fst p).
