@@ -608,7 +608,7 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                              (update_rec_T 
                                 (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt,
                               rgns, rho, ec, ee))) ->
-                        TcInc (ctxt, rgns, tyx) ->
+                        included (frv tyx) rgns ->
                         TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) 
                                             (x, tyx) ctxt, 
                                rgns, ec, tyc, effc) ->
@@ -848,6 +848,7 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
                           Ty2_Ref (Rgn2_Const true true s) ty)
   | TC_Cls     : forall stty env rho e rgns ctxt t,
                    TcRho (rho, rgns) ->
+                   TcInc (ctxt, rgns) ->
                    TcEnv (stty, rho, env, ctxt) ->
                    TcExp (ctxt, rgns, e, t, Empty_Static_Action) ->
                    TcVal (stty, Cls (env, rho, e), subst_rho rho t) 
@@ -880,11 +881,11 @@ with TcRho : (Rho * Omega) -> Prop :=
                (forall r, R.find r rho <> None <-> set_elem rgns r) ->
                TcRho (rho, rgns)
 
-with TcInc : (Gamma * Omega * tau) -> Prop :=
-     | Tc_Inc : forall ctxt rgns x t, 
-                  find_T x ctxt = Some t ->
-                  included (frv t) rgns ->
-                  TcInc (ctxt, rgns, t) 
+with TcInc : (Gamma * Omega) -> Prop :=
+     | Tc_Inc : forall ctxt rgns, 
+                  (forall x t, 
+                     find_T x ctxt = Some t -> included (frv t) rgns) ->
+                  TcInc (ctxt, rgns) 
 
 where "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (ctxt, rgns, rho, ec, ee)) : type_scope.
 

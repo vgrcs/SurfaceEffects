@@ -105,7 +105,8 @@ Proof.
           by (eapply ty_sound; eauto using update_env, ext_stores__env).
         destruct argTcVal as [sttya [Weaka [TcHeapca TcVal_v']]]; eauto.
         inversion TcVal_cls as [ | | | 
-                                 ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
+                                 ? ? ? ? ? ? ? TcRho_rho' TcInc' 
+                                   TcEnv_env' TcExp_abs [A B C D HSubst] 
                                  | | |]; subst. 
         inversion TcExp_abs as [ | | | 
                                  ? ? ? ? ? ? ? ? ? ?  HBt_ec_ee TcExp_ec' TcExp_ee' 
@@ -132,7 +133,8 @@ Proof.
       destruct clsTcVal as [sttyb [Weakb [TcHeapb TcVal_cls]]]; eauto.
       
       inversion TcVal_cls as [ | | | 
-                               ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
+                               ? ? ? ? ? ? ? TcRho_rho' TcInc'
+                                 TcEnv_env' TcExp_abs [A B C D HSubst] 
                                | | |]; subst. 
       inversion TcExp_abs as [ | | | |
                                ? ? ? ? ? ? HNo HLc1 HLc2 HBt_eb HTExp_eb
@@ -162,7 +164,8 @@ Proof.
      destruct argTcVal as [sttya [Weaka [TcHeapa TcVal_v']]]; eauto.
      
      inversion TcVal_cls as [ | | | 
-                              ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
+                              ? ? ? ? ? ? ? TcRho_rho' TcInc'
+                                TcEnv_env' TcExp_abs [A B C D HSubst] 
                               | | |]; subst. 
      inversion TcExp_abs as [ | | | 
                               ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
@@ -368,7 +371,8 @@ Proof.
     destruct argTcVal as [sttya [Weaka [TcHeapa TcVal_v']]]; eauto.
     
     inversion TcVal_cls as [ | | | 
-                             ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
+                             ? ? ? ? ? ? ? TcRho_rho' TcInc' 
+                               TcEnv_env' TcExp_abs [A B C D HSubst] 
                              | | |]; subst. 
     inversion TcExp_abs as [ | | | 
                              ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
@@ -407,7 +411,8 @@ Proof.
      destruct clsTcVal as [sttyb [Weakb [TcHeapb TcVal_cls]]]; eauto.
      
      inversion TcVal_cls as [ | | | 
-                              ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
+                              ? ? ? ? ? ? ? TcRho_rho' TcInc'
+                                TcEnv_env' TcExp_abs [A B C D HSubst] 
                               | | |]; subst. 
      inversion TcExp_abs as [ | | | |
                               ? ? ? ? ? ? HNo HLc1 HLc2 HBt_eb HTExp_eb
@@ -451,7 +456,8 @@ Proof.
      destruct argTcVal as [sttya [Weaka [TcHeapa TcVal_v']]]; eauto.
      
      inversion TcVal_cls as [ | | | 
-                              ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs [A B C D HSubst] 
+                              ? ? ? ? ? ? ? TcRho_rho' TcInc'
+                                TcEnv_env' TcExp_abs [A B C D HSubst] 
                               | | |]; subst. 
      inversion TcExp_abs as [ | | | 
                               ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 

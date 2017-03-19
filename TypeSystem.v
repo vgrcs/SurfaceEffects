@@ -191,7 +191,8 @@ Qed.
  
 Lemma ty_sound_closure:  
   forall stty rgns env rho ctxt f x ec ee tyx tyc effc effe, 
-    TcRho (rho, rgns) -> 
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns)->
     TcEnv (stty, rho, env, ctxt) ->
     TcExp (ctxt, rgns,  Mu f x ec ee, Ty2_Arrow tyx effc tyc effe Ty2_Effect, Empty_Static_Action) -> 
     TcVal (stty, Cls (env, rho,  Mu f x ec ee),  subst_rho rho (Ty2_Arrow tyx effc tyc effe Ty2_Effect)).   
@@ -202,6 +203,7 @@ Qed.
 Lemma ty_sound_region_closure:
   forall stty rgns env rho ctxt x er tyr effr, 
     TcRho (rho, rgns) -> 
+    TcInc (ctxt, rgns) ->
     TcEnv (stty, rho, env,ctxt) ->
     TcExp (ctxt, rgns, Lambda x er, Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr),  Empty_Static_Action) ->
     TcVal (stty, Cls (env, rho, Lambda x er), subst_rho rho (Ty2_ForallRgn (close_var_eff x effr) (close_var x tyr))).
@@ -264,17 +266,21 @@ Proof.
   Case "mu_abs". 
     exists stty; (split; [| split]; auto).
     eapply ty_sound_closure; try (solve [eassumption]). auto.
+    assert (TcInc (ctxt, rgns)) by admit.
+    auto.
   Case "rgn_abs". 
     exists stty;  (split; [| split]; auto). 
     eapply ty_sound_region_closure; try (solve [eassumption]). auto.
+    assert (TcInc (ctxt, rgns)) by admit.
+    auto.
   Case "mu_app".   
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  
     eapply ext_stores__env; eauto.  
-    inversion TcVal_mu as [ | | | ? ? ? ? ? ? ?   TcRho_rho' TcEnv_env' TcExp_abs | | |] ; subst.      
+    inversion TcVal_mu as [ | | | ? ? ? ? ? ? ? ?  TcRho_rho' TcEnv_env' TcExp_abs | | |] ; subst.      
     inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst. 
-    rewrite <- H4 in TcVal_mu. 
-    do 2 rewrite subst_rho_arrow in H4. inversion H4.
+    rewrite <- H5 in TcVal_mu. 
+    do 2 rewrite subst_rho_arrow in H5. inversion H5.
     assert (SubstEq1: subst_rho rho' tyx = subst_rho rho tya) by assumption. 
     assert (SubstEq2: subst_rho rho' tyc = subst_rho rho t) by assumption.
     rewrite <- SubstEq1 in TcVal_arg.
@@ -286,7 +292,7 @@ Proof.
      exists sttyb; intuition.  
   Case "rgn_app".     
     edestruct IHD1 as [sttyl [Weak1 [TcHeap1 TcVal_lam]]]; eauto. 
-    inversion TcVal_lam as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_lam | | |]; subst.   
+    inversion TcVal_lam as  [ | | | ? ? ? ? ? ? ?  TcRho_rho' TcInc'  TcEnv_env' TcExp_lam | | |]; subst.   
     inversion TcExp_lam as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst.  
     edestruct IHD2 as [sttyr [Weak2 [TcHeap2 TcVal_res]]]; eauto using update_env, ext_stores__env.
     apply update_rho. assumption. assumption. eapply extended_rho; eauto. 
@@ -305,7 +311,7 @@ Proof.
   Case "eff_app".
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto.
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto using ext_stores__env.
-    inversion TcVal_mu as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcEnv_env' TcExp_abs | | |]; subst. 
+    inversion TcVal_mu as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcInc' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst. 
     edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
     SCase "Extended Env".
@@ -468,6 +474,6 @@ Proof.
   Case "eff_concat". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_top". exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_empty". exists stty. intuition. rewrite subst_rho_effect. constructor.
-Qed.
+Admitted.
 
 End TypeSoundness.
