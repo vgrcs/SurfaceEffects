@@ -409,6 +409,40 @@ Lemma TcRhoIncludedNoFreeVarsEps_aux_0:
     free_rgn_vars_in_eps2 e x.
 Admitted.
 
+Lemma SubstFVarInSaAlloc:
+  forall x x0 e r,
+    subst_sa x (Rgn2_Const true false e) (SA2_Alloc r) =
+    SA2_Alloc (Rgn2_FVar true true x0) -> x <> x0.
+Proof.
+  intros.
+  unfold subst_sa, subst_rgn in H.
+  unfold rgn2_in_typ in r.  
+  dependent induction r.
+  - inversion H.
+  - destruct (RMapProp.F.eq_dec x n).
+    + subst. inversion H.
+    + inversion H; subst. assumption.
+  - inversion H.    
+Qed.
+
+Lemma SubstFVarInEpsAlloc:
+  forall x e0 e n x0,
+    subst_eps x (Rgn2_Const true false e0) e (SA2_Alloc (Rgn2_FVar true true n)) ->
+    free_rgn_vars_in_sa2 (SA2_Alloc (Rgn2_FVar true true n)) x0 -> x <> n.
+Proof.
+  intros x e0 e n x0 H H1. 
+  unfold free_rgn_vars_in_sa2 in *.
+  unfold free_rgn_vars_in_rgn2 in *.
+  unfold subst_eps in H.  
+  do 2 destruct H.
+  induction x1.
+  eapply SubstFVarInSaAlloc; eauto.
+  - unfold rgn2_in_typ in r.
+    dependent induction r; inversion H0.
+  - unfold rgn2_in_typ in r.
+    dependent induction r; inversion H0. 
+Qed.
+
 Lemma TcRhoIncludedNoFreeVarEps_Problem:
   forall x e0 e x0,
      free_rgn_vars_in_eps2 (subst_eps x (Rgn2_Const true false e0) e) x0 ->
@@ -429,11 +463,11 @@ Proof.
     unfold subst_sa. 
     induction x1; 
     unfold rgn2_in_typ in r;
-    dependent induction r; simpl; try ( solve [reflexivity]).
-    + destruct (RMapProp.F.eq_dec x n); subst.
-      * (* SA2_Alloc (Rgn2_Const true true rc) = SA2_Alloc (Rgn2_FVar true true n) *)
-        admit.
-      * reflexivity.
+    dependent induction r; simpl; try ( solve [reflexivity]). 
+    + assert (x <> n).
+      (* cannot properly use SubstFVarInEpsAlloc ... because of (->) in H0  *)
+      admit.
+      admit.
     + admit.
     + admit.
 Admitted.
