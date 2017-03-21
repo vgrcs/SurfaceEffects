@@ -458,16 +458,17 @@ Proof.
     apply Extensionality_Ensembles; unfold Same_set, Included.
     split; intro; intro; unfold In in *; repeat destruct H1.
   - intro. apply H0.
-    unfold subst_eps.
+    unfold subst_eps. 
     exists x1. split; [assumption |]. 
     unfold subst_sa. 
     induction x1; 
     unfold rgn2_in_typ in r;
     dependent induction r; simpl; try ( solve [reflexivity]). 
-    + assert (x <> n).
+    + assert (x <> n) by admit.
       (* cannot properly use SubstFVarInEpsAlloc ... because of (->) in H0  *)
-      admit.
-      admit.
+      destruct (RMapProp.F.eq_dec x n).
+      * intuition.
+      * reflexivity.  
     + admit.
     + admit.
 Admitted.
