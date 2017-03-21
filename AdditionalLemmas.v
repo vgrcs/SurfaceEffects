@@ -409,86 +409,80 @@ Lemma TcRhoIncludedNoFreeVarsEps_aux_0:
     free_rgn_vars_in_eps2 e x.
 Admitted.
 
+Lemma TcRhoIncludedNoFreeVarEps_Problem:
+  forall x e0 e x0,
+     free_rgn_vars_in_eps2 (subst_eps x (Rgn2_Const true false e0) e) x0 ->
+     free_rgn_vars_in_eps2 e x0.
+Proof.
+  intros x e0 e x0 H.
+  unfold free_rgn_vars_in_eps2 in *.
+  destruct H. destruct H.
+  exists x1.
+  split.
+  - intuition. subst.
+    apply H.
+    apply Extensionality_Ensembles; unfold Same_set, Included.
+    split; intro; intro; unfold In in *; repeat destruct H1.
+  - intro. apply H0.
+    unfold subst_eps.
+    exists x1. split; [assumption |]. 
+    unfold subst_sa. 
+    induction x1; 
+    unfold rgn2_in_typ in r;
+    dependent induction r; simpl; try ( solve [reflexivity]).
+    + destruct (RMapProp.F.eq_dec x n); subst.
+      * (* SA2_Alloc (Rgn2_Const true true rc) = SA2_Alloc (Rgn2_FVar true true n) *)
+        admit.
+      * reflexivity.
+    + admit.
+    + admit.
+Admitted.
+
 Lemma TcRhoIncludedNoFreeVarsEps_aux_2:
 forall k rc x e,
     ~ (free_rgn_vars_in_eps2 e) x ->
-    ~ (free_rgn_vars_in_eps2 (subst_eps k rc e)) x.
+    ~ (free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const _ _ rc) e)) x.
 Proof.
   intros.
   intro. unfold not in H. apply H.
-  unfold free_rgn_vars_in_eps2 in *.
-  destruct H0. destruct H.
-  unfold rgn2_in_exp in rc.
-  dependent induction rc.
-  - exists x0.   
-    unfold subst_eps in H0.
-    split.
-    + intuition. subst.
-      apply H1.
-      apply Extensionality_Ensembles; unfold Same_set, Included.
-      split; intro; intro; unfold In in *; repeat destruct H.
-    + intro. 
-      apply H0.
-      unfold subst_eps.
-      exists x0. split; [assumption |]. 
-      unfold subst_sa. induction x0.
-      * unfold rgn2_in_typ in r0.
-        dependent induction r0; simpl; try ( solve [reflexivity]).
-        { destruct (RMapProp.F.eq_dec k n); subst.
-          - admit.
-          - reflexivity. }
-      * unfold rgn2_in_typ in r0.
-        dependent induction r0; simpl; try ( solve [reflexivity]).
-        { destruct (RMapProp.F.eq_dec k n); subst.
-          - admit.
-          - reflexivity. }
-      * unfold rgn2_in_typ in r0.
-        dependent induction r0; simpl; try ( solve [reflexivity]).
-        { destruct (RMapProp.F.eq_dec k n); subst.
-          - admit.
-          - reflexivity. }
-  - exists x0.
-    unfold subst_eps in H0.
-    intuition. subst. 
-    apply H.
-    + apply Extensionality_Ensembles; unfold Same_set, Included.
-      split; intro; intro; unfold In in *; repeat destruct H0.
-    + apply H1. clear H1. clear H.  
-      unfold subst_eps.
-      exists x0. split; [assumption |].
-      unfold subst_sa. induction x0.
-      * unfold rgn2_in_typ in r.
-        dependent induction r; simpl; try ( solve [reflexivity]).
-         { destruct (RMapProp.F.eq_dec k n0); subst.
-          - admit.
-          - reflexivity. }
-      * unfold rgn2_in_typ in r.
-        dependent induction r; simpl; try ( solve [reflexivity]).
-         { destruct (RMapProp.F.eq_dec k n0); subst.
-          - admit.
-          - reflexivity. }
-      * unfold rgn2_in_typ in r.
-        dependent induction r; simpl; try ( solve [reflexivity]).
-         { destruct (RMapProp.F.eq_dec k n0); subst.
-          - admit.
-          - reflexivity. }
+  eapply TcRhoIncludedNoFreeVarEps_Problem; eauto.
 Admitted.
 
-Lemma TcRhoIncludedNoFreeVarsEps_aux_1:
+Lemma TcRhoIncludedNoFreeVarsEps_aux_2_1:
+  forall k rc e,
+    included
+      (free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const _ _ rc) e))
+      (free_rgn_vars_in_eps2 e).
+Proof.
+  intros k rc e.
+  unfold included, Included, In.
+  intro. intro. 
+  eapply TcRhoIncludedNoFreeVarEps_Problem; eauto.
+Admitted.
+
+Lemma TcRhoIncludedNoFreeVarsEps_aux_AlsoProblem:
   forall x e0 e,
     ~ free_rgn_vars_in_eps2 (subst_in_eff x e0 e) x.
 Proof.
   intros.
-  unfold subst_in_eff.
-  apply TcRhoIncludedNoFreeVarsEps_aux_2.
-  unfold free_rgn_vars_in_eps2. intro.
-  do 2 destruct H.
-  induction x0; unfold free_rgn_vars_in_sa2 in H.
-  - unfold rgn2_in_typ in r.
-    dependent induction r.
-    + unfold free_rgn_vars_in_rgn2 in H0.
+  unfold subst_in_eff. intro.
+  apply TcRhoIncludedNoFreeVarsEps_aux_2_1 in H.
+  contradict H.
+  unfold In.
+  (* no enough assumptions *)
 Admitted.
         
+Lemma TcRhoIncludedNoFreeVarsEps_aux_1_1:
+  forall x e0 e,
+    included
+      (free_rgn_vars_in_eps2 (subst_in_eff x e0 e))
+      (free_rgn_vars_in_eps2 e).
+Proof.
+  intros.
+  unfold included, Included, In in *.
+  intro. intro. unfold subst_in_eff in H.
+  eapply TcRhoIncludedNoFreeVarEps_Problem; eauto.
+Admitted.
 
 Lemma TcRhoIncludedNoFreeVarsEps_aux_3:
   forall rho x,
@@ -524,7 +518,7 @@ Proof.
         by admit.
       auto.
     + contradict Hc.
-      eapply TcRhoIncludedNoFreeVarsEps_aux_1; eauto.
+      eapply TcRhoIncludedNoFreeVarsEps_aux_AlsoProblem; eauto.
     + contradict Hr.
       eapply IHthis1; eauto. 
       assert (R.find (elt:=Region) x
