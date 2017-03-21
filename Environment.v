@@ -316,6 +316,34 @@ Proof.
   contradict H. reflexivity.
 Qed.
 
+Lemma ExtendedTcInv:
+  forall ctxt rgns f x tyx effe tyc effc, 
+    TcInc (ctxt, rgns)->
+    find_T x ctxt = Some tyx ->
+    find_T f ctxt = Some (Ty2_Arrow tyx effc tyc effe Ty2_Effect) ->
+    TcInc (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns).
+Proof.
+  intros ctxt rgns f x tyx effe tyc effc HInc HFind1 HFind2.
+  inversion HInc as [? ? HFrv]; subst.
+  econstructor. 
+  intros. apply HFrv with (x:=x0). 
+  unfold update_rec_T in H; simpl in H.
+  destruct (AsciiVars.eq_dec x0 x) as [c | c].
+  - inversion c; subst.
+    unfold find_T in H.
+    rewrite E_same_key in H.
+    inversion H; subst.
+    assumption.
+  - unfold AsciiVars.eq in c.  
+    eapply E_diff_key_1 in H; eauto.
+    destruct (AsciiVars.eq_dec x0 f) as [d | d].
+    + inversion d; subst.
+      rewrite E_same_key in H.
+      inversion H; subst.
+      assumption.
+    + eapply E_diff_key_1 in H; eauto.
+Qed.
+
 Lemma TypedExpressionFrv :
   forall ctxt rgns e t eff,
   TcInc (ctxt, rgns) ->
@@ -331,22 +359,16 @@ Proof.
     intuition; eapply HFrv; eauto. contradict H0; apply NotFreeInEmptyEps.
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv tyc) rgns /\ included (free_rgn_vars_in_eps2 effc) rgns).
-    { eapply IHHExp1; eauto.
-      - intros. econstructor.
-        intros. eapply HFrv. 
-        admit. }
-    assert (H'' : included (frv Ty2_Effect) rgns /\ 
-                  included (free_rgn_vars_in_eps2 effe) rgns).
-    eapply IHHExp2; eauto.
-    admit. 
-    split.
-    + intro. intro.
-      destruct H1.
-      * apply H0; auto.
-      * intuition. 
-        do 2 destruct H1;
-        try (solve [apply H2; auto | apply H3; auto | apply H4; auto | apply H5; auto]).
-    + intro. intro. contradict H1. apply NotFreeInEmptyEps.
+    { eapply IHHExp1; eauto; apply ExtendedTcInv; eauto. }
+   
+    { assert (H'' : included (frv Ty2_Effect) rgns /\ 
+                    included (free_rgn_vars_in_eps2 effe) rgns).
+      eapply IHHExp2; eauto.
+      - apply ExtendedTcInv; eauto.
+      - split.
+        + intro. intro.
+          eapply HFrv; eauto.
+        + intro. intro. contradict H2. apply NotFreeInEmptyEps. }
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv tyr) (set_union rgns (singleton_set x)) /\ 
                  included (free_rgn_vars_in_eps2 effr) (set_union rgns (singleton_set x))).
@@ -366,15 +388,15 @@ Proof.
       * assert (H': (forall x0 : Name, 
                        frv tyr x0 -> set_union rgns (singleton_set x) x0) ->
                     (forall x0 : Name,
-                        frv (close_var x tyr) x0 -> rgns x0)) by admit.
-      eapply H' in H3; eauto.
+                       frv (close_var x tyr) x0 -> rgns x0)) by admit.
+        eapply H' in H3; eauto.
     + intros. contradict H3. apply NotFreeInEmptyEps.
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv (Ty2_Arrow tya effc t effe Ty2_Effect)) rgns /\ 
                  included (free_rgn_vars_in_eps2 efff) rgns).
     eapply IHHExp1; eauto.
     assert (H'' : included (frv tya) rgns /\ 
-                 included (free_rgn_vars_in_eps2 effa) rgns).
+                  included (free_rgn_vars_in_eps2 effa) rgns).
     eapply IHHExp2; eauto.
     intuition.
     + admit.

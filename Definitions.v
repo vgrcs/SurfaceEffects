@@ -586,6 +586,17 @@ Notation "'⊤'" := (Top) (at level 60).
 Notation "a '⊕' b" := (Concat a b) (at level 60).
 
 
+Inductive TcRho : (Rho * Omega) -> Prop :=
+  | TC_Rho : forall rho rgns,
+               (forall r, R.find r rho <> None <-> set_elem rgns r) ->
+               TcRho (rho, rgns).
+
+Inductive TcInc : (Gamma * Omega) -> Prop :=
+     | Tc_Inc : forall ctxt rgns, 
+                  (forall x t, 
+                     find_T x ctxt = Some t -> included (frv t) rgns) ->
+                  TcInc (ctxt, rgns). 
+
 Inductive TcRgn : (Omega * rgn2_in_exp) -> Prop :=
   | TC_Rgn_Const : forall rgns s,
                       TcRgn (rgns, Rgn2_Const true false s)
@@ -608,7 +619,8 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                              (update_rec_T 
                                 (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt,
                               rgns, rho, ec, ee))) ->
-                        included (frv tyx) rgns ->
+                        find_T x ctxt = Some tyx ->
+                        find_T f ctxt = Some (Ty2_Arrow tyx effc tyc effe Ty2_Effect) ->
                         TcExp (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) 
                                             (x, tyx) ctxt, 
                                rgns, ec, tyc, effc) ->
@@ -875,17 +887,6 @@ with TcEnv : (Sigma * Rho * Env * Gamma) -> Prop :=
                   find_T x ctxt = Some t ->
                   TcVal (stty, v, subst_rho rho t)) ->
                TcEnv (stty, rho, env, ctxt)
-                     
-with TcRho : (Rho * Omega) -> Prop :=
-  | TC_Rho : forall rho rgns,
-               (forall r, R.find r rho <> None <-> set_elem rgns r) ->
-               TcRho (rho, rgns)
-
-with TcInc : (Gamma * Omega) -> Prop :=
-     | Tc_Inc : forall ctxt rgns, 
-                  (forall x t, 
-                     find_T x ctxt = Some t -> included (frv t) rgns) ->
-                  TcInc (ctxt, rgns) 
 
 where "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" := (BackTriangle (ctxt, rgns, rho, ec, ee)) : type_scope.
 
@@ -907,14 +908,12 @@ Scheme tc_exp__xind := Induction for TcExp Sort Prop
   with bt__xind     := Induction for BackTriangle Sort Prop
   with tc_val__xind := Induction for TcVal Sort Prop
   with tc_env__xind := Induction for TcEnv Sort Prop.
-  (*with tc_inc__xind := Induction for TcInc Sort Prop.*)
 
 Combined Scheme tc__xind from 
   tc_exp__xind, 
   bt__xind,
   tc_val__xind, 
   tc_env__xind.
-  (*tc_inc__xind.*)
 
 Definition get_store_typing_val {A B:Type} (p : Sigma * A * B) : Sigma   
   := fst (fst p).
