@@ -9,6 +9,7 @@ Require Import Coq.Program.Equality.
 Require Import Top0.Axioms.
 Require Import Top0.TypeLemmas.
 Require Import Top0.AdditionalLemmas.
+Require Import Top0.CorrectnessLemmas.
 Require Import Top0.Heap.
 
 Module STMapP := FMapFacts.Facts ST.
@@ -344,6 +345,297 @@ Proof.
     + eapply E_diff_key_1 in H; eauto.
 Qed.
 
+Axiom RegionAbsFrv_1:
+   forall effr rgns (x : Name) n, 
+     included (free_rgn_vars_in_eps2 effr) (set_union rgns (singleton_set x)) ->
+     included (free_rgn_vars_in_eps2 (closing_rgn_in_eps2 n x effr)) rgns.
+
+Lemma EmptyUnionisEmptySet_Name_Left :
+  forall acts,
+    Union Name (Empty_set Name) acts = acts.
+Proof.
+  intros acts;
+  apply Extensionality_Ensembles;
+  unfold Same_set, Included;
+  split.
+  - intros x Hx. unfold In in *. destruct Hx; auto. inversion H.
+  - intros x Hx. apply Union_intror. assumption.
+Qed. 
+
+Lemma EmptyUnionisEmptySet_Name_Right :
+  forall acts,
+    Union Name acts (Empty_set Name) = acts.
+Proof.
+  intros acts;
+  apply Extensionality_Ensembles;
+  unfold Same_set, Included;
+  split.
+  - intros x Hx. unfold In in *. destruct Hx; auto. inversion H.
+  - intros x Hx. apply Union_introl. assumption.
+Qed. 
+
+Lemma IncludedRemoveSingleton:
+  forall n x rgns,
+    n <> x ->
+    included (singleton_set n) (Union Name rgns (singleton_set x)) ->
+    included (singleton_set n) rgns.
+Proof.
+  intros n x rgns H1 H2.
+  unfold included, Included, In in *. 
+  intro. intro.  destruct (H2 x0); auto.  
+  inversion H; subst. 
+  contradict H0. intro. inversion H0. 
+  apply H1. symmetry. assumption.
+Qed.
+
+Lemma IncludedUnion_Name_1:
+  forall (a b : Ensemble Name) rgns,
+    included (set_union a b) rgns ->
+    included a rgns /\
+    included b rgns.
+Proof.
+  intros.
+  split.
+  - intro. intro. apply H.
+    apply Union_introl. assumption.
+  - intro. intro. apply H.
+    + apply Union_intror. assumption.
+Qed.
+
+Lemma IncludedUnion_Name_2:
+  forall (a b c d : Ensemble Name) rgns,
+    included (set_union a (set_union b c))
+             (set_union rgns d) ->
+    included (set_union a b)
+             (set_union rgns d) /\
+    included (set_union a c)
+             (set_union rgns d).
+Proof.
+  intros.
+  split.
+  - intro. intro. apply H.
+    unfold In, set_union in *.
+    inversion H0; subst.
+    + apply Union_introl. assumption.
+    + apply Union_intror. apply Union_introl. assumption.
+  - intro. intro. apply H.
+    unfold In, set_union in *.
+    inversion H0; subst.
+    + apply Union_introl. assumption.
+    + apply Union_intror. apply Union_intror. assumption.    
+Qed.
+
+Lemma IncludedUnion_Name_5:
+  forall (a b c : Ensemble Name) rgns,
+    included (set_union a b)
+             (set_union rgns c) ->
+    included a (set_union rgns c) /\
+    included b (set_union rgns c).
+Proof.
+  intros.
+  split.
+  - intro. intro. apply H.
+    apply Union_introl. assumption.
+  - intro. intro. apply H.
+    apply Union_intror. assumption.    
+Qed.
+
+
+Lemma IncludedUnion_Name_3:
+  forall (a b c : Ensemble Name) rgns,
+    included (set_union a b) rgns /\
+    included (set_union a c) rgns ->
+    included (set_union a (set_union b c)) rgns.
+Proof.
+  intros. 
+  intro. intro. unfold In, set_union in *.
+  destruct H.
+  apply IncludedUnion_Name_1 in H. destruct H.
+  apply IncludedUnion_Name_1 in H1. destruct H1.
+  repeat destruct H0; [apply H | apply H2 | apply H3]; assumption. 
+Qed.
+
+Lemma IncludedUnion_Name_4:
+  forall (a b c : Ensemble Name) rgns,
+    included (set_union a b) rgns /\
+    included (set_union a c) rgns ->
+    included (set_union a (set_union c b)) rgns.
+Proof.
+  intros. 
+  intro. intro. unfold In, set_union in *.
+  destruct H.
+  apply IncludedUnion_Name_1 in H. destruct H.
+  apply IncludedUnion_Name_1 in H1. destruct H1.
+  repeat destruct H0; [apply H1 | apply H3 | apply H2]; assumption. 
+Qed.
+
+Lemma IncludedUnion_Name_6:
+  forall (a b: Ensemble Name) rgns,
+    included a rgns /\
+    included b rgns ->
+    included (set_union a b) rgns.
+Proof.
+  intros. 
+  intro. intro. unfold In, set_union in *.
+  destruct H0; destruct H; [apply H | apply H1]; assumption. 
+Qed.
+
+Lemma RegionAbsFrv_2:
+  forall tyr x r rgns,
+    included (set_union (free_rgn_vars_in_rgn2 r) (frv tyr))
+             (set_union rgns (singleton_set x)) ->
+    included
+      (set_union (free_rgn_vars_in_rgn2 (closing_rgn_in_rgn2 0 x r))
+                 (frv (closing_rgn_exp 0 x tyr))) rgns.
+Proof.
+  intros tyr x r rgns H.
+  unfold free_rgn_vars_in_rgn2.
+  generalize 0.
+  dependent induction tyr; simpl in *; intro.
+  - unfold rgn2_in_typ in r.
+    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
+    + rewrite EmptyUnionisEmptySet_Name_Left.
+      unfold included, Included, In in *.
+      intro. intro. inversion H0.
+    + destruct (RMapProp.F.eq_dec n x); subst.
+      * simpl in *. intro. intro.
+        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
+      * rewrite EmptyUnionisEmptySet_Name_Right in H.
+        rewrite EmptyUnionisEmptySet_Name_Right.
+        apply IncludedRemoveSingleton in H; auto.
+    + rewrite EmptyUnionisEmptySet_Name_Right.
+      intro. intro. inversion H0.
+  - unfold rgn2_in_typ in r.
+    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
+    + rewrite EmptyUnionisEmptySet_Name_Left.
+      unfold included, Included, In in *.
+      intro. intro. inversion H0.
+    + destruct (RMapProp.F.eq_dec n x); subst.
+      * simpl in *. intro. intro.
+        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
+      * rewrite EmptyUnionisEmptySet_Name_Right in H.
+        rewrite EmptyUnionisEmptySet_Name_Right.
+        apply IncludedRemoveSingleton in H; auto.
+    + rewrite EmptyUnionisEmptySet_Name_Right.
+      intro. intro. inversion H0.
+  - unfold rgn2_in_typ in r.
+    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
+    + rewrite EmptyUnionisEmptySet_Name_Left.
+      unfold included, Included, In in *.
+      intro. intro. inversion H0.
+    + destruct (RMapProp.F.eq_dec n x); subst.
+      * simpl in *. intro. intro.
+        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
+      * rewrite EmptyUnionisEmptySet_Name_Right in H.
+        rewrite EmptyUnionisEmptySet_Name_Right.
+        apply IncludedRemoveSingleton in H; auto.
+    + rewrite EmptyUnionisEmptySet_Name_Right.
+      intro. intro. inversion H0.
+  - unfold rgn2_in_typ in r.
+    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
+    + rewrite EmptyUnionisEmptySet_Name_Left.
+      unfold included, Included, In in *.
+      intro. intro. inversion H0.
+    + destruct (RMapProp.F.eq_dec n x); subst.
+      * simpl in *. intro. intro.
+        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
+      * rewrite EmptyUnionisEmptySet_Name_Right in H.
+        rewrite EmptyUnionisEmptySet_Name_Right.
+        apply IncludedRemoveSingleton in H; auto.
+    + rewrite EmptyUnionisEmptySet_Name_Right.
+      intro. intro. inversion H0.
+  - apply IncludedUnion_Name_2 in H. destruct H.
+    apply IncludedUnion_Name_3.
+    split; [apply IHtyr1 | apply IHtyr2]; assumption.
+  - apply IncludedUnion_Name_4.
+    split.
+    + apply IHtyr. 
+      intro. intro. apply H.
+      destruct H0.
+      * apply Union_introl. assumption.
+      * apply Union_intror. apply Union_intror. assumption.
+    + apply IncludedUnion_Name_2 in H. destruct H.
+      apply IncludedUnion_Name_5 in H. destruct H.
+      apply IncludedUnion_Name_5 in H0. destruct H0.
+      apply IncludedUnion_Name_6.
+      split.
+      * admit.
+      * admit.
+  - apply IncludedUnion_Name_4.
+    split.
+    + apply IncludedUnion_Name_4.
+      split.
+      * { apply IncludedUnion_Name_4.
+          - split.
+            apply IHtyr3. intro. intro.
+            apply H.
+            destruct H0.
+            + apply Union_introl. assumption.
+            + apply Union_intror. apply Union_intror. apply Union_intror. apply Union_intror. assumption.
+            + apply IHtyr2. intro. intro.
+              apply H.
+              destruct H0.
+              * apply Union_introl. assumption.
+              * apply Union_intror. apply Union_intror. apply Union_intror. apply Union_introl. assumption.  
+        }
+      * { apply IncludedUnion_Name_4.
+          - split.
+            + apply IncludedUnion_Name_2 in H. destruct H.
+              apply IncludedUnion_Name_2 in H0. destruct H0.
+              apply IncludedUnion_Name_2 in H0. destruct H0.
+              apply IncludedUnion_Name_2 in H1. destruct H1.
+              apply IncludedUnion_Name_5 in H2. destruct H2.
+              apply IncludedUnion_Name_6.
+              split. 
+              * admit.
+              * eapply RegionAbsFrv_1; eauto.
+            + apply IncludedUnion_Name_2 in H. destruct H. 
+              apply IncludedUnion_Name_2 in H0. destruct H0. clear H1.
+              apply IncludedUnion_Name_2 in H0. destruct H0. clear H1.
+              apply IncludedUnion_Name_5 in H. destruct H.
+              apply IncludedUnion_Name_5 in H0. destruct H0. clear H0. clear H1.              
+              apply IncludedUnion_Name_6.
+              split. 
+              * admit.
+              * eapply RegionAbsFrv_1; eauto.
+        }
+    + apply IHtyr1. intro. intro.
+      apply H.
+      destruct H0.
+      * apply Union_introl. assumption.
+      * apply Union_intror. apply Union_introl. assumption.
+  - apply IncludedUnion_Name_4.
+    split.
+    + apply IncludedUnion_Name_2 in H. destruct H. 
+      apply IncludedUnion_Name_5 in H0. destruct H0.
+      apply IncludedUnion_Name_5 in H. destruct H.
+      eapply IHtyr.
+      * admit.
+      * admit. 
+    + admit.
+Admitted.        
+
+Lemma RegionAbsFrv_3:
+   forall tyr rgns (x : Name), 
+     included (frv tyr) (set_union rgns (singleton_set x)) ->
+     included (frv (close_var x tyr)) rgns. 
+Proof.
+  intros tyr rgns x H.
+  dependent induction tyr; simpl in *;
+  try (solve [intro; intro; inversion H0]).
+  - unfold included, Included, In in *. 
+    intro. intro.  
+    destruct H0.
+    + eapply IHtyr1; auto. 
+      intro. intro. apply H.
+      apply Union_introl. assumption. assumption.
+    + eapply IHtyr2; auto.
+      intro. intro. apply H.
+      apply Union_intror. assumption. assumption.
+  -  
+Admitted.  
+
+
 Lemma TypedExpressionFrv :
   forall ctxt rgns e t eff,
   TcInc (ctxt, rgns) ->
@@ -380,16 +672,8 @@ Proof.
     intuition.
     + unfold included, Included in *.
       destruct H5; unfold In in *.
-      * assert (H': (forall x0 : Name, 
-                       free_rgn_vars_in_eps2 effr x0 -> set_union rgns (singleton_set x) x0) ->
-                    (forall x0 : Name,
-                       free_rgn_vars_in_eps2 (close_var_eff x effr) x0 -> rgns x0)) by admit.
-        eapply H' in H4; eauto.
-      * assert (H': (forall x0 : Name, 
-                       frv tyr x0 -> set_union rgns (singleton_set x) x0) ->
-                    (forall x0 : Name,
-                       frv (close_var x tyr) x0 -> rgns x0)) by admit.
-        eapply H' in H3; eauto.
+      * eapply RegionAbsFrv_1; eauto.
+      * eapply RegionAbsFrv_3; eauto.
     + intros. contradict H3. apply NotFreeInEmptyEps.
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv (Ty2_Arrow tya effc t effe Ty2_Effect)) rgns /\ 
