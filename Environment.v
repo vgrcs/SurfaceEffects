@@ -470,11 +470,10 @@ Proof.
 Qed.
 
 Axiom IncludedUnion_Static_Action_4:
-  forall (a b c : Ensemble StaticAction2) rgns x,
+  forall (a b : Ensemble StaticAction2) rgns x,
     (free_rgn_vars_in_eps2 a x -> rgns x) ->
-    (free_rgn_vars_in_eps2 b x -> rgns x) ->
-    (free_rgn_vars_in_eps2 c x -> rgns x) ->                               
-    (free_rgn_vars_in_eps2 (Union_Static_Action (Union_Static_Action a b) c) x -> rgns x).
+    (free_rgn_vars_in_eps2 b x -> rgns x) ->                        
+    (free_rgn_vars_in_eps2 (Union_Static_Action a b) x -> rgns x).
 
 Lemma IncludedUnion_Name_6:
   forall (a b: Ensemble Name) rgns,
@@ -553,6 +552,116 @@ Proof.
       apply H. apply Union_intror. assumption. 
 Qed.  
 
+Lemma RegionAppFrv_2:
+  forall region r x n,
+    lc_type_rgn r ->
+    free_rgn_vars_in_rgn2 (opening_rgn_in_rgn2 n region r) x ->
+    free_rgn_vars_in_rgn2 r x.
+Proof.
+  intros.
+  unfold rgn2_in_typ in r.
+  dependent induction r; simpl in *.
+  - inversion H0.
+  - assumption.
+  - inversion H.
+Qed.
+
+
+Axiom RegionAppFrv_3:
+  forall region e x n,
+    lc_type_eps e ->
+    free_rgn_vars_in_eps2 (opening_rgn_in_eps2 n region e) x ->
+    free_rgn_vars_in_eps2 e x.
+
+Lemma RegionAppFrv_1:
+  forall tyr rgns w,
+    lc_type tyr ->
+    included (frv tyr) rgns ->
+    included (frv (open (mk_rgn_type w) tyr)) rgns.
+Proof.
+  intros tyr rgns w Hlc H.
+  unfold open.
+  generalize 0.
+  unfold rgn2_in_exp in w; intro.
+  dependent induction w; simpl.
+  - dependent induction tyr; simpl in *;
+    inversion Hlc; subst;
+    try (solve [do 2 intro; inversion H | do 2 intro; inversion H0]).
+    + apply IncludedUnion_Name_6.
+      split; [apply IHtyr1 |  apply IHtyr2]; auto.
+      * do 2 intro. apply H; simpl.
+        apply Union_introl. assumption.
+      * do 2 intro. apply H; simpl.
+        apply Union_intror. assumption. 
+    + apply IncludedUnion_Name_6.
+      split.
+      * do 2 intro. apply H; simpl.
+        apply Union_introl. unfold In in *. 
+        eapply RegionAppFrv_2; eauto.
+      * apply IHtyr; auto. do 2 intro. 
+        apply H; simpl.
+        apply Union_intror. assumption. 
+    + apply IncludedUnion_Name_6. 
+      split; [apply IHtyr1; auto; do 2 intro; apply H; simpl; apply Union_introl; assumption |].
+      apply IncludedUnion_Name_6.
+      split; [apply IncludedUnion_Name_6; split | apply IncludedUnion_Name_6; split].
+      * do 2 intro. apply H; simpl. 
+        apply Union_intror. apply Union_introl. apply Union_introl.
+        unfold In in *.
+        eapply RegionAppFrv_3; eauto.
+      * do 2 intro. apply H; simpl. 
+        apply Union_intror. apply Union_introl. apply Union_intror.
+        unfold In in *.
+        eapply RegionAppFrv_3; eauto.
+      * apply IHtyr2; auto; do 2 intro; apply H; simpl. 
+        apply Union_intror; apply Union_intror. apply Union_introl. assumption.
+      * apply IHtyr3; auto; do 2 intro; apply H; simpl. 
+        apply Union_intror; apply Union_intror. apply Union_intror. assumption.
+    + apply IncludedUnion_Name_6. 
+      split; [| apply IHtyr; auto; do 2 intro; apply H; simpl; apply Union_intror; assumption].
+      do 2 intro. apply H; simpl in *.
+      apply Union_introl.  unfold In in *.
+      eapply RegionAppFrv_3; eauto.
+  - dependent induction tyr; simpl;
+    inversion Hlc; subst;
+    try (solve [do 2 intro; inversion H0]).
+    + apply IncludedUnion_Name_6.
+      split; [apply IHtyr1 |  apply IHtyr2]; auto.
+      * do 2 intro. apply H; simpl.
+        apply Union_introl. assumption.
+      * do 2 intro. apply H; simpl.
+        apply Union_intror. assumption. 
+    + apply IncludedUnion_Name_6.
+      split.
+      * do 2 intro. apply H; simpl.
+        apply Union_introl. unfold In in *. 
+        eapply RegionAppFrv_2; eauto.
+      * apply IHtyr; auto. do 2 intro. 
+        apply H; simpl.
+        apply Union_intror. assumption. 
+    + apply IncludedUnion_Name_6. 
+      split; [apply IHtyr1; auto; do 2 intro; apply H; simpl; apply Union_introl; assumption |].
+      apply IncludedUnion_Name_6.
+      split; [apply IncludedUnion_Name_6; split | apply IncludedUnion_Name_6; split].
+      * do 2 intro. apply H; simpl. 
+        apply Union_intror. apply Union_introl. apply Union_introl.
+        unfold In in *.
+        eapply RegionAppFrv_3; eauto.
+      * do 2 intro. apply H; simpl. 
+        apply Union_intror. apply Union_introl. apply Union_intror.
+        unfold In in *.
+        eapply RegionAppFrv_3; eauto.
+      * apply IHtyr2; auto; do 2 intro; apply H; simpl. 
+        apply Union_intror; apply Union_intror. apply Union_introl. assumption.
+      * apply IHtyr3; auto; do 2 intro; apply H; simpl. 
+        apply Union_intror; apply Union_intror. apply Union_intror. assumption.
+    + apply IncludedUnion_Name_6. 
+      split; [| apply IHtyr; auto; do 2 intro; apply H; simpl; apply Union_intror; assumption].
+      do 2 intro. apply H; simpl in *.
+      apply Union_introl.  unfold In in *.
+      eapply RegionAppFrv_3; eauto.
+Qed.
+
 Lemma TypedExpressionFrv :
   forall ctxt rgns e t eff,
   TcInc (ctxt, rgns) ->
@@ -602,7 +711,7 @@ Proof.
     + replace (forall x : Name, frv t x -> rgns x)
       with (included (frv t) rgns) by (unfold included, Included, In; reflexivity).
       assumption.
-    + intro. apply IncludedUnion_Static_Action_4. 
+    + intro. apply IncludedUnion_Static_Action_4; [apply IncludedUnion_Static_Action_4 |].
       * apply H3.
       * apply H5.
       * apply H1.
@@ -610,43 +719,162 @@ Proof.
     assert (H' : included (frv (Ty2_ForallRgn effr tyr)) rgns /\ 
                  included (free_rgn_vars_in_eps2 efff) rgns).
     eapply IHHExp; eauto.
-    intuition.
-    + unfold included, Included, In in *.
-      assert (H': (forall x0 : Name, 
-                       frv (Ty2_ForallRgn effr tyr) x0 -> rgns x0) ->
-                    (forall x0 : Name,
-                       frv (open (mk_rgn_type w) tyr) x0 -> rgns x0)) by admit.
-      eapply H' in H0; eauto.
-    + unfold included, Included, In in *.
-      assert (H': (forall x0 : Name, 
-                       free_rgn_vars_in_eps2 efff x0 -> rgns x0) ->
-                    (forall x0 : Name,
-                       free_rgn_vars_in_eps2
-                         (Union_Static_Action 
-                            efff 
-                            (open_rgn_eff (mk_rgn_type w) effr)) x0 -> 
-                    rgns x0)) by admit.
-      eapply H' in H1; eauto.
-  - inversion HInc as [? ? HFrv]; subst.
+    destruct H' as [H2 H3].
+    split.
+    + simpl in H2.
+      apply IncludedUnion_Name_1 in H2. 
+      destruct H2 as [H4 H5].
+      apply RegionAppFrv_1; auto.
+    + intro. apply IncludedUnion_Static_Action_4.
+      * apply H3.
+      * apply H1.
+  -inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv ( Ty2_Arrow tya effc tyc effe Ty2_Effect)) rgns /\ 
                  included (free_rgn_vars_in_eps2 efff) rgns).
     eapply IHHExp1; eauto.
     assert (H'' : included (frv tya) rgns /\ 
                   included (free_rgn_vars_in_eps2 effa) rgns).
     eapply IHHExp2; eauto.
-    intuition.
-    + inversion H3.
-    + unfold included, Included, In in *. 
-      assert (H': (forall x0 : Name, 
-                       free_rgn_vars_in_eps2 efff x0 -> rgns x0) ->
-                  (forall x0 : Name, 
-                     free_rgn_vars_in_eps2 effa x0 -> rgns x0) ->
-                    (forall x0 : Name,
-                       free_rgn_vars_in_eps2
-                         (Union_Static_Action efff effa) x0 -> 
-                    rgns x0)) by admit. 
-      apply H'; auto. clear H'.
-Admitted.
+    destruct H' as [H1 H2].
+    destruct H'' as [H3 H4].
+    split.
+    + do 2 intro. inversion H0.
+    + intro. apply IncludedUnion_Static_Action_4; [apply IncludedUnion_Static_Action_4 |].
+      * apply H2.
+      * apply H4. 
+      * apply H. 
+  - assert (H1 : included (frv ty1) rgns /\ included (free_rgn_vars_in_eps2 eff1) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H2 : included (frv ty2) rgns /\ included (free_rgn_vars_in_eps2 eff2) rgns)
+      by (eapply IHHExp2; eauto).
+    assert (H3 : included (frv ty3) rgns /\ included (free_rgn_vars_in_eps2 eff3) rgns)
+      by (eapply IHHExp3; eauto).
+    assert (H4 : included (frv ty4) rgns /\ included (free_rgn_vars_in_eps2 eff4) rgns)
+      by (eapply IHHExp4; eauto).
+    split.
+    + do 2 intro. simpl in H.
+      destruct H.
+      * destruct H1. apply H0. assumption.
+      * destruct H2. apply H0. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; 
+             [apply IncludedUnion_Static_Action_4; [apply IncludedUnion_Static_Action_4 |] |];
+             [destruct H3 | destruct H4 | destruct H2 | destruct H1]; apply H0. 
+  - assert (H1 : included (frv t0) rgns /\ included (free_rgn_vars_in_eps2 veff) rgns)
+      by (eapply IHHExp; eauto).
+    destruct H1 as [H2 H3].
+    split.
+    + do 2 intro. simpl in H.
+      rewrite EmptyUnionisEmptySet_Name_Left in H.
+      apply H2. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; [apply H3 |].
+      simpl. apply H0. 
+  - assert (H2 : included (frv (Ty2_Ref (mk_rgn_type (Rgn2_Const true false s)) t)) rgns /\ 
+                 included (free_rgn_vars_in_eps2 aeff) rgns)
+      by (eapply IHHExp; eauto).
+    destruct H2 as [H3 H4].
+    split.
+    + do 2 intro. apply H3; simpl.
+      apply Union_intror. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; [apply H4 |].
+      simpl. apply H1.
+  - assert (H2 : included (frv (Ty2_Ref (mk_rgn_type (Rgn2_Const true false s)) t0)) rgns /\ 
+                 included (free_rgn_vars_in_eps2 aeff) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H3 : included (frv t0) rgns /\ 
+                 included (free_rgn_vars_in_eps2 veff) rgns)
+      by (eapply IHHExp2; eauto).
+     destruct H2 as [H4 H5].
+     destruct H3 as [H6 H7].
+     split.
+     + do 2 intro. inversion H.
+     + intro.  apply IncludedUnion_Static_Action_4; [ apply IncludedUnion_Static_Action_4  |].
+       * apply H5.
+       * apply H7. 
+       * simpl. apply H1. 
+  - assert (H1 : included (frv Ty2_Boolean) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff0) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H2 : included (frv t) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff1) rgns)
+      by (eapply IHHExp2; eauto).
+    assert (H3 : included (frv t) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff2) rgns)
+      by (eapply IHHExp3; eauto).
+    destruct H1 as [H4 H5].
+    destruct H2 as [H6 H7].
+    destruct H3 as [H8 H9].
+    split.
+    + do 2 intro. apply H6. assumption.
+    + intro.  apply IncludedUnion_Static_Action_4; [ | apply IncludedUnion_Static_Action_4 ].
+      * apply H5.
+      * apply H7.
+      * apply H9. 
+  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff1) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff2) rgns)
+      by (eapply IHHExp2; eauto).
+    destruct H1 as [H3 H4].
+    destruct H2 as [H5 H6].
+    split.
+    + do 2 intro. apply H3. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
+  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff1) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff2) rgns)
+      by (eapply IHHExp2; eauto).
+    destruct H1 as [H3 H4].
+    destruct H2 as [H5 H6].
+    split.
+    + do 2 intro. apply H3. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
+  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff1) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff2) rgns)
+      by (eapply IHHExp2; eauto).
+    destruct H1 as [H3 H4].
+    destruct H2 as [H5 H6].
+    split.
+    + do 2 intro. apply H3. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
+  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff1) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff2) rgns)
+      by (eapply IHHExp2; eauto).
+    destruct H1 as [H3 H4].
+    destruct H2 as [H5 H6].
+    split.
+    + do 2 intro. apply H3. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
+  - assert (H1 : included (frv (Ty2_Ref (Rgn2_Const true true r) t0)) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff) rgns)
+      by (eapply IHHExp; eauto).
+    destruct H1 as [H2 H3].
+    intuition. inversion H.
+  - assert (H1 : included (frv (Ty2_Ref (Rgn2_Const true true r) t0)) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff) rgns)
+      by (eapply IHHExp; eauto).
+    destruct H1 as [H2 H3].
+    intuition. inversion H.
+  - assert (H1 : included (frv Ty2_Effect) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff1) rgns)
+      by (eapply IHHExp1; eauto).
+    assert (H2 : included (frv Ty2_Effect) rgns /\ 
+                 included (free_rgn_vars_in_eps2 eff2) rgns)
+      by (eapply IHHExp2; eauto).
+    destruct H1 as [H3 H4].
+    destruct H2 as [H5 H6].
+    split.
+    + do 2 intro. apply H3. assumption.
+    + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
+Qed.
 
 Theorem TcVal_implies_closed :
   forall stty v t,

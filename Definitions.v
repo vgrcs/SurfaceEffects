@@ -651,11 +651,14 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
   | TC_Rgn_App     : forall ctxt rgns er w tyr effr efff,
                        TcExp (ctxt, rgns, er, Ty2_ForallRgn effr tyr, efff) ->
                        TcRgn (rgns, w) ->
+                       lc_type tyr ->
+                       included (free_rgn_vars_in_eps2 (open_rgn_eff (mk_rgn_type w) effr)) rgns ->
                        TcExp (ctxt, rgns,  Rgn_App er w, open (mk_rgn_type w) tyr,
                               Union_Static_Action efff (open_rgn_eff (mk_rgn_type w) effr))
   | TC_Eff_App     : forall ctxt rgns ef ea tya effc tyc effe efff effa,
                        TcExp (ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
                        TcExp (ctxt, rgns, ea, tya, effa) ->
+                       included (free_rgn_vars_in_eps2 effe) rgns ->
                        TcExp (ctxt, rgns, Eff_App ef ea, 
                               Ty2_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
   | TC_Pair_Par    : forall ctxt rgns ef1 ea1 ef2 ea2 ty1 ty2 ty3 ty4 eff1 eff2 eff3 eff4,
@@ -670,14 +673,18 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
   | TC_New_Ref     : forall ctxt rgns e t veff w s,      
                        TcExp (ctxt, rgns, e, t, veff) -> 
                        w = Rgn2_Const true false s ->
+                       included (free_rgn_vars_in_eps2 
+                                   (Singleton_Static_Action (SA_Alloc (mk_rgn_type w)))) rgns ->
                        TcExp (ctxt, rgns, Ref w e, Ty2_Ref (mk_rgn_type w) t,
                               Union_Static_Action veff 
                                                   (Singleton_Static_Action 
-                                                     (SA_Alloc(mk_rgn_type w))))
+                                                     (SA_Alloc (mk_rgn_type w))))
   | TC_Get_Ref     : forall ctxt rgns e t aeff w s,
                        w = Rgn2_Const true false s ->
                        TcExp (ctxt, rgns, e, Ty2_Ref (mk_rgn_type w) t, aeff) ->
                        TcRgn (rgns, w) ->
+                       included (free_rgn_vars_in_eps2 
+                                   (Singleton_Static_Action (SA_Read (mk_rgn_type w)))) rgns ->
                        TcExp (ctxt, rgns, DeRef w e, t, 
                               Union_Static_Action aeff 
                                                   (Singleton_Static_Action 
@@ -687,6 +694,8 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        TcExp (ctxt, rgns, ea, Ty2_Ref (mk_rgn_type w) t, aeff) ->
                        TcExp (ctxt, rgns, ev, t, veff) ->
                        TcRgn (rgns, w) ->
+                       included (free_rgn_vars_in_eps2 
+                                   (Singleton_Static_Action (SA_Write (mk_rgn_type w)))) rgns ->
                        TcExp (ctxt, rgns, Assign w ea ev, Ty2_Unit,
                               Union_Static_Action (
                                   Union_Static_Action aeff veff) 
