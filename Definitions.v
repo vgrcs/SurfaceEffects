@@ -644,6 +644,8 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        (forall rho, BackTriangle (ctxt, rgns, rho, Mu_App ef ea, Eff_App ef ea)) ->
                        TcExp (ctxt, rgns, ef, Ty2_Arrow tya effc tyc effe Ty2_Effect, efff) ->
                        TcExp (ctxt, rgns, ea, tya, effa) ->
+                       included (frv tyc) rgns ->
+                       included (free_rgn_vars_in_eps2 effc) rgns ->
                        TcExp (ctxt, rgns, Mu_App ef ea, 
                               tyc, Union_Static_Action (Union_Static_Action efff effa) effc)
   | TC_Rgn_App     : forall ctxt rgns er w tyr effr efff,

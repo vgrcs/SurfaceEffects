@@ -469,6 +469,13 @@ Proof.
   repeat destruct H0; [apply H1 | apply H3 | apply H2]; assumption. 
 Qed.
 
+Axiom IncludedUnion_Static_Action_4:
+  forall (a b c : Ensemble StaticAction2) rgns x,
+    (free_rgn_vars_in_eps2 a x -> rgns x) ->
+    (free_rgn_vars_in_eps2 b x -> rgns x) ->
+    (free_rgn_vars_in_eps2 c x -> rgns x) ->                               
+    (free_rgn_vars_in_eps2 (Union_Static_Action (Union_Static_Action a b) c) x -> rgns x).
+
 Lemma IncludedUnion_Name_6:
   forall (a b: Ensemble Name) rgns,
     included a rgns /\
@@ -481,139 +488,18 @@ Proof.
 Qed.
 
 Lemma RegionAbsFrv_2:
-  forall tyr x r rgns,
-    included (set_union (free_rgn_vars_in_rgn2 r) (frv tyr))
-             (set_union rgns (singleton_set x)) ->
-    included
-      (set_union (free_rgn_vars_in_rgn2 (closing_rgn_in_rgn2 0 x r))
-                 (frv (closing_rgn_exp 0 x tyr))) rgns.
+  forall  x r rgns n,
+    included (free_rgn_vars_in_rgn2 r) (set_union rgns (singleton_set x)) ->
+    included (free_rgn_vars_in_rgn2 (closing_rgn_in_rgn2 n x r)) rgns.
 Proof.
-  intros tyr x r rgns H.
-  unfold free_rgn_vars_in_rgn2.
-  generalize 0.
-  dependent induction tyr; simpl in *; intro.
-  - unfold rgn2_in_typ in r.
-    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
-    + rewrite EmptyUnionisEmptySet_Name_Left.
-      unfold included, Included, In in *.
-      intro. intro. inversion H0.
-    + destruct (RMapProp.F.eq_dec n x); subst.
-      * simpl in *. intro. intro.
-        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
-      * rewrite EmptyUnionisEmptySet_Name_Right in H.
-        rewrite EmptyUnionisEmptySet_Name_Right.
-        apply IncludedRemoveSingleton in H; auto.
-    + rewrite EmptyUnionisEmptySet_Name_Right.
-      intro. intro. inversion H0.
-  - unfold rgn2_in_typ in r.
-    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
-    + rewrite EmptyUnionisEmptySet_Name_Left.
-      unfold included, Included, In in *.
-      intro. intro. inversion H0.
-    + destruct (RMapProp.F.eq_dec n x); subst.
-      * simpl in *. intro. intro.
-        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
-      * rewrite EmptyUnionisEmptySet_Name_Right in H.
-        rewrite EmptyUnionisEmptySet_Name_Right.
-        apply IncludedRemoveSingleton in H; auto.
-    + rewrite EmptyUnionisEmptySet_Name_Right.
-      intro. intro. inversion H0.
-  - unfold rgn2_in_typ in r.
-    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
-    + rewrite EmptyUnionisEmptySet_Name_Left.
-      unfold included, Included, In in *.
-      intro. intro. inversion H0.
-    + destruct (RMapProp.F.eq_dec n x); subst.
-      * simpl in *. intro. intro.
-        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
-      * rewrite EmptyUnionisEmptySet_Name_Right in H.
-        rewrite EmptyUnionisEmptySet_Name_Right.
-        apply IncludedRemoveSingleton in H; auto.
-    + rewrite EmptyUnionisEmptySet_Name_Right.
-      intro. intro. inversion H0.
-  - unfold rgn2_in_typ in r.
-    dependent induction r; simpl in *; unfold set_union, empty_set in *. 
-    + rewrite EmptyUnionisEmptySet_Name_Left.
-      unfold included, Included, In in *.
-      intro. intro. inversion H0.
-    + destruct (RMapProp.F.eq_dec n x); subst.
-      * simpl in *. intro. intro.
-        rewrite EmptyUnionisEmptySet_Name_Left in H0. inversion H0.
-      * rewrite EmptyUnionisEmptySet_Name_Right in H.
-        rewrite EmptyUnionisEmptySet_Name_Right.
-        apply IncludedRemoveSingleton in H; auto.
-    + rewrite EmptyUnionisEmptySet_Name_Right.
-      intro. intro. inversion H0.
-  - apply IncludedUnion_Name_2 in H. destruct H.
-    apply IncludedUnion_Name_3.
-    split; [apply IHtyr1 | apply IHtyr2]; assumption.
-  - apply IncludedUnion_Name_4.
-    split.
-    + apply IHtyr. 
-      intro. intro. apply H.
-      destruct H0.
-      * apply Union_introl. assumption.
-      * apply Union_intror. apply Union_intror. assumption.
-    + apply IncludedUnion_Name_2 in H. destruct H.
-      apply IncludedUnion_Name_5 in H. destruct H.
-      apply IncludedUnion_Name_5 in H0. destruct H0.
-      apply IncludedUnion_Name_6.
-      split.
-      * admit.
-      * admit.
-  - apply IncludedUnion_Name_4.
-    split.
-    + apply IncludedUnion_Name_4.
-      split.
-      * { apply IncludedUnion_Name_4.
-          - split.
-            apply IHtyr3. intro. intro.
-            apply H.
-            destruct H0.
-            + apply Union_introl. assumption.
-            + apply Union_intror. apply Union_intror. apply Union_intror. apply Union_intror. assumption.
-            + apply IHtyr2. intro. intro.
-              apply H.
-              destruct H0.
-              * apply Union_introl. assumption.
-              * apply Union_intror. apply Union_intror. apply Union_intror. apply Union_introl. assumption.  
-        }
-      * { apply IncludedUnion_Name_4.
-          - split.
-            + apply IncludedUnion_Name_2 in H. destruct H.
-              apply IncludedUnion_Name_2 in H0. destruct H0.
-              apply IncludedUnion_Name_2 in H0. destruct H0.
-              apply IncludedUnion_Name_2 in H1. destruct H1.
-              apply IncludedUnion_Name_5 in H2. destruct H2.
-              apply IncludedUnion_Name_6.
-              split. 
-              * admit.
-              * eapply RegionAbsFrv_1; eauto.
-            + apply IncludedUnion_Name_2 in H. destruct H. 
-              apply IncludedUnion_Name_2 in H0. destruct H0. clear H1.
-              apply IncludedUnion_Name_2 in H0. destruct H0. clear H1.
-              apply IncludedUnion_Name_5 in H. destruct H.
-              apply IncludedUnion_Name_5 in H0. destruct H0. clear H0. clear H1.              
-              apply IncludedUnion_Name_6.
-              split. 
-              * admit.
-              * eapply RegionAbsFrv_1; eauto.
-        }
-    + apply IHtyr1. intro. intro.
-      apply H.
-      destruct H0.
-      * apply Union_introl. assumption.
-      * apply Union_intror. apply Union_introl. assumption.
-  - apply IncludedUnion_Name_4.
-    split.
-    + apply IncludedUnion_Name_2 in H. destruct H. 
-      apply IncludedUnion_Name_5 in H0. destruct H0.
-      apply IncludedUnion_Name_5 in H. destruct H.
-      eapply IHtyr.
-      * admit.
-      * admit. 
-    + admit.
-Admitted.        
+  intros. unfold rgn2_in_typ in r. 
+  dependent induction r; simpl in *; do 2 intro.
+  - inversion H0.
+  - destruct (RMapProp.F.eq_dec n x); subst.
+    + simpl in *. inversion H0.
+    + apply IncludedRemoveSingleton in H; auto.
+  - inversion H0.
+Qed. 
 
 Lemma RegionAbsFrv_3:
    forall tyr rgns (x : Name), 
@@ -621,20 +507,51 @@ Lemma RegionAbsFrv_3:
      included (frv (close_var x tyr)) rgns. 
 Proof.
   intros tyr rgns x H.
-  dependent induction tyr; simpl in *;
+  unfold close_var.
+  generalize 0.
+  dependent induction tyr; simpl in *; intro;
   try (solve [intro; intro; inversion H0]).
   - unfold included, Included, In in *. 
     intro. intro.  
     destruct H0.
     + eapply IHtyr1; auto. 
       intro. intro. apply H.
-      apply Union_introl. assumption. assumption.
+      apply Union_introl. assumption. eassumption.
     + eapply IHtyr2; auto.
       intro. intro. apply H.
-      apply Union_intror. assumption. assumption.
-  -  
-Admitted.  
-
+      apply Union_intror. assumption. eassumption.
+  - apply IncludedUnion_Name_6.
+    split.
+    + apply IncludedUnion_Name_1 in H. destruct H. clear H0. 
+      apply RegionAbsFrv_2; eauto.
+    + eapply IHtyr.
+      do 2 intro. apply H.
+       apply Union_intror. assumption.
+  - repeat (apply IncludedUnion_Name_4; split); 
+    apply IncludedUnion_Name_6; split;
+    try (solve [apply IHtyr1; do 2 intro; apply H; apply Union_introl; assumption]).
+    + apply IHtyr3. intro. intro.
+      apply H.
+      apply Union_intror. apply Union_intror. apply Union_intror. assumption. 
+    + apply IHtyr2. intro. intro.
+      apply H.
+      apply Union_intror. apply Union_intror. apply Union_introl. assumption. 
+    + apply IncludedUnion_Name_5 in H; destruct H as [H1  H]. clear H1.
+      apply IncludedUnion_Name_5 in H; destruct H as [H  H1]. clear H1.
+      apply IncludedUnion_Name_5 in H; destruct H as [H1  H]. clear H1.
+      eapply RegionAbsFrv_1; eauto.
+    + apply IncludedUnion_Name_5 in H; destruct H as [H1  H]. clear H1.
+      apply IncludedUnion_Name_5 in H; destruct H as [H  H1]. clear H1.
+      apply IncludedUnion_Name_5 in H; destruct H as [H  H1]. clear H1.
+      eapply RegionAbsFrv_1; eauto.
+  - apply IncludedUnion_Name_6.
+    split.
+    + apply IncludedUnion_Name_1 in H. destruct H. clear H0.
+      eapply RegionAbsFrv_1; eauto.
+    + apply IHtyr.
+      do 2 intro.
+      apply H. apply Union_intror. assumption. 
+Qed.  
 
 Lemma TypedExpressionFrv :
   forall ctxt rgns e t eff,
@@ -675,16 +592,20 @@ Proof.
       * eapply RegionAbsFrv_1; eauto.
       * eapply RegionAbsFrv_3; eauto.
     + intros. contradict H3. apply NotFreeInEmptyEps.
-  - inversion HInc as [? ? HFrv]; subst.
-    assert (H' : included (frv (Ty2_Arrow tya effc t effe Ty2_Effect)) rgns /\ 
-                 included (free_rgn_vars_in_eps2 efff) rgns).
-    eapply IHHExp1; eauto.
+  - assert (H' : included (frv (Ty2_Arrow tya effc t effe Ty2_Effect)) rgns /\ 
+                 included (free_rgn_vars_in_eps2 efff) rgns) by (eapply IHHExp1; eauto).
     assert (H'' : included (frv tya) rgns /\ 
-                  included (free_rgn_vars_in_eps2 effa) rgns).
-    eapply IHHExp2; eauto.
-    intuition.
-    + admit.
-    + admit.
+                  included (free_rgn_vars_in_eps2 effa) rgns) by (eapply IHHExp2; eauto).
+    destruct H' as [H2 H3].
+    destruct H'' as [H4 H5].
+    split.
+    + replace (forall x : Name, frv t x -> rgns x)
+      with (included (frv t) rgns) by (unfold included, Included, In; reflexivity).
+      assumption.
+    + intro. apply IncludedUnion_Static_Action_4. 
+      * apply H3.
+      * apply H5.
+      * apply H1.
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv (Ty2_ForallRgn effr tyr)) rgns /\ 
                  included (free_rgn_vars_in_eps2 efff) rgns).
