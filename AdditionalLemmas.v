@@ -403,123 +403,146 @@ Proof.
     eapply free_vars_subst_sa_diff in c; eauto.
 Qed.
 
-Lemma TcRhoIncludedNoFreeVarsEps_aux_0:
+Lemma TcRhoIncludedNoFreeVarsRgn_aux_fold:
+  forall rho r x,
+    free_rgn_vars_in_rgn2 (fold_subst_rgn rho r) x ->
+    free_rgn_vars_in_rgn2 r x.
+Proof.
+  intros. 
+  unfold rgn2_in_typ in r; dependent induction r.
+  - rewrite subst_rho_rgn_const in H. assumption.
+  - assert ((exists v, fold_subst_rgn rho (Rgn2_FVar true true n) = Rgn2_Const true true v) \/ 
+            fold_subst_rgn rho (Rgn2_FVar true true n) = Rgn2_FVar true true n) 
+      by (apply subst_rho_fvar_1).
+    destruct H0. 
+    + destruct H0. rewrite H0 in H. 
+      unfold free_rgn_vars_in_rgn2 in H. inversion H.
+    + rewrite H0 in H.
+      assumption.
+  - rewrite subst_rho_index in H. assumption.
+Qed.
+
+Lemma TcRhoIncludedNoFreeVarsSa_aux_fold:
+  forall rho sa x,
+    free_rgn_vars_in_sa2 (fold_subst_sa rho sa) x ->
+    free_rgn_vars_in_sa2 sa x.
+Proof.
+  intros. 
+  induction sa; unfold free_rgn_vars_in_sa2, fold_subst_sa in *;
+  eapply TcRhoIncludedNoFreeVarsRgn_aux_fold; eauto. 
+Qed.
+ 
+Lemma TcRhoIncludedNoFreeVarsEps_aux_fold:
   forall rho e x,
     free_rgn_vars_in_eps2 (fold_subst_eps rho e) x ->
     free_rgn_vars_in_eps2 e x.
-Admitted.
+Proof.
+  intros. unfold  free_rgn_vars_in_eps2, fold_subst_eps in *.
+  destruct H as [sa [[sa' [H1 H2]] H3]].
+  exists sa'. intuition.
+  rewrite <- H2 in H3.
+  eapply TcRhoIncludedNoFreeVarsSa_aux_fold; eauto.
+Qed.
 
-Lemma SubstFVarInSaAlloc:
-  forall x x0 e r,
-    subst_sa x (Rgn2_Const true false e) (SA2_Alloc r) =
-    SA2_Alloc (Rgn2_FVar true true x0) -> x <> x0.
+Lemma TcRhoIncludedNoFreeVarsSa:
+  forall k rc r x,
+    free_rgn_vars_in_rgn2 (subst_rgn k (Rgn2_Const true false rc) r) x ->
+    free_rgn_vars_in_rgn2 r x.
 Proof.
   intros.
-  unfold subst_sa, subst_rgn in H.
-  unfold rgn2_in_typ in r.  
-  dependent induction r.
+  unfold rgn2_in_typ in r.
+  dependent induction r;
+  unfold free_rgn_vars_in_rgn2, subst_rgn in *; simpl.
   - inversion H.
-  - destruct (RMapProp.F.eq_dec x n).
-    + subst. inversion H.
-    + inversion H; subst. assumption.
-  - inversion H.    
+  - destruct (RMapProp.F.eq_dec k n); subst; simpl in *.
+    + inversion H.
+    + assumption.
+  - inversion H.
 Qed.
 
-Lemma SubstFVarInEpsAlloc:
-  forall x e0 e n x0,
-    subst_eps x (Rgn2_Const true false e0) e (SA2_Alloc (Rgn2_FVar true true n)) ->
-    free_rgn_vars_in_sa2 (SA2_Alloc (Rgn2_FVar true true n)) x0 -> x <> n.
-Proof.
-  intros x e0 e n x0 H H1. 
-  unfold free_rgn_vars_in_sa2 in *.
-  unfold free_rgn_vars_in_rgn2 in *.
-  unfold subst_eps in H.  
-  do 2 destruct H.
-  induction x1.
-  eapply SubstFVarInSaAlloc; eauto.
-  - unfold rgn2_in_typ in r.
-    dependent induction r; inversion H0.
-  - unfold rgn2_in_typ in r.
-    dependent induction r; inversion H0. 
-Qed.
-
-Lemma TcRhoIncludedNoFreeVarEps_Problem:
-  forall x e0 e x0,
-     free_rgn_vars_in_eps2 (subst_eps x (Rgn2_Const true false e0) e) x0 ->
-     free_rgn_vars_in_eps2 e x0.
-Proof.
-  intros x e0 e x0 H.
-  unfold free_rgn_vars_in_eps2 in *.
-  destruct H. destruct H.
-  exists x1.
-  split.
-  - intuition. subst.
-    apply H.
-    apply Extensionality_Ensembles; unfold Same_set, Included.
-    split; intro; intro; unfold In in *; repeat destruct H1.
-  - intro. apply H0.
-    unfold subst_eps. 
-    exists x1. split; [assumption |]. 
-    unfold subst_sa. 
-    induction x1; 
-    unfold rgn2_in_typ in r;
-    dependent induction r; simpl; try ( solve [reflexivity]). 
-    + assert (x <> n) by admit.
-      (* cannot properly use SubstFVarInEpsAlloc ... because of (->) in H0  *)
-      destruct (RMapProp.F.eq_dec x n).
-      * intuition.
-      * reflexivity.  
-    + admit.
-    + admit.
-Admitted.
-
-Lemma TcRhoIncludedNoFreeVarsEps_aux_2:
-forall k rc x e,
-    ~ (free_rgn_vars_in_eps2 e) x ->
-    ~ (free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const _ _ rc) e)) x.
+Lemma TcRhoIncludedNoFreeVarsRgn:
+  forall k rc sa x,
+    free_rgn_vars_in_sa2 (subst_sa k (Rgn2_Const true false rc) sa) x ->
+    free_rgn_vars_in_sa2 sa x.
 Proof.
   intros.
-  intro. unfold not in H. apply H.
-  eapply TcRhoIncludedNoFreeVarEps_Problem; eauto.
-Admitted.
+  dependent induction sa;
+  unfold free_rgn_vars_in_sa2, subst_sa in *; simpl;
+  eapply TcRhoIncludedNoFreeVarsSa; eauto.
+Qed.
 
-Lemma TcRhoIncludedNoFreeVarsEps_aux_2_1:
+Lemma TcRhoIncludedNoFreeVarsEps:
+  forall k rc x e,
+    (free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const _ _ rc) e)) x ->
+    (free_rgn_vars_in_eps2 e) x.
+Proof.
+  intros.
+  unfold free_rgn_vars_in_eps2 in *.
+  destruct H as [sa H].
+  unfold subst_eps in H. 
+  destruct H as [H1 H2].
+  destruct H1 as [sa' H3].
+  exists sa'; intuition.
+  rewrite <- H0 in H2.
+  eapply TcRhoIncludedNoFreeVarsRgn; eauto.
+Qed.
+
+Lemma TcRhoIncludedNoFreeVarsEps_included:
   forall k rc e,
     included
       (free_rgn_vars_in_eps2 (subst_eps k (Rgn2_Const _ _ rc) e))
       (free_rgn_vars_in_eps2 e).
 Proof.
   intros k rc e.
-  unfold included, Included, In.
-  intro. intro. 
-  eapply TcRhoIncludedNoFreeVarEps_Problem; eauto.
-Admitted.
+  unfold included, Included, In. 
+  intro. intro.
+  eapply TcRhoIncludedNoFreeVarsEps; eauto.
+Qed.
 
-Lemma TcRhoIncludedNoFreeVarsEps_aux_AlsoProblem:
+Lemma TcRhoIncludedNoFreeVarsSa_aux:
+  forall x rc sa,
+    ~ free_rgn_vars_in_sa2 (subst_sa x (Rgn2_Const true false rc) sa) x.
+Proof.
+  intros.
+  induction sa; unfold subst_sa in *;
+  unfold rgn2_in_typ in r; dependent induction r; simpl; 
+  try (solve [ intro; contradict H | 
+               intro; unfold free_rgn_vars_in_rgn2 in H;
+               destruct (RMapProp.F.eq_dec x n); subst; 
+               [inversion H | inversion H; symmetry in H0; contradiction] ]).
+Qed.
+
+Lemma TcRhoIncludedNoFreeVarsEps_aux:
   forall x e0 e,
     ~ free_rgn_vars_in_eps2 (subst_in_eff x e0 e) x.
 Proof.
   intros.
-  unfold subst_in_eff. intro.
-  apply TcRhoIncludedNoFreeVarsEps_aux_2_1 in H.
-  contradict H.
-  unfold In.
-  (* no enough assumptions *)
-Admitted.
-        
-Lemma TcRhoIncludedNoFreeVarsEps_aux_1_1:
-  forall x e0 e,
-    included
-      (free_rgn_vars_in_eps2 (subst_in_eff x e0 e))
-      (free_rgn_vars_in_eps2 e).
-Proof.
-  intros.
-  unfold included, Included, In in *.
-  intro. intro. unfold subst_in_eff in H.
-  eapply TcRhoIncludedNoFreeVarEps_Problem; eauto.
-Admitted.
+  unfold subst_in_eff.  intro.
+  unfold free_rgn_vars_in_eps2, subst_eps in *.
+  destruct H as [sa [H1 H2]].
+  destruct H1 as [sa' [H3 H4]].
+  rewrite <- H4 in H2.
+  eapply TcRhoIncludedNoFreeVarsSa_aux; eauto.
+Qed.
 
-Lemma TcRhoIncludedNoFreeVarsEps_aux_3:
+
+Axiom TcRhoOnlyRightBranch:
+  forall x this1 k e0 this2 t is_bst Hr G,
+    R.find (elt:=Region) x
+           {| R.this := R.Raw.Node this1 k e0 this2 t; R.is_bst := is_bst |} <> None ->
+    (forall is_bst : R.Raw.bst this1,
+       R.find (elt:=Region) x {| R.this := this1; R.is_bst := is_bst |} <> None -> G) ->
+    R.find (elt:=Region) x {| R.this := this2; R.is_bst := Hr |} <> None.
+
+Axiom TcRhoOnlyLeftBranch:
+  forall x this1 k e0 this2 t is_bst Hl G,
+    R.find (elt:=Region) x
+           {| R.this := R.Raw.Node this1 k e0 this2 t; R.is_bst := is_bst |} <> None ->
+    (forall is_bst : R.Raw.bst this1,
+       R.find (elt:=Region) x {| R.this := this1; R.is_bst := is_bst |} <> None -> G) ->
+    R.find (elt:=Region) x {| R.this := this1; R.is_bst := Hl |} <> None.
+
+Lemma TcRhoIncludedNoFreeVarsEps_find:
   forall rho x,
     R.find x rho <> None ->
     forall e,
@@ -547,23 +570,15 @@ Proof.
     destruct H0 as [Hl | [Hc | Hr]]. 
     + contradict Hl.
       eapply IHthis2; eauto. 
-      assert (R.find (elt:=Region) x
-                 {| R.this := R.Raw.Node this1 k e0 this2 t; R.is_bst := is_bst |} <> None -> 
-              R.find (elt:=Region) x {| R.this := this2; R.is_bst := H6 |} <> None) 
-        by admit.
-      auto.
+      eapply TcRhoOnlyRightBranch; eauto.
     + contradict Hc.
-      eapply TcRhoIncludedNoFreeVarsEps_aux_AlsoProblem; eauto.
+      eapply TcRhoIncludedNoFreeVarsEps_aux; eauto.
     + contradict Hr.
       eapply IHthis1; eauto. 
-      assert (R.find (elt:=Region) x
-                 {| R.this := R.Raw.Node this1 k e0 this2 t; R.is_bst := is_bst |} <> None -> 
-              R.find (elt:=Region) x {| R.this := this1; R.is_bst := H4 |} <> None) 
-        by admit.
-      auto.
-Admitted.    
+      eapply TcRhoOnlyLeftBranch; eauto.
+Qed. 
 
-Lemma TcRhoIncludedNoFreeVarsEps:
+Lemma TcRhoIncludedNoFreeVarsEps_main:
   forall rho rgns e x,
     TcRho (rho, rgns) ->
     free_rgn_vars_in_eps2 e x ->
@@ -571,7 +586,7 @@ Lemma TcRhoIncludedNoFreeVarsEps:
     ~ (free_rgn_vars_in_eps2 (fold_subst_eps rho e)) x.
 Proof.
   intros.
-  apply TcRhoIncludedNoFreeVarsEps_aux_3.
+  apply TcRhoIncludedNoFreeVarsEps_find.
   inversion H; subst. apply H3. apply H1.
   unfold In.
   assumption.
@@ -625,15 +640,15 @@ Proof.
       intros. apply HInc. apply Union_introl. assumption.
     + destruct H0.
       * { destruct H0.
-          - eapply TcRhoIncludedNoFreeVarsEps  with (e:=e); eauto.
-            + unfold In in H0. eapply TcRhoIncludedNoFreeVarsEps_aux_0; eauto. 
+          - eapply TcRhoIncludedNoFreeVarsEps_main  with (e:=e); eauto.
+            + unfold In in H0. eapply TcRhoIncludedNoFreeVarsEps_aux_fold; eauto. 
             + unfold included, Included, Ensembles.In in *.
               intro. intro.
               apply HInc.
               apply Ensembles.Union_intror. apply Ensembles.Union_introl.
               apply Ensembles.Union_introl. assumption.
-          - eapply TcRhoIncludedNoFreeVarsEps with (e:=e0); eauto.
-            + unfold In in H0. eapply TcRhoIncludedNoFreeVarsEps_aux_0; eauto. 
+          - eapply TcRhoIncludedNoFreeVarsEps_main with (e:=e0); eauto.
+            + unfold In in H0. eapply TcRhoIncludedNoFreeVarsEps_aux_fold; eauto. 
             + unfold included, Included, Ensembles.In in *.
               intro. intro. apply HInc.
               apply Ensembles.Union_intror. apply Ensembles.Union_introl.
@@ -650,8 +665,8 @@ Proof.
   - rewrite subst_rho_forallrgn; simpl.
     unfold not_set_elem, Complement. intro.
     destruct H0.
-    + eapply TcRhoIncludedNoFreeVarsEps with (e:=e); eauto. 
-      * eapply TcRhoIncludedNoFreeVarsEps_aux_0; eauto. 
+    + eapply TcRhoIncludedNoFreeVarsEps_main with (e:=e); eauto. 
+      * eapply TcRhoIncludedNoFreeVarsEps_aux_fold; eauto. 
       * unfold included, Included, In in *. intro. intro.
         apply HInc.
         apply Union_introl. assumption.

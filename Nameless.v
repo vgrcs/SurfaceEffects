@@ -149,11 +149,18 @@ Definition free_rgn_vars_in_sa2 (sa: StaticAction2) : Ensemble Name :=
   | SA2_Write rgn => free_rgn_vars_in_rgn2 rgn
   end.
 
+(*
 Definition free_rgn_vars_in_eps2 (eps: Epsilon2) : Ensemble Name := 
   fun n => exists sa,
              ~ eps = Empty_set StaticAction2 /\
              (eps sa -> (free_rgn_vars_in_sa2 sa) n).
+*)
  
+Definition free_rgn_vars_in_eps2 (eps: Epsilon2) : Ensemble Name := 
+  fun n => exists (sa : StaticAction2),
+             eps sa /\ (free_rgn_vars_in_sa2 sa) n.
+
+
 Fixpoint frv (t: type2) : Ensemble Name :=
   match t with
   | Ty2_Natural    => empty_set
@@ -444,8 +451,8 @@ Proof.
     intro. apply H.
     unfold free_rgn_vars_in_eps2; unfold In.
     exists sa''; auto.
-    split; intuition. 
-    * subst. inversion H2.
+    (*split; intuition. 
+    * subst. inversion H2.*)
   + intro sa. unfold In in *.
     unfold closing_rgn_in_eps2; unfold opening_rgn_in_eps2; simpl.
     intro H1.
@@ -455,8 +462,8 @@ Proof.
     intro. apply H.
     unfold free_rgn_vars_in_eps2; unfold In.
     exists sa; auto.
-    split; intuition.
-    - subst. inversion H1.  
+    (*split; intuition.
+    - subst. inversion H1.*)  
 Qed.
 
 Lemma CLOSE_OPEN_VAR : close_open_var. 
@@ -765,14 +772,14 @@ Proof.
     unfold not_set_elem, Complement, In, not in *.
     intros. apply H. exists sa'. 
     split; intuition.
-    + subst. inversion H1.
+    (*+ subst. inversion H1.*)
   - unfold In.   intros x0 H0.
     exists x0. intuition.
     rewrite subst_fresh_sa; auto.
     unfold not_set_elem, Complement, In, not in *.
     intros. apply H. exists x0. 
     split; intuition.
-    + subst. inversion H0.
+    (*+ subst. inversion H0.*)
 Qed.
 
 Lemma SUBST_FRESH : subst_fresh.

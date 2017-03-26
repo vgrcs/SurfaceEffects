@@ -314,7 +314,7 @@ Proof.
   intro x. intro. 
   unfold free_rgn_vars_in_eps2, empty_set in H.
   destruct H as [sa]. destruct H.
-  contradict H. reflexivity.
+  inversion H.
 Qed.
 
 Lemma ExtendedTcInv:
@@ -474,6 +474,7 @@ Axiom IncludedUnion_Static_Action_4:
     (free_rgn_vars_in_eps2 a x -> rgns x) ->
     (free_rgn_vars_in_eps2 b x -> rgns x) ->                        
     (free_rgn_vars_in_eps2 (Union_Static_Action a b) x -> rgns x).
+
 
 Lemma IncludedUnion_Name_6:
   forall (a b: Ensemble Name) rgns,
