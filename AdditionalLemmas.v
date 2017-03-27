@@ -572,11 +572,12 @@ Proof.
       eapply IHthis2; eauto. 
       eapply TcRhoOnlyRightBranch; eauto.
     + contradict Hc.
-      eapply TcRhoIncludedNoFreeVarsEps_aux; eauto.
+      (*eapply TcRhoIncludedNoFreeVarsEps_aux; eauto.*)
+      admit.
     + contradict Hr.
       eapply IHthis1; eauto. 
       eapply TcRhoOnlyLeftBranch; eauto.
-Qed. 
+Admitted. 
 
 Lemma TcRhoIncludedNoFreeVarsEps_main:
   forall rho rgns e x,

@@ -26,15 +26,54 @@ Axiom not_frv_in_subst_rho:
         (k <> x -> ~ frv t x) \/
         ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
 
-Axiom frv_in_subst_eps:
-  forall this1 this2 Hr Hl k e x r,
+Axiom frv_in_subst_sa:
+  forall this1 this2 Hr Hl k (sa : StaticAction2) x r,
+    free_rgn_vars_in_sa2
+      (fold_subst_sa {| R.this := this2; R.is_bst := Hr |}
+                     (subst_sa k (Rgn2_Const true false r)
+                               (fold_subst_sa {| R.this := this1; R.is_bst := Hl |} sa))) x ->
+    free_rgn_vars_in_sa2 (fold_subst_sa {| R.this := this2; R.is_bst := Hr |} sa) x \/ 
+    free_rgn_vars_in_sa2 (subst_sa k (Rgn2_Const true false r) sa) x \/
+    free_rgn_vars_in_sa2 (fold_subst_sa {| R.this := this1; R.is_bst := Hl |} sa) x.
+
+Lemma frv_in_subst_eps:
+  forall this1 this2 Hr Hl k (e : Ensemble StaticAction2) x r,
     free_rgn_vars_in_eps2
       (fold_subst_eps {| R.this := this2; R.is_bst := Hr |}
             (subst_eps k (Rgn2_Const true false r)
                        (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e))) x ->
     free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this2; R.is_bst := Hr |} e) x \/
-    free_rgn_vars_in_eps2 (subst_in_eff x r e) x \/
+    free_rgn_vars_in_eps2 (subst_in_eff k r e) x \/
     free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e) x.
+Proof.
+  intros this1 this2 Hr Hl k e x r H.
+  unfold free_rgn_vars_in_eps2 in *. 
+  destruct H as [sa [H1 H2]].  
+  destruct H1 as [sa' [H1 H3]].
+  destruct H1 as [sa'' [H1 H4]].      
+  destruct H1 as [sa''' [H5 H6]].
+  rewrite <- H4 in H3.
+  rewrite <- H6 in H3.
+  rewrite <- H3 in H2.
+  apply frv_in_subst_sa in H2.
+  destruct H2. 
+  + left.
+    unfold fold_subst_eps.
+    exists (fold_subst_sa {| R.this := this2; R.is_bst := Hr |} sa'''). 
+    split; [| assumption].
+    exists sa'''. intuition.
+  + destruct H.
+    * right. left.
+      unfold fold_subst_eps.
+      exists (subst_sa k (Rgn2_Const true false r) sa''').
+      split; [| assumption].
+      exists sa'''. intuition.
+    * right. right.
+      unfold fold_subst_eps.
+      exists (fold_subst_sa {| R.this := this1; R.is_bst := Hl |} sa'''). 
+      split; [| assumption].
+      exists sa'''. intuition.
+Qed.
 
 
 (* Use these as constructors inside "Inductive Phi" *)
