@@ -345,11 +345,6 @@ Proof.
     + eapply E_diff_key_1 in H; eauto.
 Qed.
 
-Axiom RegionAbsFrv_1:
-   forall effr rgns (x : Name) n, 
-     included (free_rgn_vars_in_eps2 effr) (set_union rgns (singleton_set x)) ->
-     included (free_rgn_vars_in_eps2 (closing_rgn_in_eps2 n x effr)) rgns.
-
 Lemma EmptyUnionisEmptySet_Name_Left :
   forall acts,
     Union Name (Empty_set Name) acts = acts.
@@ -469,11 +464,17 @@ Proof.
   repeat destruct H0; [apply H1 | apply H3 | apply H2]; assumption. 
 Qed.
 
-Axiom IncludedUnion_Static_Action_4:
-  forall (a b : Ensemble StaticAction2) rgns x,
+Lemma IncludedUnion_Static_Action_4:
+  forall (a b : Ensemble StaticAction2) (rgns : Ensemble Name) (x : Name),
     (free_rgn_vars_in_eps2 a x -> rgns x) ->
     (free_rgn_vars_in_eps2 b x -> rgns x) ->                        
     (free_rgn_vars_in_eps2 (Union_Static_Action a b) x -> rgns x).
+Proof.
+  intros a b rgns x H1 H2 H3.
+  unfold free_rgn_vars_in_eps2 in *.
+  destruct H3 as [sa [H4 H5]].
+  destruct H4; [apply H1 | apply H2]; exists x0; auto.
+Qed.
 
 
 Lemma IncludedUnion_Name_6:
@@ -500,6 +501,55 @@ Proof.
     + apply IncludedRemoveSingleton in H; auto.
   - inversion H0.
 Qed. 
+
+Lemma NoFreeVarsAfterClosingRgn:
+  forall n x r,
+    ~ free_rgn_vars_in_rgn2 (closing_rgn_in_rgn2 n x r) x.
+Proof.
+  intros n x r.
+  unfold rgn2_in_typ in r. dependent induction r; intro;
+  unfold free_rgn_vars_in_rgn2, closing_rgn_in_rgn2 in H.
+  - inversion H.
+  - destruct (RMapProp.F.eq_dec n0 x); subst.
+    + inversion H.
+    + inversion H. apply n1. assumption.
+  - inversion H.
+Qed.
+
+Lemma NoFreeVarsAfterClosingSa:
+ forall n sa x,
+   ~ free_rgn_vars_in_sa2 (closing_rgn_in_sa2 n x sa) x.
+Proof.
+  intros n sa x. intro.
+  induction sa;
+  unfold free_rgn_vars_in_sa2, closing_rgn_in_sa2 in H; 
+  eapply NoFreeVarsAfterClosingRgn; eauto.
+Qed.
+
+Lemma RegionAbsFrv_1:
+   forall effr rgns (x : Name) n, 
+     included (free_rgn_vars_in_eps2 effr) (set_union rgns (singleton_set x)) ->
+     included (free_rgn_vars_in_eps2 (closing_rgn_in_eps2 n x effr)) rgns.
+Proof.
+  intros effr rgns x n H.
+  unfold free_rgn_vars_in_eps2 in *.
+  do 2 intro. unfold In in *.
+  destruct H0 as [sa [H1 H2]].
+  unfold closing_rgn_in_eps2 in H1.
+  destruct H1 as [sa' [H3 H4]].
+  rewrite <- H4 in H2. 
+  unfold included, Included, In in H.
+  destruct (H x0); auto.
+  - exists sa'. intuition.
+    destruct (RMapProp.F.eq_dec x x0); subst.
+    + contradict H2. apply NoFreeVarsAfterClosingSa.
+    + induction sa'; unfold rgn2_in_typ in r; dependent induction r; 
+      simpl in *; unfold free_rgn_vars_in_rgn2 in *;
+      try (solve [inversion H2 | destruct  (RMapProp.F.eq_dec n0 x); subst; [inversion H2 | assumption]]).
+  - destruct (RMapProp.F.eq_dec x x0); subst.
+    + contradict H2. apply NoFreeVarsAfterClosingSa.
+    + exfalso. contradict n0. inversion H0. auto.
+Qed.
 
 Lemma RegionAbsFrv_3:
    forall tyr rgns (x : Name), 
@@ -567,12 +617,19 @@ Proof.
   - inversion H.
 Qed.
 
-
-Axiom RegionAppFrv_3:
+Lemma RegionAppFrv_3:
   forall region e x n,
     lc_type_eps e ->
     free_rgn_vars_in_eps2 (opening_rgn_in_eps2 n region e) x ->
     free_rgn_vars_in_eps2 e x.
+Proof.
+  intros region e x n H1 H2.
+  inversion H1; subst.
+  unfold free_rgn_vars_in_eps2 in *.
+  destruct H2 as [sa [H3 H4]].
+  destruct (H sa).
+  exists sa. auto.
+Qed.
 
 Lemma RegionAppFrv_1:
   forall tyr rgns w,
