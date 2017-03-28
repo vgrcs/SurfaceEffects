@@ -6,18 +6,10 @@ Require Import Top0.Nameless.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 
-Lemma find_rho_1:
+Axiom find_rho_1:
   forall x this1 this2 k e t He Hl,
     R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
     R.find (elt:=nat) x {| R.this := this1; R.is_bst := Hl |} = None.
-Proof.
-  intros.
-  unfold R.find, R.Raw.find in *. simpl in *.
-  destruct (AsciiVars.compare x k); subst.
-  + auto.
-  + inversion H. 
-  + admit.
-Admitted.
 
 Axiom find_rho_2:
   forall x this1 this2 k e t He Hr,

@@ -113,6 +113,17 @@ Fixpoint phi_as_list (phi : Phi) : Trace :=
     | Phi_Par phi1 phi2 =>  (phi_as_list phi1) ++ (phi_as_list phi2)
   end.                   
 
+Lemma simplify_phi_as_list:
+  forall phi1 phi2, phi1 = phi2 ->
+                    phi_as_list phi1 = phi_as_list phi2.  
+Proof.
+  intros.
+  induction phi1, phi2;
+  try (solve [ unfold phi_as_list; simpl; reflexivity | unfold phi_as_list; simpl; inversion H]).
+  - unfold phi_as_list; simpl; inversion H. subst. auto.
+  - rewrite H. auto.
+  - rewrite H. auto. 
+Qed.
 
 Inductive ReadOnlyPhi : Phi -> Prop :=
  | Phi_RO_Nil  : ReadOnlyPhi (Phi_Nil)

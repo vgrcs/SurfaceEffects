@@ -735,3 +735,36 @@ Proof.
       intros. apply HInc. 
       apply Union_intror. assumption.
 Qed.
+
+Lemma find_rho_none:
+  forall x this1 this2 k e t He Hl Hr,
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
+    R.find (elt:=nat) x {| R.this := this1; R.is_bst := Hl |} = None \/
+    R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None.
+Proof.
+  intros.
+  unfold R.find, R.Raw.find in *. simpl in *.
+  destruct (AsciiVars.compare x k); subst.
+  + left. auto.
+  + inversion H. 
+  + right. auto.
+Qed.
+
+Lemma find_rho_none_2:
+  forall x this1 this2 k e t He Hl Hr Hc,
+    R.find (elt:=nat) x {| R.this := this1; R.is_bst := Hl |} = None /\
+    R.find (elt:=nat) x {| R.this := R.Raw.Node (R.Raw.empty nat) k e 
+                                                (R.Raw.empty nat) t; R.is_bst := Hc |} = None /\
+    R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None ->
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None.
+Proof.
+  intros.
+  unfold R.find, R.Raw.find in *. simpl in *.
+  destruct (AsciiVars.compare x k); subst.
+  + destruct H. destruct H0. assumption.
+  + destruct H. destruct H0. auto.
+  + destruct H. destruct H0. assumption.
+Qed.
+
+
+
