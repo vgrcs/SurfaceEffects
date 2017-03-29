@@ -26,18 +26,6 @@ Axiom not_frv_in_subst_rho:
         (k <> x -> ~ frv t x) \/
         ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
 
-Axiom frv_in_subst_rgn:
-  forall this1 this2 Hr Hl k (r0 : rgn2_in_typ) x r,
-    free_rgn_vars_in_rgn2
-      (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |}
-                      (subst_rgn k (Rgn2_Const true false r)
-                                 (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} r0))) x ->
-    free_rgn_vars_in_rgn2
-      (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} r0) x \/
-    free_rgn_vars_in_rgn2 (subst_rgn k (Rgn2_Const true false r) r0) x \/
-    free_rgn_vars_in_rgn2
-      (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} r0) x.
-
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
