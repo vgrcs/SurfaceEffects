@@ -222,7 +222,7 @@ Proof.
   intros; repeat split; 
   try (intro; apply H; apply RMapP.in_find_iff in H0; apply RMapP.in_find_iff; 
                                contradict H0). 
-  - eapply find_rho_1; eassumption. 
+  - eapply find_rho_1. eassumption. 
   - eapply find_rho_2; eassumption. 
   - apply find_rho_3.
     apply RMapP.not_find_in_iff.
@@ -259,6 +259,71 @@ Proof.
     Unshelve. auto. auto.
 Qed.
 
+
+Axiom not_frv_in_subst_rho_aux_2:
+  forall rho1 rho2 t1 t2 x,
+    ~(frv (subst_rho rho1 t1)) x \/ ~(frv t1) x \/ ~(frv (subst_rho rho2 t1)) x ->
+    ~(frv (subst_rho rho1 t2)) x \/ ~(frv t2) x \/ ~(frv (subst_rho rho2 t2)) x ->
+    ~ set_union (frv (subst_rho rho1 t1)) (frv (subst_rho rho1 t2)) x \/ 
+    ~ set_union (frv t1) (frv t2) x \/
+    ~ set_union (frv (subst_rho rho2 t1)) (frv (subst_rho rho2 t2)) x.
+
+Lemma not_frv_in_subst_rho_2:
+  forall this1 this2 k e t x t0 Hc Hl Hr,
+    k <> x ->
+    R.find (elt:=nat) x 
+           {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := Hc |} <> Some e ->
+    ~ frv (subst_rho {| R.this := R.Raw.Node this1 k e this2 t0; R.is_bst := Hc |} t) x ->
+    ~ frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x \/
+    ~ frv t x \/
+    ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
+Proof.
+  intros. 
+  dependent induction t; simpl in H.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - do 2 rewrite subst_rho_pair in *; simpl in *.  
+    apply not_frv_in_subst_rho_aux_2.
+    * eapply IHt1; auto.
+      intro. apply H1. apply Union_introl. assumption.
+    * eapply IHt2; auto.
+      intro. apply H1. apply Union_intror. assumption.
+  - do 2 rewrite subst_rho_tyref in *; simpl in *.
+    admit.
+  - do 2 rewrite subst_rho_arrow in *; simpl in *. 
+    admit.
+Admitted.    
+
+Lemma subst_rho_free_vars_2 :
+  forall rho x t,
+    x # subst_rho rho t ->
+    R.find (elt:=nat) x rho = None ->
+    x # t.
+Proof.
+  intro rho. destruct rho. induction this.
+  - intros x t H1 H2.
+    apply RMapP.not_find_in_iff in H2. 
+    unfold not_set_elem in *. unfold Ensembles.Complement in *. 
+    unfold subst_rho, R.fold, R.Raw.fold in *; simpl in *; auto.
+  - intros x t0 H1 H2.
+    inversion is_bst; subst.
+    apply RMapP.not_find_in_iff in H2. 
+    eapply not_in_raw_rho with (Hl:=H5) (Hr:=H7) in H2 ; eauto. 
+    destruct H2 as [HNotIn1 [HNotIn2 HNotIn3]].
+    destruct (AsciiVars.compare k x).
+    + eapply not_frv_in_subst_rho_2 with (Hl:=H5) (Hr:=H7) in H1; eauto.
+      destruct H1 as [HNotFree1 | [HNotFree2 | HNotFree3]].
+      * apply RMapP.not_find_in_iff in HNotIn1.
+        eapply IHthis1; eauto.
+      * apply HNotFree2. 
+      * apply RMapP.not_find_in_iff in HNotIn2.
+        eapply IHthis2; eauto.  
+    + inversion e0; subst.
+      contradict HNotIn3.
+      apply RMapP.find_mapsto_iff. econstructor. reflexivity.
+Admitted.
 
 Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  TcRho (rho, rgns) ->
