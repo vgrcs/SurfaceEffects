@@ -325,6 +325,95 @@ Proof.
       apply RMapP.find_mapsto_iff. econstructor. reflexivity.
 Admitted.
 
+
+Lemma subst_rho_free_vars_union_1 :
+  forall x (e1 e2 : Ensemble Name),
+    not_set_elem (set_union e1 e2) x ->
+    not_set_elem e1 x /\ not_set_elem e2 x.
+Proof.
+  intros. split; intro; apply H; [ apply Union_introl | apply Union_intror]; auto.
+Qed.
+
+Lemma subst_rho_free_vars_union_2 :
+  forall x (e1 e2 : Ensemble Name),
+    not_set_elem e1 x /\ not_set_elem e2 x ->
+    not_set_elem (set_union e1 e2) x.
+Proof.
+  intros. destruct H. intro. destruct H1; [apply H | apply H0]; auto.
+Qed.
+
+Axiom subst_rho_free_vars_rgn_aux:
+  forall rho x n,
+    R.find (elt:=nat) x rho = None ->
+    free_rgn_vars_in_rgn2 (fold_subst_rgn rho (Rgn2_FVar true true n)) x.
+
+Lemma subst_rho_free_vars_rgn:
+ forall rho x r,
+   R.find (elt:=nat) x rho = None ->
+   not_set_elem (free_rgn_vars_in_rgn2 (fold_subst_rgn rho r)) x ->
+   not_set_elem (free_rgn_vars_in_rgn2 r) x.
+Proof.
+  intros rho x r HFind HNotElem.
+  unfold rgn2_in_typ in r. dependent induction r. 
+  - rewrite subst_rho_rgn_const in HNotElem. assumption.
+  - assert ((exists v, fold_subst_rgn rho (Rgn2_FVar true true n) =  
+                         Rgn2_Const true true v) \/ 
+            fold_subst_rgn rho (Rgn2_FVar true true n) = Rgn2_FVar true true n) 
+      by (apply subst_rho_fvar_1).
+    destruct (subst_rho_fvar_1 rho n) as [[v H0] | H0]; simpl in *.
+    * contradict H0. intro. apply HNotElem. unfold In.
+      apply subst_rho_free_vars_rgn_aux.
+      assumption.
+    * rewrite H0 in HNotElem. 
+      simpl in HNotElem.
+      assumption.
+  - rewrite subst_rho_index in HNotElem. 
+    assumption.
+Qed.
+
+Axiom subst_rho_free_vars_eps:
+  forall e rho x,
+  R.find (elt:=nat) x rho = None ->  
+  not_set_elem (free_rgn_vars_in_eps2 (fold_subst_eps rho e)) x ->
+  not_set_elem (free_rgn_vars_in_eps2 e) x.
+
+Lemma subst_rho_free_vars_3 :
+  forall t rho x,
+    x # subst_rho rho t ->
+    R.find (elt:=nat) x rho = None ->
+    x # t.
+Proof.
+  intro t. dependent induction t; intros rho x H1 H2. 
+  - rewrite subst_rho_natural in H1. assumption.
+  - rewrite subst_rho_boolean in H1. assumption.
+  - rewrite subst_rho_effect in H1. assumption.
+  - rewrite subst_rho_unit in H1. assumption.
+  - rewrite subst_rho_pair in H1. simpl in *.
+    apply subst_rho_free_vars_union_1 in H1; auto. destruct H1.
+    apply subst_rho_free_vars_union_2.
+    split; [eapply IHt1 | eapply IHt2]; eauto.
+  - rewrite subst_rho_tyref in H1. simpl in *.
+    apply subst_rho_free_vars_union_1 in H1; auto. destruct H1.
+    apply subst_rho_free_vars_union_2.
+    split; [ eapply subst_rho_free_vars_rgn | eapply IHt]; eauto.
+  - rewrite subst_rho_arrow in H1. simpl in *.
+    eapply subst_rho_free_vars_union_1 in H1. destruct H1.
+    eapply subst_rho_free_vars_union_1 in H0. destruct H0.
+    eapply subst_rho_free_vars_union_1 in H0. destruct H0.
+    eapply subst_rho_free_vars_union_1 in H1. destruct H1.
+    apply subst_rho_free_vars_union_2.
+    split;  [eapply IHt1 | apply subst_rho_free_vars_union_2]; eauto.
+    split.
+    + apply subst_rho_free_vars_union_2.
+      split; [ eapply subst_rho_free_vars_eps | eapply subst_rho_free_vars_eps]; eauto. 
+    + eapply subst_rho_free_vars_union_2.
+      split; [eapply IHt2 | eapply IHt3]; eauto. 
+  - rewrite subst_rho_forallrgn in H1; simpl in *.
+    eapply subst_rho_free_vars_union_1 in H1. destruct H1.
+    eapply subst_rho_free_vars_union_2.
+    split; [ eapply subst_rho_free_vars_eps | eapply IHt]; eauto.
+Qed.
+
 Lemma not_set_elem_not_in_rho: forall rho rgns x,
                                  TcRho (rho, rgns) ->
                                  not_set_elem rgns x ->
