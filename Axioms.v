@@ -16,16 +16,6 @@ Axiom find_rho_2:
     R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
     R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None.
 
-Axiom not_frv_in_subst_rho:
-  forall this1 this2 Hl Hr k e t x,
-        ~ frv
-          (subst_rho {| R.this := this2; R.is_bst := Hr |}
-                     (subst_in_type k e
-                                    (subst_rho {| R.this := this1; R.is_bst := Hl |} t))) x ->
-        ~ frv (subst_rho {| R.this := this1; R.is_bst := Hl |} t) x \/
-        (k <> x -> ~ frv t x) \/
-        ~ frv (subst_rho {| R.this := this2; R.is_bst := Hr |} t) x.
-
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
 Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
