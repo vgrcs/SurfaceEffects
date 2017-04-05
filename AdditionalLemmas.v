@@ -239,6 +239,21 @@ Proof.
       * apply IHthis2.
 Qed.
 
+Lemma decompose_find_in_rho:
+  forall x this1 this2 k e v t He Hl Hr, 
+    R.find (elt:=Region) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = Some v ->
+    R.find (elt:=Region) x {| R.this := this1; R.is_bst := Hl |} = Some v \/
+    R.find (elt:=Region) x {| R.this := this2; R.is_bst := Hr |} = Some v \/
+    e = v.
+Proof.
+  intros.
+  apply RMapP.find_mapsto_iff  in H.
+  inversion H; subst.
+  - right. right. reflexivity.
+  - left. apply RMapP.find_mapsto_iff. auto.
+  - right. left.  apply RMapP.find_mapsto_iff. auto.
+Qed. 
+
 Lemma subst_rho_fvar_2:
   forall rho x v,
    find_R (Rgn2_FVar true false x) rho = Some v ->
@@ -251,36 +266,27 @@ Proof.
     inversion H.
   - assert (Hl: R.Raw.bst this1) by (inversion is_bst; auto).
     assert (Hr: R.Raw.bst this2) by (inversion is_bst; auto).
-    replace (fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst |} (Rgn2_FVar true true x))
+    replace (fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst |} 
+                            (Rgn2_FVar true true x))
     with
     (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |}
                     (subst_rgn k (Rgn2_Const true false e)
                                (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true x)))
-    ) by (unfold fold_subst_rgn, R.fold, R.Raw.fold in *; reflexivity).
-    apply  RMapP.find_mapsto_iff in H.    
-    inversion H; subst. 
-    + (* x = k *)
-      destruct (AsciiVars.compare k k); try (solve [unfold AsciiVars.lt in l; omega]).
-      replace (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} 
-                              (subst_rgn k (Rgn2_Const true false e)
-                              (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} (Rgn2_FVar true true k))))
-      with (fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := is_bst |} 
-                           (Rgn2_FVar true true k)) by
-          (unfold fold_subst_rgn, R.fold, R.Raw.fold in *; reflexivity).  
-      eapply R.Raw.Proofs.find_1 in H; auto.
-      apply fold_subst_rgn_eq_1; auto.
-    + apply R.Raw.Proofs.find_1 in H1; auto.
-      apply IHthis1 with (is_bst := Hl) in H1. rewrite H1. simpl.
-      rewrite subst_rho_rgn_const. reflexivity.
-    + apply R.Raw.Proofs.find_1 in H1; auto.
-      assert (R.Raw.In x this2) by (apply R.Raw.Proofs.find_iff in H1; 
-                                    [ eapply R.Raw.Proofs.MapsTo_In; eassumption | assumption]).
-      apply IHthis2 with (is_bst := Hr) in H1.
-      erewrite fold_subst_rgn_left_1; eauto; simpl.
-      assert (AsciiVars.lt k x) by (eapply fold_subst_rgn_left_2; eauto).
-      apply AsciiVars.lt_not_eq in H2.
-      destruct (RMapP.eq_dec k x); subst; [contradict H0; auto | assumption].
-Qed.
+    ) by (unfold fold_subst_rgn, R.fold, R.Raw.fold in *; reflexivity). 
+    simpl in H. 
+    eapply decompose_find_in_rho in H; eauto.
+    destruct H.
+    + assert (H' : fold_subst_rgn {| R.this := this1; R.is_bst := Hl |}
+                                 (Rgn2_FVar true true x) = Rgn2_Const true true v)
+       by (apply IHthis1; simpl; assumption). 
+      rewrite H'. simpl. rewrite subst_rho_rgn_const. reflexivity.
+    + destruct H.
+      * assert (H'' : fold_subst_rgn {| R.this := this2; R.is_bst := Hr |}
+                                 (Rgn2_FVar true true x) = Rgn2_Const true true v)
+          by (apply IHthis2; simpl; assumption). 
+        admit.
+      * subst. 
+Admitted.
 
 Lemma NotNoneIsSome:
   forall {A} x,
@@ -463,10 +469,15 @@ Lemma FindIfLowerThan:
     AsciiVars.lt x k ->
     R.find (elt:=Region) x {| R.this := this1; R.is_bst := H |} <> None.
 Proof.
-  intros x this1 this2 k e t is_bst H H1 H2 H3.
-  assert (~ R.Raw.In k this1) by (apply RProofs.lt_tree_not_in in H2; auto).
+  intros x this1 this2 k e t is_bst H H1 H2 H3. 
+  assert (~ R.Raw.In k this1) by (apply RProofs.lt_tree_not_in in H2; auto). 
   apply RProofs.in_find; auto.
   apply RProofs.find_in in H1. 
+  contradict H0.
+  inversion H1; subst.
+  - unfold AsciiVars.lt in H3; omega.
+  - admit.
+  - admit.  
 Admitted.
 
 Lemma FindIfGreaterThan:
@@ -481,6 +492,11 @@ Proof.
   assert (~ R.Raw.In k this2) by (apply RProofs.gt_tree_not_in in H2; auto).
   apply RProofs.in_find; auto.
   apply RProofs.find_in in H1. 
+  contradict H0.
+  inversion H1; subst.
+  - unfold AsciiVars.lt in H3; omega.
+  - admit.
+  - admit.  
 Admitted.
 
 Lemma TcRhoIncludedNoFreeVarsEps_find:

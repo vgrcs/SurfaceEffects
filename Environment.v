@@ -1,4 +1,3 @@
-
 Add LoadPath "." as Top0.
 Require Import Top0.Tactics.
 Require Import Top0.Definitions.
@@ -223,13 +222,54 @@ Proof.
   intros; repeat split; 
   try (intro; apply H; apply RMapP.in_find_iff in H0; apply RMapP.in_find_iff; 
                                contradict H0). 
-  - eapply find_rho_1. eassumption. 
-  - eapply find_rho_2; eassumption. 
+  - apply RMapP.not_find_in_iff in H0.
+    apply RMapP.not_find_in_iff. intro. 
+    apply H0. unfold R.In in H1. 
+    unfold R.Raw.In0 in H1.
+    destruct H1.
+    unfold R.In, R.Raw.In0. exists x0.
+    apply  R.Raw.MapsLeft. simpl in H1. 
+    assumption.
+  - apply RMapP.not_find_in_iff in H0. 
+    apply RMapP.not_find_in_iff. intro. 
+    apply H0. unfold R.In in H1. 
+    unfold R.Raw.In0 in H1.
+    destruct H1.
+    unfold R.In, R.Raw.In0. exists x0. simpl. simpl in H1.
+    apply  R.Raw.MapsRight. assumption.
   - contradict H. rewrite H. clear H. unfold R.In.  
     econstructor. simpl. econstructor. reflexivity.
   - apply find_rho_3.
     apply RMapP.not_find_in_iff.
     assumption.
+Qed.
+
+Lemma find_rho_1:
+  forall x this1 this2 k e t He Hl,
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
+    R.find (elt:=nat) x {| R.this := this1; R.is_bst := Hl |} = None.
+Proof.
+  intros.
+  inversion He; subst.
+  apply RMapP.not_find_in_iff in H.
+  eapply not_in_raw_rho with (Hr:=H6) (Hl:=Hl) in H; auto.
+  destruct H as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]]. 
+  apply RMapP.not_find_in_iff.
+  assumption.
+Qed.
+
+Lemma find_rho_2:
+  forall x this1 this2 k e t He Hr,
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := He |} = None ->
+    R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None.
+Proof.
+  intros.
+  inversion He; subst.
+  apply RMapP.not_find_in_iff in H.
+  eapply not_in_raw_rho with (Hr:=Hr) (Hl:=H4) in H; auto.
+  destruct H as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]]. 
+  apply RMapP.not_find_in_iff.
+  assumption.
 Qed.
 
 Lemma subst_rho_free_vars_union_1 :
@@ -468,10 +508,7 @@ Proof.
   - inversion is_bst; subst. 
     destruct (AsciiVars.compare x k); subst.
     + eapply IHthis1 with (is_bst:=H5); eauto.
-      * apply RMapP.not_find_in_iff in H1. 
-        eapply not_in_raw_rho with (Hl:=H5) (Hr:=H7) in H1; auto.
-        destruct H1 as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]]. 
-        apply RMapP.not_find_in_iff. assumption.  
+      * eapply find_rho_1; eauto.
       * intro. apply H2. unfold In in *. clear H2. 
         eapply subst_rho_free_vars_eps_aux_1; eauto.
     + inversion e0; subst.
@@ -482,10 +519,7 @@ Proof.
       exists sa. split; [assumption|]. 
       apply equal_fold_subst_sa; auto.
     + eapply IHthis2 with (is_bst:=H7); eauto.
-      * apply RMapP.not_find_in_iff in H1. 
-        eapply not_in_raw_rho with (Hl:=H5) (Hr:=H7) in H1; auto.
-        destruct H1 as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]].
-        apply RMapP.not_find_in_iff. assumption.  
+      * eapply find_rho_2; eauto.  
       * intro. apply H2. unfold In in *. clear H2. 
         eapply subst_rho_free_vars_eps_aux_2; eauto.
 Qed.
@@ -664,29 +698,6 @@ Proof.
     + apply Union_intror. assumption.
 Qed.
 
-Lemma IncludedUnion_Name_2:
-  forall (a b c d : Ensemble Name) rgns,
-    included (set_union a (set_union b c))
-             (set_union rgns d) ->
-    included (set_union a b)
-             (set_union rgns d) /\
-    included (set_union a c)
-             (set_union rgns d).
-Proof.
-  intros.
-  split.
-  - intro. intro. apply H.
-    unfold In, set_union in *.
-    inversion H0; subst.
-    + apply Union_introl. assumption.
-    + apply Union_intror. apply Union_introl. assumption.
-  - intro. intro. apply H.
-    unfold In, set_union in *.
-    inversion H0; subst.
-    + apply Union_introl. assumption.
-    + apply Union_intror. apply Union_intror. assumption.    
-Qed.
-
 Lemma IncludedUnion_Name_5:
   forall (a b c : Ensemble Name) rgns,
     included (set_union a b)
@@ -700,21 +711,6 @@ Proof.
     apply Union_introl. assumption.
   - intro. intro. apply H.
     apply Union_intror. assumption.    
-Qed.
-
-
-Lemma IncludedUnion_Name_3:
-  forall (a b c : Ensemble Name) rgns,
-    included (set_union a b) rgns /\
-    included (set_union a c) rgns ->
-    included (set_union a (set_union b c)) rgns.
-Proof.
-  intros. 
-  intro. intro. unfold In, set_union in *.
-  destruct H.
-  apply IncludedUnion_Name_1 in H. destruct H.
-  apply IncludedUnion_Name_1 in H1. destruct H1.
-  repeat destruct H0; [apply H | apply H2 | apply H3]; assumption. 
 Qed.
 
 Lemma IncludedUnion_Name_4:
@@ -742,7 +738,6 @@ Proof.
   destruct H3 as [sa [H4 H5]].
   destruct H4; [apply H1 | apply H2]; exists x0; auto.
 Qed.
-
 
 Lemma IncludedUnion_Name_6:
   forall (a b: Ensemble Name) rgns,
