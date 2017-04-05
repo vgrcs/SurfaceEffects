@@ -308,54 +308,119 @@ Proof.
     assumption.
 Qed.
 
-Lemma subst_rho_free_vars_rgn_aux_2:
-    forall this1 this2 k e t Hc Hl Hr x r,
-      R.find (elt:=nat) x {| R.this := this1; R.is_bst := Hl |} = None ->
-      x <> k ->
-      free_rgn_vars_in_rgn2 (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} r) x ->
-      fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} r = 
-      fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} r.
+Lemma subst_rho_free_vars_rgn_aux_1:
+  forall this1 this2 k e t Hc Hl x r,
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} =
+     None ->
+    free_rgn_vars_in_rgn2 (fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} r) x ->
+    fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} r = 
+    fold_subst_rgn {| R.this := this1; R.is_bst := Hl |} r.
 Proof.
-  intros. clear H. clear H0. unfold rgn2_in_typ in r. dependent induction r; 
-  eapply TcRhoIncludedNoFreeVarsRgn_aux_fold in H1; eauto.
+  intros. unfold rgn2_in_typ in r. dependent induction r; 
+  eapply TcRhoIncludedNoFreeVarsRgn_aux_fold in H0; eauto.
   + unfold free_rgn_vars_in_rgn2 in *; simpl in *. 
-    inversion H1.
+    inversion H0.
   + symmetry. rewrite fold_subst_rho_free_vars_rgn_aux. 
     symmetry. rewrite fold_subst_rho_free_vars_rgn_aux.
     reflexivity.
-    * simpl in H1. inversion H1. subst.
-      admit.
-    * simpl in H1. inversion H1. subst. 
-      admit.
+    * simpl in H0. inversion H0. subst.
+      assumption.
+    * simpl in H0. inversion H0. subst.
+      apply RMapP.not_find_in_iff in H. 
+      inversion Hc; subst.
+      eapply not_in_raw_rho with (Hr:=H7) in H; auto.
+      destruct H as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]]. 
+      apply RMapP.not_find_in_iff.
+      eassumption.
   + unfold free_rgn_vars_in_rgn2 in *; simpl in *. 
-    inversion H1.
-Admitted.
+    inversion H0.
+Qed.
+
+Lemma subst_rho_free_vars_rgn_aux_2:
+  forall this1 this2 k e t Hc Hr x r,
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} =
+     None ->
+    free_rgn_vars_in_rgn2 (fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} r) x ->
+    fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} r = 
+    fold_subst_rgn {| R.this := this2; R.is_bst := Hr |} r.
+Proof.
+  intros. unfold rgn2_in_typ in r. dependent induction r; 
+  eapply TcRhoIncludedNoFreeVarsRgn_aux_fold in H0; eauto.
+  + unfold free_rgn_vars_in_rgn2 in *; simpl in *. 
+    inversion H0.
+  + symmetry. rewrite fold_subst_rho_free_vars_rgn_aux. 
+    symmetry. rewrite fold_subst_rho_free_vars_rgn_aux.
+    reflexivity.
+    * simpl in H0. inversion H0. subst.
+      assumption.
+    * simpl in H0. inversion H0. subst.
+      apply RMapP.not_find_in_iff in H. 
+      inversion Hc; subst.
+      eapply not_in_raw_rho with (Hl:=H5) in H; auto.
+      destruct H as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]]. 
+      apply RMapP.not_find_in_iff.
+      eassumption.
+  + unfold free_rgn_vars_in_rgn2 in *; simpl in *. 
+    inversion H0.
+Qed.
+
+Lemma subst_rho_free_vars_sa_aux_1:
+  forall this1 this2 k e t Hc Hl x sa,
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} =
+     None ->
+    free_rgn_vars_in_sa2 (fold_subst_sa {| R.this := this1; R.is_bst := Hl |} sa) x ->
+    fold_subst_sa {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} sa = 
+    fold_subst_sa {| R.this := this1; R.is_bst := Hl |} sa.
+Proof.
+  intros. induction sa;
+  unfold free_rgn_vars_in_sa2 in *; simpl in *; f_equal;
+  eapply subst_rho_free_vars_rgn_aux_1; eauto.
+Qed.
 
 Lemma subst_rho_free_vars_sa_aux_2:
-    forall this1 this2 k e t Hc Hl Hr x sa,
-      R.find (elt:=nat) x {| R.this := this1; R.is_bst := Hl |} = None ->
-      x <> k ->
-      free_rgn_vars_in_sa2 (fold_subst_sa {| R.this := this2; R.is_bst := Hr |} sa) x ->
-      fold_subst_sa {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} sa = 
-      fold_subst_sa {| R.this := this2; R.is_bst := Hr |} sa.
+  forall this1 this2 k e t Hc Hr x sa,
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} =
+     None ->
+    free_rgn_vars_in_sa2 (fold_subst_sa {| R.this := this2; R.is_bst := Hr |} sa) x ->
+    fold_subst_sa {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} sa = 
+    fold_subst_sa {| R.this := this2; R.is_bst := Hr |} sa.
 Proof.
   intros. induction sa;
   unfold free_rgn_vars_in_sa2 in *; simpl in *; f_equal;
   eapply subst_rho_free_vars_rgn_aux_2; eauto.
 Qed.
 
-Lemma subst_rho_free_vars_eps_aux_2:
-  forall this1 this2 k e t Hc Hl Hr x e',
-    R.find (elt:=nat) x {| R.this := this1; R.is_bst := Hl |} = None ->
-    x <> k ->
-    free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this2; R.is_bst := Hr |} e') x ->
-    free_rgn_vars_in_eps2 (fold_subst_eps
-                             {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} e')
-                          x.
+
+Lemma subst_rho_free_vars_eps_aux_1:
+  forall this1 this2 k e t Hc Hl x e',
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} =
+     None ->
+   free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e') x ->
+   free_rgn_vars_in_eps2 (fold_subst_eps
+                     {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} e') x.
 Proof.
   intros. 
   unfold fold_subst_eps in *.
-  destruct H1 as [sa1 [[sa1' [H1a H1b]] H1c]].
+  destruct H0 as [sa1 [[sa1' [H1a H1b]] H1c]].
+  exists sa1. split; [| assumption].
+  exists sa1'. split; [assumption |].
+  rewrite <- H1b.
+  rewrite <- H1b in H1c.
+  eapply subst_rho_free_vars_sa_aux_1; eauto.
+Qed.
+
+
+Lemma subst_rho_free_vars_eps_aux_2:
+  forall this1 this2 k e t Hc Hr x e',
+    R.find (elt:=nat) x {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} =
+     None ->
+    free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this2; R.is_bst := Hr |} e') x ->
+    free_rgn_vars_in_eps2 (fold_subst_eps
+                     {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} e') x.
+Proof.
+  intros. 
+  unfold fold_subst_eps in *.
+  destruct H0 as [sa1 [[sa1' [H1a H1b]] H1c]].
   exists sa1. split; [| assumption].
   exists sa1'. split; [assumption |].
   rewrite <- H1b.
@@ -363,15 +428,27 @@ Proof.
   eapply subst_rho_free_vars_sa_aux_2; eauto.
 Qed.
 
-Axiom subst_rho_free_vars_eps_aux_1:
-  forall this1 this2 k e t Hc Hl Hr x e',
-    R.find (elt:=nat) x {| R.this := this2; R.is_bst := Hr |} = None ->
-    x <> k ->
-    free_rgn_vars_in_eps2 (fold_subst_eps {| R.this := this1; R.is_bst := Hl |} e') x ->
-    free_rgn_vars_in_eps2 (fold_subst_eps
-                             {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} e') x.
+Lemma equal_fold_subst_rgn:
+  forall this1 this2 k e t Hc r,
+    R.find (elt:=nat) k {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} = None ->
+    free_rgn_vars_in_rgn2 r k ->
+    fold_subst_rgn {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} r = r.
+Proof.
+  intros. unfold rgn2_in_typ in r. dependent induction r; simpl in *.
+  - inversion H0.
+  - inversion H0. subst.
+    apply fold_subst_rho_free_vars_rgn_aux. auto.   
+  - inversion H0.
+Qed.
 
-
+Lemma equal_fold_subst_sa:
+  forall this1 this2 k e t Hc sa, 
+    R.find (elt:=nat) k {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} = None ->
+    free_rgn_vars_in_sa2 sa k ->
+    fold_subst_sa {| R.this := R.Raw.Node this1 k e this2 t; R.is_bst := Hc |} sa = sa.
+Proof.
+  intros. induction sa; simpl in *; f_equal; apply equal_fold_subst_rgn; auto.
+Qed.
 
 Lemma subst_rho_free_vars_eps:
   forall rho x (e : Ensemble StaticAction2),
@@ -389,22 +466,28 @@ Proof.
     unfold fold_subst_sa, fold_subst_rgn, subst_rgn, R.fold, R.Raw.fold ; simpl.
     induction sa; reflexivity.
   - inversion is_bst; subst. 
-    apply RMapP.not_find_in_iff in H1.
-    eapply not_in_raw_rho with (Hl:=H5) (Hr:=H7) in H1; auto.
-    destruct H1 as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]].
     destruct (AsciiVars.compare x k); subst.
     + eapply IHthis1 with (is_bst:=H5); eauto.
-      apply RMapP.not_find_in_iff. assumption.  
-      intro. apply H2. unfold In in *. clear H2. 
-      apply RMapP.not_find_in_iff in HNotIn2.
-      eapply subst_rho_free_vars_eps_aux_1; eauto.
+      * apply RMapP.not_find_in_iff in H1. 
+        eapply not_in_raw_rho with (Hl:=H5) (Hr:=H7) in H1; auto.
+        destruct H1 as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]]. 
+        apply RMapP.not_find_in_iff. assumption.  
+      * intro. apply H2. unfold In in *. clear H2. 
+        eapply subst_rho_free_vars_eps_aux_1; eauto.
     + inversion e0; subst.
-      contradiction. 
+      intro. apply H2. unfold In in *. clear H2.
+      unfold free_rgn_vars_in_eps2, fold_subst_eps in *.
+      destruct H as [sa [Ha Hb]].
+      exists sa. split; [| assumption].
+      exists sa. split; [assumption|]. 
+      apply equal_fold_subst_sa; auto.
     + eapply IHthis2 with (is_bst:=H7); eauto.
-      apply RMapP.not_find_in_iff. assumption.  
-      intro. apply H2. unfold In in *. clear H2. 
-      apply RMapP.not_find_in_iff in HNotIn1.
-      eapply subst_rho_free_vars_eps_aux_2; eauto.
+      * apply RMapP.not_find_in_iff in H1. 
+        eapply not_in_raw_rho with (Hl:=H5) (Hr:=H7) in H1; auto.
+        destruct H1 as [HNotIn1 [HNotIn2 [HNotIn3  HNotIn4]]].
+        apply RMapP.not_find_in_iff. assumption.  
+      * intro. apply H2. unfold In in *. clear H2. 
+        eapply subst_rho_free_vars_eps_aux_2; eauto.
 Qed.
 
 Lemma subst_rho_free_vars :
