@@ -646,6 +646,37 @@ Proof.
     + eapply E_diff_key_1 in H; eauto.
 Qed.
 
+Lemma ExtendedTcInv_2:
+  forall ctxt rgns f x tyx effe tyc effc, 
+    TcInc (ctxt, rgns)->
+    included (frv tyx) rgns ->
+    included (frv (Ty2_Arrow tyx effc tyc effe Ty2_Effect)) rgns ->
+    TcInc (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns).
+Proof.
+  intros ctxt rgns f x tyx effe tyc effc HInc HFind1 HFind2.
+  inversion HInc as [? ? HFrv]; subst.
+  unfold included, Included in *.
+  econstructor.    
+  intros. unfold find_T in H, HFrv.
+  unfold update_rec_T in H. simpl in H.
+  destruct (AsciiVars.eq_dec x0 x) as [c | c].
+  - inversion c; subst.
+    rewrite E_same_key in H.
+    inversion H; subst.
+    auto.
+  - destruct (AsciiVars.eq_dec x0 f) as [d | d].
+    + inversion d; subst.
+      unfold AsciiVars.eq in c.
+      eapply E_diff_key_1 in H; auto.
+      rewrite E_same_key in H.
+      inversion H.
+      auto.
+    + eapply E_diff_key_1 in H; eauto. 
+      eapply E_diff_key_1 in H; eauto.
+      do 2 intro.
+      eapply HFrv; eauto.
+Qed.
+
 Lemma EmptyUnionisEmptySet_Name_Left :
   forall acts,
     Union Name (Empty_set Name) acts = acts.
