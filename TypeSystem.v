@@ -99,31 +99,31 @@ Proof.
     rewrite <- H5. rewrite <- H4. rewrite <- H3.
     inversion Hcl1. destruct (H0 sa'').
 
-    assert (fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa'') /\ e1 sa /\ e sa'') by
-        (eapply subst_rho_eps_aux_1; eauto).
+    assert (fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa'') /\ e1 sa /\ e sa'') 
+      by (eapply subst_rho_eps_aux_1; eauto).
 
-    assert(fold_subst_sa rho' (opening_rgn_in_sa2 n (Rgn2_Const true true v') (closing_rgn_in_sa2 n x sa'')) =
-            fold_subst_sa rho (opening_rgn_in_sa2 n (mk_rgn_type w) sa)). 
-    apply subst_rho_open_close_sa; auto. intuition.
-    rewrite H9. 
+    assert(H' : fold_subst_sa rho' (opening_rgn_in_sa2 n (Rgn2_Const true true v') 
+                  (closing_rgn_in_sa2 n x sa'')) =  
+                fold_subst_sa rho (opening_rgn_in_sa2 n (mk_rgn_type w) sa)) 
+    by (apply subst_rho_open_close_sa; auto; intuition).
+    rewrite H'. 
     exists (opening_rgn_in_sa2 n (mk_rgn_type w) sa).
     intuition.
     exists sa.
-    intuition.
+    split; [ assumption | reflexivity].
  - unfold fold_subst_eps.  unfold fold_subst_eps in H0. 
    unfold opening_rgn_in_eps2, closing_rgn_in_eps2. unfold opening_rgn_in_eps2, closing_rgn_in_eps2 in H0.
    destruct H0 as [sa [[sa' [H1 H2]] H3]].
-   rewrite <- H3. rewrite <- H2. 
-   exists (opening_rgn_in_sa2 n (Rgn2_Const true true v') (closing_rgn_in_sa2 n x sa')). 
+   rewrite <- H3. rewrite <- H2.    
+   exists (opening_rgn_in_sa2 n (Rgn2_Const true true v') (closing_rgn_in_sa2 n x sa)). 
+   inversion Hcl1. destruct (H0 sa).
    split.  
-   + exists (closing_rgn_in_sa2 n x sa').  intuition.
-     exists sa'. intuition.  
-     assert (fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa') /\ e1 sa /\ e sa') by
-         (eapply subst_rho_eps_aux_1 in H; eauto; intuition; eauto).
-     intuition.
-   + inversion Hcl1. destruct (H0 sa').
-     eapply subst_rho_open_close_sa; eauto. 
-     eapply subst_rho_eps_aux_2; eauto.
+   + exists (closing_rgn_in_sa2 n x sa).  split; [ | reflexivity].
+     exists sa. split; [ | reflexivity].  
+     apply subst_rho_eps_aux_1 with (sa := sa') (sa':=sa) in H; auto.
+   + eapply subst_rho_open_close_sa; eauto. 
+     apply subst_rho_eps_aux_1 with (sa := sa') (sa':=sa) in H; auto.
+     destruct H as [A [B C]]; auto.
 Qed.
    
 Lemma subst_rho_open_close :

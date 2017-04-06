@@ -66,13 +66,8 @@ Axiom UnionStoreTyping:
     ST.find (elt:=tau) l (Functional_Map_Union sttya sttym) = Some t'.
 
 Axiom subst_rho_eps_aux_1 :
- forall rho rho' n x e e1 sa sa'',
+ forall rho rho' n x e e1 sa sa',
+   lc_type_eps e ->
+   lc_type_sa sa' ->
    fold_subst_eps rho e1 = fold_subst_eps rho' (closing_rgn_in_eps2 n x e) ->
-   fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa'') /\ e1 sa /\ e sa''.
-
-Axiom subst_rho_eps_aux_2:
-  forall e e1 sa' n x rho rho',
-    lc_type_eps e ->
-    lc_type_sa sa' ->
-    fold_subst_eps rho e1 = fold_subst_eps rho' (closing_rgn_in_eps2 n x e) ->
-    fold_subst_sa rho sa' = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa').
+   fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa') /\ e1 sa /\ e sa'.
