@@ -473,10 +473,17 @@ Proof.
   assert (~ R.Raw.In k this1) by (apply RProofs.lt_tree_not_in in H2; auto). 
   apply RProofs.in_find; auto.
   apply RProofs.find_in in H1. 
-  contradict H0.
+  contradict H0. 
   inversion H1; subst.
   - unfold AsciiVars.lt in H3; omega.
-  - admit.
+  - apply RProofs.lt_tree_not_in in H2. 
+    eapply RProofs.In_1 with (x:=k); eauto. 
+    (*  H2 : ~ R.Raw.In k this1
+        H3 : AsciiVars.lt x k
+        H4 : R.Raw.In x this1
+        ============================
+        R.Raw.In k this1 *)
+    admit.
   - admit.  
 Admitted.
 

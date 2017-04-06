@@ -65,9 +65,26 @@ Axiom UnionStoreTyping:
     ST.find (elt:=tau) l sttym = Some t' ->
     ST.find (elt:=tau) l (Functional_Map_Union sttya sttym) = Some t'.
 
-Axiom subst_rho_eps_aux_1 :
+Require Import Coq.Logic.FunctionalExtensionality.
+Lemma subst_rho_eps_aux_1 :
  forall rho rho' n x e e1 sa sa',
    lc_type_eps e ->
    lc_type_sa sa' ->
-   fold_subst_eps rho e1 = fold_subst_eps rho' (closing_rgn_in_eps2 n x e) ->
+   (fold_subst_eps rho e1) = (fold_subst_eps rho' (closing_rgn_in_eps2 n x e)) ->
    fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa') /\ e1 sa /\ e sa'.
+Proof.
+  intros.
+  unfold fold_subst_eps in H1.
+  apply equal_f with (x0:=sa) in H1.
+Admitted.
+
+Lemma subst_rho_eps_aux_2 :
+ forall rho rho' n x e e1 sa sa',
+   lc_type_eps e ->
+   lc_type_sa sa' ->
+   (fold_subst_eps rho e1) sa = (fold_subst_eps rho' (closing_rgn_in_eps2 n x e)) sa' ->
+   fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa') /\ e1 sa /\ e sa'.
+Proof.
+  intros.
+  unfold fold_subst_eps in H1.
+Admitted.
