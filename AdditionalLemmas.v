@@ -477,7 +477,7 @@ Proof.
   inversion H1; subst.
   - unfold AsciiVars.lt in H3; omega.
   - apply RProofs.lt_tree_not_in in H2. 
-    eapply RProofs.In_1 with (x:=k); eauto. 
+    (*eapply RProofs.In_1 with (x:=k); eauto.*) 
     (*  H2 : ~ R.Raw.In k this1
         H3 : AsciiVars.lt x k
         H4 : R.Raw.In x this1

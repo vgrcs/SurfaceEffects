@@ -999,6 +999,11 @@ Proof.
   - inversion HInc as [? ? HFrv]; subst.
     intuition; eapply HFrv; eauto. contradict H0; apply NotFreeInEmptyEps.
   - inversion HInc as [? ? HFrv]; subst.
+    
+    (* alternative proof without using the induction hypothesis
+    split; [assumption|].
+    do 2 intro; unfold free_rgn_vars_in_eps2 in H1. 
+    destruct H1 as [sa [H' H'']]; inversion H'. *)
  
     assert (H' : included (frv tyc) rgns /\ included (free_rgn_vars_in_eps2 effc) rgns).
     { eapply IHHExp1; eauto. 
