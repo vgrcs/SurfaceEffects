@@ -52,12 +52,31 @@ Axiom UnionTcHeap:
     (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap_eff1, Eff theta1, acts_eff1) ->
     (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap_eff2, Eff theta2, acts_eff2) ->
     Disjointness theta1 theta2 /\ ~ Conflictness theta1 theta2 ->
-    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, Num v1, acts_mu1) ->
-    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, Num v2, acts_mu2) ->
+    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
+    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
     TcHeap (heap_mu1, sttym) ->
     TcHeap (heap_mu2, sttya) ->
     TcHeap (hp', Functional_Map_Union sttya sttym).
+
+
+Axiom TcValExtended_1 :
+  forall stty sttya sttyb v rho ty,
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
+    TcVal (sttya, v, subst_rho rho ty) ->
+    TcVal (Functional_Map_Union sttya sttyb, v, subst_rho rho ty).
+
+Axiom TcValExtended_2 :
+  forall stty sttya sttyb v rho ty,
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
+    TcVal (sttyb, v, subst_rho rho ty) ->
+    TcVal (Functional_Map_Union sttya sttyb, v, subst_rho rho ty).
 
 Axiom UnionStoreTyping:
   forall l sttya sttym t', 

@@ -35,7 +35,7 @@ Import TypeSoundness.
 Example PairParAux:
   forall h'' heap_mu theta env v rho ef ea 
          acts_eff acts_mu,
-   (h'', env, rho, Mu_App ef ea) ⇓ (heap_mu, Num v, acts_mu) ->
+   (h'', env, rho, Mu_App ef ea) ⇓ (heap_mu, v, acts_mu) ->
    (h'', env, rho, Eff_App ef ea) ⇓ (h'', Eff theta, acts_eff) ->
    forall stty ctxt rgns ty_e static_e,
      TcHeap (h'', stty) ->
@@ -188,7 +188,7 @@ Proof.
             + eapply ext_stores__val with (stty:=sttya); eauto. }
   - constructor; inversion HTcExp; subst.
     + assert (HS1 : acts_mu1 ⊑ theta1 /\ ReadOnlyPhi acts_eff1). 
-      { eapply PairParAux; eauto. 
+      { eapply PairParAux; eauto.  
         - inversion H5; subst.
           assert (BackTriangle (ctxt, rgns, rho, Mu_App ef1 ea1, Eff_App ef1 ea1)) by (eapply H6).
           inversion H1; subst.
@@ -529,18 +529,18 @@ Proof.
     eapply IHDyn1_2; eauto.    
     destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
     
-    assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ Num v1 = Num v0 /\ acts_mu1 = acts_mu0).  
+    assert (HR3 : H.Equal heap_mu1 heap_mu0 /\ v1 = v0 /\ acts_mu1 = acts_mu0).  
     eapply IHDyn1_3; eauto.
     inversion HR3 as [h_eq_3 [v_eq_3 a_eq_3]]. inversion v_eq_3.
     
-    assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ Num v2 = Num v3 /\ acts_mu2 = acts_mu3).  
+    assert (HR4 : H.Equal heap_mu2 heap_mu3 /\ v2 = v3 /\ acts_mu2 = acts_mu3).  
     eapply IHDyn1_4; eauto.
     inversion HR4 as [h_eq_4 [v_eq_4 a_eq_4]]. inversion v_eq_4.
 
     assert (HS1 : acts_mu0 ⊑ theta0 ). 
     { eapply PairParAux; eauto.
       - assert (heap_b =heap_eff0) by (eapply ReadOnlyTracePreservesHeap_1; eauto; subst; eassumption).
-         rewrite H35. rewrite H35 in H7. eassumption.
+         rewrite H35. rewrite <- H48 in H7. eassumption.
       - eapply EqualHeaps; eauto.  
     } inversion HExp_mu1.
     

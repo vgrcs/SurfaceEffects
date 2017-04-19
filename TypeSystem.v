@@ -326,19 +326,19 @@ Proof.
     exists sttyb. intuition.
     rewrite subst_rho_effect. rewrite subst_rho_effect in TcVal_res.
     assumption.
-  Case "par_pair".
+  Case "par_pair". 
     edestruct IHD3 as [sttym [Weak1 [TcHeap1 TcVal_app1]]]; eauto. 
-    edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto.
-    inversion TcVal_app1 as [A B [C D HRApp1] | | | | | |]; subst. 
-    inversion TcVal_app2 as [A B [C D HRApp2] | | | | | |]; subst.  
+    edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto. 
+    (*inversion TcVal_app1 as [A B [C D HRApp1] | | | | | |]; subst. 
+    inversion TcVal_app2 as [A B [C D HRApp2] | | | | | |]; subst.*)  
     exists (Functional_Map_Union sttya sttym). intuition. 
-    SCase "Weakening".
+    SCase "Weakening". 
       apply UnionStoreTyping; [apply Weaka | apply Weak1]; auto.
     SCase "TcHeap".
-      eapply UnionTcHeap with (theta1:=theta1) (theta2:=theta2); eauto. 
+      eapply UnionTcHeap with (theta1:=theta1) (theta2:=theta2); eauto.  
     SCase "TcVal".
-      rewrite subst_rho_pair.
-      econstructor; [rewrite <- HRApp1 | rewrite <- HRApp2]; constructor.
+      rewrite subst_rho_pair. 
+      econstructor; [eapply TcValExtended_2 | eapply TcValExtended_1]; eauto.
   Case "cond_true".  
     edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
     edestruct IHD2 as [stty1 [Weak1 [TcHeapv1 TcVal_e1]]]; 

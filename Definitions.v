@@ -90,7 +90,7 @@ Inductive Val :=
   | Cls  : (Raw.t Val * R.t Region * Expr) -> Val                    
   | Eff  : Theta -> Val             
   | Unit : Val
-  | Pair : nat * nat -> Val.
+  | Pair : Val * Val -> Val.
 
 (* Dynamic Actions; for operational semantics *)
 Inductive DynamicAction : Type :=
@@ -464,8 +464,8 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
                       (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap_eff1, Eff theta1, acts_eff1) ->
                       (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap_eff2, Eff theta2, acts_eff2) ->
                       Disjointness theta1 theta2 /\ not (Conflictness theta1 theta2) ->
-                      (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, Num v1, acts_mu1) ->
-                      (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, Num v2, acts_mu2) ->
+                      (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
+                      (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
                       (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, heap') ->
                       (heap, env, rho, Pair_Par ef1 ea1 ef2 ea2) 
                         ⇓ (heap', Pair (v1, v2), Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2))
@@ -897,8 +897,8 @@ with TcVal : (Sigma * Val * tau) -> Prop :=
   | TC_Unit    : forall stty, 
                    TcVal (stty, Unit, Ty2_Unit)
   | TC_Pair    : forall stty v1 v2 ty1 ty2,
-                   TcVal (stty, Num v1, ty1) ->
-                   TcVal (stty, Num v2, ty2) ->
+                   TcVal (stty, v1, ty1) ->
+                   TcVal (stty, v2, ty2) ->
                    TcVal (stty, Pair (v1, v2), Ty2_Pair ty1 ty2)
   | TC_Eff     : forall stty e, 
                    TcVal (stty, Eff e, Ty2_Effect)
