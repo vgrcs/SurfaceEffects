@@ -60,7 +60,7 @@ Axiom UnionTcHeap:
     TcHeap (hp', Functional_Map_Union sttya sttym).
 
 
-Axiom TcValExtended_1 :
+Lemma TcValExtended_1 :
   forall stty sttya sttyb v rho ty,
     (forall (l : ST.key) (t' : tau),
        ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
@@ -68,6 +68,19 @@ Axiom TcValExtended_1 :
        ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
     TcVal (sttya, v, subst_rho rho ty) ->
     TcVal (Functional_Map_Union sttya sttyb, v, subst_rho rho ty).
+Proof.
+  intros stty sttya sttyb v rho ty H1 H2 H3.  
+  generalize dependent sttyb. 
+  generalize dependent stty.
+  dependent induction H3; intros; try (solve [rewrite <- x; econstructor]).
+  - rewrite <- x. econstructor; eauto.
+    admit.
+  - rewrite <- x. econstructor; eauto.
+    admit.
+  - rewrite <- x. econstructor.
+    + admit.
+    + admit.  
+Admitted. 
 
 Axiom TcValExtended_2 :
   forall stty sttya sttyb v rho ty,
@@ -85,25 +98,9 @@ Axiom UnionStoreTyping:
     ST.find (elt:=tau) l (Functional_Map_Union sttya sttym) = Some t'.
 
 Require Import Coq.Logic.FunctionalExtensionality.
-Lemma subst_rho_eps_aux_1 :
+Axiom subst_rho_eps_aux_1 :
  forall rho rho' n x e e1 sa sa',
    lc_type_eps e ->
    lc_type_sa sa' ->
    (fold_subst_eps rho e1) = (fold_subst_eps rho' (closing_rgn_in_eps2 n x e)) ->
    fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa') /\ e1 sa /\ e sa'.
-Proof.
-  intros.
-  unfold fold_subst_eps in H1.
-  apply equal_f with (x0:=sa) in H1.
-Admitted.
-
-Lemma subst_rho_eps_aux_2 :
- forall rho rho' n x e e1 sa sa',
-   lc_type_eps e ->
-   lc_type_sa sa' ->
-   (fold_subst_eps rho e1) sa = (fold_subst_eps rho' (closing_rgn_in_eps2 n x e)) sa' ->
-   fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa2 n x sa') /\ e1 sa /\ e sa'.
-Proof.
-  intros.
-  unfold fold_subst_eps in H1.
-Admitted.
