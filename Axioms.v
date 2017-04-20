@@ -78,7 +78,9 @@ Proof.
   - rewrite <- x. econstructor; eauto.
     admit.
   - rewrite <- x. econstructor.
-    + admit.
+    + (* goal is TcVal (Functional_Map_Union sttya sttyb, v1, ty1) *)
+      (* but IH is TcVal (Functional_Map_Union sttya0 sttyb, v, subst_rho rho ty) *)
+      admit.
     + admit.  
 Admitted. 
 
