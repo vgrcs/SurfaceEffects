@@ -237,6 +237,8 @@ Proof.
   eapply H0; eassumption.
 Qed.  
 
+
+
 Lemma ty_sound:
   forall e env rho hp hp' v dynamic_eff,
     (hp, env, rho, e) ⇓ (hp', v, dynamic_eff) ->
@@ -356,14 +358,16 @@ Proof.
                       (t := t0)
                       (static_eff := veff)
       as [sttyv [Weakv [TcHeapv TcVal_v]]]; eauto.
-    exists (update_ST ((r, l), subst_rho rho t0) sttyv); split; [ | split].  
+    assert (find_H (r, allocate_H heap' r) heap' = None)
+      by (apply allocate_H_fresh).
+    exists (update_ST ((r, allocate_H heap' r), subst_rho rho t0) sttyv); split; [ | split].  
     SCase "Extended stores".   
-      intros k' t' STfind. destruct k' as [r' l'].
-      destruct (eq_nat_dec r r'); destruct (eq_nat_dec l l'); subst. 
+      intros k' t' STfind. destruct k' as [r' l']. 
+      destruct (eq_nat_dec r r'); destruct (eq_nat_dec (allocate_H heap' r) l'); subst. 
       SSCase "New address must be fresh, prove by contradiction".
         apply Weakv in STfind. 
         inversion_clear TcHeapv as [? ? ?  STfind_Hfind ?].  
-        destruct (STfind_Hfind (r', l') t' STfind) as [x F].
+        destruct (STfind_Hfind (r', allocate_H heap' r') t' STfind) as [x F].
         assert (C : None = Some x) by (rewrite <- F; rewrite <- H0; reflexivity).
         discriminate. 
       SSCase "Existing addresses are well-typed 1".
@@ -374,11 +378,11 @@ Proof.
         apply ST_diff_key_2; [simpl; intuition; apply n; congruence | now apply Weakv ].
     SCase "Heap typeness".  
       apply update_heap_fresh; eauto. 
-      remember (find_ST (r, l) sttyv) as to; symmetry in Heqto.
+      remember (find_ST (r, allocate_H heap' r) sttyv) as to; symmetry in Heqto.
       destruct to as [ t | ]. 
       SSCase "New address must be fresh, prove by contradiction".
         inversion_clear TcHeapv as [? ? ? STfind_Hfind ?].  
-        destruct (STfind_Hfind (r, l) t Heqto) as [? ex].
+        destruct (STfind_Hfind (r, allocate_H heap' r) t Heqto) as [? ex].
         rewrite H0 in ex. discriminate.
       SSCase "Heap typeness is preserved".
          reflexivity. 

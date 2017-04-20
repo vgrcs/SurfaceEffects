@@ -613,12 +613,13 @@ Proof.
     eapply IHDyn1; eauto. 
     destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. 
     inversion v_eq_1.
-    rewrite H in H10. inversion H10; subst.
+    rewrite H in H9. inversion H9; subst.
     assert (HFind : forall k, find_H k heap' = find_H k heap'0)
       by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
-    rewrite HFind in H0.
-    rewrite <- H11 in H0; inversion H0; subst.
-    apply AllocAddressIsDeterministic in H0; subst.
+    assert (find_H (r0, allocate_H heap' r0) heap' = None) by (apply allocate_H_fresh). 
+    assert (find_H (r0, allocate_H heap'0 r0) heap'0 = None) by (apply allocate_H_fresh). 
+    rewrite HFind in H1. rewrite <- H1 in H2. 
+    apply AllocAddressIsDeterministic in H2; subst. inversion H2.
     intuition.
     unfold update_H; simpl. apply HMapP.add_m; auto.
   - inversion HTcExp; subst.

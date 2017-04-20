@@ -423,6 +423,9 @@ Inductive Det_Trace : Phi -> Prop :=
                                 Disjoint_Traces (phi_as_list phi1) (phi_as_list phi2) ->
                                 Det_Trace (Phi_Par phi1 phi2). 
 
+Axiom allocate_H : Heap -> nat -> nat.
+Axiom allocate_H_fresh : forall (m : Heap) (r: nat),
+    find_H (r, allocate_H m r) m = None.
 
 Reserved Notation "e '⇓' n" (at level 50, left associativity).
 Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
@@ -480,7 +483,8 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   | BS_New_Ref     : forall e w r l v env rho  (heap heap' : Heap) vacts,
                        (heap, env, rho, e) ⇓ (heap', v, vacts) ->
                        find_R w rho = Some r ->
-                       find_H (r, l) heap' = None -> 
+                       (*find_H (r, l) heap' = None -> *)
+                       allocate_H heap' r = l ->
                        (heap, env, rho, Ref w e) ⇓ (update_H ((r, l), v) heap',
                                                     Loc (Rgn2_Const true false r) l,
                                                     Phi_Seq vacts (Phi_Elem (DA_Alloc r l v)))   

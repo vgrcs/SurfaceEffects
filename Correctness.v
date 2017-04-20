@@ -464,7 +464,7 @@ Proof.
     exact HSOUND.
   Case "new_ref e".
     (* goal *)
-    assert (HSOUND : Phi_Seq vacts (Phi_Elem (DA_Alloc r l v0)) ⊑ eff).
+    assert (HSOUND : Phi_Seq vacts (Phi_Elem (DA_Alloc r (allocate_H heap' r) v0)) ⊑ eff).
     { inversion HEff; subst; 
       inversion HBt as [ | | | | | |   
                          | | | ? ?  ? ? ? ? ? ? TcExp_e HBt_e
@@ -473,9 +473,9 @@ Proof.
       SCase "Ref w e << (a ⊕ AllocAbs w)". 
         eapply IHBS1 with (h_:=h''); eauto using HFacts.Equal_refl. 
         inversion HRonly; assumption.
-        inversion H9; subst.
+        inversion H8; subst.
         apply PTS_Elem. apply DAT_Alloc_Abs.
-        rewrite H in H2. inversion H2.
+        rewrite H in H1. inversion H1.
         apply In_singleton.
       SCase "Ref w e << (⊤)". 
         apply PhiInThetaTop.  

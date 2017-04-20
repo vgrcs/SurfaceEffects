@@ -473,7 +473,7 @@ Proof.
   - inversion H1; subst;
     assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | assumption]); subst;
     (eapply IHBigStep2; assumption).
-  - inversion H2; inversion H6.
+  - inversion H1; subst. inversion H5.
   - inversion H2; subst; (eapply IHBigStep; [reflexivity | assumption]).
   - inversion H2; inversion H6.
   - inversion H1; subst;
