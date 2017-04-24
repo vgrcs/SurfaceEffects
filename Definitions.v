@@ -426,6 +426,10 @@ Inductive Det_Trace : Phi -> Prop :=
 Axiom allocate_H : Heap -> nat -> nat.
 Axiom allocate_H_fresh : forall (m : Heap) (r: nat),
     find_H (r, allocate_H m r) m = None.
+Axiom allocate_H_determ : forall (m1 m2 : Heap) (r: nat),
+                            H.Equal m1 m2 ->
+                            allocate_H m1 r = allocate_H m2 r.
+
 
 Reserved Notation "e '⇓' n" (at level 50, left associativity).
 Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=

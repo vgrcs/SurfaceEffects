@@ -24,11 +24,6 @@ Require Import Top0.TypeSystem.
 Require Import Top0.EffectSystem.
 Require Import Top0.Correctness.
 
-Axiom AllocAddressIsDeterministic:
-  forall r0 l l0 heap,
-    find_H (r0, l0) heap = find_H (r0, l) heap ->
-    l = l0.
-
 Import EffectSoundness.
 Import TypeSoundness.
 
@@ -614,14 +609,22 @@ Proof.
     destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. 
     inversion v_eq_1.
     rewrite H in H9. inversion H9; subst.
-    assert (HFind : forall k, find_H k heap' = find_H k heap'0)
-      by (unfold find_H, update_H; simpl; intro; apply HFacts.find_m; intuition).
+    
+    assert (HFind :  find_H (r0, allocate_H heap' r0) heap' = 
+                     find_H (r0, allocate_H heap'0 r0) heap'0)
+     by (unfold find_H, update_H; apply HFacts.find_m; simpl; auto;
+         split; [reflexivity | apply allocate_H_determ]; auto).
+    
     assert (find_H (r0, allocate_H heap' r0) heap' = None) by (apply allocate_H_fresh). 
     assert (find_H (r0, allocate_H heap'0 r0) heap'0 = None) by (apply allocate_H_fresh). 
-    rewrite HFind in H1. rewrite <- H1 in H2. 
-    apply AllocAddressIsDeterministic in H2; subst. inversion H2.
-    intuition.
-    unfold update_H; simpl. apply HMapP.add_m; auto.
+    unfold find_H in H1, H2. 
+    rewrite h_eq_1 in H1. rewrite <- H1 in H2.  
+    split.
+    + unfold update_H; simpl. apply HMapP.add_m; auto. simpl.
+      split; [reflexivity | apply allocate_H_determ]; auto.
+    + split.
+      * f_equal; apply allocate_H_determ; auto.
+      *  do 3 f_equal; apply allocate_H_determ; auto.
   - inversion HTcExp; subst.
     assert ( RH1 : H.Equal heap1 heap2 /\  
                    Loc (Rgn2_Const true false s) l = Loc (Rgn2_Const true false s) l0 /\ 
