@@ -352,7 +352,7 @@ Proof.
       eauto using ext_stores__env.
     exists stty2. intuition.  
   Case "new_ref e".          
-    destruct IHD with (stty := stty)
+    edestruct IHD with (stty := stty)
                       (ctxt := ctxt)
                       (rgns := rgns)  
                       (t := t0)
@@ -393,7 +393,7 @@ Proof.
        intro.
        eapply TcVal_implies_closed in TcVal_v; eauto.
   Case "get_ref e".    
-    destruct IHD with (hp'0 := hp')
+    edestruct IHD with (hp'0 := hp')
                       (v := Loc (Rgn2_Const true false s) l) 
                       (stty := stty)
                       (rgns := rgns)
@@ -413,7 +413,7 @@ Proof.
       rewrite subst_rho_tyref in H7. inversion H7. subst.
       assumption.
   Case "set_ref e1 e2".  
-    destruct IHD1 with (hp' := heap')
+    edestruct IHD1 with (hp' := heap')
                        (v := Loc (Rgn2_Const true false s) l) 
                        (stty := stty)
                        (ctxt := ctxt)
@@ -422,7 +422,7 @@ Proof.
                        (static_eff := aeff)
                        (dynamic_eff := aacts)
        as [sttya [Weaka [TcHeapa TcVal_a]]]; eauto.
-    destruct IHD2 with (stty := sttya)
+    edestruct IHD2 with (stty := sttya)
                        (ctxt := ctxt)
                        (rgns := rgns)  
                        (t := t0)

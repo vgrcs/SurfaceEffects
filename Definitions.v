@@ -384,11 +384,11 @@ Proof.
     + apply HMapP.add_neq_in_iff.
       * intro. apply n. unfold RegionVars.eq. intuition.
       * assumption.
-  - apply IHPhi_Heap_Step. assumption.
-  - apply IHPhi_Heap_Step. assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi1) (heap0:=heap) (phi':=phi1'). reflexivity. reflexivity. assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi2) (heap0:=heap) (phi':=phi2'). reflexivity. reflexivity. assumption.
   - assumption.
-  - apply IHPhi_Heap_Step. assumption.
-  - apply IHPhi_Heap_Step. assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi1) (heap0:=heap) (phi':=phi1'). reflexivity. reflexivity. assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi2) (heap0:=heap) (phi':=phi2'). reflexivity. reflexivity. assumption.
   - assumption.
 Qed.    
     

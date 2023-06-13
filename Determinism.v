@@ -17,6 +17,7 @@ Require Import Top0.Heap.
 Require Import Top0.Environment.
 Require Import Top0.Definitions.
 Require Import Top0.CorrectnessLemmas.
+Require Import Top0.Axioms.
 
 Lemma Seq_Left_Pres :
   forall phi1 phi1' heap1 heap1' n1 phi2,
@@ -24,7 +25,16 @@ Lemma Seq_Left_Pres :
     (Phi_Seq phi1 phi2, heap1) =a=>* (Phi_Seq phi1' phi2, heap1', n1).
 Proof.
   intros phi1 phi1' heap1 heap1' n1 phi2 HSteps.
-  dependent induction HSteps; repeat econstructor; eassumption.
+  dependent induction HSteps.
+  - econstructor.
+  - econstructor. econstructor. assumption.
+  - econstructor.
+    + eapply IHHSteps1.
+      * reflexivity.
+      * reflexivity. 
+    + eapply IHHSteps2.
+      * reflexivity.
+      * reflexivity.    
 Qed.
 
 Lemma Seq_Right_Pres :
@@ -33,7 +43,16 @@ Lemma Seq_Right_Pres :
     (Phi_Seq Phi_Nil phi2, heap2) =a=>* (Phi_Seq Phi_Nil phi2', heap2', n2).
 Proof.
   intros phi2 phi2' heap2 heap2' n2 HSteps.
-  dependent induction HSteps; repeat econstructor; eassumption.
+  dependent induction HSteps.
+  - econstructor.
+  - econstructor. econstructor. assumption.
+  - econstructor.
+    + eapply IHHSteps1.
+      * reflexivity.
+      * reflexivity. 
+    + eapply IHHSteps2.
+      * reflexivity.
+      * reflexivity.    
 Qed.
 
 Lemma Par_Left_Pres :
@@ -42,7 +61,16 @@ Lemma Par_Left_Pres :
     (Phi_Par phi1 phi2, heap1) =a=>* (Phi_Par phi1' phi2, heap1', n1).
 Proof.
   intros phi1 phi1' heap1 heap1' n1 phi2 HSteps.
-  dependent induction HSteps; repeat econstructor; eassumption.
+  dependent induction HSteps.
+  - econstructor.
+  - econstructor. econstructor. assumption.
+  - econstructor.
+    + eapply IHHSteps1.
+      * reflexivity.
+      * reflexivity. 
+    + eapply IHHSteps2.
+      * reflexivity.
+      * reflexivity.    
 Qed.
 
 Lemma Par_Right_Pres :
@@ -51,7 +79,16 @@ Lemma Par_Right_Pres :
     (Phi_Par phi1 phi2, heap2) =a=>* (Phi_Par phi1 phi2', heap2', n2).
 Proof.
   intros phi2 phi2' heap2 heap2' n2 phi1 HSteps.
-  dependent induction HSteps; repeat econstructor; eassumption.
+  dependent induction HSteps.
+  - econstructor.
+  - econstructor. econstructor. assumption.
+  - econstructor.
+    + eapply IHHSteps1.
+      * reflexivity.
+      * reflexivity. 
+    + eapply IHHSteps2.
+      * reflexivity.
+      * reflexivity.    
 Qed.
 
 
@@ -264,21 +301,25 @@ Proof.
   - simpl in H2. replace (DA_Alloc r l v :: nil) with (phi_as_list (Phi_Elem (DA_Alloc r l v))) in H2
       by (simpl; reflexivity).
     apply Disjointness_app_app_and_l in H2. destruct H2.
-    destruct (IHPhi_Heap_Step  v l r H0). exists x; intuition.
-    constructor; assumption.
-  - destruct (IHPhi_Heap_Step  v l r H2). exists x; intuition.
-    constructor; assumption.
+    edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H3. assumption.
+    + inversion H3. constructor. assumption.
+  - edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H0. assumption.
+    + inversion H0. constructor. assumption.
   - exists (update_H (r, l, v) heap'). split; [apply HMapP.Equal_refl | constructor ].
   - simpl in H2. replace (DA_Alloc r l v :: nil) with (phi_as_list (Phi_Elem (DA_Alloc r l v))) in H2
       by (simpl; reflexivity).
     apply Disjointness_app_app_and_l in H2. destruct H2.
-    destruct (IHPhi_Heap_Step  v l r H0). exists x; intuition.
-    constructor; assumption.
+    edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H3. assumption.
+    + inversion H3. constructor. assumption.
   -  simpl in H2. replace (DA_Alloc r l v :: nil) with (phi_as_list (Phi_Elem (DA_Alloc r l v))) in H2
       by (simpl; reflexivity).
     apply Disjointness_app_app_and_l in H2. destruct H2.
-    destruct (IHPhi_Heap_Step  v l r H2). exists x; intuition.
-    constructor; assumption.
+    edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H3. assumption.
+    + inversion H3. constructor. assumption.
   - exists (update_H (r, l, v) heap'). split; [apply HMapP.Equal_refl | constructor ].
 Qed.
 
@@ -323,21 +364,25 @@ Proof.
   - simpl in H2. replace (DA_Write r l v :: nil) with (phi_as_list (Phi_Elem (DA_Write r l v))) in H2
       by (simpl; reflexivity).
     apply Disjointness_app_app_and_l in H2. destruct H2.
-    destruct (IHPhi_Heap_Step  v l r H0). exists x; intuition.
-    constructor; assumption.
-  - destruct (IHPhi_Heap_Step  v l r H2). exists x; intuition.
-    constructor; assumption.
+    edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H3. assumption.
+    + inversion H3. constructor. assumption.
+  - edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H0. assumption.
+    + inversion H0. constructor. assumption.
   - exists (update_H (r, l, v) heap'). split; [apply HMapP.Equal_refl | constructor ].
   - simpl in H2. replace (DA_Write r l v :: nil) with (phi_as_list (Phi_Elem (DA_Write r l v))) in H2
       by (simpl; reflexivity).
     apply Disjointness_app_app_and_l in H2. destruct H2.
-    destruct (IHPhi_Heap_Step  v l r H0). exists x; intuition.
-    constructor; assumption.
+    edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H3. assumption.
+    + inversion H3. constructor. assumption.
   -  simpl in H2. replace (DA_Write r l v :: nil) with (phi_as_list (Phi_Elem (DA_Write r l v))) in H2
       by (simpl; reflexivity).
     apply Disjointness_app_app_and_l in H2. destruct H2.
-    destruct (IHPhi_Heap_Step  v l r H2). exists x; intuition.
-    constructor; assumption.
+    edestruct IHPhi_Heap_Step; eauto. exists x. constructor.
+    + inversion H3. assumption.
+    + inversion H3. constructor. assumption.
   - exists (update_H (r, l, v) heap'). split; [apply HMapP.Equal_refl | constructor ].
 Qed.
 
@@ -380,15 +425,15 @@ Proof.
           apply HEqual.
       - constructor.
         eapply Heap.HMapP.In_m; eauto using HMapP.Equal_sym. }
-  - destruct (IHHStep heapB HEqual) as [heapB' [? ?]].
-    exists heapB'; split; [assumption | constructor; auto].
-  - destruct (IHHStep heapB HEqual) as [heapB' [? ?]].
-    exists heapB'; split; [assumption | constructor; auto].
-  - exists heapB; split; [assumption | constructor].
-  - destruct (IHHStep heapB HEqual) as [heapB' [? ?]].
-    exists heapB'; split; [assumption | constructor; auto].
-  - destruct (IHHStep heapB HEqual) as [heapB' [? ?]].
-    exists heapB'; split; [assumption | constructor; auto].
+ - edestruct IHHStep; eauto. exists x; split; [ intuition | ]. 
+    constructor. intuition.
+  - edestruct IHHStep; eauto. exists x; split; [ intuition | ].
+    constructor. intuition.
+  - exists heapB. split; [assumption | constructor; auto].
+  - edestruct IHHStep; eauto. exists x; split; [ intuition | ]. 
+    constructor. intuition.
+  - edestruct IHHStep; eauto. exists x; split; [ intuition | ]. 
+    constructor. intuition.
   - exists heapB; split; [assumption | constructor].
 Qed.
 
@@ -404,13 +449,18 @@ Proof.
   generalize dependent heapB. 
   dependent induction H1; intros.
   - { exists heapB. intuition. constructor. }
-  - edestruct Aux_Aux_Step_Ext_Heap as [heapB' [? ?]]; eauto.
-    exists heapB'; split; [assumption | constructor; assumption].
-  - edestruct (IHPhi_Heap_StepsAux1 heapB H2) as [heap1 [? ?]].
-    edestruct (IHPhi_Heap_StepsAux2 heap1 H) as [heap2 [? ?]].
-    exists heap2. intuition.
-    replace (S (n'0 + n'')) with (1 + n'0 + n'') by (simpl; reflexivity).
-    econstructor. eassumption. assumption.
+  - edestruct Aux_Aux_Step_Ext_Heap.
+    + eauto.
+    + eassumption.
+    + exists x; split.
+      * intuition.
+      * constructor. intuition.
+  - edestruct (IHPhi_Heap_StepsAux1); eauto.
+    edestruct (IHPhi_Heap_StepsAux2); eauto.
+    + destruct H. eauto.
+    + exists x0. intuition.
+      replace (S (n'0 + n'')) with (1 + n'0 + n'') by (simpl; reflexivity).
+      econstructor. eassumption. assumption.
 Qed.
 
 Lemma Par_Step_Alloc_Alloc :
@@ -617,15 +667,15 @@ Proof.
   intros  phi1 r l v phi2 r0 l0 v0 phi1' phi2' heapa heapb heap1' heap2'
           H1 H2 Det1 HDet2 HDisj HConf HEqual HStep1 HStep2; subst.
   inversion HStep1; inversion HStep2; subst.
-  edestruct Aux_Aux_Step_Ext_Heap as [heapB' [? ?]]; eauto. 
-  exists (update_H (r, l, v) heapa); exists heapB'; repeat split.
-  - assumption.
+  edestruct Aux_Aux_Step_Ext_Heap with (heapA:=heapa); eauto.
+  exists (update_H (r, l, v) heapa); exists x; repeat split.
+  - intuition.
   - do 2 constructor.
     inversion HDisj; subst. simpl in H. 
-    assert (Disjoint_Dynamic (DA_Alloc r l v) (DA_Read r0 l0 v0)) by (apply H1; left; reflexivity).
-    inversion H2; subst. eapply H_diff_key_2; eauto.
+    assert (Disjoint_Dynamic (DA_Alloc r l v) (DA_Read r0 l0 v0)) by (apply H0; left; reflexivity).
+    inversion H1; subst. eapply H_diff_key_2; eauto.
     unfold H.Equal in HEqual. rewrite HEqual. assumption.
-  - constructor. assumption.
+  - constructor. intuition.
 Qed.
 
 Lemma Par_Step_Write_Read :
@@ -647,15 +697,15 @@ Proof.
   intros  phi1 r l v phi2 r0 l0 v0 phi1' phi2' heapa heapb heap1' heap2'
           H1 H2 Det1 HDet2 HDisj HConf HEqual HStep1 HStep2; subst.
   inversion HStep1; inversion HStep2; subst.
-  edestruct Aux_Aux_Step_Ext_Heap as [heapB' [? ?]]; eauto. 
-  exists (update_H (r, l, v) heapa); exists heapB'; repeat split.
-  - assumption.
+  edestruct Aux_Aux_Step_Ext_Heap  with (heapA:=heapa); eauto.
+  exists (update_H (r, l, v) heapa). exists x; repeat split.
+  - intuition.
   - do 2 constructor. 
     inversion HDisj; subst. simpl in H. 
-    assert (Disjoint_Dynamic (DA_Write r l v) (DA_Read r0 l0 v0)) by (apply H2; left; reflexivity).
-    inversion H3; subst. eapply H_diff_key_2; eauto.
+    assert (Disjoint_Dynamic (DA_Write r l v) (DA_Read r0 l0 v0)) by (apply H1; left; reflexivity).
+    inversion H2; subst. eapply H_diff_key_2; eauto.
     unfold H.Equal in HEqual. rewrite HEqual. assumption.
-  - constructor. assumption.
+  - constructor. intuition.
 Qed.
 
 Lemma Par_Step_Read_Alloc :
@@ -677,8 +727,9 @@ Proof.
   intros  phi1 r l v phi2 r0 l0 v0 phi1' phi2' heapa heapb heap1' heap2'
           H1 H2 Det1 HDet2 HDisj HConf HEqual HStep1 HStep2; subst.
   inversion HStep1; inversion HStep2; subst. 
-  edestruct Aux_Aux_Step_Ext_Heap as [heapB' [? ?]]; eauto.
-  apply HMapP.Equal_sym in HEqual. assert (H.Equal heapb heapB') by (eapply HMapP.Equal_trans; eauto).
+  edestruct Aux_Aux_Step_Ext_Heap with (heapA:=heap1'); eauto.
+  apply HMapP.Equal_sym in HEqual.
+   assert (H.Equal heapb heap1'). eapply HMapP.Equal_trans; eauto. apply  HMapP.Equal_refl. 
   exists (update_H (r0, l0, v0) heap1'); exists (update_H (r0, l0, v0) heapb); repeat split.
   - unfold H.Equal; intros [r1 l1]. apply HMapP.Equal_sym in HEqual. unfold H.Equal in HEqual.
     destruct (RegionVars.eq_dec (r1, l1) (r0, l0));  unfold update_H; simpl.
@@ -687,13 +738,13 @@ Proof.
       rewrite HMapP.add_neq_o.
       * rewrite HMapP.add_neq_o; simpl; [apply HEqual | contradict n; intuition].
       * contradict n; intuition.
-  - inversion HDisj; subst. simpl in H. 
-    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Alloc r0 l0 v0)) by (apply H3; left; reflexivity).
-    inversion H4; subst. constructor. constructor.
+  - inversion HDisj; subst. simpl in H2. 
+    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Alloc r0 l0 v0)) by (apply H2; left; reflexivity).
+    inversion H3; subst. constructor. constructor.
   - do 2 constructor. inversion HStep2; subst.
     inversion HDisj; subst. simpl in H. 
-    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Alloc r0 l0 v0)) by (apply H3; left; reflexivity).
-    inversion H4; subst.
+    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Alloc r0 l0 v0)) by (apply H2; left; reflexivity).
+    inversion H3; subst.
     eapply H_diff_key_2; auto.
     unfold H.Equal in HEqual. rewrite HEqual. assumption.
 Qed.
@@ -717,7 +768,7 @@ Proof.
   intros  phi1 r l v phi2 r0 l0 v0 phi1' phi2' heapa heapb heap1' heap2'
           H1 H2 Det1 HDet2 HDisj HConf HEqual HStep1 HStep2; subst.
   inversion HStep1; inversion HStep2; subst.
-  edestruct Aux_Aux_Step_Ext_Heap as [heapB' [? ?]]; eauto.
+  edestruct Aux_Aux_Step_Ext_Heap with (heapA:=heap1'); eauto.
   exists (update_H (r0, l0, v0) heap1'); exists (update_H (r0, l0, v0) heapb); repeat split.
   -  unfold H.Equal; intros [r1 l1]. unfold H.Equal in HEqual.
     destruct (RegionVars.eq_dec (r1, l1) (r0, l0));  unfold update_H; simpl.
@@ -726,15 +777,15 @@ Proof.
       rewrite HMapP.add_neq_o.
       * rewrite HMapP.add_neq_o; simpl; [apply HEqual | contradict n; intuition].
       * contradict n; intuition.
-  - inversion HDisj; subst. simpl in H. 
-    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Write r0 l0 v0)) by (apply H2; left; reflexivity).
-    inversion H3; subst. constructor.  constructor.
+  - inversion HDisj; subst. simpl in H1. 
+    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Write r0 l0 v0)) by (apply H1; left; reflexivity).
+    inversion H; subst. constructor.  constructor.
     apply HMapP.Equal_sym in HEqual.
     apply HMapP.Equal_Equiv in HEqual. inversion HEqual. now apply HEqual.
   - do 2 constructor. inversion HStep2; subst.
-    inversion HDisj; subst. simpl in H. 
-    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Write r0 l0 v0)) by (apply H2; left; reflexivity).
-    inversion H4; subst.
+    inversion HDisj; subst. simpl in H1. 
+    assert (Disjoint_Dynamic (DA_Read r l v) (DA_Write r0 l0 v0)) by (apply H1; left; reflexivity).
+    inversion H3; subst.
     eapply H_diff_key_2; auto. unfold H.Equal in HEqual. rewrite <- H0.
     symmetry; apply HEqual.
 Qed.
@@ -862,9 +913,9 @@ Proof.
     + clear n. 
       apply HMapP.Equal_mapsto_iff; intros. destruct k. 
       destruct (RegionVars.eq_dec (n, n0) (r0, l0)); destruct (RegionVars.eq_dec (n, n0) (r, l)); split.
-      * inversion e0; inversion e1.  unfold fst, snd in *; subst. rewrite H6 in *. rewrite H5 in *.
+      * inversion e0; inversion e1.  unfold fst, snd in *; subst.
         inversion H1; subst. contradict H4. intuition.
-      * inversion e0; inversion e1. unfold fst, snd in *; subst. rewrite H6 in H1. rewrite H5 in H1.
+      * inversion e0; inversion e1. unfold fst, snd in *; subst.
         inversion H1; subst. contradict H4. intuition.
       * unfold RegionVars.eq in *. unfold fst, snd in *; subst. destruct e0; subst.
         intro. apply  HMapP.find_mapsto_iff in H2. rewrite H_same_key_add_twice_1 in H2. rewrite H_same_key in H2.
@@ -962,7 +1013,7 @@ Lemma Par_Step_Equal :
 Proof.
   intros phi1 phi2 phi1' phi2' heap0 heap1' heap2' HDet1 HDet2 HDisj HConf HStep1 HStep2.
   generalize dependent phi2.
-  dependent induction HStep1; intros.
+  dependent induction HStep1; intros. 
   - dependent destruction HStep2. 
     + eapply Par_Step_Alloc_Alloc; eauto || econstructor.
     + eapply Par_Step_Alloc_Read; eauto  || econstructor; assumption.
@@ -1059,7 +1110,7 @@ Proof.
           eapply HD1.
           eapply HStep2. }
     + { exists heap2'. exists heap2'. repeat split; do 2 constructor. assumption. }
-  - dependent destruction HStep2. 
+  - dependent destruction HStep2.  
     + eapply Par_Step_Write_Alloc; eauto || econstructor; assumption.
     + eapply Par_Step_Write_Read; eauto || econstructor; assumption.
     + eapply Par_Step_Write_Write; eauto || econstructor; assumption.
@@ -1106,68 +1157,95 @@ Proof.
         - do 2 constructor; assumption.
         - constructor. constructor. assumption.  }            
     + { exists (update_H (r, l, v) heap2'). exists (update_H (r, l, v) heap2'); repeat split; do 2  constructor; assumption. }
-  - inversion HDet1; subst. 
-    edestruct (IHHStep1 H1 phi1 HDet2) as [heapA [heapB [? [? ?]]]].
-    + simpl in HDisj. apply Disjointness_app_app_and_r in HDisj. destruct HDisj. assumption.
-    + simpl in HConf. inversion HDet1.
-      apply Conflictness_app_and_r in HConf; [ destruct HConf  | | | ]; assumption.
-    + assumption.
-    + exists heapA. exists heapB. repeat split.
-      * assumption.
-      * inversion H0; subst.
-        { apply Phi_Heap_Step_Progress in HStep2. contradiction. }
-        { constructor. assumption. }
-      * inversion H3; subst.
-        { constructor. constructor. assumption. }
-        { apply Phi_Heap_Step_Progress in H3. contradiction. }
+  -  inversion HDet1; subst.    
+     replace (phi_as_list (Phi_Seq phi0 phi2)) with (phi_as_list phi0 ++ phi_as_list phi2)
+       in HConf by (simpl; reflexivity).
+     apply Disjointness_app_app_and_r in HDisj.  
+     assert ( exists heapA heapB : H.t Val,
+        H.Equal heapA heapB /\
+        (Phi_Par phi1'0 phi1, heap1') ===> (Phi_Par phi1'0 phi2', heapA) /\
+          (Phi_Par phi0 phi2', heap2') ===> (Phi_Par phi1'0 phi2', heapB)).
+     { eapply IHHStep1 with (heap1:=heap0) ; auto.
+       - inversion HDisj as [HA HB].
+         assumption.         
+       - intuition. apply HConf.
+         apply Conflictness_or_app_r.
+         intuition.
+     }
+     destruct H  as [HA [ HB [HEq [Ht1 Ht2]]]].
+     exists HA, HB.
+     intuition; repeat econstructor.     
+     inversion Ht1; inversion Ht2; subst; try (solve [assumption]). 
+     + admit.
+     + admit.
+     + admit.
   - inversion HDet1; subst.
-    edestruct (IHHStep1 H2 phi0 HDet2) as [heapA [heapB [? [? ?]]]].
-    + simpl in HDisj. assumption.
-    + simpl in HConf. assumption.
-    + assumption.
-    + exists heapA. exists heapB. repeat split.
-      * assumption.
-      * inversion H0; subst.
-        { apply Phi_Heap_Step_Progress in HStep2. contradiction. }
-        { constructor. assumption. }
-      * inversion H3; subst.
-        { constructor. constructor. assumption. }
-        { apply Phi_Heap_Step_Progress in H3. contradiction. }
-  - exists heap2'. exists heap2'. repeat split.
-     * constructor; assumption.
-     * constructor; constructor.
-  - inversion HDet1; subst.
-    edestruct (IHHStep1 H1 phi1 HDet2) as [heapA [heapB [? [? ?]]]].
-    + simpl in HDisj. apply Disjointness_app_app_and_r in HDisj. destruct HDisj. assumption.
-    + simpl in HConf. inversion HDet1.
-      apply Conflictness_app_and_r in HConf; [ destruct HConf  | | | ]; assumption.
-    + assumption.
-    + exists heapA. exists heapB. repeat split.
-      * assumption.
-      * inversion H0; subst.
-        { apply Phi_Heap_Step_Progress in HStep2. contradiction. }
-        { constructor. assumption. }
-      * inversion H4; subst.
-        { constructor. constructor. assumption. }
-        { apply Phi_Heap_Step_Progress in H4. contradiction. }
-  - inversion HDet1; subst.
-    edestruct (IHHStep1 H2 phi1 HDet2) as [heapA [heapB [? [? ?]]]].
-    + simpl in HDisj. apply Disjointness_app_app_and_r in HDisj. destruct HDisj. assumption.
-    + simpl in HConf. inversion HDet1.
-      apply Conflictness_app_and_r in HConf; [ destruct HConf  | | | ]; assumption.
-    + assumption.
-    + exists heapA. exists heapB. repeat split.
-      * assumption.
-      * inversion H0; subst.
-        { apply Phi_Heap_Step_Progress in HStep2. contradiction. }
-        { constructor. assumption. }
-      * inversion H4; subst.
-        { constructor. constructor. assumption. }
-        { apply Phi_Heap_Step_Progress in H4. contradiction. }
-  - exists heap2'. exists heap2'. repeat split.
-     * constructor; assumption.
-     * constructor; constructor.
-Qed.
+    inversion HDisj; subst. simpl in H.
+    assert ( exists heapA heapB : H.t Val,
+        H.Equal heapA heapB /\
+        (Phi_Par phi2'0 phi0, heap1') ===> (Phi_Par phi2'0 phi2', heapA) /\
+          (Phi_Par phi2 phi2', heap2') ===> (Phi_Par phi2'0 phi2', heapB)) by ( eapply IHHStep1; auto).
+    destruct H0  as [HA [ HB [HEq [Ht1 Ht2]]]].
+    exists HA, HB. repeat split; [assumption | | ].
+    + rewrite Phi_Seq_Nil_L. assumption.
+    + do 2 rewrite Phi_Seq_Nil_L. assumption.
+  - exists heap2', heap2'. split.
+    + apply HMapP.Equal_refl.
+    + split.
+      * constructor. assumption.
+      * constructor. constructor.
+  -  inversion HDet1; subst.    
+     replace (phi_as_list (Phi_Seq phi0 phi2)) with (phi_as_list phi0 ++ phi_as_list phi2)
+       in HConf by (simpl; reflexivity).
+     apply Disjointness_app_app_and_r in HDisj.  
+     assert ( exists heapA heapB : H.t Val,
+        H.Equal heapA heapB /\
+        (Phi_Par phi1'0 phi1, heap1') ===> (Phi_Par phi1'0 phi2', heapA) /\
+          (Phi_Par phi0 phi2', heap2') ===> (Phi_Par phi1'0 phi2', heapB)).
+     { eapply IHHStep1; auto.
+       - inversion HDisj as [HA HB].
+         assumption.         
+       - intuition. apply HConf.
+         apply Conflictness_or_app_r.
+         intuition.
+     }
+     destruct H  as [HA [ HB [HEq [Ht1 Ht2]]]].
+     exists HA, HB.
+     intuition; repeat econstructor.     
+     inversion Ht1; inversion Ht2; subst; try (solve [assumption]).
+     + admit.
+     + admit.
+     + admit.
+  -  inversion HDet1; subst.    
+     replace (phi_as_list (Phi_Seq phi0 phi2)) with (phi_as_list phi0 ++ phi_as_list phi2)
+       in HConf by (simpl; reflexivity).
+     apply Disjointness_app_app_and_r in HDisj.  
+     assert ( exists heapA heapB : H.t Val,
+        H.Equal heapA heapB /\
+        (Phi_Par phi2'0 phi1, heap1') ===> (Phi_Par phi2'0 phi2', heapA) /\
+          (Phi_Par phi2 phi2', heap2') ===> (Phi_Par phi2'0 phi2', heapB)).
+     { eapply IHHStep1; auto.
+       - inversion HDisj as [HA HB].
+         assumption.         
+       - intuition. apply HConf.
+         apply Conflictness_or_app_r.
+         intuition.
+     }
+     destruct H  as [HA [ HB [HEq [Ht1 Ht2]]]].
+     exists HA, HB. 
+     intuition; repeat econstructor.     
+     inversion Ht1; subst; inversion Ht2; subst; try (solve [assumption]).
+     + admit.
+     + admit.
+     + admit.
+  - inversion HDisj; subst. simpl in H.
+    exists heap2', heap2'. split.
+    + apply HMapP.Equal_refl.
+    + split.
+      * constructor. assumption.
+      * constructor. constructor.       
+Admitted.
+
 
 Lemma Par_Step_Equal_new :
    forall phi1 phi2 phi1' phi2' heapa heapb heap1' heap2',
@@ -1707,18 +1785,18 @@ Proof.
   - inversion HIn.
   - apply in_or_app.
     apply in_app_or in HIn; destruct HIn.
-    + left; apply IHHStep; assumption.
+    + left. eapply IHHStep; auto.
     + right; assumption.
-  - apply IHHStep; assumption.
+  - eapply IHHStep; auto.
   - assumption.
   - apply in_or_app.
     apply in_app_or in HIn; destruct HIn.
-    + left; apply IHHStep; assumption.
+    + left; eapply IHHStep; auto.
     + right; assumption.
   - apply in_or_app.
     apply in_app_or in HIn; destruct HIn.
     + left; assumption.
-    + right; apply IHHStep; assumption.
+    + right; eapply IHHStep; auto.
   - assumption.
 Qed.
 
@@ -1749,16 +1827,20 @@ Proof.
   - intro. inversion H4. trivial.
   - inversion H2; inversion H; subst.  
     apply Conflictness_app_and_r in H3; auto. destruct H3.
-    apply Conflictness_and_app_r; auto.
-  - apply IHPhi_Heap_Step; auto; inversion H2; inversion H; assumption.
+    apply Conflictness_and_app_r. split; [ | assumption].
+    eapply IHPhi_Heap_Step; auto.    
+  - eapply IHPhi_Heap_Step; auto; inversion H2; inversion H; assumption.
   - apply H3.
   - inversion H2; inversion H; subst.
     apply Conflictness_app_and_r in H3; auto. destruct H3.
-    apply Conflictness_and_app_r; auto.
+    apply Conflictness_and_app_r. split; [ | assumption].
+    eapply IHPhi_Heap_Step; auto.    
   - inversion H2; inversion H; subst.
-    destruct H8.
+    destruct H8. destruct H13.
     apply Conflictness_app_and_r in H3; auto. destruct H3.
-    apply Conflictness_and_app_r; auto.
+    apply Conflictness_and_app_r.  split.
+    + assumption.
+    + eapply IHPhi_Heap_Step; auto.    
   - intro; now apply H3.
 Qed.
 
@@ -1789,17 +1871,20 @@ Proof.
    - intro. inversion H4; trivial.
    - inversion H2; inversion H0; subst.
      eapply Conflictness_app_and_l in H3; auto.  destruct H3. 
-     apply Conflictness_and_app_l; auto.
-   - apply IHPhi_Heap_Step; auto. inversion H2; inversion H0; assumption.
+     apply Conflictness_and_app_l; split; [ | assumption].
+     eapply IHPhi_Heap_Step; auto.    
+   - eapply IHPhi_Heap_Step; auto. inversion H2; inversion H0; assumption.
    - apply H3.
    - inversion H2; inversion H0; subst.
      destruct H8.
      apply Conflictness_app_and_l in H3; auto. destruct H3.
-     apply Conflictness_and_app_l; auto. 
+     apply Conflictness_and_app_l; split; [ | assumption].
+    eapply IHPhi_Heap_Step; auto.    
    - inversion H2; inversion H0; subst.
-     destruct H8.
+     destruct H8. 
      apply Conflictness_app_and_l in H3; auto. destruct H3.
-     apply Conflictness_and_app_l; auto. 
+     apply Conflictness_and_app_l.
+     split ; [ assumption | eapply IHPhi_Heap_Step; auto]. 
    - intro. inversion H1; trivial.
 Qed.
 
@@ -1836,18 +1921,18 @@ Proof.
   - inversion H2; inversion H; subst.
     apply Disjointness_and_app_r. simpl in H4.
     apply Disjointness_app_app_and_r in H4. destruct H4.
-    split; [ apply IHPhi_Heap_Step; eauto | assumption].
+    split; [eapply IHPhi_Heap_Step; eauto | assumption].
   - inversion H2; inversion H. simpl in H4.
-    apply IHPhi_Heap_Step; eauto.
+    eapply IHPhi_Heap_Step; eauto.
   - econstructor; intros. inversion H1. 
   - inversion H2; inversion H; subst.
     apply Disjointness_and_app_r. simpl in H4.
     apply Disjointness_app_app_and_r in H4. destruct H4.
-    split; [ apply IHPhi_Heap_Step; eauto | assumption].
+    split; [ eapply IHPhi_Heap_Step; eauto | assumption].
   - inversion H2; inversion H; subst.
     apply Disjointness_and_app_r. simpl in H4.
     apply Disjointness_app_app_and_r in H4. destruct H4.
-    split; [ assumption | apply IHPhi_Heap_Step; eauto].
+    split; [ assumption | eapply IHPhi_Heap_Step; eauto].
   -  econstructor; intros. inversion H1.    
 Qed.
 
@@ -1882,17 +1967,17 @@ Proof.
   - inversion H2; inversion H0; subst.
     apply Disjointness_and_app_l. simpl in H4.
     apply Disjointness_app_app_and_l in H4. destruct H4.
-    split; [apply IHPhi_Heap_Step; eauto | assumption].
+    split; [eapply IHPhi_Heap_Step; eauto | assumption].
   - inversion H2; inversion H0. 
-    apply IHPhi_Heap_Step; eauto.
+    eapply IHPhi_Heap_Step; eauto.
   - inversion H2; inversion H0; subst.
     apply Disjointness_and_app_l. simpl in H4.
     apply Disjointness_app_app_and_l in H4. destruct H4.
-    split; [apply IHPhi_Heap_Step; eauto | assumption].
+    split; [eapply IHPhi_Heap_Step; eauto | assumption].
   -  inversion H2; inversion H0; subst.
     apply Disjointness_and_app_l. simpl in H4.
     apply Disjointness_app_app_and_l in H4. destruct H4.
-    split; [assumption | apply IHPhi_Heap_Step; eauto].
+    split; [assumption | eapply IHPhi_Heap_Step; eauto].
 Qed.
 
 Theorem Det_Pres_Aux :
@@ -1903,22 +1988,30 @@ Theorem Det_Pres_Aux :
 Proof.
   intros phi phi' heap heap' H1 H2.
   dependent induction H1; intros; try (solve [constructor]).
-  - inversion H2; econstructor; [ apply IHPhi_Heap_Step; assumption | assumption].
-  - inversion H2; econstructor. constructor. apply IHPhi_Heap_Step; assumption. 
-  - inversion H2; subst; econstructor; [ apply IHPhi_Heap_Step; assumption | inversion H2; assumption |].
-    destruct H5. split.
-    + intro; inversion H5; subst.
-      apply H; econstructor; eauto using Phi_Heap_Step__Preserves_DAs.
-    + constructor; intros.
-      inversion H0; subst.
-      apply H7; eauto using Phi_Heap_Step__Preserves_DAs.
-  - inversion H2; subst; econstructor; [assumption | apply IHPhi_Heap_Step; assumption |].
-    destruct H5. split.
-    + intro; inversion H5; subst.
-      apply H; econstructor; eauto using Phi_Heap_Step__Preserves_DAs.
-    + constructor; intros.
-      inversion H0; subst.
-      apply H7; eauto using Phi_Heap_Step__Preserves_DAs.
+  - inversion H2; subst. econstructor.
+    + eapply IHPhi_Heap_Step; auto.
+    + assumption.
+  - inversion H2; subst. econstructor.
+    + constructor.
+    + eapply IHPhi_Heap_Step; auto.
+  - inversion H2; subst. econstructor.
+    + eapply IHPhi_Heap_Step; auto.
+    + inversion H2; subst. assumption.
+    + destruct H5. split.
+      * intro; inversion H5; subst.
+        apply H; econstructor; eauto using Phi_Heap_Step__Preserves_DAs.
+      * constructor; intros.
+        inversion H0; subst.
+        apply H7; eauto using Phi_Heap_Step__Preserves_DAs.
+  - inversion H2; subst; econstructor.
+    + assumption.
+    + eapply IHPhi_Heap_Step; auto.
+    + destruct H5. split.
+      * intro; inversion H5; subst.
+        apply H; econstructor; eauto using Phi_Heap_Step__Preserves_DAs.
+      * constructor; intros.
+        inversion H0; subst.
+        apply H7; eauto using Phi_Heap_Step__Preserves_DAs.
 Qed.    
 
 Theorem Det_Pres :
@@ -1931,7 +2024,7 @@ Proof.
    dependent induction HSteps; intro HDet.
    - assumption.
    - eapply Det_Pres_Aux; eassumption.
-   - apply IHHSteps2; apply IHHSteps1; assumption.
+   - eapply IHHSteps2; auto. eapply IHHSteps1; auto.
 Qed.
 
 
@@ -2151,11 +2244,11 @@ Lemma Term_Walk_Idemp :
 Proof.
   intros heap phi' heap' n HStep.
   dependent induction HStep.
-  + split; reflexivity.
-  + inversion H.
-  + eapply IHHStep2.
-    - destruct IHHStep1; subst; reflexivity.
-    - reflexivity.
+  - split; reflexivity.
+  - inversion H.
+  - edestruct IHHStep1; subst; auto.
+    eapply (IHHStep2 _ _ heap' _); auto.
+    subst. reflexivity.
 Qed.
 
 Theorem Diamond_Term_Walk : 
@@ -2449,8 +2542,7 @@ Proof.
   - intuition; subst.
     dependent induction H1; simpl in *.
     + contradiction.
-    + intuition; subst. inversion H0; subst.
-      eapply Conflict_da_in_theta_write; eauto.
+    + intuition; subst. inversion H0; subst; eapply Conflict_da_in_theta_write; eauto; inversion H; subst; assumption.
     + apply in_app_or in H2. destruct H2; [eapply IHPhi_Theta_Soundness1 | eapply IHPhi_Theta_Soundness2] ; eauto.
     + apply in_app_or in H2. destruct H2; [eapply IHPhi_Theta_Soundness1 | eapply IHPhi_Theta_Soundness2] ; eauto.   
   - inversion H; apply in_app_or in H1. destruct H1; [eapply IHphi1_1 | eapply IHphi1_2] ; eauto.
@@ -2471,8 +2563,7 @@ Proof.
   - intuition; subst.
     dependent induction H1; simpl in *.
     + contradiction.
-    + intuition; subst. inversion H0; subst.
-      eapply Conflict_da_in_theta_read; eauto.
+    + intuition; subst. inversion H0; subst; eapply Conflict_da_in_theta_read; eauto; inversion H; subst; assumption.
     + apply in_app_or in H2. destruct H2; [eapply IHPhi_Theta_Soundness1 | eapply IHPhi_Theta_Soundness2] ; eauto.
     + apply in_app_or in H2. destruct H2; [eapply IHPhi_Theta_Soundness1 | eapply IHPhi_Theta_Soundness2] ; eauto.   
   - inversion H; apply in_app_or in H2. destruct H2; [eapply IHphi1_1 | eapply IHphi1_2] ; eauto.

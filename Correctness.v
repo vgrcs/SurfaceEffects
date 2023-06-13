@@ -194,16 +194,16 @@ Proof.
           inversion HBt as [ | | | |  
                              | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
                              | | | | | | | | | | | | | ]; subst.
-          SSSCase "Mu_App ef ea0 << Eff_App ef ea0". 
+          SSSCase "Mu_App ef ea0 << Eff_App ef ea0".  
             assert (H_ : aacts  ⊑ eff).
             { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=facts) in HR_ef. 
               - apply ReadOnlyTracePreservesHeap_1 in BS1_1. 
                 + symmetry in BS1_1.
                   inversion HEff; subst. 
                   assert (aacts  ⊑ eff).
-                  eapply IHBS1_2 with (h_:=h'') (p_:=aacts); eauto.
-                  * apply HFacts.Equal_refl.  
-                  * assumption.
+                  eapply IHBS1_2 with (h_:=h'') (stty:=stty) (p_:=aacts); eauto.
+                  * apply HFacts.Equal_refl.   
+                  *  assumption.  
                 + assumption.  
               - assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_ef, facts)) by
                     (eapply eff_sound; eauto). 
