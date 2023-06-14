@@ -1,7 +1,6 @@
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Tactics.
 Require Import Top0.Keys.
 Require Import Top0.Definitions.
@@ -29,7 +28,9 @@ Lemma sound_approx_inj :
     Epsilon_Phi_Soundness (Union StaticAction st1 st2, dy) /\ Epsilon_Phi_Soundness (Union StaticAction st2 st1, dy).
 Proof. 
   intros st1 st2 dy HSound; split; inversion HSound as [ ? ? H' ]; subst; constructor;
-  intros da HIn; apply H' in HIn; destruct HIn as [ca HIn]; exists ca; intuition.
+  intros da HIn; apply H' in HIn; destruct HIn as [ca HIn]; exists ca; destruct HIn.
+  + split; [apply Union_introl; assumption | assumption].
+  +  split; [apply Union_intror; assumption | assumption].
 Qed.
 
 Lemma sound_comp :
@@ -42,8 +43,10 @@ Proof.
   intros eff HIn.
   inversion HIn; subst.
   destruct H3 as [HIn_1 | HIn_2].
-  - apply HEps1 in HIn_1; destruct HIn_1 as [ca HIn']; exists ca; intuition.
-  - apply HEps2 in HIn_2; destruct HIn_2 as [ca HIn']; exists ca; intuition.
+  - apply HEps1 in HIn_1; destruct HIn_1 as [ca HIn']; exists ca; destruct HIn'.
+    split; [apply Union_introl; assumption | assumption].
+  - apply HEps2 in HIn_2; destruct HIn_2 as [ca HIn']; exists ca; destruct HIn'.
+    split; [apply Union_intror; assumption | assumption].
 Qed. 
 
 Lemma sound_comp_par :
@@ -56,8 +59,10 @@ Proof.
   intros eff HIn. 
   inversion HIn; subst.
   destruct H3 as [HIn_1 | HIn_2].
-  - apply HEps1 in HIn_1; destruct HIn_1 as [ca HIn']; exists ca; intuition.
-  - apply HEps2 in HIn_2; destruct HIn_2 as [ca HIn']; exists ca; intuition.
+  - apply HEps1 in HIn_1; destruct HIn_1 as [ca HIn']; exists ca; destruct HIn'.
+    split; [apply Union_introl; assumption | assumption].
+  - apply HEps2 in HIn_2; destruct HIn_2 as [ca HIn']; exists ca; destruct HIn'.
+    split; [apply Union_intror; assumption | assumption].
 Qed.
 
 Lemma fold_dist_union : forall rho (eff1 eff2 : Epsilon),
@@ -95,13 +100,18 @@ Proof.
   intros e hp hp' env rho v dynamic_eff D. 
   intros stty ctxt rgns ty static_eff HTcEnv HTcExp HTcHeap HTcRho. 
   dynamic_cases (dependent induction D) Case; inversion HTcExp; subst.
-  Case "cnt n". apply EmptyInNil.
-  Case "bool b". apply EmptyInNil.
-  Case "var x". apply EmptyInNil.
-  Case "mu_abs". apply EmptyInNil.
-  Case "rgn_abs". apply EmptyInNil.
-  Case "mu_app".  
-    assert (clsTcVal : exists stty', 
+  (* Case "cnt n". *)
+  - apply EmptyInNil.
+  (* Case "bool b". *)
+  - apply EmptyInNil.
+  (* Case "var x". *)
+  - apply EmptyInNil.
+  (*Case "mu_abs". *)
+  - apply EmptyInNil.
+  (* Case "rgn_abs". *)
+  - apply EmptyInNil.
+  (* Case "mu_app". *)
+  - assert (clsTcVal : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (fheap, stty')
              /\ TcVal (stty', Cls (env', rho', Mu f x ec' ee'), subst_rho rho (Ty2_Arrow tya effc ty effe Ty2_Effect)))
@@ -130,19 +140,20 @@ Proof.
     
     assert (Sb : Epsilon_Phi_Soundness (fold_subst_eps rho effc, bacts)).
     rewrite <- H10; eapply IHD3 with (stty := sttya) (rho:=rho'); eauto.
-    SCase "Extended Env".
-      apply update_env.
-      SSCase "TcEnv". apply update_env.
-        SSSCase "Extended". eapply ext_stores__env; eauto.
-        SSSCase "Extended TcVal". eapply ext_stores__val; eauto.
-      SSCase "TcVal".  eassumption. 
-
-    do 2 rewrite fold_dist_union.
-    apply sound_comp; [| assumption].
-    apply sound_comp; [|assumption].
-    assumption.
-  Case "rgn_app".
-    assert (cls_TcVal : exists stty', 
+    (* SCase "Extended Env". *)
+    + apply update_env.
+      (* SSCase "TcEnv". *)
+      * { apply update_env.
+          - eapply ext_stores__env; eauto.
+          - eapply ext_stores__val; eauto. }
+        (* SSCase "TcVal". *)
+      * eassumption. 
+    + do 2 rewrite fold_dist_union.
+      apply sound_comp; [| assumption].
+      apply sound_comp; [|assumption].
+      assumption.      
+  (* Case "rgn_app". *)
+  - assert (cls_TcVal : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (fheap, stty')
              /\ TcVal (stty', Cls (env', rho', Lambda x eb),  subst_rho rho (Ty2_ForallRgn effr tyr)))
@@ -163,8 +174,8 @@ Proof.
     rewrite <- subst_add_comm_eff; eauto.
     eapply IHD2; eauto.
     eapply extended_rho; eauto. apply update_rho; auto.  eapply not_set_elem_not_in_rho; eauto. assumption.
-  Case "eff_app".   
-    assert (cls_TcVal : exists stty', 
+  (* Case "eff_app". *)     
+  - assert (cls_TcVal : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (hp', stty')
              /\ TcVal (stty', Cls (env', rho', Mu f x ec' ee'),  subst_rho rho (Ty2_Arrow tya effc tyc effe Ty2_Effect)))
@@ -194,16 +205,17 @@ Proof.
     rewrite <- H11.
     eapply IHD3 with (stty := sttya); eauto.
     apply update_env.
-    SCase "TcEnv". apply update_env.
-       SSCase "Extended". eapply ext_stores__env; eauto.
-       SSCase "Extended TcVal". eapply ext_stores__val; eauto. eassumption.
-        
-    do 2 rewrite fold_dist_union.
-    apply sound_comp; [| assumption].
-    apply sound_comp; [|assumption].
-    assumption.
-  Case "par_pair".
-    assert (HA : Epsilon_Phi_Soundness (fold_subst_eps rho eff1, acts_mu1)).
+    (* SCase "TcEnv" *)
+    + apply update_env.
+       * eapply ext_stores__env; eauto.
+       * eapply ext_stores__val; eauto.
+    + eassumption.        
+    + do 2 rewrite fold_dist_union.
+      apply sound_comp; [| assumption].
+      apply sound_comp; [|assumption].
+      assumption.
+  (* Case "par_pair". *)
+  - assert (HA : Epsilon_Phi_Soundness (fold_subst_eps rho eff1, acts_mu1)).
     eapply IHD3; eauto.
     assert (HB : Epsilon_Phi_Soundness (fold_subst_eps rho eff2, acts_mu2)).
     eapply IHD4; eauto.
@@ -226,13 +238,11 @@ Proof.
     replace (Union_Static_Action (Union_Static_Action (fold_subst_eps rho (Union_Static_Action eff3 eff4))
                                                       (fold_subst_eps rho eff2)) (fold_subst_eps rho eff1)) with
      (Union_Static_Action (fold_subst_eps rho (Union_Static_Action eff3 eff4)) 
-                                              (Union_Static_Action (fold_subst_eps rho eff1) (fold_subst_eps rho eff2))). 
-    SCase "". 
-     { apply sound_comp with (dy1:=Phi_Par acts_eff1 acts_eff2) (dy2:=Phi_Par acts_mu1 acts_mu2).
-       - rewrite fold_dist_union. apply sound_comp_par; assumption.
-       - apply sound_comp_par; assumption. } 
-    SCase "replace proof". 
-      rewrite fold_dist_union.
+                                              (Union_Static_Action (fold_subst_eps rho eff1) (fold_subst_eps rho eff2))).     
+    + apply sound_comp with (dy1:=Phi_Par acts_eff1 acts_eff2) (dy2:=Phi_Par acts_mu1 acts_mu2).
+       * rewrite fold_dist_union. apply sound_comp_par; assumption.
+       * apply sound_comp_par; assumption. 
+    + rewrite fold_dist_union.
       unfold Union_Static_Action.
       { apply Extensionality_Ensembles;
         unfold Same_set, Included; split; intros x HUnion; unfold Ensembles.In in *.
@@ -245,8 +255,8 @@ Proof.
           + apply Union_introl. assumption.
           + apply Union_intror. apply Union_intror. assumption.
           + apply Union_intror. apply Union_introl. assumption. }
-  Case "cond_true". 
-    assert (boolTcVal : exists stty', 
+  (* Case "cond_true". *)
+  - assert (boolTcVal : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (cheap, stty')
              /\ TcVal (stty', Bit true, subst_rho rho Ty2_Boolean)) by (eapply ty_sound; eauto).
@@ -260,8 +270,8 @@ Proof.
     eapply sound_comp; eauto.
     replace tacts with (Phi_Seq tacts (Phi_Nil)) by (apply Phi_Seq_Nil_R). 
     eapply sound_comp; [assumption | apply EmptyInNil].     
-  Case "cond_false". 
-    assert (bool_TcVal : exists stty', 
+  (* Case "cond_false".*)
+  - assert (bool_TcVal : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (cheap, stty')
              /\ TcVal (stty', Bit false, subst_rho rho Ty2_Boolean)) by (eapply ty_sound; eauto). 
@@ -275,8 +285,8 @@ Proof.
     eapply sound_comp; eauto.
     replace facts with (Phi_Seq (Phi_Nil) facts) by (apply Phi_Seq_Nil_L).
     eapply sound_comp; [apply EmptyInNil | assumption].  
-  Case "new_ref e".
-    assert (Epsilon_Phi_Soundness (fold_subst_eps rho  veff, vacts)) by (eapply IHD; eauto).
+  (* Case "new_ref e". *)
+  - assert (Epsilon_Phi_Soundness (fold_subst_eps rho  veff, vacts)) by (eapply IHD; eauto).
     rewrite fold_dist_union.
     apply sound_comp; [assumption | ].
     econstructor. intros eff HIn.
@@ -284,8 +294,8 @@ Proof.
     eexists. split. unfold In, fold_subst_eps, Singleton_Static_Action, fold_subst_sa.
     eexists. intuition.
     simpl. simpl in H; inversion H; subst. rewrite subst_rho_rgn_const. constructor.
-  Case "get_ref e".
-    assert (Epsilon_Phi_Soundness (fold_subst_eps rho aeff, aacts)) by (eapply IHD; eauto).
+  (* Case "get_ref e". *)
+  - assert (Epsilon_Phi_Soundness (fold_subst_eps rho aeff, aacts)) by (eapply IHD; eauto).
     rewrite fold_dist_union.
     apply sound_comp; [assumption | ]. 
     econstructor. intros eff HIn.
@@ -293,8 +303,8 @@ Proof.
     eexists. split. unfold In, fold_subst_eps, Singleton_Static_Action, fold_subst_sa.
     eexists. intuition.
     simpl. simpl in H; inversion H; subst. rewrite subst_rho_rgn_const. constructor.
-  Case "set_ref e1 e2".
-    assert (loc_TcVal : exists stty', 
+  (* Case "set_ref e1 e2". *)
+  - assert (loc_TcVal : exists stty', 
              (forall k t', ST.find k stty = Some t' -> ST.find k stty' = Some t')
              /\ TcHeap (heap', stty')
              /\ TcVal (stty', Loc (Rgn2_Const true false s) l, subst_rho rho (Ty2_Ref (mk_rgn_type (Rgn2_Const true false s)) t)))
@@ -312,8 +322,8 @@ Proof.
     eexists. split. unfold In, fold_subst_eps, Singleton_Static_Action, fold_subst_sa.
     eexists. intuition.
     simpl. simpl in H; inversion H; subst. rewrite subst_rho_rgn_const. constructor.
-  Case "nat_plus x y".
-    assert (H : exists stty', 
+  (* Case "nat_plus x y". *)
+  - assert (H : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (lheap, stty')
              /\ TcVal (stty', Num va, subst_rho rho Ty2_Natural)) by (eapply ty_sound; eauto).
@@ -321,8 +331,8 @@ Proof.
     rewrite fold_dist_union.
     apply sound_comp; eauto.
     eapply IHD2 with (stty := sttyx); eauto using ext_stores__env.
-  Case "nat_minus x y".
-    assert (H : exists stty', 
+  (* Case "nat_minus x y". *)
+  - assert (H : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (lheap, stty')
              /\ TcVal (stty', Num va, subst_rho rho Ty2_Natural)) by (eapply ty_sound; eauto).
@@ -330,8 +340,8 @@ Proof.
     rewrite fold_dist_union.
     apply sound_comp; eauto.
     eapply IHD2 with (stty := sttyx); eauto using ext_stores__env.
-  Case "nat_times x y". 
-    assert (H : exists stty', 
+  (* Case "nat_times x y". *)
+  - assert (H : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (lheap, stty')
              /\ TcVal (stty', Num va, subst_rho rho Ty2_Natural)) by (eapply ty_sound; eauto).
@@ -339,8 +349,8 @@ Proof.
     rewrite fold_dist_union.
     apply sound_comp; eauto.
     eapply IHD2 with (stty := sttyx); eauto using ext_stores__env.
-  Case "bool_eq x y".
-    assert (H : exists stty', 
+  (* Case "bool_eq x y". *)
+  - assert (H : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (lheap, stty')
              /\ TcVal (stty', Num va, subst_rho rho Ty2_Natural)) by (eapply ty_sound; eauto).
@@ -348,21 +358,28 @@ Proof.
     rewrite fold_dist_union.
     apply sound_comp; eauto.
     eapply IHD2 with (stty := sttyx); eauto using ext_stores__env. 
-  Case "alloc_abs". apply EmptyInNil.
-  Case "read_abs". apply EmptyInNil.
-  Case "write_abs". apply EmptyInNil.  
-  Case "read_conc". apply EmptyInNil.
-  Case "write_conc". apply EmptyInNil.
-  Case "eff_concat".
-     assert (H : exists stty', 
+  (* Case "alloc_abs". *)
+  - apply EmptyInNil.
+  (* Case "read_abs". *)
+  - apply EmptyInNil.
+  (* Case "write_abs". *)
+  - apply EmptyInNil.  
+  (* Case "read_conc". *)
+  - apply EmptyInNil.
+  (* Case "write_conc". *)
+  - apply EmptyInNil.
+  (* Case "eff_concat". *)
+  - assert (H : exists stty', 
              (forall l t', ST.find l stty = Some t' -> ST.find l stty' = Some t')
              /\ TcHeap (hp', stty')
              /\ TcVal (stty', Eff effa, subst_rho rho Ty2_Effect)) by (eapply ty_sound; eauto).
     destruct H as [sttyx [Weakx [TcHeapx TcVal_x]]]; eauto.
     rewrite fold_dist_union.
     apply sound_comp; eauto.
-  Case "eff_top". apply EmptyInNil.
-  Case "eff_empty". apply EmptyInNil.
+  (* Case "eff_top". *)
+  - apply EmptyInNil.
+  (* Case "eff_empty". *)
+  - apply EmptyInNil.
 Qed.
 
 

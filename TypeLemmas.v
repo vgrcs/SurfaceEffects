@@ -7,7 +7,6 @@ Require Import Coq.FSets.FSetFacts.
 Require Import Coq.FSets.FMapAVL.
 Require Import Coq.FSets.FMapFacts.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Keys.
 Require Import Top0.Nameless.
 

@@ -3,8 +3,8 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Arith.EqNat.
 Require Import Ascii.
+Require Import Coq.Arith.PeanoNat.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Keys.
 
 Definition empty_set `{T: Type} := Empty_set T.
@@ -61,7 +61,7 @@ Definition opening_rgn_in_rgn2 (k : nat) (u: rgn2_in_typ) (t: rgn2_in_typ) : rgn
  := match t with
     | Rgn2_Const _ _ _ => t
     | Rgn2_FVar _ _ _ => t
-    | Rgn2_BVar _ _ n => if (beq_nat n k) then u else t
+    | Rgn2_BVar _ _ n => if (Nat.eqb n k) then u else t
     end.
 
 Definition opening_rgn_in_sa2 (k : nat) (u: rgn2_in_typ) (sa: StaticAction2) : StaticAction2 :=
@@ -216,31 +216,51 @@ Qed.
 Lemma FreeVariables1 :
  forall x t, x # t ->  not_set_elem_frv t x .
 Proof.
- intro x. induction t; intro; unfold not_set_elem, Complement in *; simpl in *; auto;
- split; unfold not_set_elem, Complement in *; intuition.
+  intro x. induction t; intro; try (solve [unfold not_set_elem; simpl; auto]).
+  - simpl in *. 
+    unfold not_set_elem, Complement, not in *.
+    split; try (solve [intro; apply H; constructor; assumption]).
+  - simpl in *.
+    unfold not_set_elem, Complement, not in *.
+    split; try (solve [intro; apply H; constructor; assumption]).
+  - simpl in *.
+    unfold not_set_elem, Complement, not in *.
+    repeat split; intro; apply H.
+    + now apply Union_introl.
+    + apply Union_intror. apply Union_introl.  now apply Union_introl.
+    + apply Union_intror. apply Union_introl.  now apply Union_intror.
+    + apply Union_intror. apply Union_intror. now apply Union_introl.
+    +  apply Union_intror. apply Union_intror. now apply Union_intror.   
+  - simpl in *.
+    unfold not_set_elem, Complement, not in *.
+    split; intro; apply H.
+    + now apply Union_introl.
+    + now apply Union_intror.  
 Qed.
 
 Lemma FreeVariables2 :
  forall x t,  not_set_elem_frv t x -> x # t.
 Proof.
- intro x. induction t; intro; unfold not_set_elem, Complement in *; simpl in *; auto.
- - intro. contradict H0.
- - intro. contradict H0.
- - intro. contradict H0.
- - intro. contradict H0.
- - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
-   intuition.
-   destruct H1; intuition. 
- - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
-   intuition.
-   destruct H1; intuition.
- - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
-   intuition.
-   destruct H1; [apply H; auto |]. 
-   do 2 destruct H1; [apply H2 | apply H0 | apply H3 | apply H5]; auto.
- - destruct H; unfold not_set_elem, Complement in *; simpl in *; auto.
-   intuition.
-   destruct H1; intuition.
+ intro x. induction t; intro; unfold not_set_elem, Complement. 
+ - intro HG. contradict HG.
+ - intro HG. contradict HG.
+ - intro HG. contradict HG.
+ - intro HG. contradict HG.
+ - destruct H as [HA HB].
+   unfold not_set_elem, Complement, not in *.
+   intro.
+   inversion H as [H1 H2 | H3 H4]; subst; [now apply HA | now apply HB]. 
+ - destruct H as [HA HB].
+   unfold not_set_elem, Complement, not in *.
+   intro.
+   inversion H as [H1 H2 | H3 H4]; subst; [now apply HA | now apply HB]. 
+ - destruct H as [H1 H2]. 
+   destruct H2 as [HA [HB [HC HD]]].
+   unfold not; intro HG.
+   destruct HG; [apply H1; auto |].  
+    do 2 destruct H; [apply HA | apply HB | apply HC | apply HD]; auto.
+ - destruct H.
+   unfold not; intro HG. destruct HG; unfold not_set_elem, Complement in H; now apply H.
 Qed.
 
  (** end of free regions **)
@@ -362,7 +382,7 @@ Proof.
   intros n x u sa H.
   inversion H; subst;
   unfold subst_sa, opening_rgn_in_sa2, closing_rgn_in_sa2;
-  f_equal; now apply subst_as_close_open_rgn.
+  f_equal; apply subst_as_close_open_rgn; auto.
 Qed.  
 
 
@@ -404,8 +424,8 @@ Proof.
     + inversion H; subst.  inversion H2.
     + inversion H; subst. assumption.
   - f_equal;[apply IHt1 | | apply IHt2 | | apply IHt3]; try auto; inversion H; subst; auto.
-    + now apply subst_as_close_open_eps.     
-    + now apply subst_as_close_open_eps.
+    + apply subst_as_close_open_eps; auto.
+    + apply subst_as_close_open_eps; auto.
   - f_equal.
     + apply subst_as_close_open_eps. inversion H. assumption. 
     + apply IHt. inversion H; subst; auto.
@@ -423,8 +443,10 @@ Proof.
   - case (AsciiVars.eq_dec n x); intros.
     + contradict H. inversion e; subst. unfold free_rgn_vars_in_rgn2. apply In_singleton.
     + reflexivity.
-  - case_eq (beq_nat n n0); intros; simpl; [ | reflexivity].
-    destruct (AsciiVars.eq_dec x x); [apply beq_nat_true in H0; subst; reflexivity | intuition]. 
+  - case_eq (Nat.eqb n n0); intros; simpl; [ | reflexivity].
+    destruct (AsciiVars.eq_dec x x).
+    + apply Nat.eqb_eq in H0.  subst; reflexivity.
+    + contradict n1. unfold AsciiVars.eq. reflexivity.
 Qed.
 
 Lemma close_open_sa : 
@@ -451,8 +473,6 @@ Proof.
     intro. apply H.
     unfold free_rgn_vars_in_eps2; unfold In.
     exists sa''; auto.
-    (*split; intuition. 
-    * subst. inversion H2.*)
   + intro sa. unfold In in *.
     unfold closing_rgn_in_eps2; unfold opening_rgn_in_eps2; simpl.
     intro H1.
@@ -462,16 +482,16 @@ Proof.
     intro. apply H.
     unfold free_rgn_vars_in_eps2; unfold In.
     exists sa; auto.
-    (*split; intuition.
-    - subst. inversion H1.*)  
 Qed.
 
 Lemma CLOSE_OPEN_VAR : close_open_var. 
 Proof. 
-  intros t x H.  unfold close_var, open_var. generalize 0.
-  induction t; simpl; intuition;
-  unfold not_set_elem, set_union, empty_set, Complement, not in *.
-  - f_equal; [apply IHt1 | apply IHt2]; simpl in H; intuition.
+  intros t x H.  unfold close_var, open_var.  generalize 0.
+  induction t; simpl; intro; try (solve [reflexivity]);
+  unfold not_set_elem, set_union, empty_set, Complement, not in *. 
+  - f_equal; [apply IHt1 | apply IHt2]; simpl in H; intro; apply H.
+    + now apply Union_introl.
+    + now apply Union_intror.
   - simpl in H. assert (H' : In Name (free_rgn_vars_in_rgn2 r) x -> False)
       by (intros; apply H; now apply Union_introl).
     f_equal; unfold rgn2_in_typ in r; dependent induction r; subst; simpl.
@@ -479,26 +499,26 @@ Proof.
     + case (AsciiVars.eq_dec n x); intros. unfold AsciiVars.eq in e; subst.
       * contradict H'. unfold free_rgn_vars_in_rgn2. apply In_singleton.
       * reflexivity.
-    + case_eq (beq_nat n n0); intros; simpl.
-      * apply beq_nat_true in H0; subst.
+    + case_eq (Nat.eqb n n0); intros; simpl.
+      * apply Nat.eqb_eq in H0; subst.
         destruct (AsciiVars.eq_dec x x);  [reflexivity | contradict n; reflexivity].
       * reflexivity.
     + apply IHt. intros. apply H. now apply Union_intror.
     + apply IHt. intros. apply H. now apply Union_intror.
     + apply IHt. intros. apply H. now apply Union_intror.
   - simpl in H. f_equal.
-    + apply IHt1; intuition.
+    + apply IHt1. intro; apply H. now apply Union_introl.
     + apply close_open_eps.
       intros. apply H. apply Union_intror. apply Union_introl. now apply Union_introl.
-    + apply IHt2; intuition.
+    + apply IHt2.  intro; apply H. apply Union_intror. apply Union_intror. now apply Union_introl.
     + apply close_open_eps.
       intros. apply H. apply Union_intror. apply Union_introl. now apply Union_intror.
-    +  apply IHt3; intuition.
+    +  apply IHt3. intro; apply H.  apply Union_intror. apply Union_intror. now apply Union_intror.
   - simpl in H. f_equal.
     + apply close_open_eps.
-      intros. apply H.  now apply Union_introl.
+      intros. apply H. apply Union_introl; auto.
     + apply IHt.
-      intros. apply H.  now apply Union_intror.
+      intros. apply H. apply Union_intror; auto.
 Qed.
 
 
@@ -518,15 +538,12 @@ Proof.
   intros. induction H; unfold opening_rgn_in_rgn2, closing_rgn_in_rgn2.
   - reflexivity.
   - destruct (AsciiVars.eq_dec r x).
-    + rewrite PeanoNat.Nat.eqb_refl. inversion e; now subst.
+    + rewrite PeanoNat.Nat.eqb_refl.
+      inversion e; subst.
+      reflexivity.
     + reflexivity.
 Qed.      
-(*  - destruct (AsciiVars.eq_dec x0 x); simpl; auto.
-    inversion e; subst; now rewrite NPeano.Nat.eqb_refl.
-  - destruct (AsciiVars.eq_dec x0 x); simpl; auto.
-    inversion e; subst; now rewrite NPeano.Nat.eqb_refl.
-  - destruct (AsciiVars.eq_dec x0 x); simpl; auto.
-    inversion e; subst; now rewrite NPeano.Nat.eqb_refl. *)
+
 
 Lemma opening_lc_sa : forall n x sa, lc_type_sa sa ->
                                      opening_rgn_in_sa2 n (Rgn2_FVar true true x) sa = sa.
@@ -540,7 +557,7 @@ Lemma open_close_sa : forall n x sa, lc_type_sa sa ->
 Proof.
   intros n x sa H.
   induction H; unfold opening_rgn_in_sa2, closing_rgn_in_sa2;
-  now rewrite open_close_rgn.
+  rewrite open_close_rgn; auto.
 Qed.
 
 Lemma open_close_eps : forall eff n x, lc_type_eps eff ->
@@ -553,7 +570,7 @@ Proof.
     intros [sa' [[sa'' [H2 H3]] H1]]. subst. inversion H; subst. 
     destruct (H0 sa'').
     unfold opening_rgn_in_sa2, closing_rgn_in_sa2.  
-    destruct sa''; rewrite open_close_rgn; auto; inversion H3; now subst.
+    destruct sa''; rewrite open_close_rgn; auto; inversion H3; subst; assumption.
   - intro sa. intros. unfold In in *. 
     inversion H; subst.    
     exists (closing_rgn_in_sa2 n x sa). split. 
@@ -592,7 +609,7 @@ Proof.
   - unfold opening_rgn_in_eps2 in H0.
     destruct H0 as [x' [H1 H2]].
     erewrite open_subst_lc_sa in H2; eauto.
-    + now subst.
+    + subst. assumption.
     + destruct (H x'); auto. 
   - unfold opening_rgn_in_eps2.
     exists x. intuition.
@@ -619,7 +636,7 @@ Proof.
         inversion H; subst.
         destruct (H1 x').
         eapply open_subst_lc_sa in H4; eauto.
-        now rewrite H4.
+        rewrite H4. assumption.
       * rewrite open_subst_lc_eps; auto.
     + apply Extensionality_Ensembles. unfold Same_set, Included.
       split; intros. unfold In in *.
@@ -627,7 +644,7 @@ Proof.
         inversion H0; subst.
         destruct (H1 x').
         eapply open_subst_lc_sa in H4; eauto.
-        now rewrite H4.
+        rewrite H4. assumption.
       * rewrite open_subst_lc_eps; auto.       
   - f_equal; [ rewrite open_subst_lc_eps; auto | apply IHHlc].
 Qed.
@@ -649,7 +666,7 @@ Proof.
       destruct (AsciiVars.eq_dec x n0); [ | reflexivity].
       unfold AsciiVars.eq in e. symmetry in e. contradiction.
   - unfold subst_rgn, opening_rgn_in_rgn2, closing_rgn_in_rgn2.
-    case (beq_nat n0 n); [ | reflexivity].
+    case (Nat.eqb n0 n); [ | reflexivity].
     unfold rgn2_in_typ in v.
     dependent induction v; reflexivity.
 Qed.
@@ -693,7 +710,7 @@ Proof.
     fold (subst_rgn x u r).
     rewrite subst_open_rgn; auto.
   - (*unfold open_rgn_in_type, close_rgn_in_type; simpl.*)
-    f_equal; try (solve [now apply IHt1 | now apply IHt2 | now apply IHt3]). 
+    f_equal; try (solve [apply IHt1;auto | apply IHt2;auto | apply IHt3;auto]). 
     + rewrite subst_open_eps; auto. 
     + rewrite subst_open_eps; auto. 
   - f_equal; [ |  apply IHt]; auto.
@@ -715,7 +732,7 @@ Lemma singleton_eq : forall x y, x = y <-> Singleton Name x y.
 Proof.
   intros x y. split.
   - intros H; subst. apply In_singleton.
-  - intros H. now inversion H.
+  - intros H. inversion H. reflexivity.
 Qed.
 
 Lemma subst_fresh_rgn : forall r x u, not_set_elem (free_region r) x ->
@@ -729,7 +746,7 @@ Proof.
   dependent induction r.
   - reflexivity.
   - unfold not, In, singleton_set in H.
-    assert (x <> n) by (contradict H; now apply singleton_eq).
+    assert (x <> n) by (contradict H; apply singleton_eq; auto).
     destruct (AsciiVars.eq_dec x n).
     + inversion e. contradiction.
     + reflexivity.
@@ -789,41 +806,43 @@ Proof.
   - reflexivity.
   - reflexivity.
   - reflexivity.  
-  - f_equal; [apply IHt1 | apply IHt2];
-    unfold not_set_elem, Complement in *; 
-    simpl in H; intuition.
+  - f_equal; [apply IHt1 | apply IHt2]; 
+    simpl in H; unfold not, not_set_elem, Complement in *;
+    intro; apply H.
+    + now apply Union_introl.
+    + now apply Union_intror.
   - unfold not_set_elem, Complement in H.
     f_equal; [ | apply IHt].
     + apply subst_fresh_rgn.
       unfold not_set_elem, free_region, Complement.
-      unfold not in *; intros. apply H. simpl. now apply Union_introl.
+      unfold not in *; intros. apply H. simpl. apply Union_introl. assumption.
     + unfold not_set_elem, free_region, Complement.
-      unfold not in *; intros. apply H. simpl. now apply Union_intror.
+      unfold not in *; intros. apply H. simpl. apply Union_intror. assumption.
   - unfold not_set_elem, Complement in H.
     f_equal; [apply IHt1 | | apply IHt2 | | apply IHt3].
     + unfold not_set_elem, free_region, Complement.
-      unfold not in *; intros. apply H. simpl. now apply Union_introl.
+      unfold not in *; intros. apply H. simpl. apply Union_introl. assumption.
     + rewrite subst_fresh_eps; auto.
       unfold not_set_elem, free_region, Complement.
       simpl in H. unfold not in *. intros.
-      apply H.  apply Union_intror.  apply Union_introl. now  apply Union_introl.
+      apply H.  apply Union_intror.  apply Union_introl. apply Union_introl. assumption.
     + unfold not_set_elem, free_region, Complement.
       simpl in H. unfold not in *. intros.
-      apply H. apply Union_intror.  apply Union_intror. now apply Union_introl.
+      apply H. apply Union_intror.  apply Union_intror. apply Union_introl. assumption.
     + rewrite subst_fresh_eps; auto.
       unfold not_set_elem, free_region, Complement.
       simpl in H. unfold not in *. intros.
-      apply H.  apply Union_intror.  apply Union_introl. now  apply Union_intror.
+      apply H.  apply Union_intror.  apply Union_introl. apply Union_intror. assumption.
     + unfold not_set_elem, free_region, Complement.
       simpl in H. unfold not in *. intros.
-      apply H. apply Union_intror.  apply Union_intror. now apply Union_intror. 
+      apply H. apply Union_intror.  apply Union_intror. apply Union_intror. assumption.
   - f_equal; [ | apply IHt].
     + rewrite subst_fresh_eps; auto.
       unfold not_set_elem, free_region, Complement in *.
       simpl in H. unfold not in *. intros.
-      apply H. now apply Union_introl.
+      apply H.  apply Union_introl. assumption.
     + simpl in H. unfold not_set_elem, free_region, Complement in *.
-      unfold not in *. intros. apply H. now apply Union_intror.
+      unfold not in *. intros. apply H. apply Union_intror. assumption.
 Qed. 
 
 Lemma SUBST_INTRO : subst_intro.
@@ -833,7 +852,7 @@ Proof.
   rewrite SUBST_OPEN; auto. f_equal.
   - simpl in *; destruct (AsciiVars.eq_dec x x); intros;
     [reflexivity | unfold AsciiVars.eq in n; contradict n; reflexivity ].
-  - symmetry. now apply SUBST_FRESH.
+  - symmetry. apply SUBST_FRESH. assumption.
 Qed .
 
 

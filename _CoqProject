@@ -1,3 +1,4 @@
+-R . Top0
 Keys.v 
 Tactics.v 
 Nameless.v 
@@ -13,4 +14,3 @@ EffectSystem.v
 Determinism.v 
 DeterminismExt.v
 Correctness.v
--R . "Top0"

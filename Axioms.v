@@ -1,4 +1,3 @@
-Add LoadPath "." as Top0.
 Require Import Top0.Definitions.
 Require Import Top0.Heap.
 Require Import Top0.Keys.

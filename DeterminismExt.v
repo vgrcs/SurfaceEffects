@@ -11,7 +11,6 @@ Require Import Coq.Arith.Minus.
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Compare_dec.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Keys.
 Require Import Top0.Heap.
 Require Import Top0.Tactics.

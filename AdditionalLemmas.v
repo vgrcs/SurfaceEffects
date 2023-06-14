@@ -1,8 +1,7 @@
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
-Require Import Omega.
+Require Import Lia.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Tactics.
 Require Import Top0.Keys.
 Require Import Top0.Nameless.
@@ -475,7 +474,7 @@ Proof.
   apply RProofs.find_in in H1. 
   contradict H0. 
   inversion H1; subst.
-  - unfold AsciiVars.lt in H3; omega.
+  - unfold AsciiVars.lt in H3; lia.
   - apply RProofs.lt_tree_not_in in H2. 
     (*eapply RProofs.In_1 with (x:=k); eauto.*) 
     (*  H2 : ~ R.Raw.In k this1
@@ -501,7 +500,7 @@ Proof.
   apply RProofs.find_in in H1. 
   contradict H0.
   inversion H1; subst.
-  - unfold AsciiVars.lt in H3; omega.
+  - unfold AsciiVars.lt in H3; lia.
   - admit.
   - admit.  
 Admitted.

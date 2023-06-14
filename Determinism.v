@@ -11,7 +11,6 @@ Require Import Coq.Arith.Minus.
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Compare_dec.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Keys.
 Require Import Top0.Heap.
 Require Import Top0.Environment.
@@ -518,8 +517,8 @@ Proof.
         intro.  apply HMapP.add_mapsto_iff. right. split; simpl; [intuition |].
         apply HMapP.add_mapsto_iff. left; simpl; split; auto.
         apply HMapP.add_mapsto_iff in H1.
-        destruct H1 as [[? ?]| ?]; [assumption | destruct H1 as [? ?  ?]; contradict H1; auto].
-      * unfold RegionVars.eq in *. unfold fst, snd in *; subst.
+        destruct H1 as [[? ?]| ?]; [assumption | destruct H1 as [HA HB]; contradict HA; auto].
+      * unfold RegionVars.eq in *. unfold fst, snd in *; subst. 
         intro. apply  HMapP.find_mapsto_iff in H1.
         apply  HMapP.find_mapsto_iff.
         { eapply H_diff_key_add_comm_2.
@@ -849,15 +848,15 @@ Proof.
         apply HMapP.find_mapsto_iff.
         apply HMapP.add_mapsto_iff. left; simpl. split; auto.
         apply HMapP.add_mapsto_iff in H1.
-        destruct H1 as [ [ ?  ?] | [? ?] ]; [assumption | contradict H2; intuition]. 
+        destruct H1 as [ [ ?  ?] | [? ?] ]; [assumption | contradict H2; contradict H1; auto]. 
       * unfold RegionVars.eq in *. unfold fst, snd in *; subst.
         intro. apply  HMapP.find_mapsto_iff in H1.
         apply  HMapP.find_mapsto_iff.
         { eapply H_diff_key_add_comm_2. 
-          - contradict n1. inversion n1. intuition.
-          - contradict n2. inversion n2. intuition.
+          - contradict n1. inversion n1. contradict n2. auto.
+          - contradict n2. inversion n2; subst. contradict n1. auto.
           - apply H_diff_key_2.
-            + contradict n1. inversion n1. intuition.
+            + contradict n1. inversion n1; subst. contradict n2. auto.
             + unfold H.Equal in HEqual. rewrite <- HEqual.
               apply H_diff_key_1 in H1.
               * apply H_diff_key_1 in H1; [assumption | contradict n2; inversion n2; auto]. 
@@ -950,7 +949,7 @@ Proof.
           - contradict n2. inversion n2. auto.
           - contradict n1. inversion n1. auto.
           - apply H_diff_key_2.
-            + contradict n1. inversion n1. intuition.
+            + contradict n1. inversion n1; subst. now contradict n2.
             + unfold H.Equal in HEqual. rewrite <- HEqual.
               apply H_diff_key_1 in H2.
               * apply H_diff_key_1 in H2; [assumption | contradict n2; inversion n2; auto]. 
@@ -1165,7 +1164,7 @@ Proof.
         H.Equal heapA heapB /\
         (Phi_Par phi1'0 phi1, heap1') ===> (Phi_Par phi1'0 phi2', heapA) /\
           (Phi_Par phi0 phi2', heap2') ===> (Phi_Par phi1'0 phi2', heapB)).
-     { eapply IHHStep1 with (heap1:=heap0) ; auto.
+     { eapply IHHStep1; auto.
        - inversion HDisj as [HA HB].
          assumption.         
        - intuition. apply HConf.
@@ -2028,7 +2027,7 @@ Proof.
 Qed.
 
 
-Require Import Omega.
+Require Import Lia.
     
 Theorem Diamond_Walk_Aux : 
   forall n n1 n2,
@@ -2048,33 +2047,33 @@ Proof.
   intros phi0 phi1 phi2 heap0 heap1 heap2 H0_1 H0_2 HDet. 
   dependent destruction H0_1.
   - exists phi2; exists heap2; exists heap2; exists n2; exists 0.
-   repeat split; try (solve [omega]).
+   repeat split; try (solve [lia]).
    + assumption.  (* phi1 walks into phi1 in n2 steps *)
    + apply PHT_Refl.  (* phi2 takes 0 steps *)
   -  rename H0 into H0_1.  
     dependent destruction H0_2.
     + exists phi1. exists heap1. exists heap1. exists 0. exists 1.
-      repeat split; try (solve [omega]).
+      repeat split; try (solve [lia]).
       * apply PHT_Refl. (* phi1 takes 0 steps *)
       * apply PHT_Step; assumption. (* phi2 walks into phi1 in 1 step *)
     + rename H0 into H0_2.
       destruct (Diamond_Step phi0 phi1 phi2 heap0 heap1 heap2 HDet H0_1 H0_2)
         as [phi3 [heap3 [heap4 [n13 [n23 [Heq [H1_3 [H2_3 [? ?]]]]]]]]].
       exists phi3. exists heap3. exists heap4. exists n13. exists n23. (* n13 and n23 are the remaining steps *)
-      repeat split;  try (solve [omega]). 
+      repeat split;  try (solve [lia]). 
       * assumption. (* context provided by Diamond_Step *)
       * assumption. (* context provided by Diamond_Step *)
       * assumption.
     + rename phi' into phi2'. rename heap' into heap2'. 
       rename H0_2_1 into H0_2'. rename H0_2_2 into H2'_2. 
       edestruct (H (1 + n')) as [phi3 [heap3 [heap4 [n1_3 [n2'_3 [Heq [H1_3 [H2'_3 [? ?]]]]]]]]]. (* transitivity on phi2 *)
-      * omega. (* phi2 took n' intermediate steps *)
+      * lia. (* phi2 took n' intermediate steps *)
       * reflexivity.
       * eapply PHT_Step; eassumption.  (* phi1 steps 1 *)
       * eassumption. (* by induction *)
       * eassumption. (* by induction *)  
       * { edestruct (H (n2'_3 + n'')) as [phi4 [heap5 [heap6 [n3_4 [n2_4 [Heq' [H3_4 [H2_4 [? ?]]]]]]]]].
-          - omega.  (* phi2 took n'' intermediate steps *)
+          - lia.  (* phi2 took n'' intermediate steps *)
           - reflexivity.
           - eassumption. (* by induction *)
           - eassumption. (* by induction *)
@@ -2082,20 +2081,20 @@ Proof.
           - apply Aux_Step_Ext_Heap with (heapB:=heap3) in H3_4; [ | apply HMapP.Equal_sym; assumption].
             destruct H3_4 as [heap5' [? ?]].
             exists phi4. exists heap5'. exists heap6. exists (1 + n1_3 + n3_4). exists n2_4.
-            repeat split; try (solve [omega]).
+            repeat split; try (solve [lia]).
             + eapply HMapP.Equal_trans in Heq'; eauto. apply HMapP.Equal_sym; assumption.  
             + eapply PHT_Trans. eassumption. assumption.
             + assumption. }
   - rename phi' into phi1'. rename heap' into heap1'.
     rename H0_1_1 into H0_1'. rename H0_1_2 into H1'_1.
     edestruct (H (n' + n2)) as [phi3 [heap3 [heap4 [n1'_3 [n2_3 [Heq [H1'_3 [H2_3 [? ?]]]]]]]]].
-    + omega.  (* phi1 took n' intermediate steps *)
+    + lia.  (* phi1 took n' intermediate steps *)
     + reflexivity.
     + eassumption.
     + eassumption.
     + assumption.
     + edestruct (H (n'' + n1'_3)) as [phi4 [heap5 [heap6 [n1_4 [n3_4 [Heq' [H1_4 [H3_4 [? ?]]]]]]]]].
-      * omega. (* phi1 took the remaining n'' intermediate steps *)
+      * lia. (* phi1 took the remaining n'' intermediate steps *)
       * reflexivity. 
       * eassumption.
       * eassumption.
@@ -2103,7 +2102,7 @@ Proof.
       * apply Aux_Step_Ext_Heap with (heapB:=heap4) in H3_4; [ |assumption].
         destruct H3_4 as [heap6' [? ?]]. 
         exists phi4. exists heap5. exists heap6'. exists n1_4. exists (1 + n2_3 + n3_4).
-        repeat split;  try (solve [omega]).
+        repeat split;  try (solve [lia]).
         { eapply HMapP.Equal_trans in H4; eauto. }
         { assumption. }
         { eapply PHT_Trans. eassumption. assumption. }
@@ -2131,7 +2130,7 @@ Proof.
     edestruct (Aux_Step_Ext_Heap _ _ _ _ _ _ H0_2 HEqual')
      as [heap2' [HEqual'' ?]].
     exists phi2; exists heap2'; exists heap2; exists n2; exists 0.
-    repeat split; try (solve [omega]).
+    repeat split; try (solve [lia]).
     + eauto using HMapP.Equal_sym.  
     + assumption. (* phi1 walks into phi2 in n2 steps *)
     + apply PHT_Refl.  (* phi2 takes 0 steps *)
@@ -2140,7 +2139,7 @@ Proof.
     + edestruct (Aux_Aux_Step_Ext_Heap _ _ _ _ _ H0_1 HEqual)
        as [heap1' [HEqual' H0_1']].
       exists phi1. exists heap1. exists heap1'. exists 0. exists 1.
-      repeat split; try (solve [omega]).
+      repeat split; try (solve [lia]).
       * assumption.
       * apply PHT_Refl. (* phi1 takes 0 steps *)
       * apply PHT_Step; assumption. (* phi2 walks into phi1 in 1 step *)
@@ -2148,21 +2147,21 @@ Proof.
       destruct (Diamond_Step_new phi0 phi1 phi2 heapa heapb heap1 heap2 HDet HEqual H0_1 H0_2)
         as [phi3 [heap3 [heap4 [n13 [n23 [Heq [H1_3 [H2_3 [? ?]]]]]]]]].
       exists phi3. exists heap3. exists heap4. exists n13. exists n23. (* n13 and n23 are the remaining steps *)
-      repeat split;  try (solve [omega]). 
+      repeat split;  try (solve [lia]). 
       * assumption.
       * assumption. (* context provided by Diamond_Step *)
       * assumption. (* context provided by Diamond_Step *)
     + rename phi' into phi2'. rename heap' into heap2'. 
       rename H0_2_1 into H0_2'. rename H0_2_2 into H2'_2. 
       edestruct (H (1 + n')) as [phi3 [heap3 [heap4 [n1_3 [n2'_3 [Heq [H1_3 [H2'_3 [? ?]]]]]]]]]. (* transitivity on phi2 *)
-      * omega. (* phi2 took n' intermediate steps *)
+      * lia. (* phi2 took n' intermediate steps *)
       * reflexivity.
       * eassumption.
       * eapply PHT_Step; eassumption.  (* phi1 steps 1 *)
       * eassumption. (* by induction *)
       * eassumption. (* by induction *)  
       * { edestruct (H (n2'_3 + n'')) as [phi4 [heap5 [heap6 [n3_4 [n2_4 [Heq' [H3_4 [H2_4 [? ?]]]]]]]]].
-          - omega.  (* phi2 took n'' intermediate steps *)
+          - lia.  (* phi2 took n'' intermediate steps *)
           - reflexivity.
           - apply HMapP.Equal_refl.
           - eassumption. (* by induction *)
@@ -2171,21 +2170,21 @@ Proof.
           - apply Aux_Step_Ext_Heap with (heapB:=heap3) in H3_4; [ | apply HMapP.Equal_sym; assumption].
             destruct H3_4 as [heap5' [? ?]].
             exists phi4. exists heap5'. exists heap6. exists (1 + n1_3 + n3_4). exists n2_4.
-            repeat split; try (solve [omega]).
+            repeat split; try (solve [lia]).
             + eapply HMapP.Equal_trans in Heq'; eauto. apply HMapP.Equal_sym; assumption.  
             + eapply PHT_Trans. eassumption. assumption.
             + assumption. }
   - rename phi' into phi1'. rename heap' into heap1'.
     rename H0_1_1 into H0_1'. rename H0_1_2 into H1'_1.
     edestruct (H (n' + n2)) as [phi3 [heap3 [heap4 [n1'_3 [n2_3 [Heq [H1'_3 [H2_3 [? ?]]]]]]]]].
-    + omega.  (* phi1 took n' intermediate steps *)
+    + lia.  (* phi1 took n' intermediate steps *)
     + reflexivity.
     + eassumption.
     + eassumption.
     + eassumption.
     + assumption.
     + edestruct (H (n'' + n1'_3)) as [phi4 [heap5 [heap6 [n1_4 [n3_4 [Heq' [H1_4 [H3_4 [? ?]]]]]]]]].
-      * omega. (* phi1 took the remaining n'' intermediate steps *)
+      * lia. (* phi1 took the remaining n'' intermediate steps *)
       * reflexivity. 
       * apply HMapP.Equal_refl.
       * eassumption.
@@ -2194,7 +2193,7 @@ Proof.
       * apply Aux_Step_Ext_Heap with (heapB:=heap4) in H3_4; [ |assumption].
         destruct H3_4 as [heap6' [? ?]]. 
         exists phi4. exists heap5. exists heap6'. exists n1_4. exists (1 + n2_3 + n3_4).
-        repeat split;  try (solve [omega]).
+        repeat split;  try (solve [lia]).
         { eapply HMapP.Equal_trans in H4; eauto. }
         { assumption. }
         { eapply PHT_Trans. eassumption. assumption. }

@@ -11,7 +11,6 @@ Require Import Coq.Arith.Minus.
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Compare_dec.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Keys.
 Require Import Top0.Heap.
 Require Import Top0.Tactics.
@@ -37,9 +36,9 @@ Proof.
   generalize dependent cacts.
   generalize dependent cheap.
   generalize dependent b2.
-  dependent induction H; intros; 
-  inversion H0; subst; intuition.
-  rewrite H in H2. inversion H2; subst. auto.
+  dependent induction H; intros; inversion H0; subst; repeat split.
+  rewrite H in H2.
+  inversion H2; subst. reflexivity.
 Qed.
 
 Axiom RewritePhiR:
@@ -103,7 +102,8 @@ Proof.
   generalize dependent l.
   generalize dependent h'.
   dependent induction H.
-  intros. inversion H0; subst. rewrite H2 in H. inversion H; subst. intuition.
+  intros. inversion H0; subst. rewrite H2 in H. inversion H; subst.
+  repeat split. 
 Qed.
 
 
@@ -134,8 +134,8 @@ Proof.
   dynamic_cases (dependent induction BS1) Case;
   intros h'' eff rgns ctxt stty ee_exp p'; 
   intros h_ h'_ v_ p_ HEqual BS2;
-  intros HEff HBt static ty HRonly HHeap HRho HEnv HExp;
-  try (solve [assert (Phi_Nil ⊑ eff) by (constructor); inversion BS2; subst; intuition]).
+    intros HEff HBt static ty HRonly HHeap HRho HEnv HExp;
+    try (solve [assert (Phi_Nil ⊑ eff) by (constructor); inversion BS2; subst; assumption]).
   Case "mu_app".  
     inversion HExp as  [ | | | | | 
                          ? ? ? ? ? ? ? ? ? ? ? HExp_ef HExp_ea 

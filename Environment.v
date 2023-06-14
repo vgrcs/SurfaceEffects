@@ -1,4 +1,3 @@
-Add LoadPath "." as Top0.
 Require Import Top0.Tactics.
 Require Import Top0.Definitions.
 Require Import Top0.Keys.
@@ -87,7 +86,7 @@ Proof.
   right; split; [exact H | now rewrite RMapP.find_mapsto_iff ].
 Qed.
 
-Require Import Omega.
+Require Import Lia.
 
 Lemma Raw_same_key:
   forall t x v e, 
@@ -96,7 +95,7 @@ Lemma Raw_same_key:
 Proof.
   intros. rewrite EProofs.add_find; auto.
   case_eq (AsciiVars.compare x x); intros; 
-  now try repeat (unfold AsciiVars.lt in l; omega).
+  now try repeat (unfold AsciiVars.lt in l; lia).
 Qed.  
 
 Lemma Raw_diff_key_1:
@@ -135,38 +134,30 @@ Proof.
   apply TC_Env;
   unfold find_E, update_E, find_T, update_T in *; simpl.
   clear HTc.
-  Case "env is a bst". now apply EProofs.add_bst.
-  Case "TcEnv is well-typed: HE".  
-    intros x0 v0 HF.
-    destruct (AsciiVars.eq_dec x0 x) as [c | c]. 
-    unfold AsciiVars.eq in c; intros.
-    SCase "x0 = x". subst; exists t.
-        now rewrite E_same_key. 
-    SCase "x0 <> x". 
-      eapply Raw_diff_key_1 in HF; auto.      
-      destruct (HE x0 v0) as [t0 HU] ; [auto | ] ; exists t0.
-      eapply E_diff_key_2 ; [ auto | exact HU]. 
-  Case "TcEnv is well-typed: HT". 
-    intros x0 t0 HF.
+  - now apply EProofs.add_bst. (** "env is a bst" **)
+  - intros x0 v0 HF. (** "TcEnv is well-typed: HE" **)
+    destruct (AsciiVars.eq_dec x0 x) as [c | c].
+    + unfold AsciiVars.eq in c; intros. 
+      subst. exists t. now rewrite E_same_key.
+    + unfold AsciiVars.eq in c; intros. 
+      eapply Raw_diff_key_1 in HF; auto; subst.
+      * destruct (HE x0 v0) as [t0 HU] ; [auto | ] ; exists t0.
+        eapply E_diff_key_2 ; [ auto | exact HU]. 
+  - intros x0 t0 HF. (** "TcEnv is well-typed: HT".  **)
     destruct (AsciiVars.eq_dec x0 x) as [c | c]; 
     unfold AsciiVars.eq in c; intros; subst.  
-    SCase "x0 = x". exists v.
-        now rewrite Raw_same_key.
-    SCase "x0 <> x". 
-      eapply E_diff_key_1 in HF; auto.
+    + exists v. now rewrite Raw_same_key.
+    + eapply E_diff_key_1 in HF; auto.
       destruct (HT x0 t0) as [x1 ?] ; [auto | ].
       exists x1; [eapply Raw_diff_key_2]; auto.
-  Case "Type preservation: HV". 
-    intros x0 v0 t0 HFindE HFindT. 
+  - intros x0 v0 t0 HFindE HFindT. (** "Type preservation: HV". **)
     destruct (AsciiVars.eq_dec x0 x) as [c | c];
     unfold AsciiVars.eq in c; intros; subst.
-    SCase "x0 = x".
-      rewrite Raw_same_key in HFindE by assumption.
+    + rewrite Raw_same_key in HFindE by assumption.
       inversion HFindE; subst.
       rewrite E_same_key in HFindT by assumption.
       inversion HFindT; subst. assumption.
-    SCase "x0 <> x". 
-      eapply Raw_diff_key_1 in HFindE; auto.
+    + eapply Raw_diff_key_1 in HFindE; auto.
       eapply E_diff_key_1 in HFindT; auto.
       eapply HV; eauto.
 Qed.
@@ -605,7 +596,7 @@ Proof.
       * rewrite <- RMapP.in_find_iff.  rewrite RMapP.add_in_iff.
         right. rewrite RMapP.in_find_iff. 
         assumption.
-      * destruct H1; [apply H0; assumption | inversion H1; subst; intuition]. 
+      * destruct H1; [apply H0; assumption | inversion H1; subst; contradict c; reflexivity].
 Qed.
 
 Lemma NotFreeInEmptyEps:

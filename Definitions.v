@@ -19,7 +19,6 @@ Require Import Coq.Bool.Bool.
 Require Import Coq.Strings.String.
 Require Import Ascii.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Keys.
 Require Import Top0.Tactics.
 Require Export Top0.Nameless.
@@ -384,12 +383,24 @@ Proof.
     + apply HMapP.add_neq_in_iff.
       * intro. apply n. unfold RegionVars.eq. intuition.
       * assumption.
-  - apply IHPhi_Heap_Step with (phi:=phi1) (heap0:=heap) (phi':=phi1'). reflexivity. reflexivity. assumption.
-  - apply IHPhi_Heap_Step with (phi:=phi2) (heap0:=heap) (phi':=phi2'). reflexivity. reflexivity. assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi1) (heap:=heap) (phi':=phi1').
+    + reflexivity.
+    + reflexivity.
+    + assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi2) (heap:=heap) (phi':=phi2'). 
+    + reflexivity.
+    + reflexivity.
+    + assumption.
   - assumption.
-  - apply IHPhi_Heap_Step with (phi:=phi1) (heap0:=heap) (phi':=phi1'). reflexivity. reflexivity. assumption.
-  - apply IHPhi_Heap_Step with (phi:=phi2) (heap0:=heap) (phi':=phi2'). reflexivity. reflexivity. assumption.
-  - assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi1) (heap:=heap) (phi':=phi1').
+    + reflexivity.
+    + reflexivity.
+    + assumption.
+  - apply IHPhi_Heap_Step with (phi:=phi2) (heap:=heap) (phi':=phi2'). 
+    + reflexivity.
+    + reflexivity.
+    + assumption.
+ - assumption.
 Qed.    
     
       
@@ -518,7 +529,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   | BS_Bool_Eq     : forall a b va vb env rho (heap lheap rheap : Heap) (lacts racts : Phi),
                        (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
                        (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->   
-                       (heap, env, rho, Eq a b) ⇓ (rheap, Bit (beq_nat va vb), Phi_Seq lacts racts)
+                       (heap, env, rho, Eq a b) ⇓ (rheap, Bit (Nat.eqb va vb), Phi_Seq lacts racts)
   | BS_Alloc_Abs   : forall w r env rho heap,
                        find_R w rho = Some r ->
                        (heap, env, rho, AllocAbs w) ⇓ (heap, Eff (Some (singleton_set (CA_AllocAbs r))), Phi_Nil)

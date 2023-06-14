@@ -2,7 +2,6 @@ Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Lists.List.
 
-Add LoadPath "." as Top0.
 Require Import Top0.Definitions.
 Require Import Top0.Heap.
 Require Import Top0.Axioms.
@@ -517,16 +516,23 @@ Proof.
     apply Extensionality_Ensembles;
     unfold Same_set, Included; split; intros x H; unfold Ensembles.In in *.
     inversion H.
-    unfold fold_subst_eps. exists (SA_Read r). intuition.
-    inversion H. inversion H0. inversion H1. subst. unfold fold_subst_sa; simpl. apply Ensembles.In_singleton.
+    unfold fold_subst_eps. exists (SA_Read r).
+    + split; [constructor | subst; simpl; reflexivity].
+    + inversion H. inversion H0. inversion H1. subst. unfold fold_subst_sa; simpl. apply Ensembles.In_singleton.
   - replace (fold_subst_eps rho (Union_Static_Action eps1 eps2)) with (Union_Static_Action (fold_subst_eps rho eps1) (fold_subst_eps rho eps2)).
     constructor; assumption.
     apply Extensionality_Ensembles;
     unfold Same_set, Included; split; intros x H; unfold Ensembles.In in *.
-    inversion H; subst; inversion H0; unfold fold_subst_eps; exists x0; split;
-    [apply Ensembles.Union_introl | | apply Ensembles.Union_intror | ]; intuition.
-    inversion H. inversion H0. inversion H1; subst;
-    [apply Ensembles.Union_introl | apply Ensembles.Union_intror]; unfold Ensembles.In; unfold fold_subst_eps; exists x0; intuition.
+    + inversion H; subst; inversion H0; unfold fold_subst_eps; exists x0; split.
+      * apply Ensembles.Union_introl. destruct H1; subst. assumption.
+      * destruct H1; subst. reflexivity. 
+      * apply Ensembles.Union_intror. destruct H1; subst. assumption.
+      * destruct H1; subst. reflexivity.   
+   + inversion H. inversion H0. inversion H1; subst;
+       [apply Ensembles.Union_introl | apply Ensembles.Union_intror];
+       unfold Ensembles.In; unfold fold_subst_eps; exists x0.
+     * split; [assumption | reflexivity].
+     * split; [assumption | reflexivity].
 Qed.
 
 Lemma ReadOnlyStaticImpliesReadOnlyPhi :
