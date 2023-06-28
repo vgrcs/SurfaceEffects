@@ -43,60 +43,33 @@ Axiom ReadOnlyWalkSameHeap:
     (*H.Equal h same_h.*)
     h = same_h.
 
-(* Induction principle for TcHeap when we know that previous heaps are 
-   consistent and the new ones are non-overlapping. *)
-Axiom UnionTcHeap:
-  forall hp hp' ef1 ea1 ef2 ea2 theta1 theta2 v1 v2 acts_eff1 acts_eff2 env rho
-         heap heap_mu1 heap_mu2 heap_eff1 heap_eff2 sttym sttya acts_mu1 acts_mu2,
-    (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap_eff1, Eff theta1, acts_eff1) ->
-    (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap_eff2, Eff theta2, acts_eff2) ->
-    Disjointness theta1 theta2 /\ ~ Conflictness theta1 theta2 ->
+
+Axiom StoreTyping_Extended:
+  forall stty sttya sttyb,
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+    	ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = Some t' ).  
+  
+  
+Axiom TcHeap_Extended:
+  forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
+  	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2,
     (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
     (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
     TcHeap (heap_mu1, sttym) ->
     TcHeap (heap_mu2, sttya) ->
-    TcHeap (hp', Functional_Map_Union sttya sttym).
+    TcHeap (hp', Functional_Map_Union sttym sttya).
 
+Axiom TcValExtended:
+  forall stty1 stty2 v1 v2 rho ty1 ty2,   	
+    TcVal (stty1, v1, subst_rho rho ty1) ->
+    TcVal (stty2, v2, subst_rho rho ty2) ->
+    TcVal (Functional_Map_Union stty1 stty2, Pair (v1, v2), subst_rho rho (Ty2_Pair ty1 ty2)).
 
-Lemma TcValExtended_1 :
-  forall stty sttya sttyb v rho ty,
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
-    TcVal (sttya, v, subst_rho rho ty) ->
-    TcVal (Functional_Map_Union sttya sttyb, v, subst_rho rho ty).
-Proof.
-  intros stty sttya sttyb v rho ty H1 H2 H3.  
-  generalize dependent sttyb. 
-  generalize dependent stty.
-  dependent induction H3; intros; try (solve [rewrite <- x; econstructor]).
-  - rewrite <- x. econstructor; eauto.
-    admit.
-  - rewrite <- x. econstructor; eauto.
-    admit.
-  - rewrite <- x. econstructor.
-    + (* goal is TcVal (Functional_Map_Union sttya sttyb, v1, ty1) *)
-      (* but IH is TcVal (Functional_Map_Union sttya0 sttyb, v, subst_rho rho ty) *)
-      admit.
-    + admit.  
-Admitted. 
-
-Axiom TcValExtended_2 :
-  forall stty sttya sttyb v rho ty,
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
-    TcVal (sttyb, v, subst_rho rho ty) ->
-    TcVal (Functional_Map_Union sttya sttyb, v, subst_rho rho ty).
-
-Axiom UnionStoreTyping:
-  forall l sttya sttym t', 
-    ST.find (elt:=tau) l sttya = Some t' -> 
-    ST.find (elt:=tau) l sttym = Some t' ->
-    ST.find (elt:=tau) l (Functional_Map_Union sttya sttym) = Some t'.
 
 Require Import Coq.Logic.FunctionalExtensionality.
 Axiom subst_rho_eps_aux_1 :

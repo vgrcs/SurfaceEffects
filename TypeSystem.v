@@ -250,10 +250,10 @@ Lemma ty_sound:
          /\ TcHeap (hp', stty')
          /\ TcVal (stty', v, subst_rho rho t).
 Proof.
-  intros e env rho hp hp'  v dynamic_eff D.
+  intros e env rho hp hp'  v dynamic_eff D. 
   dynamic_cases (dependent induction D) Case;
   intros stty ctxt rgns t static_eff Hhp Hrho Henv Hexp; 
-  inversion Hexp; subst.   
+  inversion Hexp; subst.    
   (* Case_str "cnt n". *)
   - exists stty; (split; [| split]; auto). rewrite subst_rho_natural.
     econstructor; eassumption.
@@ -331,16 +331,38 @@ Proof.
     rewrite subst_rho_effect. rewrite subst_rho_effect in TcVal_res.
     assumption.
   (* Case "par_pair". *)
-  - edestruct IHD3 as [sttym [Weak1 [TcHeap1 TcVal_app1]]]; eauto. 
-    edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto. 
-    exists (Functional_Map_Union sttya sttym). intuition. 
-    (* SCase "Weakening". *)
-    + apply UnionStoreTyping; [apply Weaka | apply Weak1]; auto.
-    (* SCase "TcHeap". *)
-    + eapply UnionTcHeap with (theta1:=theta1) (theta2:=theta2); eauto.  
-    (* SCase "TcVal". *)
-    + rewrite subst_rho_pair. 
-      econstructor; [eapply TcValExtended_2 | eapply TcValExtended_1]; eauto.
+  - edestruct IHD3 as [sttym [Weak1 [TcHeap1 TcVal_app1]]]; eauto.  
+    edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto.
+    assert (exists stty' : ST.t tau,
+           (forall (l : ST.key) (t' : tau),
+            ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l stty' = Some t') /\
+             TcHeap (heap_eff1, stty') /\ TcVal (stty', Eff theta1, subst_rho rho ty3)) as HTyped3.
+    eapply IHD1; eauto.
+    assert (exists stty' : ST.t tau,
+           (forall (l : ST.key) (t' : tau),
+            ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l stty' = Some t') /\
+             TcHeap (heap_eff2, stty') /\ TcVal (stty', Eff theta2, subst_rho rho ty4)) as HTyped4.
+    eapply IHD2; eauto.
+    assert (exists stty' : ST.t tau,
+           (forall (l : ST.key) (t' : tau),
+            ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l stty' = Some t') /\
+             TcHeap (heap_mu1, stty') /\ TcVal (stty', v1, subst_rho rho ty1)) as HTyped1.
+    eapply IHD3; eauto.
+    assert (exists stty' : ST.t tau,
+           (forall (l : ST.key) (t' : tau),
+            ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l stty' = Some t') /\
+             TcHeap (heap_mu2, stty') /\ TcVal (stty', v2, subst_rho rho ty2)) as HTyped2.
+    eapply IHD4; eauto.
+    destruct HTyped1 as[ stty1 [HA1  [HA2 HA3]]].
+    destruct HTyped2 as[ stty2 [HB1  [HB2 HB3]]].
+    destruct HTyped3 as[ stty3 [HC1  [HC2 HC3]]].
+    destruct HTyped4 as[ stty4 [HD1  [HD2 HD3]]]. 
+    exists (Functional_Map_Union stty1 stty2). 
+    split.
+    + intros. eapply StoreTyping_Extended; eauto.
+    + split.
+      * eapply TcHeap_Extended with(acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
+      * eapply TcValExtended; eauto.
   (* Case "cond_true". *)
   - edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
     edestruct IHD2 as [stty1 [Weak1 [TcHeapv1 TcVal_e1]]]; 
