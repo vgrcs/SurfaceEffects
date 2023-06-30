@@ -11,6 +11,7 @@ Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
+ 
  (* both ec' and ee' and evaluated with the same context, but twice: inside Bs_Mu_App and BS_EffApp*)
 Axiom MuAppAndEffAppShareArgument:
  forall h'' env rho ef env' rho' f x ec' ee' ea aheap v eff facts1 aacts1 bacts1, 
@@ -44,14 +45,9 @@ Axiom ReadOnlyWalkSameHeap:
     h = same_h.
 
 
-Axiom StoreTyping_Extended:
-  forall stty sttya sttyb,
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-    	ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = Some t' ).  
+Axiom Functional_Map_Union_find:
+  forall sttya sttyb (l : ST.key) (t' : tau),
+    ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = ST.find (elt:=tau) l sttya.
   
   
 Axiom TcHeap_Extended:

@@ -96,6 +96,90 @@ Proof.
     rewrite Phi_Seq_Nil_R. reflexivity.
 Qed.
 
+
+Lemma NilPhiReadOnly:
+  forall phi,
+    NilPhi phi -> ReadOnlyPhi phi.
+Proof.
+  intros.
+  dependent induction phi.
+  - constructor.
+  - inversion H.
+  - inversion H; subst.
+    + constructor.
+      * apply IHphi1; assumption.
+      * apply IHphi2. assumption.
+  - inversion H; subst.
+    + constructor.
+      * apply IHphi1; assumption.
+      * apply IHphi2. assumption. 
+Qed.
+
+
+(*Lemma NilPhiEval:
+  forall h env rho e v h' phi,
+    (h, env, rho, e) ⇓ (h', v, phi) -> NilPhi phi -> phi = Phi_Nil.
+Proof.
+  intros  h env rho e v h'. intros phi Ha Hb.     
+  dependent induction phi.
+  - reflexivity.
+  - inversion Hb.
+  - inversion Hb; subst.      
+    assumption.
+  - inversion Hb; subst; destruct H2.
+    + assumption.
+    + assumption.
+    + assumption.  
+Qed.*)              
+
+Lemma NilAnyTheta:
+  forall phi,
+    NilPhi phi -> phi ⊑ Theta_Empty.
+Proof.
+  intros.
+  dependent induction phi.
+  - constructor.
+  - inversion H.
+  - inversion H; subst.
+    constructor.
+    + apply IHphi1. assumption.
+    + apply IHphi2. assumption.
+  - inversion H; subst.
+    constructor.
+    + apply IHphi1. assumption.
+    + apply IHphi2. assumption.
+Qed.
+
+  
+Lemma EmptyIsNil_2:
+  forall phi, phi ⊑ Theta_Empty -> NilPhi(phi).
+Proof.
+  induction phi; intros. try (solve [constructor]).
+  - unfold Theta_Empty, empty_set in H. 
+    dependent induction H; inversion H; subst; try (solve [inversion H2]).
+    + clear H2. clear H0. clear a. clear acts. 
+      dependent induction H; try (solve [inversion H]); intros.
+      * eapply IHDA_in_Theta; eauto. apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
+      * eapply IHDA_in_Theta; eauto. apply EmptyUnionisEmptySet_2 in x.
+         destruct x; subst. intuition.
+    + dependent induction H; try (solve [inversion H]).
+      * eapply IHDA_in_Theta; eauto.  apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
+      * eapply IHDA_in_Theta; eauto.  apply EmptyUnionisEmptySet_2 in x.
+        destruct x; subst. intuition.
+  - inversion H; subst.
+    assert ( H_ : NilPhi(phi1)). apply IHphi1; inversion H; assumption.
+    assert ( H__ : NilPhi(phi2)). apply IHphi2; inversion H; assumption. 
+    econstructor.
+    + assumption.
+    + assumption.   
+  - inversion H; subst.
+    assert ( H_ : NilPhi(phi1)). apply IHphi1; inversion H; assumption.
+    assert ( H__ : NilPhi(phi2)). apply IHphi2; inversion H; assumption.
+    econstructor; assumption.
+Qed.
+
 Lemma EmptyInAnyTheta:
   forall phi theta, phi ⊑ Theta_Empty -> phi ⊑ theta .
 Proof.  
@@ -106,10 +190,10 @@ Proof.
         destruct x; subst. intuition.
     * eapply IHDA_in_Theta; eauto. apply EmptyUnionisEmptySet_2 in x.
         destruct x; subst. intuition.
-  - inversion H; subst. apply EmptyIsNil in H2. apply EmptyIsNil in H4. subst.
-    apply PTS_Par. apply IHphi1. apply PTS_Nil.  apply IHphi1. apply PTS_Nil.
-  - inversion H; subst. apply EmptyIsNil in H2. apply EmptyIsNil in H4. subst.
-    apply PTS_Seq. apply IHphi1. apply PTS_Nil.  apply IHphi1. apply PTS_Nil. 
+  - inversion H; subst.
+    apply PTS_Par; [ apply IHphi1; assumption | apply IHphi2; assumption]. 
+  - inversion H; subst.
+    apply PTS_Seq; [ apply IHphi1; assumption | apply IHphi2; assumption]. 
 Qed.
 
 Lemma EnsembleUnionSym:
@@ -139,18 +223,45 @@ Proof.
     by (unfold Union_Theta, set_union, empty_set; f_equal;
          apply Extensionality_Ensembles; red; split; unfold Included;
          intros x Hx; [ inversion Hx; subst; [contradiction | assumption] | apply Union_intror]; auto).
-  - rewrite HUnionEmpty in H0; assumption.
-  - apply DAT_Top. 
+  -  rewrite HUnionEmpty in H0; assumption.
+  -   apply DAT_Top. 
   - induction eff. assert ( HUnionEmpty : (Union_Theta (Some empty_set)  (Some a)) = Some a) 
      by (unfold Union_Theta, set_union, empty_set; f_equal;
          apply Extensionality_Ensembles; red; split; unfold Included;
          intros x Hx; [ inversion Hx; subst; [contradiction | assumption] | apply Union_intror]; auto).
-    rewrite <- HUnionEmpty. auto. now simpl in H.
-  - induction eff. assert ( HUnionEmpty : (Union_Theta (Some empty_set)  (Some a)) = Some a) 
+    rewrite <- HUnionEmpty.  auto. now simpl in H.
+  -  induction eff. assert ( HUnionEmpty : (Union_Theta (Some empty_set)  (Some a)) = Some a) 
      by (unfold Union_Theta, set_union, empty_set; f_equal;
          apply Extensionality_Ensembles; red; split; unfold Included;
          intros x Hx; [ inversion Hx; subst; [contradiction | assumption] | apply Union_intror]; auto).
     rewrite <- HUnionEmpty. auto. now simpl in H. 
+Qed.
+
+Lemma EmptyUnionIsIdentity_2 : 
+  forall p eff,  p ⊑ eff -> p ⊑ (Union_Theta (Some empty_set) eff). 
+Proof.
+  intros p eff H; inversion H; subst; try apply PTS_Nil.  
+  induction eff; apply PTS_Elem;
+  try assert ( HUnionEmpty : (Union_Theta (Some empty_set)  (Some a)) = Some a) 
+      by (unfold Union_Theta, set_union, empty_set; f_equal;
+         apply Extensionality_Ensembles; red; split; unfold Included;
+         intros x Hx; [ inversion Hx; subst; [contradiction | assumption] | apply Union_intror]; auto).
+  - rewrite HUnionEmpty. assumption.
+  - apply DAT_Top.
+  - induction eff. 
+    assert ( HUnionEmpty : (Union_Theta (Some empty_set)  (Some a)) = Some a) 
+     by (unfold Union_Theta, set_union, empty_set; f_equal;
+         apply Extensionality_Ensembles; red; split; unfold Included;
+         intros x Hx; [ inversion Hx; subst; [contradiction | assumption] | apply Union_intror]; auto).
+    + rewrite HUnionEmpty. assumption.
+    + simpl. assumption.
+  - induction eff. 
+    assert ( HUnionEmpty : (Union_Theta (Some empty_set)  (Some a)) = Some a) 
+     by (unfold Union_Theta, set_union, empty_set; f_equal;
+         apply Extensionality_Ensembles; red; split; unfold Included;
+         intros x Hx; [ inversion Hx; subst; [contradiction | assumption] | apply Union_intror]; auto).
+    + rewrite HUnionEmpty. assumption.
+    + simpl. assumption.  
 Qed.
 
 Lemma EnsembleUnionComp :

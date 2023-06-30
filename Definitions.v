@@ -97,12 +97,19 @@ Inductive DynamicAction : Type :=
 | DA_Read  : Region -> nat -> Val -> DynamicAction
 | DA_Write : Region -> nat -> Val -> DynamicAction. 
 
-Definition Trace := list DynamicAction. 
+Definition Trace := list DynamicAction.
+
 Inductive Phi :=
  | Phi_Nil : Phi
- | Phi_Elem : DynamicAction -> Phi                                
- | Phi_Par : Phi -> Phi -> Phi                 
+ | Phi_Elem : DynamicAction -> Phi
+ | Phi_Par : Phi -> Phi -> Phi
  | Phi_Seq : Phi -> Phi -> Phi.
+
+
+Inductive NilPhi : Phi -> Prop :=
+ | Phi_Nil_empty : NilPhi Phi_Nil
+ | Phi_Seq_Nil   : forall phi1 phi2, NilPhi(phi1) -> NilPhi(phi2) -> NilPhi(Phi_Seq phi1 phi2)
+ | Phi_Par_Nil   : forall phi1 phi2, NilPhi(phi1) -> NilPhi(phi2) -> NilPhi(Phi_Par phi1 phi2).
 
 Fixpoint phi_as_list (phi : Phi) : Trace :=
   match phi with
@@ -357,8 +364,7 @@ Inductive Phi_Heap_Step : (Phi * Heap) -> (Phi * Heap) -> Prop :=
 | PHS_Par_2  : forall phi2 phi2' heap heap',
                  (phi2, heap) ===> (phi2', heap') ->
                  forall phi1, (Phi_Par phi1 phi2, heap) ===> (Phi_Par phi1 phi2', heap')
-| PHS_Par_3  : forall heap, 
-                 (Phi_Par Phi_Nil Phi_Nil, heap) ===> (Phi_Nil, heap)   
+| PHS_Par_3  : forall heap, (Phi_Par Phi_Nil Phi_Nil, heap) ===> (Phi_Nil, heap)                                 
 where "phi_heap '===>' phi'_heap'" := (Phi_Heap_Step phi_heap phi'_heap') : type_scope.
 
 Module HMapP := FMapFacts.Facts H.

@@ -7,6 +7,7 @@ Require Import Top0.Keys.
 Require Import Top0.Nameless.
 Require Import Top0.Definitions.
 Require Import Top0.Axioms.
+Require Import Top0.Heap.
 
 
 Lemma subst_rho_natural :
@@ -641,5 +642,20 @@ Proof.
       apply Union_intror. assumption.
 Qed.
 
+Lemma StoreTyping_Extended:
+  forall stty sttya sttyb,
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+    	ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = Some t' ).
+Proof.
+  intros stty sttya sttyb Ha Hb.
+  intros l t' H.
+  edestruct (Ha l t' H).
+  generalize l t'.
+  apply Functional_Map_Union_find.
+Qed.
 
 
