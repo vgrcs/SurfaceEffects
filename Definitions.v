@@ -106,10 +106,17 @@ Inductive Phi :=
  | Phi_Seq : Phi -> Phi -> Phi.
 
 
+
+Inductive PhiEquiv: Phi -> Prop :=
+  | Phi_Equiv: forall phi, Phi_Seq Phi_Nil phi = phi /\ Phi_Seq phi Phi_Nil = phi /\
+    Phi_Par phi Phi_Nil = phi /\ Phi_Par Phi_Nil phi = phi
+    -> PhiEquiv(phi).
+
 Inductive NilPhi : Phi -> Prop :=
  | Phi_Nil_empty : NilPhi Phi_Nil
  | Phi_Seq_Nil   : forall phi1 phi2, NilPhi(phi1) -> NilPhi(phi2) -> NilPhi(Phi_Seq phi1 phi2)
  | Phi_Par_Nil   : forall phi1 phi2, NilPhi(phi1) -> NilPhi(phi2) -> NilPhi(Phi_Par phi1 phi2).
+
 
 Fixpoint phi_as_list (phi : Phi) : Trace :=
   match phi with

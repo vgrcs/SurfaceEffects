@@ -46,7 +46,7 @@ Axiom ReadOnlyWalkSameHeap:
 
 
 Axiom Functional_Map_Union_find:
-  forall sttya sttyb (l : ST.key) (t' : tau),
+  forall sttya sttyb (l : ST.key),
     ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = ST.find (elt:=tau) l sttya.
   
   

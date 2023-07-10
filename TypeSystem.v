@@ -332,7 +332,7 @@ Proof.
     assumption.
   (* Case "par_pair". *)
   - edestruct IHD3 as [sttym [Weak1 [TcHeap1 TcVal_app1]]]; eauto.  
-    edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto.
+    edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto. 
     assert (exists stty' : ST.t tau,
            (forall (l : ST.key) (t' : tau),
             ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l stty' = Some t') /\

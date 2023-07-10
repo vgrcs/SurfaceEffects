@@ -18,12 +18,14 @@ Proof.
   - reflexivity.
   - inversion is_bst; subst.
     rewrite IHthis1 by assumption.
-    replace (subst_in_type k e Ty2_Natural) with Ty2_Natural.
+    replace (subst_in_type k e Ty2_Natural) with Ty2_Natural. 
     rewrite IHthis2 by assumption.
     reflexivity.
     unfold subst_in_type, open_var, close_var.
     simpl. reflexivity.
 Qed.
+
+
 
 Lemma subst_rho_boolean :
   forall rho, subst_rho rho Ty2_Boolean = Ty2_Boolean.
@@ -650,11 +652,11 @@ Lemma StoreTyping_Extended:
        ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
     (forall (l : ST.key) (t' : tau),
     	ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = Some t' ).
-Proof.
+Proof. 
   intros stty sttya sttyb Ha Hb.
   intros l t' H.
   edestruct (Ha l t' H).
-  generalize l t'.
+  generalize l. 
   apply Functional_Map_Union_find.
 Qed.
 

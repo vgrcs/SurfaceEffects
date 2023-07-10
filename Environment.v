@@ -129,7 +129,7 @@ Lemma update_env:
        TcVal (stty, v, subst_rho rho t) ->
        TcEnv (stty, rho, update_E (x, v) env, update_T (x, t) ctxt) ).
 Proof. 
-  intros stty rho env ctxt HEnv x v t HTc. 
+  intros stty rho env ctxt HEnv x v t HTc.  
   inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
   apply TC_Env;
   unfold find_E, update_E, find_T, update_T in *; simpl.
