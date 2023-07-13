@@ -60,10 +60,13 @@ Proof.
   destruct sttya. destruct sttyb. simpl. induction this0.
   - inversion is_bst; subst.
     + reflexivity. 
-    + unfold ST.find, ST.fold. simpl.
+    + unfold ST.find, ST.fold. simpl. 
       destruct (RegionVars.compare l x).
       * admit.
-      * admit. (* should be true*)
+      * unfold ST.add.
+        
+        admit. (* should be true*)
+        
       * admit.            
   - inversion is_bst0; subst.
 

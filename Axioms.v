@@ -4,6 +4,8 @@ Require Import Top0.Keys.
 Require Import Top0.Nameless.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
+Require Import Top0.MapFind.
+
 
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
@@ -60,11 +62,29 @@ Axiom TcHeap_Extended:
     TcHeap (heap_mu2, sttya) ->
     TcHeap (hp', Functional_Map_Union sttym sttya).
 
+
+Lemma StoreTyping_Extended:
+  forall stty sttya sttyb,
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
+    (forall (l : ST.key) (t' : tau),
+    	ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = Some t' ).
+Proof. 
+  intros stty sttya sttyb Ha Hb.
+  intros l t' H.
+  edestruct (Ha l t' H).
+  generalize l. 
+  apply Functional_Map_Union_find.
+Qed.
+
 Axiom TcValExtended:
-  forall stty1 stty2 v1 v2 rho ty1 ty2,   	
+  forall  stty1 stty2 v1 v2 rho ty1 ty2,
     TcVal (stty1, v1, subst_rho rho ty1) ->
     TcVal (stty2, v2, subst_rho rho ty2) ->
     TcVal (Functional_Map_Union stty1 stty2, Pair (v1, v2), subst_rho rho (Ty2_Pair ty1 ty2)).
+  
 
 
 Require Import Coq.Logic.FunctionalExtensionality.
