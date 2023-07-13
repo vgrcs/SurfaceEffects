@@ -63,22 +63,6 @@ Axiom TcHeap_Extended:
     TcHeap (hp', Functional_Map_Union sttym sttya).
 
 
-Lemma StoreTyping_Extended:
-  forall stty sttya sttyb,
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-    	ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = Some t' ).
-Proof. 
-  intros stty sttya sttyb Ha Hb.
-  intros l t' H.
-  edestruct (Ha l t' H).
-  generalize l. 
-  apply Functional_Map_Union_find.
-Qed.
-
 Axiom TcValExtended:
   forall  stty1 stty2 v1 v2 rho ty1 ty2,
     TcVal (stty1, v1, subst_rho rho ty1) ->
