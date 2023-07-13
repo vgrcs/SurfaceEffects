@@ -56,6 +56,7 @@ Axiom TcHeap_Extended:
   forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
   	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2,
     (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
+
     (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
     TcHeap (heap_mu1, sttym) ->

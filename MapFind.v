@@ -20,6 +20,16 @@ Definition Functional_Map_Union (stty1 stty2 : Sigma) : Sigma :=
   in ST.fold f stty1 stty2.
 
 
+Lemma fold_add_empty:
+  forall x e h is_bst is_bst0,
+    {| ST.this := ST.Raw.Node  (ST.Raw.Leaf tau) x e  (ST.Raw.Leaf tau) h; ST.is_bst := is_bst |} =
+      ST.add x e {| ST.this := ST.Raw.Leaf tau; ST.is_bst := is_bst0 |}.
+Proof.
+  intros.
+  unfold ST.add. unfold ST.Raw.add. simpl.
+Admitted.
+  
+
 Lemma Functional_Map_Union_find_1:
   forall sttya sttyb (l : ST.key) (t' : tau),
     ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = ST.find (elt:=tau) l sttya.
@@ -34,7 +44,7 @@ Proof.
                        {| ST.this := ST.Raw.Leaf tau; ST.is_bst := is_bst0 |})
         with ( {| ST.this := ST.Raw.Node l0 x e r h; ST.is_bst := is_bst |} ).
       * reflexivity.
-      * (*unfold ST.fold, ST.Raw.fold. *)
+      * unfold ST.add, ST.Raw.add. unfold ST.fold, ST.Raw.fold. simpl.
         admit.
   - inversion is_bst0; subst.
     assert (
