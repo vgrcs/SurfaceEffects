@@ -6,6 +6,8 @@ Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Top0.MapFind.
 
+Require Import Coq.Classes.EquivDec.
+Require Import Coq.Classes.RelationClasses.
 
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
@@ -13,7 +15,43 @@ Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
- 
+Fixpoint eq_phi n m : Prop :=
+  match n, m with
+  | Phi_Seq Phi_Nil e, e' => eq_phi e e'
+  | Phi_Nil,  Phi_Nil  => True
+  | Phi_Elem e, Phi_Elem e' => e = e'
+  | Phi_Seq e1 e2, Phi_Seq e1' e2' => eq_phi e1 e1' /\ eq_phi e2 e2'
+  | Phi_Par e1 e2, Phi_Par e1' e2' =>  eq_phi e1 e1' /\ eq_phi e2 e2'
+  | _, _ => False
+  end.
+
+(*Theorem eq_phi_is_eq n m : eq_phi n m -> n = m.
+Proof.
+  dependent induction n; induction m;
+    try (solve [unfold eq_phi; intro; subst; reflexivity]);
+    try (solve [unfold eq_phi; intro; contradiction]);
+    try (solve [unfold eq_phi; intro; inversion H]). 
+  - unfold eq_phi; intuition. 
+    assert (n1 = m1) by (apply IHn1; assumption).
+    assert (n2 = m2) by (apply IHn2; assumption).
+    subst. reflexivity.
+  - unfold eq_phi; intuition. 
+    assert (n1 = m1) by (apply IHn1; assumption).
+    assert (n2 = m2) by (apply IHn2; assumption).
+    subst. reflexivity.
+Qed.*)
+
+Lemma EquivSeqNil:
+  forall phi, eq_phi phi phi -> eq_phi (Phi_Seq Phi_Nil phi) phi.
+Proof.
+  intros. dependent induction phi.  
+  - unfold eq_phi. auto.
+  - unfold eq_phi. reflexivity.
+  - intuition.
+  - intuition.
+Qed.
+
+
  (* both ec' and ee' and evaluated with the same context, but twice: inside Bs_Mu_App and BS_EffApp*)
 Axiom MuAppAndEffAppShareArgument:
  forall h'' env rho ef env' rho' f x ec' ee' ea aheap v eff facts1 aacts1 bacts1, 
@@ -46,11 +84,35 @@ Axiom ReadOnlyWalkSameHeap:
     (*H.Equal h same_h.*)
     h = same_h.
 
+(*
+Lemma mapsto_fold:
+  forall sttya sttyb (l : ST.key) (e:tau),
+    ST.MapsTo l e sttya -> ST.MapsTo l e (Functional_Map_Union sttya sttyb).
+Proof.
+  intros.
+  unfold Functional_Map_Union.
+  destruct sttya. destruct sttyb. simpl. induction this0.
+  pose (ST.Raw.bst {|ST.this := ST.Raw.Node  (ST.Raw.Leaf tau) l e  (ST.Raw.Leaf tau) Int.Z_as_Int._1 |}).
+  - replace (ST.fold
+               (fun (k : nat * nat) (v : tau) (m : Sigma) => ST.add k v m)
+               {| ST.this := this; ST.is_bst := is_bst |}
+               {| ST.this := ST.Raw.Leaf tau; ST.is_bst := is_bst0 |})
+      with  ({| ST.this := ST.Raw.Node  (ST.Raw.Leaf tau) l e  (ST.Raw.Leaf tau) Int.Z_as_Int._1;
+               ST.is_bst := is_bst0 |}).
+*)  
 
 Axiom Functional_Map_Union_find:
   forall sttya sttyb (l : ST.key),
     ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = ST.find (elt:=tau) l sttya.
-  
+
+Lemma fold_add_empty:
+  forall x e is_bst is_bst0,
+    {| ST.this := ST.Raw.Node  (ST.Raw.Leaf tau) x e  (ST.Raw.Leaf tau) Int.Z_as_Int._1; ST.is_bst := is_bst |} =
+      ST.add x e {| ST.this := ST.Raw.Leaf tau; ST.is_bst := is_bst0 |}.
+Proof.
+  intros.
+  unfold ST.add. unfold ST.Raw.add. simpl.
+Admitted.
   
 Axiom TcHeap_Extended:
   forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
