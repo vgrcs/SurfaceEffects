@@ -84,35 +84,12 @@ Axiom ReadOnlyWalkSameHeap:
     (*H.Equal h same_h.*)
     h = same_h.
 
-(*
-Lemma mapsto_fold:
-  forall sttya sttyb (l : ST.key) (e:tau),
-    ST.MapsTo l e sttya -> ST.MapsTo l e (Functional_Map_Union sttya sttyb).
-Proof.
-  intros.
-  unfold Functional_Map_Union.
-  destruct sttya. destruct sttyb. simpl. induction this0.
-  pose (ST.Raw.bst {|ST.this := ST.Raw.Node  (ST.Raw.Leaf tau) l e  (ST.Raw.Leaf tau) Int.Z_as_Int._1 |}).
-  - replace (ST.fold
-               (fun (k : nat * nat) (v : tau) (m : Sigma) => ST.add k v m)
-               {| ST.this := this; ST.is_bst := is_bst |}
-               {| ST.this := ST.Raw.Leaf tau; ST.is_bst := is_bst0 |})
-      with  ({| ST.this := ST.Raw.Node  (ST.Raw.Leaf tau) l e  (ST.Raw.Leaf tau) Int.Z_as_Int._1;
-               ST.is_bst := is_bst0 |}).
-*)  
 
 Axiom Functional_Map_Union_find:
   forall sttya sttyb (l : ST.key),
     ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = ST.find (elt:=tau) l sttya.
 
-Lemma fold_add_empty:
-  forall x e is_bst is_bst0,
-    {| ST.this := ST.Raw.Node  (ST.Raw.Leaf tau) x e  (ST.Raw.Leaf tau) Int.Z_as_Int._1; ST.is_bst := is_bst |} =
-      ST.add x e {| ST.this := ST.Raw.Leaf tau; ST.is_bst := is_bst0 |}.
-Proof.
-  intros.
-  unfold ST.add. unfold ST.Raw.add. simpl.
-Admitted.
+
   
 Axiom TcHeap_Extended:
   forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
