@@ -266,8 +266,8 @@ Proof.
   (* Case "mu_abs". *)
   - exists stty; (split; [| split]; auto).
     eapply ty_sound_closure; try (solve [eassumption]). auto.
-    assert (TcInc (ctxt, rgns)) by admit.
-    auto.
+    constructor.
+    admit.
   (* Case "rgn_abs". *)
   -  exists stty;  (split; [| split]; auto). 
     eapply ty_sound_region_closure; try (solve [eassumption]). auto.

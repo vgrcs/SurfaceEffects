@@ -52,6 +52,21 @@ Proof.
 Qed.
 
 
+(** if \empty; \empty |- e : \tau ! \epsilon
+     and \empty ; \empty |- \empty; e => v_1; H_1; \phi_1
+     and \empty ; \empty |- \empty; e => v_2; H_2; \phi_2
+     then v_1 = v_2 and H_1 = H_2 and \phi_1 = \phi_2.**)
+
+Module HRaw := H.Raw.
+
+
+Axiom Determinism:
+  forall stty (e : Expr) v1 v2 ty (env : Env)  (h1 h2 : Heap) phi_1 phi_2,
+    TcVal (stty, v1, ty) ->
+    TcVal(stty, v2, ty) ->
+    (H.empty Val , Raw.Leaf Val, R.empty nat, e) ⇓ (h1, v1, phi_1) ->
+    (H.empty Val, Raw.Leaf Val, R.empty nat, e) ⇓ (h2, v2, phi_2).
+      
  (* both ec' and ee' and evaluated with the same context, but twice: inside Bs_Mu_App and BS_EffApp*)
 Axiom MuAppAndEffAppShareArgument:
  forall h'' env rho ef env' rho' f x ec' ee' ea aheap v eff facts1 aacts1 bacts1, 

@@ -8,6 +8,7 @@ Require Import Coq.Program.Equality.
 Require Import Lia.
 
 
+
 Require Import Coq.Setoids.Setoid.
 
 Definition equivalent (n m : nat) : Prop :=
@@ -31,6 +32,16 @@ Require Import Top0.Keys.
 Require Import Top0.Definitions.
 Require Import Top0.Nameless.
 
+Lemma NotNoneIsSome:
+  forall {A} x,
+    x <> None <-> exists a : A, x = Some a.
+Proof.
+  intuition.
+  - destruct x.
+    + exists a. reflexivity.
+    + contradict H. reflexivity.
+  - subst. destruct H. inversion H.          
+Qed.
 
 Module STProofs := ST.Raw.Proofs.
 Module STMapP := FMapFacts.Facts ST.
@@ -59,9 +70,15 @@ Lemma MapsTo_fold_Leaf:
       (ST.this
          (ST.fold AddToMap {| ST.this := ST.Raw.Node l0 x e r h; ST.is_bst := is_bst |}
                   {| ST.this := ST.Raw.Leaf tau; ST.is_bst := is_bst0 |})) <->
-    ST.Raw.MapsTo l d (ST.Raw.Node l0 x e r h).
+      ST.Raw.MapsTo l d (ST.Raw.Node l0 x e r h).
+Proof.
+  intros.
+  split; intro; apply STProofs.elements_mapsto.
+  + apply STProofs.elements_mapsto in H.
+    unfold ST.fold in H. rewrite STProofs.fold_1 in H. simpl in *; auto.
+    unfold fold_left in H.
 Admitted.
-  
+
 Lemma Functional_Map_Union_find_2:
   forall (sttya sttyb: ST.t tau) (l : ST.key) (t' : tau),
     ST.Raw.bst (ST.this sttya) ->
