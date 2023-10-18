@@ -5,6 +5,8 @@ Require Import Coq.Structures.DecidableTypeEx.
 Require Import Coq.ZArith.Znat.
 Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Arith.PeanoNat.
+Require Import Coq.FSets.FMapAVL.
+Require Import Coq.FSets.FMapFacts.
 
 Module Type IndexedType.
   Variable t: Type.
@@ -70,5 +72,6 @@ Defined.
 End OrderedAscii.
 
 Module AsciiVars := OrderedAscii (IndexedAscii).
-
 Module RegionVars := PairOrderedType Nat_as_OT Nat_as_OT.
+
+
