@@ -137,22 +137,22 @@ Inductive Conflict_Traces : Trace -> Trace -> Prop :=
     Conflict_Traces phi1 phi2.
 
 
-Reserved Notation "phi '⊑' theta" (at level 50, left associativity).
 Inductive Phi_Theta_Soundness : Phi -> Theta -> Prop :=
 | PTS_Nil : forall theta,
-    (Phi_Nil) ⊑ theta
+     Phi_Theta_Soundness  Phi_Nil theta
 | PTS_Elem : forall da theta,
     DA_in_Theta da theta ->
-    (Phi_Elem da) ⊑ theta
+     Phi_Theta_Soundness  (Phi_Elem da) theta
 | PTS_Seq : forall phi1 phi2 theta,
-    phi1 ⊑ theta ->
-    phi2 ⊑ theta ->
-    Phi_Seq phi1 phi2 ⊑ theta
+    Phi_Theta_Soundness phi1 theta ->
+    Phi_Theta_Soundness phi2 theta ->
+     Phi_Theta_Soundness (Phi_Seq phi1 phi2) theta
 | PTS_Par : forall phi1 phi2 theta,
-    phi1 ⊑ theta ->
-    phi2 ⊑ theta ->
-    Phi_Par phi1 phi2 ⊑ theta
-where "phi '⊑' theta" := (Phi_Theta_Soundness phi theta) : type_scope.
+    Phi_Theta_Soundness phi1 theta ->
+    Phi_Theta_Soundness phi2  theta ->
+    Phi_Theta_Soundness (Phi_Par phi1 phi2) theta.
+
+(*Notation "phi '⊑' theta" := (Phi_Theta_Soundness phi theta) (at level 50, left associativity).*)
 
 
 

@@ -36,9 +36,9 @@ Definition Functional_Map_Union (stty1 stty2 : Sigma) : Sigma :=
   let f := fun (k : nat * nat) (v : tau) (m : Sigma) => ST.add k v m
   in ST.fold f stty1 stty2.
 
-Inductive merge : Sigma -> Sigma -> Sigma -> Prop :=
-| mergeL : forall stty1 stty2, merge stty1 stty2 (Functional_Map_Union stty1 stty2)
-| mergeR : forall stty1 stty2, merge stty1 stty2 (Functional_Map_Union stty2 stty1).
+Inductive merge_Sigma : Sigma -> Sigma -> Sigma -> Prop :=
+| mergeL : forall stty1 stty2, merge_Sigma stty1 stty2 (Functional_Map_Union stty1 stty2)
+| mergeR : forall stty1 stty2, merge_Sigma stty1 stty2 (Functional_Map_Union stty2 stty1).
 
 
 (** begin of free regions **)
@@ -308,8 +308,8 @@ Definition fold_subst_eps rho eps :=
 
 
 
-Notation "'∅'" := (Empty)  (at level 60).
-Notation "'⊤'" := (Top) (at level 60).
+(*Notation "'∅'" := (Empty)  (at level 60).*)
+(*Notation "'⊤'" := (Top) (at level 60).*)
 Notation "a '⊕' b" := (Concat a b) (at level 60).
 
 Reserved Notation "ctxt ';;' rgns ';;' rho '|-' ec '<<' ee" (at level 50, left associativity).
@@ -343,7 +343,7 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
                        lc_type tyr ->
                        lc_type_eps effr ->
                        (forall rho, 
-                          BackTriangle (ctxt, set_union rgns (singleton_set x), rho, er, ∅)) ->
+                          BackTriangle (ctxt, set_union rgns (singleton_set x), rho, er, Empty)) ->
                        TcExp (ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
                        TcExp (ctxt, rgns, Lambda x er, Ty2_ForallRgn 
                                                          (close_var_eff x effr) 
@@ -464,17 +464,17 @@ Inductive TcExp : (Gamma * Omega  * Expr * tau * Epsilon) -> Prop :=
 with BackTriangle : Gamma * Omega * Rho * Expr * Expr -> Prop :=
   | BT_Num_Pure     : forall ctxt rgns rho (n : nat),
                         TcExp (ctxt, rgns, Const n, Ty2_Natural, Empty_Static_Action) ->
-                        BackTriangle (ctxt, rgns, rho, (Const n), ∅)
+                        BackTriangle (ctxt, rgns, rho, (Const n), Empty)
   | BT_Bool_Pure    : forall ctxt rgns rho (b : bool),
                         TcExp (ctxt, rgns, Bool b, Ty2_Boolean, Empty_Static_Action) ->
-                        BackTriangle (ctxt, rgns, rho, Bool b, ∅)
+                        BackTriangle (ctxt, rgns, rho, Bool b, Empty)
   | BT_Var_Pure     : forall ctxt rgns rho ty (x : VarId),
                         TcExp (ctxt, rgns, Var x, ty, Empty_Static_Action) ->
-                        BackTriangle (ctxt, rgns, rho, Var x, ∅)
+                        BackTriangle (ctxt, rgns, rho, Var x, Empty)
   | BT_Abs_Pure     : forall ctxt rgns rho (f x: VarId) (ec ee: Expr),
-                        BackTriangle (ctxt, rgns, rho, Mu f x ec ee, ∅)
+                        BackTriangle (ctxt, rgns, rho, Mu f x ec ee, Empty)
   | BT_Rgn_Pure     : forall ctxt rgns rho (x: VarId) (e: Expr),
-                        BackTriangle (ctxt, rgns, rho, Lambda x e, ∅)
+                        BackTriangle (ctxt, rgns, rho, Lambda x e, Empty)
   | BT_App_Conc     : forall  ctxt rgns rho (ef ea: Expr)
                               ty_mu ty_eff ty_ef ty_ea  static_ef static_ea static_mu static_ee,
                         TcExp (ctxt, rgns, Mu_App ef ea, ty_mu, static_mu) ->
@@ -500,16 +500,16 @@ with BackTriangle : Gamma * Omega * Rho * Expr * Expr -> Prop :=
                         BackTriangle (ctxt, rgns, rho, Pair_Par ef1 ea1 ef2 ea2,(eff1 ⊕ eff2) ⊕ (eff3 ⊕ eff4))
   | BT_Rgn_App      : forall ctxt rgns rho er w ty_eb static_er,
                         TcExp (ctxt, rgns, er, ty_eb, static_er) ->
-                        TcExp (ctxt, rgns, ∅, Ty2_Effect, Empty_Static_Action) ->
-                        BackTriangle (ctxt, rgns, rho, er, ∅) ->    
-                        BackTriangle (ctxt, rgns, rho, Rgn_App er w, ∅)
+                        TcExp (ctxt, rgns, Empty, Ty2_Effect, Empty_Static_Action) ->
+                        BackTriangle (ctxt, rgns, rho, er, Empty) ->    
+                        BackTriangle (ctxt, rgns, rho, Rgn_App er w, Empty)
   | BT_Cond_Cond    : forall ctxt rgns rho (e et ef effe efft efff : Expr) 
                              ty_e ty_et ty_ef static_e static_et static_ef,
                         TcExp (ctxt, rgns, e, ty_e, static_e) ->
                         TcExp (ctxt, rgns, et, ty_et, static_et) ->
                         TcExp (ctxt, rgns, ef, ty_ef, static_ef) ->
                         ReadOnlyStatic (fold_subst_eps rho static_e) ->
-                        BackTriangle (ctxt, rgns, rho, e, ∅) ->
+                        BackTriangle (ctxt, rgns, rho, e, Empty) ->
                         BackTriangle (ctxt, rgns, rho, et, efft) ->
                         BackTriangle (ctxt, rgns, rho, ef, efff) ->
                         BackTriangle (ctxt, rgns, rho, Cond e et ef, Cond e efft efff)
@@ -523,7 +523,7 @@ with BackTriangle : Gamma * Omega * Rho * Expr * Expr -> Prop :=
                          BackTriangle (ctxt, rgns, rho, DeRef w e, eff ⊕ (ReadAbs w))
   | BT_Ref_Read_Conc : forall ctxt rgns rho (e eff : Expr) (r : RgnId) ty_e static_e,
                          TcExp (ctxt, rgns, e, ty_e, static_e) ->
-                         BackTriangle (ctxt, rgns, rho, e, ∅) ->
+                         BackTriangle (ctxt, rgns, rho, e, Empty) ->
                          BackTriangle (ctxt, rgns, rho, DeRef (Rgn2_Const true false r) e, ReadConc e)
   | BT_Ref_Write_Abs : forall ctxt rgns rho (e1 e2 eff1 eff2 : Expr) (w : Region_in_Expr) 
                        ty_e1 static_e1,

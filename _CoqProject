@@ -9,6 +9,7 @@ Definitions/Heap.v
 Definitions/StaticActions.v
 Definitions/Tactics.v
 Definitions/Types.v
+Definitions/GHeap.v
 Definitions/Semantics.v
 Proofs/LocallyNameless.v
 Proofs/TypeLemmas.v
