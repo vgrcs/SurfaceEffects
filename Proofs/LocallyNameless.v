@@ -1,29 +1,36 @@
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Ascii.
-Require Import StaticActions.
-Require Import ComputedActions.
-Require Import Types.
-Require Import Regions.
-Require Import Keys.
+Require Import Definitions.StaticActions.
+Require Import Definitions.ComputedActions.
+Require Import Definitions.Types.
+Require Import Definitions.Regions.
+Require Import Definitions.Keys.
 Require Import Coq.Arith.PeanoNat.
 
-Lemma ClosedType :
- forall tau x,
-   frv tau = empty_set ->
-   x # tau.
+
+Definition free_in_type_closed := forall tau x, frv tau = empty_set -> x # tau.
+Definition closed_free_in_effect := forall x t, x # t ->  not_set_elem_frv t x .
+Definition free_in_effect_closed := forall x t, not_set_elem_frv t x -> x # t.
+Definition closed_subst_as_close_open_rgn:= forall n r x u,
+    lc_type_rgn r ->
+    subst_rgn x u r = opening_rgn_in_rgn n (mk_rgn_type u) (closing_rgn_in_rgn n x r).
+
+
+  
+Lemma FREE_IN_TYPE_CLOSED : free_in_type_closed.
 Proof.
-  intros.
+  intros tau x H.
   unfold not_set_elem, Complement.
   rewrite H.
   intuition.
   contradiction.
 Qed.
 
-Lemma FreeVariables1 :
- forall x t, x # t ->  not_set_elem_frv t x .
+
+Lemma CLOSED_FREE_IN_EFFECT: closed_free_in_effect.
 Proof.
-  intro x. induction t; intro; try (solve [unfold not_set_elem; simpl; auto]).
+  intros x t H. induction t; try (solve [unfold not_set_elem; simpl; auto]).
   - simpl in *. 
     unfold not_set_elem, Complement, not in *.
     split; try (solve [intro; apply H; constructor; assumption]).
@@ -45,10 +52,10 @@ Proof.
     + now apply Union_intror.  
 Qed.
 
-Lemma FreeVariables2 :
- forall x t,  not_set_elem_frv t x -> x # t.
+
+Lemma FREE_IN_EFFECT_CLOSED : free_in_effect_closed. 
 Proof.
- intro x. induction t; intro; unfold not_set_elem, Complement. 
+ intros x t H. induction t; unfold not_set_elem, Complement. 
  - intro HG. contradict HG.
  - intro HG. contradict HG.
  - intro HG. contradict HG.
@@ -70,14 +77,8 @@ Proof.
    unfold not; intro HG. destruct HG; unfold not_set_elem, Complement in H; now apply H.
 Qed.
 
- (** end of free regions **)
- 
 
-
-Lemma subst_as_close_open_rgn :
-  forall n r x u,
-    lc_type_rgn r ->
-    subst_rgn x u r = opening_rgn_in_rgn n (mk_rgn_type u) (closing_rgn_in_rgn n x r).
+Lemma CLOSED_SUBST_AS_CLOSE_OPEN_RGN : closed_subst_as_close_open_rgn.
 Proof.
   intros n r x u H. inversion H; subst; simpl.
   - reflexivity.
@@ -100,7 +101,7 @@ Proof.
   intros n x u sa H.
   inversion H; subst;
   unfold subst_sa, opening_rgn_in_sa, closing_rgn_in_sa;
-  f_equal; apply subst_as_close_open_rgn; auto.
+  f_equal; apply CLOSED_SUBST_AS_CLOSE_OPEN_RGN; auto.
 Qed.  
 
 

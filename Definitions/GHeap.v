@@ -7,24 +7,24 @@ Require Import Definitions.Expressions.
 Require Import Definitions.Types.
 Require Import Definitions.Semantics.
 
+Definition HeapVal := prod nat Val.
+Definition HeapKey := prod nat  nat.
+Definition Heap := gmap HeapKey HeapVal.
 
-(* (region, address)*)
-Definition HeapPair := prod nat nat.
+Definition timestamp_Write (p: Val) : HeapVal :=
+  (S 0, p).
 
-(* ((region, address), timestamp) *)
-Definition HeapKey := prod HeapPair nat.
+Definition timestamp_Read (p: option HeapVal) : option Val :=
+  match p with
+    None => None | Some v => Some (snd v)
+  end.
 
-Definition Heap := gmap HeapKey  Val.
 
-
-Axiom timestamp_Read : Heap -> nat.
-Axiom timestamp_Write : Heap -> nat.
-
-Definition find_H (k: HeapPair) (m: Heap) : option Val :=  m !! (k, timestamp_Read m).
-Definition update_H (p: (prod nat nat) * Val) (m: Heap) :=  <[ (fst p, timestamp_Write m) := (snd p) ]>  m.
+Definition find_H (k: HeapKey) (m: Heap) : option Val := timestamp_Read (m !! k).
+Definition update_H (p: HeapKey * Val) (m: Heap) :=  <[ fst p := timestamp_Write (snd p) ]>  m.
 
 (* returns new address *)
-Axiom allocate_H : Heap -> nat -> HeapPair.
+Axiom allocate_H : Heap -> nat -> HeapKey.
 Axiom allocate_H_fresh : forall (m : Heap) (r: nat),
   find_H (allocate_H m r) m = None.
 Axiom allocate_H_determ :
@@ -32,17 +32,16 @@ Axiom allocate_H_determ :
     m1 = m2 ->
     allocate_H m1 r = allocate_H m2 r.
 
-
-Definition Merge_Function (v1 v2 : option Val) : option Val :=
+Definition Merge_Function (v1 v2 : option HeapVal) : option HeapVal :=
   match (v1, v2) with
   | (None, None) => None
   | (None, Some v) => Some v
   | (Some v, None) => Some v
-  | (Some _, Some _) => None
+  | (Some (t1, v1), Some (t2, v2)) =>
+      if (Nat.lt_dec t1 t2) then Some (t2, v2) else Some (t1, v1)
 end.
 
 Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap := merge Merge_Function heap1 heap2.
-
 
 
 Reserved Notation "phi_heap '===>' phi'_heap'" (at level 50, left associativity).
