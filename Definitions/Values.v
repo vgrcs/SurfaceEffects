@@ -11,7 +11,7 @@ Inductive Val :=
 | Loc  : Region_in_Expr -> nat -> Val
 | Num  : nat -> Val
 | Bit  : bool -> Val
-| Cls  : (Raw.t Val * R.t RgnId * Expr) -> Val
+| Cls  : (Raw.t Val * Rho * Expr) -> Val
 | Eff  : Theta -> Val
 | Unit : Val
 | Pair : Val * Val -> Val.

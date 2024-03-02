@@ -19,7 +19,7 @@ Module R := FMapAVL.Make (AsciiVars).
 Module RMapP := FMapFacts.Facts R.
 Module RMapProp := FMapFacts.Properties R.
 
-Definition Rho := R.t nat.
+Definition Rho := R.t RgnId.
 
 
 Definition find_R (k: Region_in_Expr) (m: Rho) : option RgnId :=

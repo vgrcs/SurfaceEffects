@@ -51,6 +51,7 @@ Definition free_rgn_vars_in_rgn (rgn: Region_in_Type) : Ensemble VarId :=
 
 Definition free_region (rgn: Region_in_Type) : Ensemble VarId := free_rgn_vars_in_rgn rgn.
 
+
 Definition free_rgn_vars_in_sa (sa: StaticAction) : Ensemble VarId :=
   match sa with
   | SA2_Alloc rgn => free_rgn_vars_in_rgn rgn
@@ -256,6 +257,7 @@ Definition subst_rgn  (z : VarId) (u : Region_in_Expr) (t: Region_in_Type) : Reg
     | Rgn2_BVar _ _ _  => t
   end.
 
+
 Definition subst_sa (z : VarId) (u : Region_in_Expr) (t: StaticAction) : StaticAction :=
  match t with
   | SA2_Alloc rgn => SA2_Alloc (subst_rgn z u rgn)
@@ -265,6 +267,7 @@ Definition subst_sa (z : VarId) (u : Region_in_Expr) (t: StaticAction) : StaticA
 
 Definition subst_eps  (z : VarId) (u : Region_in_Expr) (t: Epsilon) : Epsilon :=
    fun sa => exists sa', t sa' /\ subst_sa z u sa' = sa.
+
 
 Reserved Notation "'[' x ':=' u ']' t" (at level 20).
 Fixpoint subst_type (z : VarId) (u : Region_in_Expr) (t : tau) {struct t} : tau :=
@@ -305,7 +308,6 @@ Definition fold_subst_sa rho sa:=
 
 Definition fold_subst_eps rho eps :=
   fun sa => exists sa', eps sa' /\ fold_subst_sa rho sa' = sa.
-
 
 
 (*Notation "'∅'" := (Empty)  (at level 60).*)

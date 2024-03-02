@@ -3,6 +3,11 @@ Require Import Coq.Sets.Ensembles.
 Require Import Definitions.Regions.
 Require Import Definitions.Values.
 Require Import Definitions.ComputedActions.
+Require Import Coq.Setoids.Setoid.
+Require Import Coq.Program.Equality.
+
+
+
 
 (* Dynamic Actions; for operational semantics *)
 Inductive DynamicAction : Type :=
@@ -19,6 +24,60 @@ Inductive Phi :=
  | Phi_Seq : Phi -> Phi -> Phi.
 
 
+Definition  phi_eq (phi1 phi2 :Phi) : Prop :=
+  match phi1, phi2 with
+  | Phi_Nil, Phi_Nil => True
+  | (Phi_Seq Phi_Nil a), b => (a = b) -> True
+  | (Phi_Elem a), (Phi_Elem b) => a = b
+  | (Phi_Seq a b), (Phi_Seq c d) =>  a = c /\ b = d 
+  | (Phi_Par a b), (Phi_Par c d) =>  a = c /\ b = d
+  | _, _ => False
+  end.
+
+
+Reserved Notation "phi '≈' phi'" (at level 50, left associativity).
+Inductive Phi_equiv : Phi -> Phi -> Prop :=
+| Cmp_Nil :
+  Phi_equiv Phi_Nil Phi_Nil
+| Cmp_Elem : forall a b,
+    a = b  -> Phi_equiv (Phi_Elem a) (Phi_Elem b)
+| Cmp_Seq : forall a b c d,
+    Phi_equiv a c ->
+    Phi_equiv b d ->
+    Phi_equiv (Phi_Seq a b) (Phi_Seq c d)
+| Cmp_Par : forall a b c d,
+    Phi_equiv a c ->
+    Phi_equiv b d ->
+    Phi_equiv (Phi_Par a b) (Phi_Par c d)
+| Cmp_Sym : forall a b,
+    Phi_equiv a b ->
+    Phi_equiv b a
+| Cmp_Trans : forall a b c,
+    Phi_equiv a b ->
+    Phi_equiv b c ->
+    Phi_equiv a c
+| Cmp_Seq_Nil :
+    Phi_Seq Phi_Nil Phi_Nil = Phi_Nil ->
+    Phi_equiv (Phi_Seq Phi_Nil Phi_Nil) Phi_Nil
+where "phi '≈' phi'" := (Phi_equiv phi phi') : type_scope.
+
+
+Instance Phi_equivalence : Equivalence (Phi_equiv).
+Proof.
+  constructor.
+  - unfold Reflexive. 
+    induction x; try (constructor; reflexivity).
+    + apply Cmp_Par; assumption.
+    + apply Cmp_Seq; assumption.  
+  - unfold Symmetric. intros.
+    constructor. assumption.
+  - unfold Transitive. intros.
+    eapply Cmp_Trans.
+    + eassumption.
+    + assumption.
+Qed.
+
+
 Fixpoint phi_as_list (phi : Phi) : Trace :=
   match phi with
     | Phi_Nil => nil
@@ -26,6 +85,13 @@ Fixpoint phi_as_list (phi : Phi) : Trace :=
     | Phi_Seq phi1 phi2 =>  (phi_as_list phi1) ++ (phi_as_list phi2)
     | Phi_Par phi1 phi2 =>  (phi_as_list phi1) ++ (phi_as_list phi2)
   end.                   
+
+
+Lemma Equiv_phi_as_list:
+  forall phi1 phi2,
+    phi1 ≈ phi2 ->
+    phi_as_list phi1 = phi_as_list phi2.
+Admitted.
 
 Lemma simplify_phi_as_list:
   forall phi1 phi2, phi1 = phi2 ->
@@ -40,20 +106,34 @@ Proof.
 Qed.
 
 Inductive ReadOnlyPhi : Phi -> Prop :=
- | Phi_RO_Nil  : ReadOnlyPhi (Phi_Nil)
- | Phi_RO_Elem : forall r a v, ReadOnlyPhi (Phi_Elem (DA_Read r a v))
- | Phi_RO_Seq  : forall phi1 phi2, ReadOnlyPhi phi1 -> ReadOnlyPhi phi2 -> ReadOnlyPhi (Phi_Seq phi1 phi2)
- | Phi_RO_Par  : forall phi1 phi2, ReadOnlyPhi phi1 -> ReadOnlyPhi phi2 -> ReadOnlyPhi (Phi_Par phi1 phi2). 
+| Phi_RO_Nil  :
+  ReadOnlyPhi (Phi_Nil)
+| Phi_RO_Elem : forall r a v,
+    ReadOnlyPhi (Phi_Elem (DA_Read r a v))
+| Phi_RO_Seq  : forall phi1 phi2,
+    ReadOnlyPhi phi1 ->
+    ReadOnlyPhi phi2 ->
+    ReadOnlyPhi (Phi_Seq phi1 phi2)
+| Phi_RO_Par  : forall phi1 phi2,
+    ReadOnlyPhi phi1 ->
+    ReadOnlyPhi phi2 ->
+    ReadOnlyPhi (Phi_Par phi1 phi2). 
 
 Definition Empty_Dynamic_Action := Empty_set DynamicAction.
 Definition Singleton_Dynamic_Action (e : DynamicAction) :=  Singleton DynamicAction e.
 Definition Union_Dynamic_Action (a b : Ensemble DynamicAction) :=  Union DynamicAction a b.
 
 Inductive DA_in_Phi : DynamicAction -> Phi -> Prop :=
-| DAP_Trace : forall da, DA_in_Phi da (Phi_Elem da)
-| DAP_Par   : forall da phi1 phi2, DA_in_Phi da phi1 \/ DA_in_Phi da phi2 -> DA_in_Phi da (Phi_Par phi1 phi2)
-| DAP_Seq   : forall da phi1 phi2, DA_in_Phi da phi1 \/ DA_in_Phi da phi2 -> DA_in_Phi da (Phi_Seq phi1 phi2).
-  
+| DAP_Trace : forall da,
+    DA_in_Phi da (Phi_Elem da)
+| DAP_Par   : forall da phi1 phi2,
+    DA_in_Phi da phi1 \/ DA_in_Phi da phi2 ->
+    DA_in_Phi da (Phi_Par phi1 phi2)
+| DAP_Seq   : forall da phi1 phi2,
+    DA_in_Phi da phi1 \/ DA_in_Phi da phi2 ->
+    DA_in_Phi da (Phi_Seq phi1 phi2).
+
+
 Inductive DA_in_Theta : DynamicAction -> Theta -> Prop :=
 | DAT_Top :
     forall da, DA_in_Theta da None
@@ -137,6 +217,7 @@ Inductive Conflict_Traces : Trace -> Trace -> Prop :=
     Conflict_Traces phi1 phi2.
 
 
+Reserved Notation "phi '⋞' theta" (at level 50, left associativity).
 Inductive Phi_Theta_Soundness : Phi -> Theta -> Prop :=
 | PTS_Nil : forall theta,
      Phi_Theta_Soundness  Phi_Nil theta
@@ -150,10 +231,8 @@ Inductive Phi_Theta_Soundness : Phi -> Theta -> Prop :=
 | PTS_Par : forall phi1 phi2 theta,
     Phi_Theta_Soundness phi1 theta ->
     Phi_Theta_Soundness phi2  theta ->
-    Phi_Theta_Soundness (Phi_Par phi1 phi2) theta.
-
-(*Notation "phi '⊑' theta" := (Phi_Theta_Soundness phi theta) (at level 50, left associativity).*)
-
+    Phi_Theta_Soundness (Phi_Par phi1 phi2) theta
+where "phi '⋞' theta" := (Phi_Theta_Soundness phi theta) : type_scope.
 
 
 Inductive Det_Trace : Phi -> Prop :=

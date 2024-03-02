@@ -5,31 +5,55 @@ Require Import Definitions.ComputedActions.
 Require Import Definitions.DynamicActions.
 Require Import Definitions.Expressions.
 Require Import Definitions.Types.
-Require Import Definitions.Semantics.
 
-Definition HeapVal := prod nat Val.
-Definition HeapKey := prod nat  nat.
+Definition HeapVal := Val.
+Definition HeapKey := prod nat nat.
 Definition Heap := gmap HeapKey HeapVal.
 
-Definition timestamp_Write (p: Val) : HeapVal :=
-  (S 0, p).
+Definition keys_eq x y := Nat.eq (fst x) (fst y) /\ Nat.eq (snd x) (snd y).
 
-Definition timestamp_Read (p: option HeapVal) : option Val :=
-  match p with
-    None => None | Some v => Some (snd v)
-  end.
+Lemma keys_eq_dec : forall (k : nat * nat) (k' : nat * nat),
+    { keys_eq k k' } + { ~ keys_eq k k' }.
+Proof.
+  intros. unfold keys_eq, Nat.eq. destruct k as (r, l);
+    destruct k' as (r', l'); subst; simpl.
+  destruct (eq_nat_dec r r'); destruct (eq_nat_dec l l'). 
+  - left. unfold Nat.eq. auto.
+  - right. intro. contradict n. intuition.
+  - right. intro. contradict n. intuition.
+  - right. intro. contradict n. intuition.
+Qed.    
+
+(* Define an equivalence relation for MyType *)
+Definition Heap_equiv (x y : Heap) : Prop :=
+  x =@{gmap HeapKey HeapVal} y.
+
+Global Instance heap_equiv : Equiv Heap := λ a b, a =@{Heap} b.
+Global Instance heap_equivalence : Equivalence (≡@{Heap}).
+Proof.
+ split; [unfold Reflexive | unfold Symmetric | unfold Transitive].
+  - intros x. unfold Heap_equiv. reflexivity.
+  - intros x y H. unfold equiv, heap_equiv in *. subst. reflexivity.
+  - intros x y z H1 H2. unfold equiv, heap_equiv in *. subst. reflexivity.
+Qed.
 
 
-Definition find_H (k: HeapKey) (m: Heap) : option Val := timestamp_Read (m !! k).
-Definition update_H (p: HeapKey * Val) (m: Heap) :=  <[ fst p := timestamp_Write (snd p) ]>  m.
+Axiom timestamp_Write: Val -> HeapVal.
+Axiom timestamp_Read : option HeapVal -> option Val.
+Axiom timestamp : HeapVal -> nat.
+
+Definition find_H (k: HeapKey) (m: Heap) : option Val
+  := m !! k.
+Definition update_H (p: HeapKey * Val) (m: Heap)
+  :=  <[ fst p := snd p ]>  m.
 
 (* returns new address *)
-Axiom allocate_H : Heap -> nat -> HeapKey.
+Axiom allocate_H : Heap -> nat -> nat.
 Axiom allocate_H_fresh : forall (m : Heap) (r: nat),
-  find_H (allocate_H m r) m = None.
+  find_H (r, allocate_H m r) m = None.
 Axiom allocate_H_determ :
   forall (m1 m2 : Heap) (r: nat),
-    m1 = m2 ->
+    m1 =@{Heap} m2 ->
     allocate_H m1 r = allocate_H m2 r.
 
 Definition Merge_Function (v1 v2 : option HeapVal) : option HeapVal :=
@@ -37,11 +61,12 @@ Definition Merge_Function (v1 v2 : option HeapVal) : option HeapVal :=
   | (None, None) => None
   | (None, Some v) => Some v
   | (Some v, None) => Some v
-  | (Some (t1, v1), Some (t2, v2)) =>
-      if (Nat.lt_dec t1 t2) then Some (t2, v2) else Some (t1, v1)
+  | (Some v1, Some v2) =>
+      if (Nat.lt_dec (timestamp v1) (timestamp v1)) then Some v2 else Some v1
 end.
 
-Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap := merge Merge_Function heap1 heap2.
+Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap
+  := merge Merge_Function heap1 heap2.
 
 
 Reserved Notation "phi_heap '===>' phi'_heap'" (at level 50, left associativity).
@@ -90,7 +115,6 @@ Inductive Phi_Heap_StepsAux : (Phi * Heap) -> (Phi * Heap * nat) -> Prop :=
 where "phi_heap '=a=>*' phi'_heap'_n'" := (Phi_Heap_StepsAux phi_heap phi'_heap'_n') : type_scope.
 
 
-
 Reserved Notation "phi_heap '==>*' phi'_heap'" (at level 50, left associativity).
 Definition Phi_Heap_Steps phi_heap phi'_heap' :=
   exists n',
@@ -98,23 +122,6 @@ Definition Phi_Heap_Steps phi_heap phi'_heap' :=
     | (phi', heap') => phi_heap =a=>* (phi', heap', n')
     end.
 Notation "phi_heap '==>*' phi'_heap'" := (Phi_Heap_Steps phi_heap phi'_heap') : type_scope.
-
-
-Reserved Notation "e '⇓' n" (at level 50, left associativity, only parsing).
-Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
-| BS_Pair_Par: forall env rho ea1 ef1 ea2 ef2 v1 v2 theta1 theta2
-                      (heap_eff1 heap_eff2 heap heap_mu1 heap_mu2 heap' : Heap)
-                      (acts_mu1 acts_mu2 acts_eff1 acts_eff2 : Phi),
-    (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap_eff1, Eff theta1, acts_eff1) ->
-    (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap_eff2, Eff theta2, acts_eff2) ->
-    Disjointness theta1 theta2 /\ not (Conflictness theta1 theta2) ->
-    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
-    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
-    (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, heap') ->
-    (heap, env, rho, Pair_Par ef1 ea1 ef2 ea2)
-      ⇓ (heap', Pair (v1, v2), Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2))
-where "e '⇓' n" := (BigStep e n) : type_scope.
-
 
 Inductive TcHeap : (Heap * Sigma) -> Prop := 
 | TC_Heap : forall heap store,
@@ -130,13 +137,5 @@ Inductive TcHeap : (Heap * Sigma) -> Prop :=
          TcVal (store, v, t))) ->
     TcHeap (heap, store).
 
-Axiom TcHeap_Extended:
-  forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
-  	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2,
-    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
 
-    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
-    (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
-    TcHeap (heap_mu1, sttym) ->
-    TcHeap (heap_mu2, sttya) ->
-    TcHeap (hp', Functional_Map_Union sttym sttya).
+
