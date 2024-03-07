@@ -924,6 +924,7 @@ Proof.
       apply Union_intror. assumption.
 Qed.
 
+
 Lemma StoreTyping_Extended:
   forall stty sttya sttyb,
     (forall (l : ST.key) (t' : tau),

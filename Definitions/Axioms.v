@@ -12,6 +12,9 @@ Axiom Phi_Seq_Nil_R : forall phi, Phi_Seq phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
+Axiom RewritePhiR:
+  forall acts, Phi_Seq Phi_Nil acts = acts.
+
 Axiom TcHeap_Extended:
   forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
   	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2,
@@ -28,6 +31,19 @@ Axiom ReadOnlyWalkSameHeap:
     ReadOnlyPhi (Phi_Par acts_mu1 acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
     h ≡@{Heap} same_h.
+
+
+(*Lemma Functional_Map_Union_find:
+  forall sttya sttyb (k : SigmaKey),
+    find_ST k (Functional_Map_Union_Sigma sttya sttyb) = find_ST k sttya.
+Proof.
+  intros.  unfold find_ST, Functional_Map_Union_Sigma.
+  assert (merge f sttya sttyb !! k = diag_None f (sttya !! k) (sttyb !! k))
+    by (rewrite lookup_merge; reflexivity).
+  replace (merge f sttya sttyb !! k) with (diag_None f (sttya !! k) (sttyb !! k)).
+  destruct (sttyb !! k); destruct (sttya !! k); unfold f; simpl; reflexivity.
+Qed.*)
+
 
 Axiom Functional_Map_Union_find:
   forall sttya sttyb (l : ST.key),
@@ -68,5 +84,5 @@ Lemma EvaluationEffectFromEffApp:
 Proof.
   intros.
   inversion H using MuAppAndEffAppShareArgument.
-  intros. econstructor; eauto.
-Qed. 
+  intros. econstructor; eauto. 
+Qed.

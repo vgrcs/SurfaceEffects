@@ -5,9 +5,7 @@ Require Import Definitions.Values.
 Require Import Definitions.ComputedActions.
 Require Import Coq.Setoids.Setoid.
 Require Import Coq.Program.Equality.
-
-
-
+Require Import  Coq.Classes.RelationClasses.
 
 (* Dynamic Actions; for operational semantics *)
 Inductive DynamicAction : Type :=
@@ -23,59 +21,56 @@ Inductive Phi :=
  | Phi_Par : Phi -> Phi -> Phi
  | Phi_Seq : Phi -> Phi -> Phi.
 
-
-Definition  phi_eq (phi1 phi2 :Phi) : Prop :=
-  match phi1, phi2 with
-  | Phi_Nil, Phi_Nil => True
-  | (Phi_Seq Phi_Nil a), b => (a = b) -> True
-  | (Phi_Elem a), (Phi_Elem b) => a = b
-  | (Phi_Seq a b), (Phi_Seq c d) =>  a = c /\ b = d 
-  | (Phi_Par a b), (Phi_Par c d) =>  a = c /\ b = d
-  | _, _ => False
-  end.
-
-
 Reserved Notation "phi '≈' phi'" (at level 50, left associativity).
-Inductive Phi_equiv : Phi -> Phi -> Prop :=
-| Cmp_Nil :
-  Phi_equiv Phi_Nil Phi_Nil
-| Cmp_Elem : forall a b,
-    a = b  -> Phi_equiv (Phi_Elem a) (Phi_Elem b)
-| Cmp_Seq : forall a b c d,
-    Phi_equiv a c ->
-    Phi_equiv b d ->
-    Phi_equiv (Phi_Seq a b) (Phi_Seq c d)
-| Cmp_Par : forall a b c d,
-    Phi_equiv a c ->
-    Phi_equiv b d ->
-    Phi_equiv (Phi_Par a b) (Phi_Par c d)
-| Cmp_Sym : forall a b,
-    Phi_equiv a b ->
-    Phi_equiv b a
-| Cmp_Trans : forall a b c,
-    Phi_equiv a b ->
-    Phi_equiv b c ->
-    Phi_equiv a c
-| Cmp_Seq_Nil :
-    Phi_Seq Phi_Nil Phi_Nil = Phi_Nil ->
-    Phi_equiv (Phi_Seq Phi_Nil Phi_Nil) Phi_Nil
-where "phi '≈' phi'" := (Phi_equiv phi phi') : type_scope.
+Inductive Phi_Equiv : Phi -> Phi -> Prop :=
+ | Equiv_Phi : forall a b,
+    a = b -> Phi_Equiv a b
+| Equiv_Phi_Seq_Nil_L1 : forall a b,
+    Phi_Equiv a b -> Phi_Equiv (Phi_Seq Phi_Nil a) b                               
+| Equiv_Phi_Seq_Nil_R1 : forall a b,
+    Phi_Equiv a b -> Phi_Equiv (Phi_Seq a Phi_Nil) b
+| Equiv_Phi_Seq_Nil_L2 : forall a b,
+    Phi_Equiv a b -> Phi_Equiv b (Phi_Seq Phi_Nil a)
+| Equiv_Phi_Seq_Nil_R2 : forall a b,
+    Phi_Equiv a b -> Phi_Equiv b (Phi_Seq a Phi_Nil)
+where "phi '≈' phi'" := (Phi_Equiv phi phi') : type_scope.
 
 
-Instance Phi_equivalence : Equivalence (Phi_equiv).
+
+Global Instance Phi_Refl : Reflexive (fun a b => Phi_Equiv a b).
 Proof.
-  constructor.
-  - unfold Reflexive. 
-    induction x; try (constructor; reflexivity).
-    + apply Cmp_Par; assumption.
-    + apply Cmp_Seq; assumption.  
-  - unfold Symmetric. intros.
-    constructor. assumption.
-  - unfold Transitive. intros.
-    eapply Cmp_Trans.
-    + eassumption.
-    + assumption.
+  constructor.  reflexivity.
+Qed.  
+
+Lemma TestPhi1: forall a, Phi_Nil ≈ Phi_Elem a -> False.
+Proof.
+  intros. inversion H. inversion H0.
 Qed.
+
+Lemma TestPhi2: forall a, Phi_Seq Phi_Nil (Phi_Elem a) ≈ Phi_Elem a.
+Proof.
+  intros. apply Equiv_Phi_Seq_Nil_L1. reflexivity.
+Qed.
+
+
+(*Global Instance Phi_Symm : Symmetric (fun a b => Phi_Equiv a b).
+Proof.
+  unfold Symmetric. intros.
+  apply Equiv_Phi_Sym. assumption.
+Qed.
+
+Global Instance Phi_equivalence : Equivalence (fun a b => Phi_Equiv a b).
+Proof.
+  intros. 
+  constructor.
+  - unfold Reflexive.    
+    reflexivity. 
+  - unfold Symmetric.
+    now symmetry.
+  - unfold Transitive. intros. 
+    eapply Equiv_Phi_Trans; eauto.
+Qed.
+*)
 
 
 Fixpoint phi_as_list (phi : Phi) : Trace :=
@@ -87,19 +82,14 @@ Fixpoint phi_as_list (phi : Phi) : Trace :=
   end.                   
 
 
-Lemma Equiv_phi_as_list:
-  forall phi1 phi2,
-    phi1 ≈ phi2 ->
-    phi_as_list phi1 = phi_as_list phi2.
-Admitted.
-
 Lemma simplify_phi_as_list:
   forall phi1 phi2, phi1 = phi2 ->
                     phi_as_list phi1 = phi_as_list phi2.  
 Proof.
   intros.
   induction phi1, phi2;
-  try (solve [ unfold phi_as_list; simpl; reflexivity | unfold phi_as_list; simpl; inversion H]).
+    try (solve [ unfold phi_as_list; simpl; reflexivity |
+                 unfold phi_as_list; simpl; inversion H]).
   - unfold phi_as_list; simpl; inversion H. subst. auto.
   - rewrite H. auto.
   - rewrite H. auto. 
@@ -118,6 +108,7 @@ Inductive ReadOnlyPhi : Phi -> Prop :=
     ReadOnlyPhi phi1 ->
     ReadOnlyPhi phi2 ->
     ReadOnlyPhi (Phi_Par phi1 phi2). 
+
 
 Definition Empty_Dynamic_Action := Empty_set DynamicAction.
 Definition Singleton_Dynamic_Action (e : DynamicAction) :=  Singleton DynamicAction e.

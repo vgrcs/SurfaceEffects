@@ -24,6 +24,7 @@ Proof.
   - right. intro. contradict n. intuition.
 Qed.    
 
+
 (* Define an equivalence relation for MyType *)
 Definition Heap_equiv (x y : Heap) : Prop :=
   x =@{gmap HeapKey HeapVal} y.

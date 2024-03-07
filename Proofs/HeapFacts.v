@@ -8,6 +8,9 @@ Require Import Definitions.DynamicActions.
 Require Import Proofs.TypeFacts.
 Require Import Definitions.Axioms.
 
+Import Expressions.
+Import ComputedActions.
+
 Lemma TcHeapEmpty:
   forall (heap : gmap HeapKey HeapVal) stty,
     heap = ∅ ->
@@ -217,24 +220,10 @@ Lemma EmptyTracePreservesHeap_1:
     h ≡@{Heap} same_h.
 Proof.
   intros h r env e same_h v' acts H Hnil.
-  dependent induction H; auto; inversion Hnil.
+  dependent induction H; auto; inversion Hnil.  
   - eapply IHBigStep. reflexivity. auto. reflexivity.
   - eapply IHBigStep; [reflexivity | auto | reflexivity]. 
 Qed.
-
-
-Lemma EMPTYTRACEPRESERVESHEAP_1 : 
-  forall h r env e same_h v' acts,
-    (h, r, env, e) ⇓ (same_h, v', acts) ->
-    acts = Phi_Nil ->
-    h ≡@{Heap} same_h.
-Proof.
-  intros h r env e same_h v' acts H Hnil.
-  dependent induction H; auto; inversion Hnil.
-  - eapply IHBigStep; [reflexivity | auto | reflexivity ].
-  - eapply IHBigStep; [reflexivity | auto | reflexivity ]. 
-Qed.
-
 
 Lemma Equal_heap_equal:
   forall (heap1 heap2 : Heap),
@@ -346,8 +335,7 @@ Lemma EmptyTracePreservesHeap_5 :
     exists same_h,  (same_h, r, env, e) ⇓ (h, v, Phi_Nil).
 Proof.
   intros h r env e v H.
-  dependent induction H; exists h; econstructor; auto.
-  assumption. assumption.
+  dependent induction H; exists h; econstructor; auto. 
 Qed.
 
 Lemma H_same_key_add_twice_1 :
