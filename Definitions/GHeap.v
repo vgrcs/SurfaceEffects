@@ -4,7 +4,7 @@ Require Import Definitions.Regions.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.DynamicActions.
 Require Import Definitions.Expressions.
-Require Import Definitions.Types.
+Require Import Definitions.GTypes.
 
 Definition HeapVal := Val.
 Definition HeapKey := prod nat nat.

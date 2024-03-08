@@ -8,7 +8,7 @@ Definitions/DynamicActions.v
 Definitions/Axioms.v
 Definitions/StaticActions.v
 Definitions/Tactics.v
-Definitions/Types.v
+Definitions/GTypes.v
 Definitions/GHeap.v
 Definitions/Semantics.v
 Proofs/LocallyNameless.v

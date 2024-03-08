@@ -9,7 +9,7 @@ Require Import Definitions.ComputedActions.
 Require Import Definitions.DynamicActions.
 Require Import Definitions.StaticActions.
 Require Import Definitions.Regions.
-Require Import Definitions.Types.
+Require Import Definitions.GTypes.
 
 
 Lemma UnionEmptyWithEffIsEff:
@@ -464,12 +464,27 @@ Qed.
 
 
 Inductive SA_DA_Soundness : StaticAction -> DynamicAction -> Prop :=
-| SA_DA_Read : forall r l v, SA_DA_Soundness (SA_Read (Rgn2_Const true true r)) (DA_Read r l v)
-| SA_DA_Write : forall r l v, SA_DA_Soundness (SA_Write (Rgn2_Const true true r)) (DA_Write r l v)
-| SA_DA_Alloc : forall r l v, SA_DA_Soundness (SA_Alloc (Rgn2_Const true true r)) (DA_Alloc r l v).
+| SA_DA_Read :
+  forall r l v,
+    SA_DA_Soundness (SA_Read (Rgn_Const true true r)) (DA_Read r l v)
 
-Inductive Epsilon_Phi_Soundness :  (Epsilon * Phi) -> Prop := 
-  | EPS : forall st dy, (forall da, DA_in_Phi da dy -> exists sa, Ensembles.In StaticAction st sa /\ SA_DA_Soundness sa da) -> Epsilon_Phi_Soundness (st, dy).
+| SA_DA_Write :
+  forall r l v,
+    SA_DA_Soundness (SA_Write (Rgn_Const true true r)) (DA_Write r l v)
+
+| SA_DA_Alloc
+  : forall r l v,
+    SA_DA_Soundness (SA_Alloc (Rgn_Const true true r)) (DA_Alloc r l v).
+
+
+Inductive Epsilon_Phi_Soundness :  (Epsilon * Phi) -> Prop :=
+| EPS :
+  forall st dy,
+    (forall da, DA_in_Phi da dy ->
+                exists sa, Ensembles.In StaticAction st sa
+                           /\ SA_DA_Soundness sa da) ->
+    Epsilon_Phi_Soundness (st, dy).
+
 
 Lemma ReadOnlyStaticImpliesReadOnlySubstStatic : 
   forall eps rho,

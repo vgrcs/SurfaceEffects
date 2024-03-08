@@ -102,7 +102,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
     allocate_H heap' r = l ->
     phi = (Phi_Seq vacts (Phi_Elem (DA_Alloc r l v))) ->
     (heap, env, rho, Ref w e) ⇓
-      (update_H ((r, l), v) heap', Loc (Rgn2_Const true false r) l, phi)
+      (update_H ((r, l), v) heap', Loc (Rgn_Const true false r) l, phi)
 
 | BS_Get_Ref : forall ea w r l v env rho (heap heap' : Heap) (phi aacts : Phi),
     (heap, env, rho, ea) ⇓ (heap', Loc w l, aacts) ->
@@ -170,14 +170,14 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
 
 | BS_Read_Conc :
   forall ea r l env rho (heap heap' : Heap) phi,
-    (heap, env, rho, ea) ⇓ (heap', Loc (Rgn2_Const true false r) l, phi) ->
+    (heap, env, rho, ea) ⇓ (heap', Loc (Rgn_Const true false r) l, phi) ->
     phi = Phi_Nil ->
     (heap, env, rho, ReadConc ea) ⇓
       (heap', Eff (Some (singleton_set (CA_ReadConc r l))), phi)
 
 | BS_Write_Conc :
   forall ea r l env rho (heap heap' : Heap) phi,
-    (heap, env, rho, ea) ⇓ (heap', Loc (Rgn2_Const true false r) l, phi) ->
+    (heap, env, rho, ea) ⇓ (heap', Loc (Rgn_Const true false r) l, phi) ->
     phi = Phi_Nil ->
     (heap, env, rho, WriteConc ea) ⇓
       (heap', Eff (Some (singleton_set (CA_WriteConc r l))), phi)

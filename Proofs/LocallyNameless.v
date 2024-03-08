@@ -3,7 +3,7 @@ Require Import Coq.Sets.Ensembles.
 Require Import Ascii.
 Require Import Definitions.StaticActions.
 Require Import Definitions.ComputedActions.
-Require Import Definitions.Types.
+Require Import Definitions.GTypes.
 Require Import Definitions.Regions.
 Require Import Definitions.Keys.
 Require Import Coq.Arith.PeanoNat.
@@ -175,7 +175,7 @@ Qed.
 
 Lemma close_open_rgn : 
   forall r n x, (In VarId (free_rgn_vars_in_rgn r) x -> False) ->
-                closing_rgn_in_rgn n x (opening_rgn_in_rgn n (Rgn2_FVar true true x) r) = r.
+                closing_rgn_in_rgn n x (opening_rgn_in_rgn n (Rgn_FVar true true x) r) = r.
 Proof.
   intros r n x H.
   unfold closing_rgn_in_rgn, opening_rgn_in_rgn. 
@@ -192,7 +192,7 @@ Qed.
 
 Lemma close_open_sa : 
   forall sa n x, (In VarId (free_rgn_vars_in_sa sa) x -> False) ->
-                 closing_rgn_in_sa n x (opening_rgn_in_sa n (Rgn2_FVar true true x) sa) = sa.
+                 closing_rgn_in_sa n x (opening_rgn_in_sa n (Rgn_FVar true true x) sa) = sa.
 Proof.
   intros sa n x H.
   unfold closing_rgn_in_sa, opening_rgn_in_sa. 
@@ -201,7 +201,7 @@ Qed.
   
 Lemma close_open_eps :
   forall e x n , (In VarId (free_rgn_vars_in_eps e) x -> False) ->
-                 closing_rgn_in_eps n x (opening_rgn_in_eps n (Rgn2_FVar true true x) e) = e. 
+                 closing_rgn_in_eps n x (opening_rgn_in_eps n (Rgn_FVar true true x) e) = e. 
 Proof.
   intros e x n H.
   apply Extensionality_Ensembles.
@@ -217,7 +217,7 @@ Proof.
   + intro sa. unfold In in *.
     unfold closing_rgn_in_eps; unfold opening_rgn_in_eps; simpl.
     intro H1.
-    exists (opening_rgn_in_sa n (Rgn2_FVar true true x) sa).
+    exists (opening_rgn_in_sa n (Rgn_FVar true true x) sa).
     rewrite close_open_sa.
     split; [exists sa; auto | reflexivity].
     intro. apply H.
@@ -276,7 +276,7 @@ Qed.
 Lemma open_close_rgn :
   forall r n x,
     lc_type_rgn r ->
-    opening_rgn_in_rgn n (Rgn2_FVar true true x) (closing_rgn_in_rgn n x r) = r.
+    opening_rgn_in_rgn n (Rgn_FVar true true x) (closing_rgn_in_rgn n x r) = r.
 Proof. 
   intros. induction H; unfold opening_rgn_in_rgn, closing_rgn_in_rgn.
   - reflexivity.
@@ -291,7 +291,7 @@ Qed.
 Lemma opening_lc_sa :
   forall n x sa,
     lc_type_sa sa ->
-    opening_rgn_in_sa n (Rgn2_FVar true true x) sa = sa.
+    opening_rgn_in_sa n (Rgn_FVar true true x) sa = sa.
 Proof.
   intros n x sa H. unfold opening_rgn_in_sa.
   dependent induction sa; f_equal; inversion H; subst; inversion H1; simpl; reflexivity.
@@ -300,7 +300,7 @@ Qed.
 Lemma open_close_sa :
   forall n x sa,
     lc_type_sa sa ->
-    opening_rgn_in_sa n (Rgn2_FVar true true x) (closing_rgn_in_sa n x sa) = sa.
+    opening_rgn_in_sa n (Rgn_FVar true true x) (closing_rgn_in_sa n x sa) = sa.
 Proof.
   intros n x sa H.
   induction H; unfold opening_rgn_in_sa, closing_rgn_in_sa;
@@ -311,7 +311,7 @@ Qed.
 Lemma open_close_eps :
   forall eff n x,
     lc_type_eps eff ->
-    opening_rgn_in_eps n (Rgn2_FVar true true x) (closing_rgn_in_eps n x eff) = eff.
+    opening_rgn_in_eps n (Rgn_FVar true true x) (closing_rgn_in_eps n x eff) = eff.
 Proof. 
   intros eff n x H. unfold opening_rgn_in_eps, closing_rgn_in_eps. 
   apply Extensionality_Ensembles.
@@ -618,7 +618,7 @@ Qed.
 Lemma SUBST_INTRO : subst_intro.
 Proof.
   intros x t u H1 H2. unfold open_var.
-  replace (opening_rgn_exp 0 (Rgn2_FVar true true x) t) with (open  (Rgn2_FVar true true x) t) by (now unfold open).
+  replace (opening_rgn_exp 0 (Rgn_FVar true true x) t) with (open  (Rgn_FVar true true x) t) by (now unfold open).
   rewrite SUBST_OPEN; auto. f_equal.
   - simpl in *; destruct (AsciiVars.eq_dec x x); intros;
     [reflexivity | unfold AsciiVars.eq in n; contradict n; reflexivity ].

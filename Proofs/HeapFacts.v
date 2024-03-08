@@ -1,7 +1,7 @@
 From stdpp Require Import gmap.
 Require Import Coq.Program.Equality.
 Require Import Definitions.GHeap.
-Require Import Definitions.Types.
+Require Import Definitions.GTypes.
 Require Import Definitions.Values.
 Require Import Definitions.Semantics.
 Require Import Definitions.DynamicActions.
@@ -12,27 +12,18 @@ Import Expressions.
 Import ComputedActions.
 
 Lemma TcHeapEmpty:
-  forall (heap : gmap HeapKey HeapVal) stty,
+  forall (heap : gmap HeapKey HeapVal) (stty : gmap SigmaKey Tau),
     heap = ∅ ->
-    ST.Empty stty ->
+    stty = ∅ ->
     TcHeap (heap, stty).
 Proof.
   intros heap stty H1 H2.
-  unfold ST.Empty in *.
-   econstructor.
-  - intros.  unfold find_H in H.
+  econstructor; unfold find_H, find_ST in *; subst.
+  - intros.
     assert(H3: ¬is_Some ((∅ : Heap) !! k)). apply lookup_empty_is_Some.
     contradict H3. unfold is_Some. subst. exists v. assumption.
-  - intros. 
-    edestruct H2 with (a:=k) (e:=t).
-    unfold find_ST in H.       
-    apply STMapP.find_mapsto_iff.
-    assumption.
-  - intros.
-    edestruct H2 with (a:=k) (e:=t).
-    unfold find_ST in H.
-    apply STMapP.find_mapsto_iff.
-    assumption.
+  - intros. inversion H.
+  - intros. inversion H.
 Qed.
 
   
@@ -104,16 +95,16 @@ Lemma H_same_domain:
        find_ST k stty = None -> 
        (forall (k0 : HeapKey) (v0 : Val),
           find_H k0 (update_H (k, v) heap) = Some v0 ->
-          exists t0 : tau, find_ST k0 (update_ST (k, t) stty) = Some t0) /\
-       (forall (k0 : ST.key) (t0 : tau),
-          find_ST k0 (update_ST (k, t) stty) = Some t0 ->
+          exists t0 : Tau, find_ST k0 (update_ST k t stty) = Some t0) /\
+       (forall (k0 : SigmaKey) (t0 : Tau),
+          find_ST k0 (update_ST k t stty) = Some t0 ->
           exists v0 : Val, find_H k0 (update_H (k, v) heap) = Some v0)) /\
     (forall k v t,
        find_ST k stty = Some t ->
        (forall (k0 : HeapKey) (v0 : Val),
           find_H k0 (update_H (k, v) heap) = Some v0 ->
-          exists t0 : tau, find_ST k0 stty = Some t0) /\
-       (forall (k0 : ST.key) (t0 : tau),
+          exists t0 : Tau, find_ST k0 stty = Some t0) /\
+       (forall (k0 : SigmaKey) (t0 : Tau),
           find_ST k0 stty = Some t0 ->
           exists v0 : Val, find_H k0 (update_H (k, v) heap) = Some v0)).
 Proof.
@@ -167,7 +158,7 @@ Lemma H_update_heap_fresh:
     (forall k v t,
        find_ST k stty = None ->
        TcVal (stty, v, t) ->
-       TcHeap (update_H (k, v) heap, update_ST (k, t) stty)).
+       TcHeap (update_H (k, v) heap, update_ST k t stty)).
 Proof. 
   intros stty heap Hhp l v t Htc STfind.
   inversion Hhp as [? ? TcHeap_STFind TcHeap_HFind TcHeap_tcVal]; subst; constructor.

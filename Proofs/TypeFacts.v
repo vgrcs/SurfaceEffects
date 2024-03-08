@@ -1,25 +1,27 @@
+From stdpp Require Import gmap.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Definitions.StaticActions.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.Regions.
-Require Import Definitions.Types.
+Require Import Definitions.GTypes.
 Require Import Definitions.Keys.
 Require Import Definitions.Values.
 Require Import Definitions.Axioms.
 Require Import Proofs.RegionFacts.
 Require Import Proofs.EffectFacts.
 Require Import Proofs.LocallyNameless.
+Require Import Definitions.GHeap.
 
-Module STMapP := FMapFacts.Facts ST.
+(*Module STMapP := FMapFacts.Facts ST.
 Module STRaw := ST.Raw.
-Module STProofs := ST.Raw.Proofs.
+Module STProofs := ST.Raw.Proofs.*)
 
 Definition find_type_ext_stores_def  := 
-   forall stty stty' l (t' : tau),
-      ST.find l stty = Some t' ->
-      ST.find l stty' = Some t' -> 
-      ST.find l stty =  ST.find l stty'.
+   forall stty stty' l (t' : Tau),
+      find_ST l stty = Some t' ->
+      find_ST l stty' = Some t' -> 
+      find_ST l stty =  find_ST l stty'.
 
 Lemma find_type_ext_stores: find_type_ext_stores_def.  
 Proof.
@@ -31,42 +33,56 @@ Qed.
 
 
 Lemma ST_same_key_1:
-  forall t l ty stty, 
-    ST.find (elt := t) l (ST.add l ty stty) = Some ty.
+  forall (l : SigmaKey) (ty : Tau) (stty : Sigma), 
+    find_ST l (update_ST l ty stty) = Some ty.
 Proof.
-  intros; rewrite <- STMapP.find_mapsto_iff. now apply ST.add_1.
+  intros.
+  unfold find_ST, update_ST. apply lookup_insert.
 Qed. 
 
 Lemma ST_diff_keys_1:
-  forall t a b v v' e,   
+  forall  a b v v' (stty : gmap SigmaKey Tau),
     a <> b ->
-    ST.find (elt := t) a (ST.add b v e) = Some v' -> 
-    ST.find (elt := t) a e = Some v'.
+    <[b:=v]> stty !! a = Some v' ->
+    stty !! a = Some v'.
 Proof.
-  intros  t a b v v' e H1 H2. 
-  rewrite <- STMapP.find_mapsto_iff in H2. rewrite -> STMapP.add_mapsto_iff in H2.
-  intuition.
-  - destruct a, b; simpl in *; subst; intuition.
-  - now rewrite -> STMapP.find_mapsto_iff in H2.
+  intros a b v v' e Hneq Hfind.
+  unfold find_ST, update_ST in *.
+  rewrite lookup_insert_Some in Hfind.
+  destruct Hfind as [[Ha Hb] | [Hc Hd]].
+  - contradict Hneq. auto.
+  - assumption.
+Qed.
+
+
+Lemma H_diff_keys_2:
+  forall a b v v' (heap : gmap HeapKey HeapVal),   
+    b <> a ->
+    heap !! a = Some v' ->
+    (<[ b:=v ]> heap) !! a = Some v'.
+Proof.
+  intros a b v v' e Hneq Hfind.
+  rewrite lookup_insert_Some.
+  right. split; [assumption | assumption].
 Qed.
 
 
 Lemma ST_diff_key_2:
-  forall t a b v v' e,   
+  forall a b v v' (stty : gmap SigmaKey Tau),
     b <> a ->
-    ST.find (elt := t) a e = Some v' ->
-    ST.find (elt := t) a (ST.add b v e) = Some v'.
+    stty !! a = Some v' ->
+    (<[b:=v]> stty) !! a = Some v'.
 Proof.
-  intros. 
-  rewrite <- STMapP.find_mapsto_iff. rewrite -> STMapP.add_mapsto_iff.
-  destruct a, b; simpl.
-  right. intuition. now rewrite STMapP.find_mapsto_iff.
+  intros.
+  unfold find_ST, update_ST in *.
+  rewrite lookup_insert_Some.
+  right. split; [assumption | assumption].
 Qed.
 
 
 Lemma ST_update_same_type:
   forall stty l0 t t0,
-  ST.find (elt:=tau) l0 (ST.add l0 t stty) = Some t0 -> 
+  find_ST l0 (update_ST l0 t stty) = Some t0 -> 
   t = t0.
 Proof.
   intros stty l0 t t0 H. 
@@ -81,7 +97,7 @@ Definition get_store_typing_val {A B:Type} (p : Sigma * A * B) : Sigma
 Definition get_store_typing_env {A B C:Type} (p : Sigma * A * B * C) : Sigma   
   := fst (fst (fst p)).
 
-Definition mk_TcVal_ext_store_ty (p : Sigma * Val * tau) (stty' : Sigma)
+Definition mk_TcVal_ext_store_ty (p : Sigma * Val * Tau) (stty' : Sigma)
   := TcVal (stty', snd (fst p), snd p).
 
 Definition mk_TcEnv_ext_store_ty (p : Sigma * Rho * Env * Gamma) (stty' : Sigma)
@@ -200,15 +216,11 @@ Proof.
 Qed.
 
 
-Definition subst_in_type := fun x r ty => subst_type x (Rgn2_Const true false r) ty.
-
-
-
 Lemma subst_type_rgn_comm_2:
   forall r k1 k2 v1 v2,
     k1 <> k2 ->
-    subst_rgn k1 (Rgn2_Const true false v1) (subst_rgn k2 (Rgn2_Const true false v2) r) =
-    subst_rgn k2 (Rgn2_Const true false v2) (subst_rgn k1 (Rgn2_Const true false v1) r).
+    subst_rgn k1 (Rgn_Const true false v1) (subst_rgn k2 (Rgn_Const true false v2) r) =
+    subst_rgn k2 (Rgn_Const true false v2) (subst_rgn k1 (Rgn_Const true false v1) r).
 Proof.
   intros r k1 k2 v1 v2 H.
   unfold Region_in_Type in r.
@@ -229,17 +241,18 @@ Qed.
 Lemma subst_type_sa_comm_2:
   forall sa k1 k2 v1 v2,
     k1 <> k2 ->
-    subst_sa k1 (Rgn2_Const true false v1) (subst_sa k2 (Rgn2_Const true false v2) sa) =
-    subst_sa k2 (Rgn2_Const true false v2) (subst_sa k1 (Rgn2_Const true false v1) sa).
+    subst_sa k1 (Rgn_Const true false v1) (subst_sa k2 (Rgn_Const true false v2) sa) =
+    subst_sa k2 (Rgn_Const true false v2) (subst_sa k1 (Rgn_Const true false v1) sa).
 Proof.
   intros sa k1 k2 v1 v2 H.
   destruct sa; simpl; apply f_equal; apply subst_type_rgn_comm_2; auto.
 Qed.
 
-Lemma subst_type_eps_comm_2 : forall (k1 : R.key) (v1 : RgnId) (k2 : R.key) (v2 : RgnId) (e : Epsilon),
-                                k1 <> k2 ->
-                                subst_eps k1 (Rgn2_Const true false v1) (subst_eps k2 (Rgn2_Const true false v2) e) =
-                                subst_eps k2 (Rgn2_Const true false v2) (subst_eps k1 (Rgn2_Const true false v1) e).
+Lemma subst_type_eps_comm_2 :
+  forall (k1 : R.key) (v1 : RgnId) (k2 : R.key) (v2 : RgnId) (e : Epsilon),
+    k1 <> k2 ->
+    subst_eps k1 (Rgn_Const true false v1) (subst_eps k2 (Rgn_Const true false v2) e) =
+      subst_eps k2 (Rgn_Const true false v2) (subst_eps k1 (Rgn_Const true false v1) e).
 Proof.
   intros k1 v1 k2 v2 e H. unfold subst_eps.
   apply Extensionality_Ensembles; unfold Same_set, Included.
@@ -248,9 +261,11 @@ Proof.
 Qed.
 
 
-Lemma subst_type_type_comm_2 : forall (k1 : R.key) (v1 : RgnId) (k2 : R.key) (v2 : RgnId) (b : tau),
-                          k1 <> k2 -> 
-                          subst_in_type k1 v1 (subst_in_type k2 v2 b) = subst_in_type k2 v2 (subst_in_type k1 v1 b).
+Lemma subst_type_type_comm_2 :
+  forall (k1 : R.key) (v1 : RgnId) (k2 : R.key) (v2 : RgnId) (b : Tau),
+    k1 <> k2 ->
+    subst_in_type k1 v1 (subst_in_type k2 v2 b) =
+      subst_in_type k2 v2 (subst_in_type k1 v1 b).
 Proof.
   intros k1 v1 k2 v2 b H.
   unfold subst_in_type.
@@ -406,8 +421,8 @@ Lemma ExtendedTcInv_2:
   forall ctxt rgns f x tyx effe tyc effc, 
     TcInc (ctxt, rgns)->
     included (frv tyx) rgns ->
-    included (frv (Ty2_Arrow tyx effc tyc effe Ty2_Effect)) rgns ->
-    TcInc (update_rec_T (f, Ty2_Arrow tyx effc tyc effe Ty2_Effect) (x, tyx) ctxt, rgns).
+    included (frv (Ty_Arrow tyx effc tyc effe Ty_Effect)) rgns ->
+    TcInc (update_rec_T (f, Ty_Arrow tyx effc tyc effe Ty_Effect) (x, tyx) ctxt, rgns).
 Proof.
   intros ctxt rgns f x tyx effe tyc effc HInc HFind1 HFind2.
   inversion HInc as [? ? HFrv]; subst.
@@ -528,7 +543,7 @@ Proof.
         by  (apply IncludedUnion_Name_1 in H0; destruct H0; assumption). 
       apply ExtendedTcInv_2; eauto. }
      
-    { assert (H'' : included (frv Ty2_Effect) rgns /\ 
+    { assert (H'' : included (frv Ty_Effect) rgns /\ 
                     included (free_rgn_vars_in_eps effe) rgns).
       eapply IHHExp2; eauto.
       - simpl in H0. 
@@ -551,7 +566,7 @@ Proof.
       * eapply RegionAbsFrv_1; eauto.
       * eapply RegionAbsFrv_3; eauto.
     + intros. contradict H3. apply NotFreeInEmptyEps.
-  - assert (H' : included (frv (Ty2_Arrow tya effc t effe Ty2_Effect)) rgns /\ 
+  - assert (H' : included (frv (Ty_Arrow tya effc t effe Ty_Effect)) rgns /\ 
                  included (free_rgn_vars_in_eps efff) rgns) by (eapply IHHExp1; eauto).
     assert (H'' : included (frv tya) rgns /\ 
                   included (free_rgn_vars_in_eps effa) rgns) by (eapply IHHExp2; eauto).
@@ -565,7 +580,7 @@ Proof.
       * apply H5.
       * intro. apply H0. auto.
   - inversion HInc as [? ? HFrv]; subst.
-    assert (H' : included (frv (Ty2_ForallRgn effr tyr)) rgns /\ 
+    assert (H' : included (frv (Ty_ForallRgn effr tyr)) rgns /\ 
                  included (free_rgn_vars_in_eps efff) rgns).
     eapply IHHExp; eauto.
     destruct H' as [H2 H3].
@@ -578,7 +593,7 @@ Proof.
       * apply H3.
       * apply H1.
   -inversion HInc as [? ? HFrv]; subst.
-    assert (H' : included (frv ( Ty2_Arrow tya effc tyc effe Ty2_Effect)) rgns /\ 
+    assert (H' : included (frv ( Ty_Arrow tya effc tyc effe Ty_Effect)) rgns /\ 
                  included (free_rgn_vars_in_eps efff) rgns).
     eapply IHHExp1; eauto.
     assert (H'' : included (frv tya) rgns /\ 
@@ -617,7 +632,7 @@ Proof.
       apply H2. assumption.
     + intro. apply IncludedUnion_Static_Action_4; [apply H3 |].
       simpl. apply H0. 
-  - assert (H2 : included (frv (Ty2_Ref (mk_rgn_type (Rgn2_Const true false s)) t)) rgns /\ 
+  - assert (H2 : included (frv (Ty_Ref (mk_rgn_type (Rgn_Const true false s)) t)) rgns /\ 
                  included (free_rgn_vars_in_eps aeff) rgns)
       by (eapply IHHExp; eauto).
     destruct H2 as [H3 H4].
@@ -626,7 +641,7 @@ Proof.
       apply Union_intror. assumption.
     + intro. apply IncludedUnion_Static_Action_4; [apply H4 |].
       simpl. apply H1.
-  - assert (H2 : included (frv (Ty2_Ref (mk_rgn_type (Rgn2_Const true false s)) t0)) rgns
+  - assert (H2 : included (frv (Ty_Ref (mk_rgn_type (Rgn_Const true false s)) t0)) rgns
                  /\ included (free_rgn_vars_in_eps aeff) rgns)
       by (eapply IHHExp1; eauto).
     assert (H3 : included (frv t0) rgns /\ 
@@ -640,7 +655,7 @@ Proof.
        * apply H5.
        * apply H7. 
        * simpl. apply H1. 
-  - assert (H1 : included (frv Ty2_Boolean) rgns /\ 
+  - assert (H1 : included (frv Ty_Boolean) rgns /\ 
                  included (free_rgn_vars_in_eps eff0) rgns)
       by (eapply IHHExp1; eauto).
     assert (H2 : included (frv t) rgns /\ 
@@ -658,10 +673,10 @@ Proof.
       * apply H5.
       * apply H7.
       * apply H9. 
-  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+  - assert (H1 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff1) rgns)
       by (eapply IHHExp1; eauto).
-    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+    assert (H2 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff2) rgns)
       by (eapply IHHExp2; eauto).
     destruct H1 as [H3 H4].
@@ -669,10 +684,10 @@ Proof.
     split.
     + do 2 intro. apply H3. assumption.
     + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
-  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+  - assert (H1 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff1) rgns)
       by (eapply IHHExp1; eauto).
-    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+    assert (H2 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff2) rgns)
       by (eapply IHHExp2; eauto).
     destruct H1 as [H3 H4].
@@ -680,10 +695,10 @@ Proof.
     split.
     + do 2 intro. apply H3. assumption.
     + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
-  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+  - assert (H1 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff1) rgns)
       by (eapply IHHExp1; eauto).
-    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+    assert (H2 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff2) rgns)
       by (eapply IHHExp2; eauto).
     destruct H1 as [H3 H4].
@@ -691,10 +706,10 @@ Proof.
     split.
     + do 2 intro. apply H3. assumption.
     + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
-  - assert (H1 : included (frv Ty2_Natural) rgns /\ 
+  - assert (H1 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff1) rgns)
       by (eapply IHHExp1; eauto).
-    assert (H2 : included (frv Ty2_Natural) rgns /\ 
+    assert (H2 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff2) rgns)
       by (eapply IHHExp2; eauto).
     destruct H1 as [H3 H4].
@@ -702,20 +717,20 @@ Proof.
     split.
     + do 2 intro. apply H3. assumption.
     + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
-  - assert (H1 : included (frv (Ty2_Ref (Rgn2_Const true true r) t0)) rgns /\ 
+  - assert (H1 : included (frv (Ty_Ref (Rgn_Const true true r) t0)) rgns /\ 
                  included (free_rgn_vars_in_eps eff) rgns)
       by (eapply IHHExp; eauto).
     destruct H1 as [H2 H3].
     intuition. inversion H.
-  - assert (H1 : included (frv (Ty2_Ref (Rgn2_Const true true r) t0)) rgns /\ 
+  - assert (H1 : included (frv (Ty_Ref (Rgn_Const true true r) t0)) rgns /\ 
                  included (free_rgn_vars_in_eps eff) rgns)
       by (eapply IHHExp; eauto).
     destruct H1 as [H2 H3].
     intuition. inversion H.
-  - assert (H1 : included (frv Ty2_Effect) rgns /\ 
+  - assert (H1 : included (frv Ty_Effect) rgns /\ 
                  included (free_rgn_vars_in_eps eff1) rgns)
       by (eapply IHHExp1; eauto).
-    assert (H2 : included (frv Ty2_Effect) rgns /\ 
+    assert (H2 : included (frv Ty_Effect) rgns /\ 
                  included (free_rgn_vars_in_eps eff2) rgns)
       by (eapply IHHExp2; eauto).
     destruct H1 as [H3 H4].
@@ -924,15 +939,26 @@ Proof.
       apply Union_intror. assumption.
 Qed.
 
+Lemma Functional_Map_Union_find:
+  forall sttya sttyb (k : SigmaKey),
+    find_ST k (Functional_Map_Union_Sigma sttya sttyb) = find_ST k sttya.
+Proof.
+  intros.  unfold find_ST, Functional_Map_Union_Sigma.
+  assert (merge f sttya sttyb !! k = diag_None f (sttya !! k) (sttyb !! k))
+    by (rewrite lookup_merge; reflexivity).
+  replace (merge f sttya sttyb !! k) with (diag_None f (sttya !! k) (sttyb !! k)).
+  destruct (sttyb !! k); destruct (sttya !! k); unfold f; simpl; reflexivity.
+Qed.
 
 Lemma StoreTyping_Extended:
   forall stty sttya sttyb,
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttya = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-       ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l sttyb = Some t' ) ->
-    (forall (l : ST.key) (t' : tau),
-    	ST.find (elt:=tau) l stty = Some t' -> ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = Some t' ).
+    (forall (l : SigmaKey) (t' : Tau),
+       find_ST l stty = Some t' -> find_ST l sttya = Some t' ) ->
+    (forall (l : SigmaKey) (t' : Tau),
+       find_ST l stty = Some t' -> find_ST l sttyb = Some t' ) ->
+    (forall (l : SigmaKey) (t' : Tau),
+        find_ST l stty = Some t' ->
+        find_ST l (Functional_Map_Union_Sigma sttya sttyb) = Some t' ).
 Proof. 
   intros stty sttya sttyb Ha Hb.
   intros l t' H.

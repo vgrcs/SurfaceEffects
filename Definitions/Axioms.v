@@ -4,7 +4,7 @@ Require Import Definitions.Semantics.
 Require Import Definitions.Values.
 Require Import Definitions.GHeap.
 Require Import Definitions.Expressions.
-Require Import Definitions.Types.
+Require Import Definitions.GTypes.
 
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.
@@ -24,7 +24,7 @@ Axiom TcHeap_Extended:
     (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
     TcHeap (heap_mu1, sttym) ->
     TcHeap (heap_mu2, sttya) ->
-    TcHeap (hp', Functional_Map_Union sttym sttya).
+    TcHeap (hp', Functional_Map_Union_Sigma sttym sttya).
 
 Axiom ReadOnlyWalkSameHeap:
   forall acts_mu1 acts_mu2 h same_h,
@@ -32,22 +32,6 @@ Axiom ReadOnlyWalkSameHeap:
     (Phi_Par acts_mu1 acts_mu2, h) ==>* (Phi_Nil, same_h) ->
     h ≡@{Heap} same_h.
 
-
-(*Lemma Functional_Map_Union_find:
-  forall sttya sttyb (k : SigmaKey),
-    find_ST k (Functional_Map_Union_Sigma sttya sttyb) = find_ST k sttya.
-Proof.
-  intros.  unfold find_ST, Functional_Map_Union_Sigma.
-  assert (merge f sttya sttyb !! k = diag_None f (sttya !! k) (sttyb !! k))
-    by (rewrite lookup_merge; reflexivity).
-  replace (merge f sttya sttyb !! k) with (diag_None f (sttya !! k) (sttyb !! k)).
-  destruct (sttyb !! k); destruct (sttya !! k); unfold f; simpl; reflexivity.
-Qed.*)
-
-
-Axiom Functional_Map_Union_find:
-  forall sttya sttyb (l : ST.key),
-    ST.find (elt:=tau) l (Functional_Map_Union sttya sttyb) = ST.find (elt:=tau) l sttya.
 
 Axiom subst_rho_eps_aux_1 :
  forall rho rho' n x e e1 sa sa',
@@ -61,7 +45,8 @@ Axiom TcValExtended:
   forall  stty1 stty2 v1 v2 rho ty1 ty2,
     TcVal (stty1, v1, subst_rho rho ty1) ->
     TcVal (stty2, v2, subst_rho rho ty2) ->
-    TcVal (Functional_Map_Union stty1 stty2, Pair (v1, v2), subst_rho rho (Ty2_Pair ty1 ty2)).
+    TcVal (Functional_Map_Union_Sigma stty1 stty2,
+        Pair (v1, v2), subst_rho rho (Ty_Pair ty1 ty2)).
   
 
  (* both ec' and ee' and evaluated with the same context, but twice: inside Bs_Mu_App and BS_EffApp*)
