@@ -41,11 +41,12 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   forall (f : VarId) x ef ea ec' ee' v v'
          (env env': Env) (rho rho' : Rho) (heap fheap aheap bheap : Heap)
          (phi facts aacts bacts : Phi),
+    heap ≡@{Heap} fheap ->
     (heap, env, rho, ef) ⇓ (fheap, Cls (env', rho', Mu f x ec' ee'), facts) ->
     (fheap, env, rho, ea) ⇓ (aheap, v, aacts) ->
     (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ec')
       ⇓ (bheap, v', bacts) ->
-    phi = (Phi_Seq (Phi_Seq facts aacts) bacts) ->
+    phi = (Phi_Seq (Phi_Seq facts aacts) bacts) ->    
     (heap, env, rho,  Mu_App ef ea) ⇓ (bheap, v', phi)
 
 | BS_Rgn_App :
@@ -71,6 +72,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   forall env rho ea1 ef1 ea2 ef2 v1 v2 theta1 theta2
          (heap_eff1 heap_eff2 heap heap_mu1 heap_mu2 heap' : Heap)
          (phi acts_mu1 acts_mu2 acts_eff1 acts_eff2 : Phi),
+    heap ≡@{Heap} heap_eff1 /\ heap ≡@{Heap} heap_eff2 ->
     (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap_eff1, Eff theta1, acts_eff1) ->
     (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap_eff2, Eff theta2, acts_eff2) ->
     Disjointness theta1 theta2 /\ not (Conflictness theta1 theta2) ->
@@ -82,13 +84,15 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
 
 | BS_Cond_True :
   forall e et ef env rho v (heap cheap theap : Heap) (phi cacts tacts : Phi),
-    (heap, env, rho, e) ⇓ (cheap, (Bit true), cacts) ->
+    heap ≡@{Heap} cheap ->
+    (heap, env, rho, e) ⇓ (cheap, (Bit true), cacts) ->    
     (cheap, env, rho, et) ⇓ (theap, v, tacts) ->
     phi = (Phi_Seq cacts tacts) ->
     (heap, env, rho, Cond e et ef) ⇓ (theap, v, phi)
 
 | BS_Cond_False :
   forall e et ef env rho v (heap cheap fheap : Heap) (phi cacts facts : Phi),
+    heap ≡@{Heap} cheap ->
     (heap, env, rho, e) ⇓ (cheap, (Bit false), cacts) ->
     (cheap, env, rho, ef) ⇓ (fheap, v, facts) ->
     phi = (Phi_Seq cacts facts) ->
@@ -113,6 +117,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
 
 | BS_Set_Ref :
   forall ea ev w r l v env rho (heap heap' heap'' : Heap) (phi aacts vacts : Phi),
+    heap ≡@{Heap} heap' ->
     (heap, env, rho, ea) ⇓ (heap', Loc w l, aacts) ->
     (heap', env, rho, ev) ⇓ (heap'', v, vacts) ->
     find_R w rho = Some r ->
@@ -121,6 +126,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
 
 | BS_Nat_Plus :
   forall a b va vb env rho (heap lheap rheap : Heap) (phi lacts racts : Phi),
+    heap ≡@{Heap} lheap ->
     (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
     (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->
     phi = ( Phi_Seq lacts racts) ->
@@ -128,13 +134,15 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
 
 | BS_Nat_Minus :
   forall a b va vb env rho (heap lheap rheap : Heap) (phi lacts racts : Phi),
+    heap ≡@{Heap} lheap ->
     (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
     (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->
-     phi = ( Phi_Seq lacts racts) ->
+    phi = ( Phi_Seq lacts racts) ->
     (heap, env, rho, Minus a b) ⇓ (rheap, Num (va - vb), phi)
 
 | BS_Nat_Times :
   forall a b va vb env rho (heap lheap rheap : Heap) (phi lacts racts : Phi),
+    heap ≡@{Heap} lheap ->
     (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
     (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->
     phi = ( Phi_Seq lacts racts) ->
@@ -142,6 +150,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
 
 | BS_Bool_Eq :
   forall a b va vb env rho (heap lheap rheap : Heap) (phi lacts racts : Phi),
+    heap ≡@{Heap} lheap ->
     (heap, env, rho, a) ⇓ (lheap, Num va, lacts) ->
     (lheap, env, rho, b) ⇓ (rheap, Num vb, racts) ->
     phi = ( Phi_Seq lacts racts) ->
@@ -229,5 +238,4 @@ Tactic Notation "dynamic_cases" tactic (first) ident(c) :=
   | Case_aux c "eff_top"
   | Case_aux c "eff_empty"
   (*| Case_aux c "mu_rec"*) ].
-
     

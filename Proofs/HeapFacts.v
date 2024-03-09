@@ -234,53 +234,6 @@ Proof.
   assumption.
 Qed.
 
-Lemma ReadOnlyTracePreservesHeap_1 : 
-  forall h env rho e same_h v' acts,
-    (h, env, rho, e) ⇓ (same_h, v', acts) ->
-    ReadOnlyPhi acts ->
-    h ≡@{Heap} same_h.
-Proof.
-intros h env rho e same_h v' acts H.
-  dependent induction H; intros;
-  try (solve [reflexivity]).
-  - inversion H2. inversion H5. subst.
-    assert (h=fheap) by (eapply  IHBigStep1; [reflexivity | auto | assumption]); subst.
-    assert (aheap=fheap)  by (symmetry; eapply IHBigStep2; auto); subst.
-   (eapply IHBigStep3; [reflexivity | reflexivity | assumption]).
-  - inversion H2; subst;
-    assert (h=fheap) by (eapply  IHBigStep1; [reflexivity | auto | assumption]); subst;
-    (eapply IHBigStep2; [reflexivity | reflexivity | assumption]). 
-  - inversion H5; subst. inversion H9; subst. 
-    assert (h = heap_mu1) by (eapply IHBigStep3; eauto).
-    assert (h = heap_mu2) by (eapply IHBigStep4; eauto). 
-    rewrite <- H6 in H2. rewrite <- H7 in H3.
-    assert (h = same_h) by (eapply ReadOnlyWalkSameHeap; eauto).
-    assumption.
-  - inversion H1; subst;
-    assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | auto | assumption]).
-    eapply IHBigStep2; subst; [reflexivity | reflexivity | assumption].
-  - inversion H1; subst;
-    assert (h=cheap) by (eapply  IHBigStep1; [reflexivity | auto | assumption]).
-    eapply IHBigStep2; subst; [reflexivity | reflexivity | assumption].
-  - inversion H1; subst. inversion H5.
-  - inversion H2; subst; (eapply IHBigStep; [reflexivity | auto | assumption]).
-  - inversion H2; inversion H6.
-  - inversion H1; subst;
-    assert (h=lheap) by (eapply IHBigStep1; [reflexivity | auto |assumption]); subst;
-    (eapply IHBigStep2; [reflexivity | auto | assumption]).
-  - inversion H1; subst;
-    assert (h=lheap) by (eapply IHBigStep1; [reflexivity | auto |assumption]); subst;
-    (eapply IHBigStep2; [reflexivity | auto |assumption]).
-  - inversion H1; subst;
-    assert (h=lheap) by (eapply IHBigStep1; [reflexivity | auto |assumption]); subst;
-    (eapply IHBigStep2; [reflexivity | auto |assumption]).
-  - inversion H1; subst;
-    assert (h=lheap) by (eapply IHBigStep1; [reflexivity | auto |assumption]); subst;
-    (eapply IHBigStep2; [reflexivity | auto |assumption]).
-  - eapply EmptyTracePreservesHeap_1; eauto.
-  - eapply EmptyTracePreservesHeap_1. eauto. reflexivity.  
-Qed.   
-
 
 Lemma EmptyTracePreservesHeap_2 : 
   forall h r env e same_h v acts,
@@ -465,3 +418,4 @@ Proof.
     + assumption.
  - assumption.
 Qed.
+

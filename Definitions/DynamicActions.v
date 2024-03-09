@@ -23,54 +23,19 @@ Inductive Phi :=
 
 Reserved Notation "phi '≈' phi'" (at level 50, left associativity).
 Inductive Phi_Equiv : Phi -> Phi -> Prop :=
- | Equiv_Phi : forall a b,
+| Equiv_Phi : forall a b,
     a = b -> Phi_Equiv a b
-| Equiv_Phi_Seq_Nil_L1 : forall a b,
-    Phi_Equiv a b -> Phi_Equiv (Phi_Seq Phi_Nil a) b                               
-| Equiv_Phi_Seq_Nil_R1 : forall a b,
-    Phi_Equiv a b -> Phi_Equiv (Phi_Seq a Phi_Nil) b
-| Equiv_Phi_Seq_Nil_L2 : forall a b,
-    Phi_Equiv a b -> Phi_Equiv b (Phi_Seq Phi_Nil a)
-| Equiv_Phi_Seq_Nil_R2 : forall a b,
-    Phi_Equiv a b -> Phi_Equiv b (Phi_Seq a Phi_Nil)
 where "phi '≈' phi'" := (Phi_Equiv phi phi') : type_scope.
-
-
 
 Global Instance Phi_Refl : Reflexive (fun a b => Phi_Equiv a b).
 Proof.
-  constructor.  reflexivity.
+  constructor. reflexivity.
 Qed.  
 
 Lemma TestPhi1: forall a, Phi_Nil ≈ Phi_Elem a -> False.
 Proof.
   intros. inversion H. inversion H0.
 Qed.
-
-Lemma TestPhi2: forall a, Phi_Seq Phi_Nil (Phi_Elem a) ≈ Phi_Elem a.
-Proof.
-  intros. apply Equiv_Phi_Seq_Nil_L1. reflexivity.
-Qed.
-
-
-(*Global Instance Phi_Symm : Symmetric (fun a b => Phi_Equiv a b).
-Proof.
-  unfold Symmetric. intros.
-  apply Equiv_Phi_Sym. assumption.
-Qed.
-
-Global Instance Phi_equivalence : Equivalence (fun a b => Phi_Equiv a b).
-Proof.
-  intros. 
-  constructor.
-  - unfold Reflexive.    
-    reflexivity. 
-  - unfold Symmetric.
-    now symmetry.
-  - unfold Transitive. intros. 
-    eapply Equiv_Phi_Trans; eauto.
-Qed.
-*)
 
 
 Fixpoint phi_as_list (phi : Phi) : Trace :=
