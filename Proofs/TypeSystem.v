@@ -3,6 +3,7 @@ Require Import Coq.Structures.OrderedType.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Sets.Ensembles.
 Require Import Ascii.
+Require Import String.
 Require Import Coq.ZArith.Znat.
 Require Import Coq.Program.Equality.
 
@@ -272,27 +273,27 @@ Proof.
   dynamic_cases (dependent induction D) Case;
   intros stty ctxt rgns t static_eff Hhp Hrho Henv Hexp; 
   inversion Hexp; subst.    
-  (* Case_str "cnt n". *)
-  - exists stty; (split; [| split]; auto). rewrite subst_rho_natural.
+  Case "cnt n".
+    exists stty; (split; [| split]; auto). rewrite subst_rho_natural.
     econstructor; eassumption.
-  (* Case "bool b". *)
-  -  exists stty;  (split; [| split]; auto). rewrite subst_rho_boolean.
+  Case "bool b".
+    exists stty;  (split; [| split]; auto). rewrite subst_rho_boolean.
     econstructor; eassumption. 
-  (* Case "var x". *)
-  -  exists stty; (split; [| split]; auto).
+  Case "var x".
+    exists stty; (split; [| split]; auto).
     eapply ty_sound_var; eassumption. 
-  (* Case "mu_abs". *)
-  - exists stty; (split; [| split]; auto).
-    eapply ty_sound_closure; try (solve [eassumption]). auto.
-    constructor.
+  Case "mu_abs".
+    exists stty; (split; [| split]; auto).
+    eapply ty_sound_closure; try (solve [eassumption]). auto. 
+    econstructor. 
     admit.
-  (* Case "rgn_abs". *)
-  -  exists stty;  (split; [| split]; auto). 
-    eapply ty_sound_region_closure; try (solve [eassumption]). auto.
-    assert (TcInc (ctxt, rgns)) by admit.
-    auto.
-  (* Case "mu_app". *)
-  - edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
+  Case "rgn_abs".
+    exists stty;  (split; [| split]; auto). 
+    eapply ty_sound_region_closure; try (solve [eassumption]).
+    econstructor.
+    admit.
+  Case "mu_app".
+    edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  
     eapply ext_stores__env; eauto.  
     inversion TcVal_mu as [ | | | ? ? ? ? ? ? ? ?  TcRho_rho' TcEnv_env' TcExp_abs | | |] ; subst.      
@@ -304,12 +305,13 @@ Proof.
     rewrite <- SubstEq1 in TcVal_arg.
     unfold update_rec_E, update_rec_T in *. 
     edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
-    (* SCase "TcEnv". *)    
-    + apply update_env. apply update_env. eapply ext_stores__env; eauto.  
+    SCase "TcEnv".
+      apply update_env. apply update_env. eapply ext_stores__env; eauto.  
       eapply ext_stores__val; eauto. eassumption.
-    + exists sttyb; intuition.  
-    (* SCase "TcVal". *)
-    - edestruct IHD1 as [sttyl [Weak1 [TcHeap1 TcVal_lam]]]; eauto. 
+    SCase "TcHeap".
+      exists sttyb; intuition.  
+    SCase "TcVal".
+      edestruct IHD1 as [sttyl [Weak1 [TcHeap1 TcVal_lam]]]; eauto. 
       inversion TcVal_lam as  [ | | | ? ? ? ? ? ? ?  TcRho_rho' TcInc'  TcEnv_env' TcExp_lam | | |]; subst.   
       inversion TcExp_lam as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst.  
       edestruct IHD2 as [sttyr [Weak2 [TcHeap2 TcVal_res]]]; eauto using update_env, ext_stores__env.
@@ -320,79 +322,82 @@ Proof.
       inversion H5.  
       unfold update_R in TcVal_res. 
       simpl in TcVal_res. rewrite subst_add_comm in TcVal_res.
-      (* SCase "abstraction body is well typed". *)
-      + unfold subst_in_type in TcVal_res.
-      rewrite SUBST_AS_CLOSE_OPEN in TcVal_res; auto.
-      erewrite subst_rho_open_close in TcVal_res; eauto. 
-      (* SCase "bound variable is free". *)      
-      +  eapply bound_var_is_fresh; eauto.
-  (* Case "eff_app". *)
-  - edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto.
+      SSCase "abstraction body is well typed".
+        unfold subst_in_type in TcVal_res.
+        rewrite SUBST_AS_CLOSE_OPEN in TcVal_res; auto.
+        erewrite subst_rho_open_close in TcVal_res; eauto. 
+      SSCase "bound variable is free".
+        eapply bound_var_is_fresh; eauto.
+  Case "eff_app". 
+    edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto.
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto using ext_stores__env.
     inversion TcVal_mu as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcInc' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst. 
     edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
-    (* SCase "Extended Env". *)
-    + apply update_env.
-      (* SSCase "TcEnv". *)
-      * { apply update_env.
-          (* SSSCase "Extended". *)
-          - eapply ext_stores__env; eauto.
-          (* SSSCase "Extended TcVal". *)          
-         - rewrite <- H4 in TcVal_mu.  eapply ext_stores__val; eauto. }
-      (* SSCase "TcVal". *)       
-      * do 2 rewrite subst_rho_arrow in H4.
+    SCase "Extended Env". 
+      apply update_env.
+      SSCase "TcEnv". 
+      { apply update_env.
+        - eapply ext_stores__env; eauto.
+        - rewrite <- H4 in TcVal_mu.  eapply ext_stores__val; eauto. }
+      SSCase "TcVal".
+        do 2 rewrite subst_rho_arrow in H4.
         inversion H4.
         assert (SubstEq: subst_rho rho' tyx = subst_rho rho tya) by assumption.
         rewrite <- SubstEq in TcVal_arg.  eassumption. 
-    + exists sttyb. intuition.
+    exists sttyb. intuition.
     rewrite subst_rho_effect. rewrite subst_rho_effect in TcVal_res.
     assumption.
-  (* Case "par_pair". *)
-  - edestruct IHD3 as [sttym [Weak1 [TcHeap1 TcVal_app1]]]; eauto.  
+  Case "par_pair".
+    edestruct IHD3 as [sttym [Weak1 [TcHeap1 TcVal_app1]]]; eauto.  
     edestruct IHD4 as [sttya [Weaka [TcHeapa TcVal_app2]]]; eauto. 
     assert (exists stty' : Sigma,
            (forall (l : SigmaKey) (t' : Tau),
             find_ST l stty = Some t' -> find_ST l stty' = Some t') /\
-             TcHeap (heap_eff1, stty') /\ TcVal (stty', Eff theta1, subst_rho rho ty3)) as HTyped3.
+             TcHeap (heap_eff1, stty') /\ TcVal (stty', Eff theta1, subst_rho rho ty3))
+      as HTyped3.
     eapply IHD1; eauto.
     assert (exists stty' : Sigma,
            (forall (l : SigmaKey) (t' : Tau),
             find_ST l stty = Some t' -> find_ST l stty' = Some t') /\
-             TcHeap (heap_eff2, stty') /\ TcVal (stty', Eff theta2, subst_rho rho ty4)) as HTyped4.
+             TcHeap (heap_eff2, stty') /\ TcVal (stty', Eff theta2, subst_rho rho ty4))
+      as HTyped4.
     eapply IHD2; eauto.
     assert (exists stty' : Sigma,
            (forall (l : SigmaKey) (t' : Tau),
             find_ST l stty = Some t' -> find_ST l stty' = Some t') /\
-             TcHeap (heap_mu1, stty') /\ TcVal (stty', v1, subst_rho rho ty1)) as HTyped1.
+             TcHeap (heap_mu1, stty') /\ TcVal (stty', v1, subst_rho rho ty1))
+      as HTyped1.
     eapply IHD3; eauto.
     assert (exists stty' : Sigma,
            (forall (l : SigmaKey) (t' : Tau),
             find_ST l stty = Some t' -> find_ST l stty' = Some t') /\
-             TcHeap (heap_mu2, stty') /\ TcVal (stty', v2, subst_rho rho ty2)) as HTyped2.
+             TcHeap (heap_mu2, stty') /\ TcVal (stty', v2, subst_rho rho ty2))
+      as HTyped2.
     eapply IHD4; eauto.
     destruct HTyped1 as[ stty1 [HA1  [HA2 HA3]]].
     destruct HTyped2 as[ stty2 [HB1  [HB2 HB3]]].
     destruct HTyped3 as[ stty3 [HC1  [HC2 HC3]]].
-    destruct HTyped4 as[ stty4 [HD1  [HD2 HD3]]]. 
-    exists (Functional_Map_Union_Sigma stty1 stty2). 
-    split.
-    + intros. eapply StoreTyping_Extended; eauto.
-    + split.
-      * eapply TcHeap_Extended with(acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
-      * eapply TcValExtended; eauto.
-  (* Case "cond_true". *)
-  - edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
+    destruct HTyped4 as[ stty4 [HD1  [HD2 HD3]]].  
+    { exists (Functional_Map_Union_Sigma stty1 stty2).
+      split.
+      + intros. eapply StoreTyping_Extended; eauto.
+      + split.
+        * eapply TcHeap_Extended with(acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
+        * eapply TcValExtended; eauto.
+    }
+  Case "cond_true".
+    edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
     edestruct IHD2 as [stty1 [Weak1 [TcHeapv1 TcVal_e1]]]; 
       eauto using ext_stores__env.
     exists stty1. intuition.
-  (* Case "cond_false". *)
-  - edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
+  Case "cond_false".
+    edestruct IHD1 as [sttyb [Weakb [TcHeapvb TcVal_e0]]]; eauto. 
     edestruct IHD2 as [stty2 [Weak2 [TcHeapv2 TcVal_e2]]]; 
       eauto using ext_stores__env.
     exists stty2. intuition.  
-  (* Case "new_ref e". *)
-  - edestruct IHD with (stty := stty)
+  Case "new_ref e".
+    edestruct IHD with (stty := stty)
                       (ctxt := ctxt)
                       (rgns := rgns)  
                       (t := t0)
@@ -401,39 +406,42 @@ Proof.
     assert (find_H (r, allocate_H heap' r) heap' = None)
       by (apply allocate_H_fresh).
     exists (update_ST (r, allocate_H heap' r) (subst_rho rho t0) sttyv); split; [ | split].  
-    (* SCase "Extended stores". *)
-    + intros k' t' STfind. destruct k' as [r' l']. 
+    SCase "Extended stores".
+      intros k' t' STfind. destruct k' as [r' l']. 
       destruct (eq_nat_dec r r'); destruct (eq_nat_dec (allocate_H heap' r) l'); subst. 
-      (* SSCase "New address must be fresh, prove by contradiction". *)
-      * apply Weakv in STfind. 
+      SSCase "New address must be fresh, prove by contradiction".
+        apply Weakv in STfind. 
         inversion_clear TcHeapv as [? ? ?  STfind_Hfind ?].  
         destruct (STfind_Hfind (r', allocate_H heap' r') t' STfind) as [x F].
         assert (C : None = Some x) by (rewrite <- F; rewrite <- H0; reflexivity).
         discriminate. 
-      (* SSCase "Existing addresses are well-typed 1". *)
-      * apply ST_diff_key_2; [ simpl; intuition; apply n; congruence | now apply Weakv in STfind ].
-      (*SSCase "Existing addresses are well-typed 2". *)
-      * apply ST_diff_key_2; [ simpl; intuition; apply n; congruence | now apply Weakv in STfind ].
-      (* SSCase "Existing addresses are well-typed 3". *)
-      * apply ST_diff_key_2; [simpl; intuition; apply n; congruence | now apply Weakv ].
-    (* SCase "Heap typeness". *)
-    + apply H_update_heap_fresh; eauto. 
+      SSCase "Existing addresses are well-typed 1".
+        apply ST_diff_key_2; [ simpl; intuition; apply n; congruence |
+                             now apply Weakv in STfind ].
+      SSCase "Existing addresses are well-typed 2".
+        apply ST_diff_key_2; [ simpl; intuition; apply n; congruence |
+                           now apply Weakv in STfind ].
+      SSCase "Existing addresses are well-typed 3".
+         apply ST_diff_key_2; [simpl; intuition; apply n; congruence |
+                             now apply Weakv ].
+    SCase "Heap typeness".
+      apply H_update_heap_fresh; eauto. 
       remember (find_ST (r, allocate_H heap' r) sttyv) as to; symmetry in Heqto.
       destruct to as [ t | ]. 
-      (* SSCase "New address must be fresh, prove by contradiction". *)
-      * inversion_clear TcHeapv as [? ? ? STfind_Hfind ?].  
+      SSCase "New address must be fresh, prove by contradiction".
+        inversion_clear TcHeapv as [? ? ? STfind_Hfind ?].  
         destruct (STfind_Hfind (r, allocate_H heap' r) t Heqto) as [? ex].
         rewrite H0 in ex. discriminate.
-      (* SSCase "Heap typeness is preserved". *)
-      * reflexivity. 
-    (* SCase "Loc is well-typed". *)
-    + simpl in H; inversion H; subst. 
+      SSCase "Heap typeness is preserved".
+        reflexivity. 
+    SCase "Loc is well-typed".
+      simpl in H; inversion H; subst. 
       rewrite subst_rho_tyref. unfold mk_rgn_type. rewrite subst_rho_rgn_const.
       econstructor. apply ST_same_key_1.
       intro.
       eapply TcVal_implies_closed in TcVal_v; eauto.
-  (* Case "get_ref e". *)
-  - edestruct IHD with (hp' := hp')
+  Case "get_ref e".
+    edestruct IHD with (hp' := hp')
                       (v := Loc (Rgn_Const true false s) l) 
                       (stty := stty)
                       (rgns := rgns)
@@ -443,17 +451,17 @@ Proof.
                       (dynamic_eff := aacts)
     as [sttyv [Weakv [TcHeapv TcVal_v]]]; eauto.
     exists sttyv. split; [ | split].
-    (* SCase "HeapTyping extends". *)
-    + apply Weakv.
-    (* SCase "Heap is well typed". *)
-    + apply TcHeapv.
-    (* SCase "Value is well-typed". *) 
-    + inversion_clear TcHeapv as [? ? ? ? HeapTcVal]. eapply HeapTcVal; eauto. 
+    SCase "HeapTyping extends".
+      apply Weakv.
+    SCase "Heap is well typed".
+      apply TcHeapv.
+    SCase "Value is well-typed".
+      inversion_clear TcHeapv as [? ? ? ? HeapTcVal]. eapply HeapTcVal; eauto. 
       inversion TcVal_v; subst; simpl in H; inversion H; subst.
       rewrite subst_rho_tyref in H7. inversion H7. subst.
       assumption.
-  (* Case "set_ref e1 e2". *)
-  - edestruct IHD1 with (hp' := heap')
+  Case "set_ref e1 e2".
+    edestruct IHD1 with (hp' := heap')
                        (v := Loc (Rgn_Const true false s) l) 
                        (stty := stty)
                        (ctxt := ctxt)
@@ -469,58 +477,58 @@ Proof.
                        (static_eff := veff)
       as [sttyv [Weakv [TcHeapv TcVal_v]]]; eauto using ext_stores__env.
     exists sttyv. split; [ | split].
-    (* SCase "HeapTyping extends". *)
-    + eapply weakening_trans; eauto.
-    (* SCase "New heap is well typed". *)
-    + apply H_update_heap_exists with (t:= subst_rho rho t0).   
+    SCase "HeapTyping extends".
+      eapply weakening_trans; eauto.
+    SCase "New heap is well typed".
+      apply H_update_heap_exists with (t:= subst_rho rho t0).   
       { assumption. }
       { apply Weakv. inversion TcVal_a; subst.  
         simpl in H0; inversion H0; subst.
         rewrite subst_rho_tyref in H5. inversion H5. subst.
         assumption. }
       { assumption. }
-    (* SCase "Result value is well-typed". *)
-    + rewrite subst_rho_unit. constructor.
-  (* Case "nat_plus x y". *)
-  - edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
+    SCase "Result value is well-typed".
+      rewrite subst_rho_unit. constructor.
+  Case "nat_plus x y".
+    edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
       eauto using ext_stores__env. 
     exists sttyy. intuition. rewrite subst_rho_natural. constructor.
-  (* Case "nat_minus x y". *)
-  - edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
+  Case "nat_minus x y".
+    edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
       eauto using ext_stores__env.
     exists sttyy. intuition. rewrite subst_rho_natural. constructor.
-  (* Case "nat_times x y". *)
-  - edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
+  Case "nat_times x y".
+    edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
       eauto using ext_stores__env.
     exists sttyy. intuition. rewrite subst_rho_natural. constructor.
-  (* Case "bool_eq x y". *)
-  -  edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
+  Case "bool_eq x y".
+    edestruct IHD1 as [sttyx [Weakx [TcHeapvx TcVal_x]]]; eauto. 
     edestruct IHD2 as [sttyy [Weaky [TcHeapvy TcVal_y]]]; 
       eauto using ext_stores__env.
     exists sttyy. intuition. rewrite subst_rho_boolean. constructor.
-  (* Case "alloc_abs". *)
-  - exists stty. intuition. rewrite subst_rho_effect. constructor.
-  (* Case "read_abs". *)
-  - exists stty. intuition. rewrite subst_rho_effect. constructor.
-  (* Case "write_abs". *)
-  - exists stty. intuition. rewrite subst_rho_effect. constructor.
-  (* Case "read_conc". *)
-  - exists stty. intuition.
+  Case "alloc_abs".
+    exists stty. intuition. rewrite subst_rho_effect. constructor.
+  Case "read_abs".
+    exists stty. intuition. rewrite subst_rho_effect. constructor.
+  Case "write_abs".
+    exists stty. intuition. rewrite subst_rho_effect. constructor.
+  Case "read_conc".
+    exists stty. intuition.
     assert (hp = hp') by (eapply EmptyTracePreservesHeap_1; eauto; reflexivity); now subst.
     rewrite subst_rho_effect. constructor.      
-  (*Case "write_conc". *)
-  - exists stty. intuition.
+  Case "write_conc".
+    exists stty. intuition.
     assert (hp = hp') by (eapply EmptyTracePreservesHeap_1; eauto; reflexivity); now subst.
     rewrite subst_rho_effect. constructor. 
-  (* Case "eff_concat". *)
-  - exists stty. intuition. rewrite subst_rho_effect. constructor.
-  (* Case "eff_top". *)
-  - exists stty. intuition. rewrite subst_rho_effect. constructor.
-  (*Case "eff_empty". *)
-  - exists stty. intuition. rewrite subst_rho_effect. constructor.
+  Case "eff_concat".
+    exists stty. intuition. rewrite subst_rho_effect. constructor.
+  Case "eff_top".
+    exists stty. intuition. rewrite subst_rho_effect. constructor.
+  Case "eff_empty".
+    exists stty. intuition. rewrite subst_rho_effect. constructor.
 Admitted.
 
 

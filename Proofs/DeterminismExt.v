@@ -77,7 +77,12 @@ Proof.
   generalize dependent ctxt.
   generalize dependent static_eff.
   dependent induction HStep; intros;
-  try (solve [repeat constructor; try (eapply IHHStep; reflexivity); try (eapply IHHStep1; reflexivity); try (eapply IHHStep2; reflexivity); try (eapply IHHStep3; reflexivity); try assumption]).
+    try (solve [repeat constructor;
+                try (eapply IHHStep; reflexivity);
+                try (eapply IHHStep1; reflexivity);
+                try (eapply IHHStep2; reflexivity);
+                try (eapply IHHStep3; reflexivity);
+                try assumption]).
   - constructor.  
     + constructor. 
       * inversion HTcExp; subst. eapply IHHStep1; eauto.
@@ -355,7 +360,8 @@ Proof.
   generalize dependent acts2; generalize dependent val2; generalize dependent heap2. 
   generalize dependent heap_b.
   dependent induction Dyn1; 
-  intros heap_b Heq heap2 val2 acts2 Dyn2 stty ctxt rgns ty static HTcHeap HTcRho HTcEnv HTcExp;
+    intros heap_b Heq heap2 val2 acts2 Dyn2 stty ctxt rgns ty static
+      HTcHeap HTcRho HTcEnv HTcExp;
   inversion Dyn2; subst;
   try (solve [intuition]).
   - intuition. rewrite H0 in H8. inversion H8; subst. reflexivity.
@@ -406,7 +412,9 @@ Proof.
     { eapply IHDyn1_3; eauto. 
       - apply update_env; simpl.  
         + eapply ext_stores__env; eauto.  
-          apply update_env; [eassumption | eapply ext_stores__val with (stty:=sttyb); eauto].
+          apply update_env.
+          * eassumption.
+          * eapply ext_stores__val with (stty:=sttyb); eauto.
         + eapply ext_stores__val with (stty:=sttya); eauto. }
     destruct RH3 as [h_eq_3 [v_eq_3 a_eq_3]]; subst.
     auto.
@@ -434,8 +442,9 @@ Proof.
      inversion HSubst as [[H_fold A]]; clear A.
      
      
-     assert ( RH1 : fheap ≡@{Heap} fheap0 /\  Cls (env', rho', Lambda x eb) =
-                                            Cls (env'0, rho'0, Lambda x0 eb0) /\ facts = facts0 ).
+     assert ( RH1 : fheap ≡@{Heap} fheap0 /\
+                      Cls (env', rho', Lambda x eb) = Cls (env'0, rho'0, Lambda x0 eb0) /\
+                      facts = facts0 ).
      eapply IHDyn1_1; eauto.
      destruct RH1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1. subst.
      rewrite H in H9. inversion H9; subst.
@@ -525,15 +534,22 @@ Proof.
       by (eapply eff_sound; eauto; eapply EqualHeaps; eauto).
  
     assert (ReadOnlyPhi acts_eff1 ) 
-      by (eapply ReadOnlyStaticImpliesReadOnlyPhi with(eps:=fold_subst_eps rho static_ee); eauto).
+      by (eapply ReadOnlyStaticImpliesReadOnlyPhi
+           with (eps:=fold_subst_eps rho static_ee); eauto).
     assert (ReadOnlyPhi acts_eff2 ) 
-      by (eapply ReadOnlyStaticImpliesReadOnlyPhi with(eps:=fold_subst_eps rho static_ee0); eauto).
+      by (eapply ReadOnlyStaticImpliesReadOnlyPhi
+           with (eps:=fold_subst_eps rho static_ee0); eauto).
     assert (ReadOnlyPhi acts_eff0 ) 
-      by (eapply ReadOnlyStaticImpliesReadOnlyPhi with(eps:=fold_subst_eps rho static_ee); eauto).
+      by (eapply ReadOnlyStaticImpliesReadOnlyPhi
+           with (eps:=fold_subst_eps rho static_ee); eauto).
     assert (ReadOnlyPhi acts_eff3 ) 
-      by (eapply ReadOnlyStaticImpliesReadOnlyPhi with(eps:=fold_subst_eps rho static_ee0); eauto).
+      by (eapply ReadOnlyStaticImpliesReadOnlyPhi
+           with (eps:=fold_subst_eps rho static_ee0); eauto).
 
-    assert (HR1 : heap_a ≡@{Heap} heap_b /\ Eff theta1 = Eff theta0 /\ acts_eff1 = acts_eff0).   
+    assert (HR1 : heap_a ≡@{Heap} heap_b /\
+                    Eff theta1 = Eff theta0 /\
+                    acts_eff1 = acts_eff0).
+    
     { eapply IHDyn1_1; eauto.  
       - assert (heap_a =heap_eff1) by
           ( destruct H as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
@@ -544,7 +560,10 @@ Proof.
             
     destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.  subst.
     
-    assert (HR2 : heap_eff2 ≡@{Heap} heap_eff3 /\ Eff theta2 = Eff theta3 /\ acts_eff2 = acts_eff3). 
+    assert (HR2 : heap_eff2 ≡@{Heap} heap_eff3 /\
+                    Eff theta2 = Eff theta3 /\
+                    acts_eff2 = acts_eff3).
+    
     eapply IHDyn1_2; eauto.    
     destruct HR2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
     
@@ -573,14 +592,19 @@ Proof.
     } inversion HExp_mu2. 
     
     intuition. 
-    eapply unique_heap_new with  (heapa := heap_a) (heapb := heap_b) (theta1:=theta0) (theta2:=theta3); eauto.
+    eapply unique_heap_new with (heapa := heap_a)
+                                (heapb := heap_b)
+                                (theta1:=theta0)
+                                (theta2:=theta3); eauto.
     * assert (Det_Trace (Phi_Par acts_mu0 acts_mu3)).
       subst. eapply Det_trace_from_theta; eauto; 
-      [ eapply Dynamic_DetTrace in Dyn1_3 | eapply Dynamic_DetTrace in Dyn1_4]; eassumption.  
+        [ eapply Dynamic_DetTrace in Dyn1_3 |
+          eapply Dynamic_DetTrace in Dyn1_4]; eassumption.  
       now inversion H78.
     * assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (subst; eapply Det_trace_from_theta; eauto; 
-            [ eapply Dynamic_DetTrace in Dyn1_3 | eapply Dynamic_DetTrace in Dyn1_4]; eassumption).
+            [ eapply Dynamic_DetTrace in Dyn1_3 |
+              eapply Dynamic_DetTrace in Dyn1_4]; eassumption).
       now inversion H78.
     * rewrite <- H80. rewrite <- H81. eassumption.
     * rewrite <- H80. rewrite <- H81. reflexivity.
