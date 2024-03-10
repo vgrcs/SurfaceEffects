@@ -63,12 +63,13 @@ Definition Merge_Function (v1 v2 : option HeapVal) : option HeapVal :=
   | (None, Some v) => Some v
   | (Some v, None) => Some v
   | (Some v1, Some v2) =>
-      if (Nat.lt_dec (timestamp v1) (timestamp v1)) then Some v2 else Some v1
+      if (Nat.lt_dec (timestamp v1) (timestamp v2)) then Some v2 else Some v1
 end.
 
 Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap
   := merge Merge_Function heap1 heap2.
 
+  
 
 Reserved Notation "phi_heap '===>' phi'_heap'" (at level 50, left associativity).
 Inductive Phi_Heap_Step : (Phi * Heap) -> (Phi * Heap) -> Prop :=
