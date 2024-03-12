@@ -13,12 +13,10 @@ Axiom Phi_Par_Nil_R : forall phi, Phi_Par phi Phi_Nil = phi.
 Axiom Phi_Par_Nil_L : forall phi, Phi_Par Phi_Nil phi = phi.
 
 (* ++++++++++++++++++++++++++++++++++++++++*)
-Axiom TcValExtended:
-  forall  stty1 stty2 v1 v2 rho ty1 ty2,
-    TcVal (stty1, v1, subst_rho rho ty1) ->
+Axiom TcValExtended_Union:
+  forall stty1 stty2 v2 ty2 rho,
     TcVal (stty2, v2, subst_rho rho ty2) ->
-    TcVal (Functional_Map_Union_Sigma stty1 stty2,
-        Pair (v1, v2), subst_rho rho (Ty_Pair ty1 ty2)).
+    TcVal (Functional_Map_Union_Sigma stty1 stty2, v2, subst_rho rho ty2).
 
 Axiom TcHeap_Extended:
   forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 

@@ -15,6 +15,7 @@ Require Import Definitions.GHeap.
 Require Import Proofs.Determinism.
 Require Import Definitions.Axioms.
 Require Import Definitions.GTypes.
+Require Import Definitions.DynamicActions.
 Require Import Proofs.EffectFacts.
 Require Import Proofs.RegionFacts.
 Require Import Proofs.TypeFacts.
@@ -33,6 +34,97 @@ Module TypeSoundness.
   Import TypeFacts.
 
 Module RMapOrdProp := FMapFacts.OrdProperties R.
+
+Lemma ST_find_Ext_1:
+  forall k stty stty' x,
+    find_ST k stty = Some x ->
+    find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
+Proof.
+  intros.
+  unfold find_ST, Functional_Map_Union_Sigma in *.
+  replace (merge f stty stty' !! k) with (diag_None f (stty !! k) (stty' !! k)) by
+    (rewrite lookup_merge; reflexivity).
+  destruct (stty !! k).
+  - inversion H; subst. unfold f; simpl.
+    destruct (stty' !! k); reflexivity.
+  - inversion H.
+Qed.
+
+Lemma ST_find_Ext_2:
+  forall k sttym sttya t,
+    find_ST k (Functional_Map_Union_Sigma sttym sttya) = Some t ->
+    find_ST k sttym = Some t.
+Proof.
+  intros.
+  unfold find_ST, Functional_Map_Union_Sigma in *.
+  assert (H1 :diag_None f (sttym !! k) (sttya !! k) = Some t) by
+    (replace (diag_None f (sttym !! k) (sttya !! k))
+      with (merge f sttym sttya !! k)
+      by (rewrite lookup_merge; reflexivity); assumption).
+  clear H.
+  destruct (sttym !! k). 
+  - destruct (sttya !! k).
+    + inversion H1; subst. reflexivity.
+    + inversion H1; subst. reflexivity. 
+  - destruct (sttya !! k); inversion H1.
+Qed.    
+
+Lemma ST_find_Ext_3:
+  forall k stty stty' x,
+    find_ST k stty = Some x <->
+      find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
+Proof.
+  split; [apply ST_find_Ext_1 | apply ST_find_Ext_2].
+Qed.
+  
+
+
+Lemma TcHeap_Extended:
+  forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
+  	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2,
+    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
+    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
+    (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
+    TcHeap (heap_mu1, sttym) ->
+    TcHeap (heap_mu2, sttya) ->
+    TcHeap (hp', Functional_Map_Union_Sigma sttym sttya).
+Proof.
+  intros hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
+  	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2 Ha Hb Hc HTcHeap1 HTcHeap2.
+  inversion HTcHeap1 as [? ? TcHeap_STFind_1 TcHeap_HFind_1 TcHeap_tcVal_1]; subst;
+    inversion HTcHeap2 as [? ? TcHeap_STFind_2 TcHeap_HFind_2 TcHeap_tcVal_2]; subst;
+    constructor.
+  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [Hnew ?]. 
+    edestruct H; eauto.
+    + admit.
+    + admit.
+  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [Hnew ?].
+    edestruct H; eauto.
+    + admit.
+    + admit.
+  - admit.
+Admitted.
+
+
+Lemma TcValExtended:
+  forall  stty1 stty2 v1 v2 rho ty1 ty2,
+    TcVal (stty1, v1, subst_rho rho ty1) ->
+    TcVal (stty2, v2, subst_rho rho ty2) ->
+    TcVal (Functional_Map_Union_Sigma stty1 stty2,
+        Pair (v1, v2), subst_rho rho (Ty_Pair ty1 ty2)).
+Proof.
+  intros.
+  replace (subst_rho rho (Ty_Pair ty1 ty2))
+    with (Ty_Pair (subst_rho rho ty1) (subst_rho rho ty2))
+    by (now rewrite subst_rho_pair).
+  econstructor. 
+  - apply ext_stores__val with (stty:=stty1).
+    intros.
+    + now rewrite Functional_Map_Union_find.
+    + assumption.
+  - apply TcValExtended_Union.
+    assumption.
+Admitted.
 
 
 Lemma subst_rho_open_close_rgn :
@@ -529,46 +621,6 @@ Proof.
     exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_empty".
     exists stty. intuition. rewrite subst_rho_effect. constructor.
-Admitted.
-
-
-(*
-Lemma Functional_Map_Union_find_2:
-  forall sttya sttyb (k : SigmaKey),
-    k ∉ dom sttya →
-    find_ST k (Functional_Map_Union_Sigma sttya sttyb) = find_ST k sttyb.
-Proof.
-  intros.  unfold find_ST, Functional_Map_Union_Sigma.
-  assert (merge f sttya sttyb !! k = diag_None f (sttya !! k) (sttyb !! k))
-    by (rewrite lookup_merge; reflexivity).
-  replace (merge f sttya sttyb !! k) with (diag_None f (sttya !! k) (sttyb !! k)).
-  apply not_elem_of_dom_1 in H.
-  destruct (sttyb !! k); destruct (sttya !! k). 
-  - simpl in *. inversion H0.
-Admitted.
-
-  
-
-Lemma TcValExtended:
-  forall  stty1 stty2 v1 v2 rho ty1 ty2,
-    stty1 ##ₘ stty2 ->
-    TcVal (stty1, v1, subst_rho rho ty1) ->
-    TcVal (stty2, v2, subst_rho rho ty2) ->
-    TcVal (Functional_Map_Union_Sigma stty1 stty2,
-        Pair (v1, v2), subst_rho rho (Ty_Pair ty1 ty2)).
-Proof.
-  intros.
-  replace (subst_rho rho (Ty_Pair ty1 ty2))
-    with (Ty_Pair (subst_rho rho ty1) (subst_rho rho ty2))
-    by (now rewrite subst_rho_pair).
-  econstructor.
-  - apply ext_stores__val with (stty:=stty1).
-    intros.
-    + now rewrite Functional_Map_Union_find.
-    + assumption.
-  - apply ext_stores__val with (stty:=stty2).   
-Admitted.
-*)
-  
+Admitted.  
 
 End TypeSoundness.
