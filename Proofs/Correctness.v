@@ -36,6 +36,20 @@ Import ComputedActions.
 Import StaticActions.
 Import Semantics.
 
+
+Lemma EvaluationEffectFromEffApp:
+ forall h'' env rho ef env' rho' f x ec' ee' ea aheap v eff facts1 aacts1 bacts1,
+   (h'', env, rho, Eff_App ef ea)
+     ⇓ (h'', eff, Phi_Seq (Phi_Seq facts1 aacts1) bacts1) ->
+   (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee')
+     ⇓ (h'', eff, bacts1).
+Proof.
+  intros.
+  inversion H using MuAppAndEffAppShareArgument.  
+  intros. econstructor; eauto.  
+Qed. 
+
+
 Lemma DeterminismReadOnlyCond:
   forall h env rho e b1 b2 h' cheap cacts,
     (h, env, rho, e) ⇓ (h', Bit b1, Phi_Nil) ->

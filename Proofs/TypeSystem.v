@@ -69,7 +69,7 @@ Proof.
   - destruct (sttya !! k); inversion H1.
 Qed.    
 
-Lemma ST_find_Ext_3:
+Lemma ST_find_Ext_Left:
   forall k stty stty' x,
     find_ST k stty = Some x <->
       find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
@@ -94,17 +94,22 @@ Proof.
   inversion HTcHeap1 as [? ? TcHeap_STFind_1 TcHeap_HFind_1 TcHeap_tcVal_1]; subst;
     inversion HTcHeap2 as [? ? TcHeap_STFind_2 TcHeap_HFind_2 TcHeap_tcVal_2]; subst;
     constructor.
-  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [Hnew ?]. 
-    edestruct H; eauto.
+  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
+    edestruct HSome; eauto.
     + admit.
     + admit.
-  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [Hnew ?].
-    edestruct H; eauto.
+  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
+    edestruct HSome; eauto.
     + admit.
     + admit.
   - admit.
 Admitted.
 
+Lemma ST_find_Ext_Right:
+  forall (stty1 stty2 : Sigma) (k : SigmaKey) (t : Tau),
+    find_ST k stty2 = Some t ->
+    find_ST k (Functional_Map_Union_Sigma stty1 stty2) = Some t.
+  Admitted.
 
 Lemma TcValExtended:
   forall  stty1 stty2 v1 v2 rho ty1 ty2,
@@ -122,8 +127,31 @@ Proof.
     intros.
     + now rewrite Functional_Map_Union_find.
     + assumption.
-  - apply TcValExtended_Union.
-    assumption.
+  - generalize dependent v1.
+    generalize dependent ty1.
+    generalize dependent stty1.
+    dependent induction H0; rewrite <- x; intros.
+    + constructor.
+    + constructor.
+    + constructor; auto. 
+      apply ST_find_Ext_Right. assumption.
+    + eapply TC_Cls; eauto.
+      apply ext_stores__env with (stty:=stty2); eauto.
+      apply ST_find_Ext_Right. 
+    + constructor.  
+    + constructor.
+      * admit.
+      * admit.
+    + constructor.    
+Admitted.
+
+
+Lemma subst_rho_eps_aux_1 :
+ forall rho rho' n x e e1 sa sa',
+   lc_type_eps e ->
+   lc_type_sa sa' ->
+   (fold_subst_eps rho e1) = (fold_subst_eps rho' (closing_rgn_in_eps n x e)) ->
+   fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa n x sa') /\ e1 sa /\ e sa'.
 Admitted.
 
 
@@ -203,7 +231,8 @@ Proof.
     rewrite <- H5. rewrite <- H4. rewrite <- H3.
     inversion Hcl1. destruct (H0 sa'').
 
-    assert (fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa n x sa'') /\ e1 sa /\ e sa'') 
+    assert (fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa n x sa'')
+            /\ e1 sa /\ e sa'') 
       by (eapply subst_rho_eps_aux_1; eauto).
 
     assert(H' : fold_subst_sa rho' (opening_rgn_in_sa n (Rgn_Const true true v') 

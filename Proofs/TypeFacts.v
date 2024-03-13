@@ -13,10 +13,6 @@ Require Import Proofs.EffectFacts.
 Require Import Proofs.LocallyNameless.
 Require Import Definitions.GHeap.
 
-(*Module STMapP := FMapFacts.Facts ST.
-Module STRaw := ST.Raw.
-Module STProofs := ST.Raw.Proofs.*)
-
 Definition find_type_ext_stores_def  := 
    forall stty stty' l (t' : Tau),
       find_ST l stty = Some t' ->
@@ -355,10 +351,11 @@ Proof.
       assumption.
 Qed.
 
-Lemma not_set_elem_not_in_rho: forall rho rgns x,
-                                 TcRho (rho, rgns) ->
-                                 not_set_elem rgns x ->
-                                 ~ R.In (elt:=RgnId) x rho.
+Lemma not_set_elem_not_in_rho:
+  forall rho rgns x,
+    TcRho (rho, rgns) ->
+    not_set_elem rgns x ->
+    ~R.In (elt:=RgnId) x rho.
 Proof.
   intros rho rgns  x HRho H .
   inversion_clear HRho as [rho' rgns' HRgn' HVal''].

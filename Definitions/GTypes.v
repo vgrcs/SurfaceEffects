@@ -7,7 +7,7 @@ Require Import Definitions.StaticActions.
 Require Import Definitions.Values.
 Require Import Definitions.Expressions.
 
-(* substitute for type *)
+
 Inductive Tau :=
   | Ty_Natural : Tau
   | Ty_Boolean : Tau
