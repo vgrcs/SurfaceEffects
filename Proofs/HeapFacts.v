@@ -88,7 +88,7 @@ Proof.
 Qed.
   
 
-Lemma H_same_domain:
+Lemma H_Same_Domain:
   forall stty heap, 
     TcHeap (heap, stty) ->
     (forall k v t,
@@ -162,8 +162,8 @@ Lemma H_update_heap_fresh:
 Proof. 
   intros stty heap Hhp l v t Htc STfind.
   inversion Hhp as [? ? TcHeap_STFind TcHeap_HFind TcHeap_tcVal]; subst; constructor.
-  - apply H_same_domain in Hhp. destruct Hhp as [Hnew ?]. edestruct Hnew; eauto.
-  - apply H_same_domain in Hhp. destruct Hhp as [Hnew ?]. edestruct Hnew; eauto.
+  - apply H_Same_Domain in Hhp. destruct Hhp as [Hnew ?]. edestruct Hnew; eauto.
+  - apply H_Same_Domain in Hhp. destruct Hhp as [Hnew ?]. edestruct Hnew; eauto.
   - intros k v0 t0 Hfind' STfind'. destruct l as [r l]; destruct k as [r0 l0]. 
     destruct (eq_nat_dec l l0);  destruct (eq_nat_dec r r0); subst;
     try (eapply ST_diff_keys_1 in STfind'; eapply H_diff_keys_1 in Hfind'; eauto;
@@ -194,8 +194,8 @@ Lemma H_update_heap_exists:
 Proof. 
   intros stty heap Hhp l v t Htc STfind.
   inversion Hhp as [? ? TcHeap_STFind TcHeap_HFind TcHeap_tcVal]; subst; constructor.
-  - apply H_same_domain in Hhp. destruct Hhp as [? Hupdate]. edestruct Hupdate; eauto.
-  - apply H_same_domain in Hhp. destruct Hhp as [? Hupdate]. edestruct Hupdate; eauto.
+  - apply H_Same_Domain in Hhp. destruct Hhp as [? Hupdate]. edestruct Hupdate; eauto.
+  - apply H_Same_Domain in Hhp. destruct Hhp as [? Hupdate]. edestruct Hupdate; eauto.
   - intros k0 v0 t0 Hfind' STfind'. destruct l as [r l]; destruct k0 as [r0 l0]. 
     destruct (eq_nat_dec l l0);  destruct (eq_nat_dec r r0); subst;
     try (eapply H_diff_keys_1 in Hfind'; eauto; simpl; intuition; apply n; congruence).

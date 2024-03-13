@@ -43,16 +43,14 @@ Definition find_ST (k: SigmaKey) (m: Sigma) : option Tau := m !! k.
 Definition update_ST (k: SigmaKey) (t: Tau) (m: Sigma) :=  <[ k := t ]>  m.
 
 
-Definition f (v1 v2 : option Tau) : option Tau :=
+Definition Merge_ST (v1 v2 : option Tau) : option Tau :=
   match (v1, v2) with
-  | (None, None) => None
-  | (None, Some v) => None
-  | (Some v, None) => Some v
-  | (Some v1, _) => Some v1
+  | (None, _) => None
+  | (Some v, _) => Some v
 end.
 
 Definition Functional_Map_Union_Sigma (stty1 stty2 : Sigma) : Sigma
-  := merge f stty1 stty2.
+  := merge Merge_ST stty1 stty2.
 
 
 Definition find_T (k: V_Key) (m: Gamma) : option Tau := E.find k m.

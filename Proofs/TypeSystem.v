@@ -42,10 +42,11 @@ Lemma ST_find_Ext_1:
 Proof.
   intros.
   unfold find_ST, Functional_Map_Union_Sigma in *.
-  replace (merge f stty stty' !! k) with (diag_None f (stty !! k) (stty' !! k)) by
+  replace (merge Merge_ST stty stty' !! k)
+    with (diag_None Merge_ST (stty !! k) (stty' !! k)) by
     (rewrite lookup_merge; reflexivity).
   destruct (stty !! k).
-  - inversion H; subst. unfold f; simpl.
+  - inversion H; subst. unfold Merge_ST; simpl.
     destruct (stty' !! k); reflexivity.
   - inversion H.
 Qed.
@@ -57,9 +58,9 @@ Lemma ST_find_Ext_2:
 Proof.
   intros.
   unfold find_ST, Functional_Map_Union_Sigma in *.
-  assert (H1 :diag_None f (sttym !! k) (sttya !! k) = Some t) by
-    (replace (diag_None f (sttym !! k) (sttya !! k))
-      with (merge f sttym sttya !! k)
+  assert (H1: diag_None Merge_ST (sttym !! k) (sttya !! k) = Some t) by
+    (replace (diag_None Merge_ST (sttym !! k) (sttya !! k))
+      with (merge Merge_ST sttym sttya !! k)
       by (rewrite lookup_merge; reflexivity); assumption).
   clear H.
   destruct (sttym !! k). 
@@ -69,7 +70,7 @@ Proof.
   - destruct (sttya !! k); inversion H1.
 Qed.    
 
-Lemma ST_find_Ext_Left:
+Lemma ST_find_Extend_Left:
   forall k stty stty' x,
     find_ST k stty = Some x <->
       find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
@@ -94,11 +95,11 @@ Proof.
   inversion HTcHeap1 as [? ? TcHeap_STFind_1 TcHeap_HFind_1 TcHeap_tcVal_1]; subst;
     inversion HTcHeap2 as [? ? TcHeap_STFind_2 TcHeap_HFind_2 TcHeap_tcVal_2]; subst;
     constructor.
-  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
+  - apply H_Same_Domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
     edestruct HSome; eauto.
     + admit.
     + admit.
-  - apply H_same_domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
+  - apply H_Same_Domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
     edestruct HSome; eauto.
     + admit.
     + admit.

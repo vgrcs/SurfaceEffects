@@ -756,6 +756,7 @@ Proof.
     intro. destruct H; contradict H; [eapply IHHTcVal1 | eapply IHHTcVal2]; eauto.
 Qed.
 
+
 Lemma subst_rho_fresh_var :
   forall rho rgns x stty v t r,
     TcRho (rho, rgns) ->
@@ -802,7 +803,7 @@ Lemma TcRhoIncludedNoFreeVarsTyRef:
   forall rho rgns r0 t x,
     TcRho (rho, rgns) ->
     included (set_union (free_rgn_vars_in_rgn r0) (frv t)) rgns ->
-    ~ free_rgn_vars_in_rgn (fold_subst_rgn rho r0) x.
+    ~free_rgn_vars_in_rgn (fold_subst_rgn rho r0) x.
 Proof.
   intros rho rgns r0 t x HRho HInc H.
   generalize dependent r0.
@@ -941,10 +942,11 @@ Lemma Functional_Map_Union_find:
     find_ST k (Functional_Map_Union_Sigma sttya sttyb) = find_ST k sttya.
 Proof.
   intros.  unfold find_ST, Functional_Map_Union_Sigma.
-  assert (merge f sttya sttyb !! k = diag_None f (sttya !! k) (sttyb !! k))
+  assert (merge Merge_ST sttya sttyb !! k = diag_None Merge_ST (sttya !! k) (sttyb !! k))
     by (rewrite lookup_merge; reflexivity).
-  replace (merge f sttya sttyb !! k) with (diag_None f (sttya !! k) (sttyb !! k)).
-  destruct (sttyb !! k); destruct (sttya !! k); unfold f; simpl; reflexivity.
+  replace (merge Merge_ST sttya sttyb !! k)
+    with (diag_None Merge_ST (sttya !! k) (sttyb !! k)).
+  destruct (sttyb !! k); destruct (sttya !! k); unfold Merge_ST; simpl; reflexivity.
 Qed.
 
 Lemma StoreTyping_Extended:
