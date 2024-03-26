@@ -405,28 +405,24 @@ Proof.
     exists stty; (split; [| split]; auto).
     eapply ty_sound_var; eassumption. 
   Case "mu_abs".
-    exists stty; (split; [| split]; auto).
-    eapply ty_sound_closure; try (solve [eassumption]). auto. 
-    econstructor. 
-    admit.
+    exists stty; (split; [| split]; auto). 
+    eapply ty_sound_closure; try (solve [eassumption]). auto.
   Case "rgn_abs".
-    exists stty;  (split; [| split]; auto). 
+    exists stty;  (split; [| split]; auto).  
     eapply ty_sound_region_closure; try (solve [eassumption]).
-    econstructor.
-    admit.
   Case "mu_app".
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  
     eapply ext_stores__env; eauto.  
     inversion TcVal_mu as [ | | | ? ? ? ? ? ? ? ?  TcRho_rho' TcEnv_env' TcExp_abs | | |] ; subst.      
     inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst.  
-    rewrite <- H6 in TcVal_mu. 
+    rewrite <- H6 in TcVal_mu.   
     do 2 rewrite subst_rho_arrow in H6. inversion H6.
     assert (SubstEq1: subst_rho rho' tyx = subst_rho rho tya) by assumption. 
     assert (SubstEq2: subst_rho rho' tyc = subst_rho rho t) by assumption.
     rewrite <- SubstEq1 in TcVal_arg.
     unfold update_rec_E, update_rec_T in *. 
-    edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
+    edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto. simpl in *.
     SCase "TcEnv".
       apply update_env. apply update_env. eapply ext_stores__env; eauto.  
       eapply ext_stores__val; eauto. eassumption.
@@ -651,6 +647,6 @@ Proof.
     exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_empty".
     exists stty. intuition. rewrite subst_rho_effect. constructor.
-Admitted.  
+Qed.
 
 End TypeSoundness.

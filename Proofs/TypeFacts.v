@@ -534,21 +534,21 @@ Proof.
     intuition; eapply HFrv; eauto. contradict H0; apply NotFreeInEmptyEps.
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv tyc) rgns /\ included (free_rgn_vars_in_eps effc) rgns).
-    { eapply IHHExp1; eauto. 
-      simpl in H0. 
+    { eapply IHHExp1; eauto.  
+      simpl in H1. 
       assert (H': included (frv tyx) rgns) 
-        by  (apply IncludedUnion_Name_1 in H0; destruct H0; assumption). 
+        by  (apply IncludedUnion_Name_1 in H1; destruct H1; assumption). 
       apply ExtendedTcInv_2; eauto. }
      
     { assert (H'' : included (frv Ty_Effect) rgns /\ 
                     included (free_rgn_vars_in_eps effe) rgns).
       eapply IHHExp2; eauto.
-      - simpl in H0. 
+      - simpl in H1. 
         assert (H''': included (frv tyx) rgns) 
-          by  (apply IncludedUnion_Name_1 in H0; destruct H0; assumption).  
+          by  (apply IncludedUnion_Name_1 in H1; destruct H1; assumption).  
         apply ExtendedTcInv_2; eauto. 
       - split; auto.
-        intro. intro. contradict H1. apply NotFreeInEmptyEps. }
+        intro. intro. contradict H2. apply NotFreeInEmptyEps. }
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv tyr) (set_union rgns (singleton_set x)) /\ 
                  included (free_rgn_vars_in_eps effr) (set_union rgns (singleton_set x))).
@@ -559,10 +559,10 @@ Proof.
     split; simpl.
     intuition.
     + unfold included, Included in *.
-      destruct H5; unfold In in *.
+      destruct H6; unfold In in *.
       * eapply RegionAbsFrv_1; eauto.
       * eapply RegionAbsFrv_3; eauto.
-    + intros. contradict H3. apply NotFreeInEmptyEps.
+    + intros. contradict H4. apply NotFreeInEmptyEps.
   - assert (H' : included (frv (Ty_Arrow tya effc t effe Ty_Effect)) rgns /\ 
                  included (free_rgn_vars_in_eps efff) rgns) by (eapply IHHExp1; eauto).
     assert (H'' : included (frv tya) rgns /\ 

@@ -358,8 +358,9 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
     (forall rho,
         (BackTriangle
            (update_rec_T (f, Ty_Arrow tyx effc tyc effe Ty_Effect) (x, tyx) ctxt,
-             rgns, rho, ec, ee))) ->
+             rgns, rho, ec, ee))) ->    
     (* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*)
+    TcInc (ctxt, rgns) ->
     included (frv (Ty_Arrow tyx effc tyc effe Ty_Effect)) rgns ->
     (* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*)
     TcExp (update_rec_T (f, Ty_Arrow tyx effc tyc effe Ty_Effect) (x, tyx) ctxt,
@@ -374,6 +375,7 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
     not_set_elem rgns x ->
     lc_type tyr ->
     lc_type_eps effr ->
+    TcInc (ctxt, rgns) ->
     (forall rho,
         BackTriangle (ctxt, set_union rgns (singleton_set x), rho, er, Empty)) ->
     TcExp (ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->
