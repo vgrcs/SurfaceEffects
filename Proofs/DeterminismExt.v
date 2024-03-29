@@ -812,25 +812,21 @@ Proof.
 Qed.
  
 Lemma EmptyTcEnv :
-    TcEnv (∅, R.empty RgnId, E.Raw.empty Val, E.empty Tau).
+    TcEnv (∅, R.empty RgnId, ∅, ∅).
 Proof.
-  econstructor.
-  - intuition.
-  - intros. inversion H.
-  - intros. inversion H.
-  - intros. inversion H.
+  econstructor; intros; inversion H.
 Qed.
 
 Theorem Determinism : 
   forall exp heap1 heap2 val1 val2 acts1 acts2,
-    (∅, E.Raw.empty Val, R.empty RgnId, exp) ⇓ (heap1, val1, acts1) ->
-    (∅, E.Raw.empty Val, R.empty RgnId, exp) ⇓ (heap2, val2, acts2) ->
+    (∅, ∅, R.empty RgnId, exp) ⇓ (heap1, val1, acts1) ->
+    (∅, ∅, R.empty RgnId, exp) ⇓ (heap2, val2, acts2) ->
     forall ty eff,
-      TcExp (E.empty Tau, Empty_set VarId, exp, ty, eff) ->
+      TcExp (∅, Empty_set VarId, exp, ty, eff) ->
        heap1 ≡@{Heap} heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
   intros.
-  eapply DynamicDeterminism_ext with (ctxt:=E.empty Tau); eauto.
+  eapply DynamicDeterminism_ext with (ctxt:=∅); eauto.
   - apply TcHeapEmpty.
     + reflexivity.
     + econstructor.
@@ -844,8 +840,8 @@ Lemma Determinism_new:
     TcVal (stty, v1, ty) ->
     TcVal(stty, v2, ty) ->
     rho = R.empty nat ->
-    (∅ , Raw.Leaf Val, rho, e) ⇓ (h1, v1, phi_1) ->
-    (∅, Raw.Leaf Val, rho, e) ⇓ (h2, v2, phi_2) ->
+    (∅, ∅, rho, e) ⇓ (h1, v1, phi_1) ->
+    (∅, ∅, rho, e) ⇓ (h2, v2, phi_2) ->
     h1 ≡@{Heap} h2 /\ v1 = v2 /\ phi_1 = phi_2.
 Proof.
   intros.

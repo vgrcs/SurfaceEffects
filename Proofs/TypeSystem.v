@@ -318,7 +318,7 @@ Lemma ty_sound_var :
   TcVal (stty, v, subst_rho rho t).
 Proof.
   intros x v stty rho env ctxt t HTcEnv FindEnv FindCtxt. (* Hclosed. *)
-  inversion_clear HTcEnv as [? ? ? ? HBst HFwd HBack HTc].
+  inversion_clear HTcEnv as [? ? ?  HBst HFwd HBack HTc].
   destruct (HFwd x v FindEnv) as [y FindEnv']. 
   rewrite FindEnv' in FindCtxt. inversion FindCtxt; subst. 
   eapply HTc; [eexact FindEnv | eexact FindEnv' ]. (*| assumption]. *)
@@ -534,13 +534,13 @@ Proof.
         assert (C : None = Some x) by (rewrite <- F; rewrite <- H0; reflexivity).
         discriminate. 
       SSCase "Existing addresses are well-typed 1".
-        apply ST_diff_key_2; [ simpl; intuition; apply n; congruence |
+        apply G_diff_keys_2; [ simpl; intuition; apply n; congruence |
                              now apply Weakv in STfind ].
       SSCase "Existing addresses are well-typed 2".
-        apply ST_diff_key_2; [ simpl; intuition; apply n; congruence |
+        apply G_diff_keys_2; [ simpl; intuition; apply n; congruence |
                            now apply Weakv in STfind ].
       SSCase "Existing addresses are well-typed 3".
-         apply ST_diff_key_2; [simpl; intuition; apply n; congruence |
+         apply G_diff_keys_2; [simpl; intuition; apply n; congruence |
                              now apply Weakv ].
     SCase "Heap typeness".
       apply H_update_heap_fresh; eauto. 
@@ -555,7 +555,7 @@ Proof.
     SCase "Loc is well-typed".
       simpl in H; inversion H; subst. 
       rewrite subst_rho_tyref. unfold mk_rgn_type. rewrite subst_rho_rgn_const.
-      econstructor. apply ST_same_key_1.
+      econstructor. apply lookup_insert.
       intro.
       eapply TcVal_implies_closed in TcVal_v; eauto.
   Case "get_ref e".

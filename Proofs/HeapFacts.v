@@ -86,7 +86,7 @@ Proof.
   - assumption.
   - contradict Hc. reflexivity.
 Qed.
-  
+
 
 Lemma H_Same_Domain:
   forall stty heap, 
@@ -108,27 +108,27 @@ Lemma H_Same_Domain:
           find_ST k0 stty = Some t0 ->
           exists v0 : Val, find_H k0 (update_H (k, v) heap) = Some v0)).
 Proof.
-  intros stty heap Hhp;
-  inversion_clear Hhp as [? ? TcHeap_STFind TcHeap_HFind TcHeap_tcVal]; split.
-  - intros k v t Hnone; split.
+  intros stty heap Hhp.
+  inversion_clear Hhp as [? ? TcHeap_STFind TcHeap_HFind TcHeap_tcVal]; split. 
+  - intros k v t Hnone; split. 
     + intros k0 v0 Hfind'.
       destruct k0 as [r0 l0]; destruct k as [r l];
         destruct (eq_nat_dec l l0); destruct (eq_nat_dec r r0); subst;
-        try (apply H_diff_keys_1 in Hfind';
+        try (apply G_diff_keys_1 in Hfind';
              [ destruct (TcHeap_STFind (r0, l0) v0 Hfind') as [t0 STfind'];
-               exists t0; apply ST_diff_key_2;
+               exists t0; apply G_diff_keys_2;
                [contradict n; inversion n; reflexivity | assumption] |
                contradict n; inversion n; reflexivity ]).
-      * exists t. apply ST_same_key_1.
+      *  exists t. apply lookup_insert.  
     + intros k0 t0 STfind'; 
       destruct k0 as [r0 l0];
         destruct k as [r l];
         destruct (eq_nat_dec l l0);
         destruct (eq_nat_dec r r0); subst;
-        try ( apply ST_diff_keys_1 in STfind';
+        try ( apply G_diff_keys_1 in STfind';
             [ destruct (TcHeap_HFind (r0, l0) t0 STfind') as [v0 Hfind'];
               exists v0;
-              apply H_diff_keys_2 | ]; simpl; intuition; apply n; now inversion H).
+              apply G_diff_keys_2 | ]; simpl; intuition; apply n; now inversion H).
       exists v. unfold find_H, update_H. apply H_same_key_1.
   - intros k v t STfind; split.
     + intros k0 v0 Hfind'.
@@ -166,19 +166,19 @@ Proof.
   - apply H_Same_Domain in Hhp. destruct Hhp as [Hnew ?]. edestruct Hnew; eauto.
   - intros k v0 t0 Hfind' STfind'. destruct l as [r l]; destruct k as [r0 l0]. 
     destruct (eq_nat_dec l l0);  destruct (eq_nat_dec r r0); subst;
-    try (eapply ST_diff_keys_1 in STfind'; eapply H_diff_keys_1 in Hfind'; eauto;
+    try (eapply G_diff_keys_1 in STfind'; eapply G_diff_keys_1 in Hfind'; eauto;
          try (simpl; intuition; apply n; congruence); 
          apply ext_stores__val with (stty:=stty);
          [intros k1 t1 STfind''; destruct k1 as [r1 l1]; 
            destruct (eq_nat_dec l0 l1);  destruct (eq_nat_dec r0 r1); subst;
-           try (apply ST_diff_key_2; [simpl; intuition; apply n; congruence | assumption]) |
+           try (apply G_diff_keys_2; [simpl; intuition; apply n; congruence | assumption]) |
           now apply TcHeap_tcVal with (k := (r0, l0)) ] ).
-    apply ST_update_same_type in STfind'; 
-    apply H_update_same_value in Hfind'; simpl in *; subst.
+    apply G_update_same_value in STfind'; 
+    apply G_update_same_value in Hfind'; simpl in *; subst.
     apply ext_stores__val with (stty:=stty); auto.
     intros k1 t1 STfind'. destruct k1 as [r1 l1].
     destruct (eq_nat_dec l0 l1);  destruct (eq_nat_dec r0 r1); subst;
-    try (apply ST_diff_key_2; [ simpl; intuition; apply n; now inversion H | assumption] ).
+    try (apply G_diff_keys_2; [ simpl; intuition; apply n; now inversion H | assumption] ).
     rewrite STfind' in Htc. discriminate.
 Qed.
 

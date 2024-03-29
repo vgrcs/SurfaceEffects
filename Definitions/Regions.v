@@ -1,3 +1,4 @@
+(*From stdpp Require Import gmap.*)
 Require Import Ascii.
 Require Import Definitions.Keys.
 
@@ -20,6 +21,7 @@ Module RMapP := FMapFacts.Facts R.
 Module RMapProp := FMapFacts.Properties R.
 
 Definition Rho := R.t RgnId.
+(*Definition Rho := gmap VarId nat.*)
 
 
 Definition find_R (k: Region_in_Expr) (m: Rho) : option RgnId :=

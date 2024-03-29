@@ -28,65 +28,6 @@ Proof.
 Qed.
 
 
-Lemma ST_same_key_1:
-  forall (l : SigmaKey) (ty : Tau) (stty : Sigma), 
-    find_ST l (update_ST l ty stty) = Some ty.
-Proof.
-  intros.
-  unfold find_ST, update_ST. apply lookup_insert.
-Qed. 
-
-Lemma ST_diff_keys_1:
-  forall  a b v v' (stty : gmap SigmaKey Tau),
-    a <> b ->
-    <[b:=v]> stty !! a = Some v' ->
-    stty !! a = Some v'.
-Proof.
-  intros a b v v' e Hneq Hfind.
-  unfold find_ST, update_ST in *.
-  rewrite lookup_insert_Some in Hfind.
-  destruct Hfind as [[Ha Hb] | [Hc Hd]].
-  - contradict Hneq. auto.
-  - assumption.
-Qed.
-
-
-Lemma H_diff_keys_2:
-  forall a b v v' (heap : gmap HeapKey HeapVal),   
-    b <> a ->
-    heap !! a = Some v' ->
-    (<[ b:=v ]> heap) !! a = Some v'.
-Proof.
-  intros a b v v' e Hneq Hfind.
-  rewrite lookup_insert_Some.
-  right. split; [assumption | assumption].
-Qed.
-
-
-Lemma ST_diff_key_2:
-  forall a b v v' (stty : gmap SigmaKey Tau),
-    b <> a ->
-    stty !! a = Some v' ->
-    (<[b:=v]> stty) !! a = Some v'.
-Proof.
-  intros.
-  unfold find_ST, update_ST in *.
-  rewrite lookup_insert_Some.
-  right. split; [assumption | assumption].
-Qed.
-
-
-Lemma ST_update_same_type:
-  forall stty l0 t t0,
-  find_ST l0 (update_ST l0 t stty) = Some t0 -> 
-  t = t0.
-Proof.
-  intros stty l0 t t0 H. 
-  rewrite ST_same_key_1 in H. inversion H. reflexivity.
-Qed.
-
-
-
 Definition get_store_typing_val {A B:Type} (p : Sigma * A * B) : Sigma   
   := fst (fst p).
 
@@ -177,10 +118,11 @@ Proof.
 Qed.
 
 
-Lemma update_rho: forall rho rgns x v,
-                    TcRho (rho, rgns) ->
-                    not_set_elem rgns x ->
-                    TcRho (update_R (x, v) rho, set_union rgns (singleton_set x)).
+Lemma update_rho:
+  forall rho rgns x v,
+    TcRho (rho, rgns) ->
+    not_set_elem rgns x ->
+    TcRho (update_R (x, v) rho, set_union rgns (singleton_set x)).
 Proof.
   intros rho rgns x v HRho HFresh.
   unfold update_R; simpl. 
@@ -337,7 +279,6 @@ Lemma subst_add_comm :
       subst_rho (R.add k v rho) ty = subst_rho rho (subst_in_type k v ty). 
 Proof.
   intros k v rho H ty.
-  (*unfold subst_rho, subst_in_type.*)
   apply fold_add_type.  
   - assumption.
   - intros k0 v0 b0 H'.
@@ -378,44 +319,58 @@ Proof.
 Qed.
 
 
-Module EProofs := Raw.Proofs.
-Module EMapP := FMapFacts.Facts E.
-
-
-Lemma E_same_key:
-  forall t x v e, 
-    E.find (elt := t) x (E.add x v e) = Some v.
+Lemma G_same_key {A}:
+  forall l1 l2 v (heap : gmap VarId A),
+    l1 = l2 -> 
+    heap !! l1 = Some v ->
+    (<[ l2:=v ]> heap) !! l1 = Some v.
 Proof.
-  intros. rewrite <- EMapP.find_mapsto_iff. rewrite -> EMapP.add_mapsto_iff.
-  left. intuition. 
-Qed.  
+  intros.
+  rewrite H.
+  rewrite  lookup_insert_Some.
+  left. split; reflexivity.
+Qed.
 
-Lemma E_diff_key_1:
-  forall t a b v v' e,   
+Lemma G_update_same_value `{Countable K} {A}: 
+  forall (heap : gmap K A) l v v',
+    (<[ l:=v ]> heap) !! l= Some v' ->
+    v = v'.
+Proof.
+  intros heap l v v' Hfind. 
+  rewrite lookup_insert_Some in Hfind.
+  destruct Hfind as [[Ha Hb] | [Hc Hd]].
+  - assumption.
+  - contradict Hc. reflexivity.
+Qed.
+
+Lemma G_diff_keys_1 `{Countable K} {A} :
+  forall a b v v' (env : gmap K A),
     a <> b ->
-    E.find (elt := t) a (E.add b v e) = Some v' -> 
-    E.find (elt := t) a e = Some v'.
+    (<[ b:=v ]> env) !! a = Some v' -> 
+    env !! a = Some v'.
 Proof.
-  intros. 
-  rewrite <- EMapP.find_mapsto_iff in H0. rewrite -> EMapP.add_mapsto_iff in H0.
-  destruct H0; destruct H0; [destruct H | rewrite -> EMapP.find_mapsto_iff in H1]; auto.
+  intros.
+  apply lookup_insert_Some in H1.
+  destruct H1 as [[Ha Hb] | [Hc Hd]].
+  - contradict H0. now symmetry.
+  - assumption.
 Qed.
 
 
-Lemma E_diff_key_2:
-  forall t a b v v' e,   
+Lemma G_diff_keys_2 `{Countable K} {A}:
+  forall a b v v' (env : gmap K A),
     b <> a ->
-    E.find (elt := t) a e = Some v' ->
-    E.find (elt := t) a (E.add b v e) = Some v'.
+    env !! a = Some v' ->
+    (<[ b:=v ]> env) !! a = Some v'.
 Proof.
-  intros. 
-  rewrite <- EMapP.find_mapsto_iff. rewrite -> EMapP.add_mapsto_iff.
-  right; split; [exact H | now rewrite EMapP.find_mapsto_iff ].
+  intros.
+  apply  lookup_insert_Some.
+  right. split; assumption.
 Qed.
 
 
 Lemma ExtendedTcInv_2:
-  forall ctxt rgns f x tyx effe tyc effc, 
+  forall (ctxt: Gamma) rgns f x tyx effe tyc effc, 
     TcInc (ctxt, rgns)->
     included (frv tyx) rgns ->
     included (frv (Ty_Arrow tyx effc tyc effe Ty_Effect)) rgns ->
@@ -429,18 +384,25 @@ Proof.
   unfold update_rec_T in H. simpl in H.
   destruct (AsciiVars.eq_dec x0 x) as [c | c].
   - inversion c; subst.
-    rewrite E_same_key in H.
-    inversion H; subst.
+    unfold update_T in H; simpl in H.    
+    assert ( HSubst : <[x:=tyx]> (<[f:=Ty_Arrow tyx effc tyc effe Ty_Effect]> ctxt) !! x
+                      = Some tyx)
+      by (apply lookup_insert). 
+    rewrite H in HSubst.
+    inversion HSubst; subst.
     do 2 intro. eapply HFind1. assumption.
   - destruct (AsciiVars.eq_dec x0 f) as [d | d].
     + inversion d; subst.
       unfold AsciiVars.eq in c.
-      eapply E_diff_key_1 in H; auto.
-      rewrite E_same_key in H.
+      eapply G_diff_keys_1 in H; auto.
+      unfold update_T in H; simpl in H.
+      assert ( HSame : forall x v (e : gmap VarId Tau), (<[ x:=v ]> e) !! x = Some v)
+               by (intros; apply  lookup_insert).      
+      rewrite HSame in H.      
       inversion H; subst.
       do 2 intro. eapply HFind2. assumption.
-    + eapply E_diff_key_1 in H; eauto. 
-      eapply E_diff_key_1 in H; eauto.
+    + eapply G_diff_keys_1 in H; eauto. 
+      eapply G_diff_keys_1 in H; eauto.
       do 2 intro.
       eapply HFrv; eauto.
 Qed.
@@ -778,15 +740,16 @@ Proof.
                                       eapply subst_rho_free_vars; eauto]  ] ).
 Qed.
 
-Lemma extended_rho : forall stty rho env ctxt,
-                       TcEnv (stty, rho, env, ctxt) ->
-                       forall x r rgns,
-                         TcRho (rho, rgns) ->
-                         not_set_elem rgns x -> 
-                         TcEnv (stty, update_R (x, r) rho, env, ctxt). 
+Lemma extended_rho :
+  forall stty rho env ctxt,
+    TcEnv (stty, rho, env, ctxt) ->
+    forall x r rgns,
+      TcRho (rho, rgns) ->
+      not_set_elem rgns x ->
+      TcEnv (stty, update_R (x, r) rho, env, ctxt). 
 Proof.
   intros stty rho env ctxt HEnv x r rgns HRho HRgns. 
-  inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
+  inversion_clear HEnv as [ stty' rho' env' ctxt' HE HT HV].  
   inversion_clear HRho as [rho' rgns' HRgn' HVal''].
   constructor; auto.
   intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
@@ -794,8 +757,8 @@ Proof.
   - eapply subst_rho_fresh_var; eauto. econstructor; auto. 
   - unfold not_set_elem in HRgns. unfold Ensembles.Complement in HRgns.
     intro. 
-    apply RMapP.in_find_iff in H0.
-    eapply HRgn' in H0. contradiction.
+    apply RMapP.in_find_iff in H.
+    eapply HRgn' in H. contradiction.
 Qed.
 
 
@@ -967,42 +930,6 @@ Proof.
 Qed.
 
 
-Lemma Raw_diff_key_1:
-  forall t a b v v' e,
-    Raw.bst e ->
-    b <> a ->
-    Raw.find (elt := t) a (Raw.add b v e) = Some v' -> 
-    Raw.find (elt := t) a e = Some v'.
-Proof.
-  intros. 
-  apply EProofs.find_1; auto.
-  apply EProofs.find_2 in H1. now apply EProofs.add_3 in H1.
-Qed.
-
-Require Import Lia.
-
-Lemma Raw_same_key:
-  forall t x v e, 
-    Raw.bst e ->
-    Raw.find (elt := t) x (Raw.add x v e) = Some v.
-Proof.
-  intros. rewrite EProofs.add_find; auto.
-  case_eq (AsciiVars.compare x x); intros; 
-  now try repeat (unfold AsciiVars.lt in l; lia).
-Qed.  
-
-Lemma Raw_diff_key_2:
-  forall t a b v v' e,
-    Raw.bst e ->
-    b <> a ->
-    Raw.find (elt := t) a e = Some v' ->
-    Raw.find (elt := t) a (Raw.add b v e) = Some v'.
-Proof.
-  intros. apply EProofs.find_1; 
-  [now apply EProofs.add_bst | apply EProofs.find_2 in H1; now apply EProofs.add_2 ].
-Qed.
-
-
 Lemma update_env:
   forall stty rho env ctxt, 
     TcEnv (stty, rho, env, ctxt) -> 
@@ -1011,34 +938,36 @@ Lemma update_env:
        TcEnv (stty, rho, update_E (x, v) env, update_T (x, t) ctxt) ).
 Proof. 
   intros stty rho env ctxt HEnv x v t HTc.  
-  inversion_clear HEnv as [ stty' rho' env' ctxt' ? HE HT HV]. 
+  inversion_clear HEnv as [ stty' rho' env' ctxt' HE HT HV]. 
   apply TC_Env;
   unfold find_E, update_E, find_T, update_T in *; simpl.
   clear HTc.
-  - now apply EProofs.add_bst. (** "env is a bst" **)
   - intros x0 v0 HF. (** "TcEnv is well-typed: HE" **)
     destruct (AsciiVars.eq_dec x0 x) as [c | c].
     + unfold AsciiVars.eq in c; intros. 
-      subst. exists t. now rewrite E_same_key.
+      subst. exists t.
+      apply lookup_insert.
     + unfold AsciiVars.eq in c; intros. 
-      eapply Raw_diff_key_1 in HF; auto; subst.
-      * destruct (HE x0 v0) as [t0 HU] ; [auto | ] ; exists t0.
-        eapply E_diff_key_2 ; [ auto | exact HU]. 
+      eapply G_diff_keys_1 in HF; auto; subst. 
+      destruct (HE x0 v0) as [t0 HU] ; [auto | ] ; exists t0.
+      eapply G_diff_keys_2; [ auto | exact HU]. 
   - intros x0 t0 HF. (** "TcEnv is well-typed: HT".  **)
     destruct (AsciiVars.eq_dec x0 x) as [c | c]; 
     unfold AsciiVars.eq in c; intros; subst.  
-    + exists v. now rewrite Raw_same_key.
-    + eapply E_diff_key_1 in HF; auto.
+    + exists v. apply lookup_insert.
+    + eapply G_diff_keys_1 in HF; auto.
       destruct (HT x0 t0) as [x1 ?] ; [auto | ].
-      exists x1; [eapply Raw_diff_key_2]; auto.
+      exists x1; [eapply G_diff_keys_2]; auto.
   - intros x0 v0 t0 HFindE HFindT. (** "Type preservation: HV". **)
     destruct (AsciiVars.eq_dec x0 x) as [c | c];
     unfold AsciiVars.eq in c; intros; subst.
-    + rewrite Raw_same_key in HFindE by assumption.
+    + assert (<[x:=v]> env !! x = Some v) by (apply lookup_insert).
+      rewrite H in HFindE.
       inversion HFindE; subst.
-      rewrite E_same_key in HFindT by assumption.
+      assert (<[x:=t]> ctxt !! x = Some t) by (apply lookup_insert).
+      rewrite H0 in HFindT.      
       inversion HFindT; subst. assumption.
-    + eapply Raw_diff_key_1 in HFindE; auto.
-      eapply E_diff_key_1 in HFindT; auto.
+    + eapply G_diff_keys_1 in HFindE; auto.
+      eapply G_diff_keys_1 in HFindT; auto.
       eapply HV; eauto.
 Qed.

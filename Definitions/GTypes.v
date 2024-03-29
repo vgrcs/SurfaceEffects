@@ -20,7 +20,7 @@ Inductive Tau :=
 
 Definition SigmaKey := prod nat nat.
 Definition Sigma := gmap SigmaKey Tau.
-Definition Gamma : Type := E.t Tau.
+Definition Gamma := gmap VarId Tau.
 Definition Omega : Type := Ensemble VarId.
 
 
@@ -53,11 +53,13 @@ Definition Functional_Map_Union_Sigma (stty1 stty2 : Sigma) : Sigma
   := merge Merge_ST stty1 stty2.
 
 
-Definition find_T (k: V_Key) (m: Gamma) : option Tau := E.find k m.
-Definition update_T (p: V_Key * Tau) m := E.add (fst p) (snd p) m.
+Definition find_T (k: VarId) (m: Gamma) : option Tau :=  m !! k.
+
+Definition update_T (p: VarId * Tau) (m : Gamma) := <[ fst p := snd p ]>  m.
+
 Definition update_rec_T (f: VarId * Tau) (x: VarId * Tau) m :=
-  let m' := E.add (fst f) (snd f) m
-  in E.add (fst x) (snd x) m'.
+  let m' := update_T f m
+  in update_T x m'.
 
 
 (** begin of free regions **)
@@ -711,7 +713,6 @@ with TcVal : (Sigma * Val * Tau) -> Prop :=
 with TcEnv : (Sigma * Rho * Env * Gamma) -> Prop :=
 | TC_Env :
   forall stty rho env ctxt,
-    E.Raw.bst env ->
     (forall x v, (find_E x env = Some v -> exists t, find_T x ctxt = Some t)) ->
     (forall x t, (find_T x ctxt = Some t -> exists v, find_E x env = Some v)) ->
     (forall x v t, find_E x env = Some v -> find_T x ctxt = Some t ->
