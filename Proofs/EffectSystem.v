@@ -1,3 +1,4 @@
+From stdpp Require Import gmap.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import String.
@@ -188,6 +189,7 @@ Proof.
     rewrite <- subst_add_comm_eff; eauto.
     eapply IHD2; eauto.
     eapply extended_rho; eauto. apply update_rho; auto.
+    apply not_elem_of_dom.
     eapply not_set_elem_not_in_rho; eauto. assumption.
   Case "eff_app".
     assert (cls_TcVal : exists stty', 
@@ -424,4 +426,5 @@ Qed.
 
 
 End EffectSoundness.
+
 

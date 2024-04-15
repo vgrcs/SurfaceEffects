@@ -157,7 +157,7 @@ Proof.
   - f_equal;[ | apply IHt]. unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
     unfold Region_in_Type in r. dependent induction r. 
     + reflexivity.
-    + destruct (AsciiVars.eq_dec v x); destruct (AsciiVars.eq_dec x v).
+    + destruct (AsciiVars.eq_dec r x); destruct (AsciiVars.eq_dec x r).
       * rewrite PeanoNat.Nat.eqb_refl. reflexivity.
       * unfold  AsciiVars.eq in *. symmetry in e. contradiction.
       * unfold  AsciiVars.eq in *. symmetry in e. contradiction.
@@ -174,14 +174,14 @@ Proof.
 Qed.
 
 Lemma close_open_rgn : 
-  forall r n x, (In VarId (free_rgn_vars_in_rgn r) x -> False) ->
+  forall r n x, (In RgnName (free_rgn_vars_in_rgn r) x -> False) ->
                 closing_rgn_in_rgn n x (opening_rgn_in_rgn n (Rgn_FVar true true x) r) = r.
 Proof.
   intros r n x H.
   unfold closing_rgn_in_rgn, opening_rgn_in_rgn. 
   unfold Region_in_Type in r; dependent induction r; intros.
   - reflexivity.
-  - case (AsciiVars.eq_dec v x); intros.
+  - case (AsciiVars.eq_dec r x); intros.
     + contradict H. inversion e; subst. unfold free_rgn_vars_in_rgn. apply In_singleton.
     + reflexivity.
   - case_eq (Nat.eqb n n0); intros; simpl; [ | reflexivity].
@@ -191,7 +191,7 @@ Proof.
 Qed.
 
 Lemma close_open_sa : 
-  forall sa n x, (In VarId (free_rgn_vars_in_sa sa) x -> False) ->
+  forall sa n x, (In RgnName (free_rgn_vars_in_sa sa) x -> False) ->
                  closing_rgn_in_sa n x (opening_rgn_in_sa n (Rgn_FVar true true x) sa) = sa.
 Proof.
   intros sa n x H.
@@ -200,7 +200,7 @@ Proof.
 Qed.
   
 Lemma close_open_eps :
-  forall e x n , (In VarId (free_rgn_vars_in_eps e) x -> False) ->
+  forall e x n , (In RgnName (free_rgn_vars_in_eps e) x -> False) ->
                  closing_rgn_in_eps n x (opening_rgn_in_eps n (Rgn_FVar true true x) e) = e. 
 Proof.
   intros e x n H.
@@ -233,11 +233,11 @@ Proof.
   - f_equal; [apply IHt1 | apply IHt2]; simpl in H; intro; apply H.
     + now apply Union_introl.
     + now apply Union_intror.
-  - simpl in H. assert (H' : In VarId (free_rgn_vars_in_rgn r) x -> False)
+  - simpl in H. assert (H' : In RgnName (free_rgn_vars_in_rgn r) x -> False)
       by (intros; apply H; now apply Union_introl).
     f_equal; unfold Region_in_Type in r; dependent induction r; subst; simpl.
     + reflexivity.
-    + case (AsciiVars.eq_dec v x); intros. unfold AsciiVars.eq in e; subst.
+    + case (AsciiVars.eq_dec r x); intros. unfold AsciiVars.eq in e; subst.
       * contradict H'. unfold free_rgn_vars_in_rgn. apply In_singleton.
       * reflexivity.
     + case_eq (Nat.eqb n n0); intros; simpl.
@@ -412,7 +412,7 @@ Proof.
   intros x u n v r.
   unfold Region_in_Type in r.
   dependent induction r; try (solve [reflexivity]). 
-  - destruct (AsciiVars.eq_dec v0 x). 
+  - destruct (AsciiVars.eq_dec r x). 
     + unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
       inversion e; subst.
       destruct (AsciiVars.eq_dec x x); [ | reflexivity].
@@ -420,7 +420,7 @@ Proof.
       dependent induction u; simpl; reflexivity.
     + unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
       unfold AsciiVars.eq in n0.
-      destruct (AsciiVars.eq_dec x v0); [ | reflexivity].
+      destruct (AsciiVars.eq_dec x r); [ | reflexivity].
       unfold AsciiVars.eq in e. symmetry in e. contradiction.
   - unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
     case (Nat.eqb n0 n); [ | reflexivity].
@@ -490,7 +490,7 @@ Qed.
 
 Lemma singleton_eq :
   forall x y,
-    x = y <-> Singleton VarId x y.
+    x = y <-> Singleton RgnName x y.
 Proof.
   intros x y. split.
   - intros H; subst. apply In_singleton.
@@ -510,8 +510,8 @@ Proof.
   dependent induction r.
   - reflexivity.
   - unfold not, In, singleton_set in H.
-    assert (x <> v) by (contradict H; apply singleton_eq; auto).
-    destruct (AsciiVars.eq_dec x v).
+    assert (x <> r) by (contradict H; apply singleton_eq; auto).
+    destruct (AsciiVars.eq_dec x r).
     + inversion e. contradiction.
     + reflexivity.
   - reflexivity.
@@ -527,9 +527,8 @@ Proof.
   induction sa; unfold subst_sa, subst_rgn; f_equal;
   unfold free_rgn_vars_in_rgn in H; unfold In in *; 
   unfold Region_in_Type in r;
-  dependent induction r; try (solve [reflexivity |
-                                     assert (x <> v) by (contradict H; now apply singleton_eq);
-                                     destruct (AsciiVars.eq_dec x v); [inversion e; contradiction | reflexivity]]). 
+    dependent induction r;
+    try (solve [reflexivity |assert (x <> r) by (contradict H; now apply singleton_eq);destruct (AsciiVars.eq_dec x r);[inversion e; contradiction | reflexivity]]). 
 Qed.
 
 Lemma subst_fresh_sa_ext :

@@ -1,5 +1,6 @@
 From stdpp Require Import gmap.
 Require Import Coq.Sets.Ensembles.
+Require Import Ascii.
 Require Import Definitions.Keys.
 Require Import Definitions.Regions.
 Require Import Definitions.ComputedActions.
@@ -63,17 +64,17 @@ Definition update_rec_T (f: VarId * Tau) (x: VarId * Tau) m :=
 
 
 (** begin of free regions **)
-Definition free_rgn_vars_in_rgn (rgn: Region_in_Type) : Ensemble VarId :=
+Definition free_rgn_vars_in_rgn (rgn: Region_in_Type) : Ensemble RgnName :=
   match rgn with
   | Rgn_Const _ _ _ => empty_set
   | Rgn_FVar _ _ n => singleton_set n
   | Rgn_BVar _ _ _ => empty_set
   end.
 
-Definition free_region (rgn: Region_in_Type) : Ensemble VarId := free_rgn_vars_in_rgn rgn.
+Definition free_region (rgn: Region_in_Type) : Ensemble RgnName := free_rgn_vars_in_rgn rgn.
 
 
-Definition free_rgn_vars_in_sa (sa: StaticAction) : Ensemble VarId :=
+Definition free_rgn_vars_in_sa (sa: StaticAction) : Ensemble RgnName :=
   match sa with
   | SA_Alloc rgn => free_rgn_vars_in_rgn rgn
   | SA_Read rgn => free_rgn_vars_in_rgn rgn
@@ -81,7 +82,7 @@ Definition free_rgn_vars_in_sa (sa: StaticAction) : Ensemble VarId :=
   end.
 
 
-Definition free_rgn_vars_in_eps (eps: Epsilon) : Ensemble VarId := 
+Definition free_rgn_vars_in_eps (eps: Epsilon) : Ensemble RgnName := 
   fun n => exists (sa : StaticAction),
              eps sa /\ (free_rgn_vars_in_sa sa) n.
 
@@ -255,7 +256,7 @@ Inductive lc_type : Tau -> Prop :=
 
 Inductive TcRho : (Rho * Omega) -> Prop :=
   | TC_Rho : forall rho rgns,
-               (forall r, R.find r rho <> None <-> set_elem rgns r) ->
+               (forall r, rho !! r <> None <-> set_elem rgns r) ->
                TcRho (rho, rgns).
 
 Inductive TcInc : (Gamma * Omega) -> Prop :=
@@ -276,7 +277,7 @@ Inductive TcRgn : (Omega * Region_in_Expr) -> Prop :=
 (** begin of substitutions **)
 
 
-Definition subst_rgn  (z : VarId) (u : Region_in_Expr) (t: Region_in_Type) : Region_in_Type :=
+Definition subst_rgn  (z : RgnName) (u : Region_in_Expr) (t: Region_in_Type) : Region_in_Type :=
   match t with
     | Rgn_Const _ _ r => t
     | Rgn_FVar _ _ r  => if (AsciiVars.eq_dec z r) then mk_rgn_type u else t 
@@ -284,19 +285,19 @@ Definition subst_rgn  (z : VarId) (u : Region_in_Expr) (t: Region_in_Type) : Reg
   end.
 
 
-Definition subst_sa (z : VarId) (u : Region_in_Expr) (t: StaticAction) : StaticAction :=
+Definition subst_sa (z : RgnName) (u : Region_in_Expr) (t: StaticAction) : StaticAction :=
  match t with
   | SA_Alloc rgn => SA_Alloc (subst_rgn z u rgn)
   | SA_Read rgn  => SA_Read  (subst_rgn z u rgn)
   | SA_Write rgn => SA_Write (subst_rgn z u rgn)
  end.
 
-Definition subst_eps  (z : VarId) (u : Region_in_Expr) (t: Epsilon) : Epsilon :=
+Definition subst_eps  (z : RgnName) (u : Region_in_Expr) (t: Epsilon) : Epsilon :=
    fun sa => exists sa', t sa' /\ subst_sa z u sa' = sa.
 
 
 Reserved Notation "'[' x ':=' u ']' t" (at level 20).
-Fixpoint subst_type (z : VarId) (u : Region_in_Expr) (t : Tau) {struct t} : Tau :=
+Fixpoint subst_type (z : RgnName) (u : Region_in_Expr) (t : Tau) {struct t} : Tau :=
   match t with
   | Ty_Natural => Ty_Natural
   | Ty_Boolean => Ty_Boolean
@@ -320,11 +321,17 @@ Definition subst_in_eff := fun x r eff => subst_eps x (Rgn_Const true false r) e
 
 Definition subst_in_sa := fun x r sa => subst_sa x (Rgn_Const true false r) sa.
 
-Definition subst_in_rgn := fun x r rgn => subst_rgn x (Rgn_Const true false r) rgn.
+Definition subst_in_rgn (r : RgnName) (v : RgnVal) (rgn : Region_in_Type)
+  := subst_rgn r (Rgn_Const true false v) rgn.
 
-Definition subst_rho := R.fold subst_in_type.
+Definition subst_rho (rho : Rho) (t : Tau)
+  := map_fold (fun r v t => subst_in_type r v t) t rho.
 
-Definition fold_subst_rgn := R.fold (fun x r rgn => subst_rgn x (Rgn_Const true false r) rgn).
+Print subst_rho. 
+
+Definition fold_subst_rgn  (rho : Rho) (rt : Region_in_Type)
+  := map_fold (fun x r rgn => subst_rgn x (Rgn_Const true false r) rgn) rt rho.
+
 
 Definition fold_subst_sa rho sa:=
   match sa with
@@ -612,7 +619,7 @@ with BackTriangle : Gamma * Omega * Rho * Expr * Expr -> Prop :=
     BackTriangle (ctxt, rgns, rho, DeRef w e, eff ⊕ (ReadAbs w))
 
 | BT_Ref_Read_Conc :
-  forall ctxt rgns rho (e eff : Expr) (r : RgnId) ty_e static_e,
+  forall ctxt rgns rho (e eff : Expr) (r : RgnVal) ty_e static_e,
     TcExp (ctxt, rgns, e, ty_e, static_e) ->
     BackTriangle (ctxt, rgns, rho, e, Empty) ->
     BackTriangle (ctxt, rgns, rho, DeRef (Rgn_Const true false r) e, ReadConc e)
@@ -626,7 +633,7 @@ with BackTriangle : Gamma * Omega * Rho * Expr * Expr -> Prop :=
     BackTriangle (ctxt, rgns, rho, Assign w e1 e2, eff1 ⊕ (eff2 ⊕ (WriteAbs w)))
 
 | BT_Ref_Write_Conc:
-  forall ctxt rgns rho (e1 e2 eff1 eff2 : Expr) (r : RgnId) ty_e1 static_e1,
+  forall ctxt rgns rho (e1 e2 eff1 eff2 : Expr) (r : RgnVal) ty_e1 static_e1,
     BackTriangle (ctxt, rgns, rho, e1, eff1) ->
     BackTriangle (ctxt, rgns, rho, e2, eff2) ->
     TcExp (ctxt, rgns, e1, ty_e1, static_e1) ->

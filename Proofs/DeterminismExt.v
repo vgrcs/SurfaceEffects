@@ -801,26 +801,25 @@ Qed.
 
 
 Lemma EmptyTcRho :
-  TcRho (R.empty RgnId, Empty_set VarId).
+  TcRho (∅, Empty_set RgnName).
 Proof.
   econstructor. intro.
   split; intros.
-  - apply RMapP.in_find_iff in H.
-    apply RMapP.empty_in_iff in H.
-    contradiction.
+  - contradict H.
+    apply lookup_empty.
   - contradiction.
 Qed.
  
 Lemma EmptyTcEnv :
-    TcEnv (∅, R.empty RgnId, ∅, ∅).
+    TcEnv (∅, ∅, ∅, ∅).
 Proof.
   econstructor; intros; inversion H.
 Qed.
 
 Theorem Determinism : 
   forall exp heap1 heap2 val1 val2 acts1 acts2,
-    (∅, ∅, R.empty RgnId, exp) ⇓ (heap1, val1, acts1) ->
-    (∅, ∅, R.empty RgnId, exp) ⇓ (heap2, val2, acts2) ->
+    (∅, ∅, ∅, exp) ⇓ (heap1, val1, acts1) ->
+    (∅, ∅, ∅, exp) ⇓ (heap2, val2, acts2) ->
     forall ty eff,
       TcExp (∅, Empty_set VarId, exp, ty, eff) ->
        heap1 ≡@{Heap} heap2 /\ val1 = val2 /\ acts1 = acts2.
@@ -836,25 +835,12 @@ Qed.
 
 
 Lemma Determinism_new:
-  forall rho  stty (e : Expr) v1 v2 ty (env : Env)  (h1 h2 : Heap) phi_1 phi_2,
+  forall stty (e : Expr) v1 v2 ty (env : Env)  (h1 h2 : Heap) phi_1 phi_2,
     TcVal (stty, v1, ty) ->
-    TcVal(stty, v2, ty) ->
-    rho = R.empty nat ->
-    (∅, ∅, rho, e) ⇓ (h1, v1, phi_1) ->
-    (∅, ∅, rho, e) ⇓ (h2, v2, phi_2) ->
+    TcVal(stty, v2, ty) ->    
+    (∅, ∅, ∅, e) ⇓ (h1, v1, phi_1) ->
+    (∅, ∅, ∅, e) ⇓ (h2, v2, phi_2) ->
     h1 ≡@{Heap} h2 /\ v1 = v2 /\ phi_1 = phi_2.
 Proof.
   intros.
-  generalize dependent h2. generalize dependent phi_2. generalize dependent v2.
-  generalize dependent rho. generalize dependent phi_1. generalize dependent e.
-  generalize dependent env. generalize dependent h1.
-  dependent induction H; subst; intros; subst.
-  - generalize dependent stty.
-    generalize dependent h2.
-    generalize dependent v2.
-    generalize dependent phi_2.
-    generalize dependent env.
-    dependent induction H2; intros; inversion H3; subst.
-    + intuition. 
-    + inversion H0; subst.
 Admitted.

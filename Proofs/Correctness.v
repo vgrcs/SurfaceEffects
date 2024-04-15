@@ -1,10 +1,10 @@
+From stdpp Require Import gmap.
+
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
-From stdpp Require Import gmap.
-Require Import Coq.FSets.FMapAVL. 
 Require Import Coq.Structures.OrderedTypeEx.
 Require Import Coq.Arith.Peano_dec.
-Require Import Ascii String.
+Require Import String.
 Require Import Coq.Arith.EqNat.
 Require Import Coq.Arith.Mult.
 Require Import Coq.Arith.Plus.

@@ -12,11 +12,11 @@ Definition set_minus `{T: Type} (s: Ensemble T) (e: T)  := Ensembles.Subtract T 
 
 (* Computed Actions; for effect specification *)
 Inductive ComputedAction : Set :=
-| CA_ReadConc  : RgnId -> nat -> ComputedAction
-| CA_WriteConc : RgnId -> nat -> ComputedAction 
-| CA_AllocAbs  : RgnId -> ComputedAction
-| CA_ReadAbs   : RgnId -> ComputedAction
-| CA_WriteAbs  : RgnId -> ComputedAction. 
+| CA_ReadConc  : RgnVal -> nat -> ComputedAction
+| CA_WriteConc : RgnVal -> nat -> ComputedAction 
+| CA_AllocAbs  : RgnVal -> ComputedAction
+| CA_ReadAbs   : RgnVal -> ComputedAction
+| CA_WriteAbs  : RgnVal -> ComputedAction. 
 
 Definition Theta := option (Ensemble ComputedAction).
 Definition Theta_Top : Theta := None.

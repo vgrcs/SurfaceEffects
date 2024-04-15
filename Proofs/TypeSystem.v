@@ -2,7 +2,7 @@ Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Structures.OrderedType.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Sets.Ensembles.
-Require Import Ascii.
+(*Require Import Ascii.*)
 Require Import String.
 Require Import Coq.ZArith.Znat.
 Require Import Coq.Program.Equality.
@@ -33,7 +33,6 @@ Module TypeSoundness.
   Import Semantics.
   Import TypeFacts.
 
-Module RMapOrdProp := FMapFacts.OrdProperties R.
 
 Lemma ST_find_Ext_1:
   forall k stty stty' x,
@@ -171,17 +170,17 @@ Proof.
   unfold Region_in_Expr in w.
   dependent induction r; dependent induction Hlc1; simpl in *.
   - repeat rewrite subst_rho_rgn_const in *. auto.
-  - destruct (RMapP.eq_dec r0 x); subst; simpl in *.
+  - destruct (AsciiVars.eq_dec r0 x); subst; simpl in *.
     + rewrite subst_rho_index in H. rewrite subst_rho_rgn_const in H. inversion H.
     + auto.
   - auto.
-  - destruct (RMapP.eq_dec r x); subst; simpl in *.
+  - destruct (AsciiVars.eq_dec r0 x); subst; simpl in *.
     + rewrite subst_rho_index in H.
-      destruct (subst_rho_fvar_1 rho v) as [[v0 H0] | H0];
+      destruct (subst_rho_fvar_1 rho r) as [[v0 H0] | H0];
       rewrite H0 in H; inversion H.
     + auto.
   - rewrite subst_rho_index in H. rewrite subst_rho_rgn_const in H. inversion H.
-  - destruct (RMapP.eq_dec r x); subst; simpl in *.
+  - destruct (AsciiVars.eq_dec r x); subst; simpl in *.
     + repeat rewrite subst_rho_index in H. inversion H; subst.
       rewrite NPeano.Nat.eqb_refl.
       rewrite subst_rho_rgn_const.
@@ -365,17 +364,18 @@ Qed.
 
 Lemma bound_var_is_fresh :
   forall rho rgns  x,
-    TcRho (rho, rgns) -> not_set_elem rgns x -> ~ R.In (elt:=RgnId) x rho.
+    TcRho (rho, rgns) ->
+    not_set_elem rgns x ->
+    x ∉ dom rho.
 Proof.
   intros rho rgns x H1 H2.
   inversion H1; subst.
   unfold not_set_elem in H2. unfold Ensembles.Complement in H2. 
-  unfold not. intro. 
-  apply RMapP.in_find_iff in H. 
-  apply H2. 
-  eapply H0; eassumption.
-Qed.  
-
+  unfold not. intro.
+  apply H2. apply H0. 
+  contradict H. apply not_elem_of_dom. assumption.
+Qed.
+ 
 
 
 Lemma ty_sound:
@@ -395,7 +395,7 @@ Proof.
   dynamic_cases (dependent induction D) Case;
   intros stty ctxt rgns t static_eff Hhp Hrho Henv Hexp; 
   inversion Hexp; subst.    
-  Case "cnt n".
+  Case "cnt n"%string.
     exists stty; (split; [| split]; auto). rewrite subst_rho_natural.
     econstructor; eassumption.
   Case "bool b".
@@ -445,6 +445,7 @@ Proof.
         rewrite SUBST_AS_CLOSE_OPEN in TcVal_res; auto.
         erewrite subst_rho_open_close in TcVal_res; eauto. 
       SSCase "bound variable is free".
+        apply not_elem_of_dom.
         eapply bound_var_is_fresh; eauto.
   Case "eff_app". 
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto.

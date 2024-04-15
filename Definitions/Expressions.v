@@ -1,5 +1,8 @@
 Require Import Definitions.Regions.
 Require Import Definitions.Keys.
+Require Import Ascii.
+
+Definition VarId := ascii.
 
 Inductive Expr :=
   | Const     : nat -> Expr

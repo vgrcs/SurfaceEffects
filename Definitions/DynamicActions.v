@@ -9,9 +9,9 @@ Require Import  Coq.Classes.RelationClasses.
 
 (* Dynamic Actions; for operational semantics *)
 Inductive DynamicAction : Type :=
-| DA_Alloc : RgnId -> nat -> Val -> DynamicAction
-| DA_Read  : RgnId -> nat -> Val -> DynamicAction
-| DA_Write : RgnId -> nat -> Val -> DynamicAction. 
+| DA_Alloc : RgnVal -> nat -> Val -> DynamicAction
+| DA_Read  : RgnVal -> nat -> Val -> DynamicAction
+| DA_Write : RgnVal -> nat -> Val -> DynamicAction. 
 
 Definition Trace := list DynamicAction.
 

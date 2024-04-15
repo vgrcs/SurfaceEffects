@@ -565,7 +565,7 @@ Qed.
 
 Lemma EmptyUnionisEmptySet_Name_Left :
   forall acts,
-    Union VarId (Empty_set VarId) acts = acts.
+    Union RgnName (Empty_set RgnName) acts = acts.
 Proof.
   intros acts;
   apply Extensionality_Ensembles;
@@ -577,7 +577,7 @@ Qed.
 
 Lemma EmptyUnionisEmptySet_Name_Right :
   forall acts,
-    Union VarId acts (Empty_set VarId) = acts.
+    Union RgnName acts (Empty_set RgnName) = acts.
 Proof.
   intros acts;
   apply Extensionality_Ensembles;
@@ -590,7 +590,7 @@ Qed.
 Lemma IncludedRemoveSingleton:
   forall n x rgns,
     n <> x ->
-    included (singleton_set n) (Union VarId rgns (singleton_set x)) ->
+    included (singleton_set n) (Union RgnName rgns (singleton_set x)) ->
     included (singleton_set n) rgns.
 Proof.
   intros n x rgns H1 H2.
@@ -602,7 +602,7 @@ Proof.
 Qed.
 
 Lemma IncludedUnion_Name_1:
-  forall (a b : Ensemble VarId) rgns,
+  forall (a b : Ensemble RgnName) rgns,
     included (set_union a b) rgns ->
     included a rgns /\
     included b rgns.
@@ -616,7 +616,7 @@ Proof.
 Qed.
 
 Lemma IncludedUnion_Name_5:
-  forall (a b c : Ensemble VarId) rgns,
+  forall (a b c : Ensemble RgnName) rgns,
     included (set_union a b)
              (set_union rgns c) ->
     included a (set_union rgns c) /\
@@ -631,7 +631,7 @@ Proof.
 Qed.
 
 Lemma IncludedUnion_Name_4:
-  forall (a b c : Ensemble VarId) rgns,
+  forall (a b c : Ensemble RgnName) rgns,
     included (set_union a b) rgns /\
     included (set_union a c) rgns ->
     included (set_union a (set_union c b)) rgns.
@@ -645,7 +645,7 @@ Proof.
 Qed.
 
 Lemma IncludedUnion_Static_Action_4:
-  forall (a b : Ensemble StaticAction) (rgns : Ensemble VarId) (x : VarId),
+  forall (a b : Ensemble StaticAction) (rgns : Ensemble RgnName) (x : RgnName),
     (free_rgn_vars_in_eps a x -> rgns x) ->
     (free_rgn_vars_in_eps b x -> rgns x) ->                        
     (free_rgn_vars_in_eps (Union_Static_Action a b) x -> rgns x).
@@ -657,7 +657,7 @@ Proof.
 Qed.
 
 Lemma IncludedUnion_Name_6:
-  forall (a b: Ensemble VarId) rgns,
+  forall (a b: Ensemble RgnName) rgns,
     included a rgns /\
     included b rgns ->
     included (set_union a b) rgns.
@@ -675,7 +675,7 @@ Proof.
   intros. unfold Region_in_Type in r. 
   dependent induction r; simpl in *; do 2 intro.
   - inversion H0.
-  - destruct (RMapProp.F.eq_dec v x); subst.
+  - destruct (AsciiVars.eq_dec r x); subst.
     + simpl in *. inversion H0.
     + apply IncludedRemoveSingleton in H; auto.
   - inversion H0.
@@ -691,7 +691,7 @@ Proof.
   unfold Region_in_Type in r. dependent induction r; intro;
   unfold free_rgn_vars_in_rgn, closing_rgn_in_rgn in H.
   - inversion H.
-  - destruct (RMapProp.F.eq_dec v x); subst.
+  - destruct (AsciiVars.eq_dec r x); subst.
     + inversion H.
     + inversion H. apply n0. assumption.
   - inversion H.
@@ -711,7 +711,7 @@ Qed.
 
 
 Lemma RegionAbsFrv_1:
-   forall effr rgns (x : VarId) n, 
+   forall effr rgns (x : RgnName) n, 
      included (free_rgn_vars_in_eps effr) (set_union rgns (singleton_set x)) ->
      included (free_rgn_vars_in_eps (closing_rgn_in_eps n x effr)) rgns.
 Proof.
@@ -725,18 +725,26 @@ Proof.
   unfold included, Included, In in H.
   destruct (H x0); auto.
   - exists sa'. intuition.
-    destruct (RMapProp.F.eq_dec x x0); subst.
-    + contradict H2. apply NoFreeVarsAfterClosingSa.
-    + induction sa'; unfold Region_in_Type in r; dependent induction r; 
-      simpl in *; unfold free_rgn_vars_in_rgn in *;
-      try (solve [inversion H2 | destruct  (RMapProp.F.eq_dec v x); subst; [inversion H2 | assumption]]).
-  - destruct (RMapProp.F.eq_dec x x0); subst.
-    + contradict H2. apply NoFreeVarsAfterClosingSa.
-    + exfalso. contradict n0. inversion H0. auto.
+    destruct (AsciiVars.eq_dec x x0); subst.
+    + contradict H2.
+      unfold AsciiVars.eq in e; subst.
+      apply NoFreeVarsAfterClosingSa.
+    + unfold AsciiVars.eq in n0.
+      induction sa'; unfold Region_in_Type in r; dependent induction r; 
+        simpl in *; unfold free_rgn_vars_in_rgn in *;
+        try (solve [inversion H2 | destruct  (AsciiVars.eq_dec r x);
+                                   subst; [inversion H2 | assumption]]).
+  - destruct (AsciiVars.eq_dec x x0); subst.
+    + contradict H2.
+      unfold AsciiVars.eq in e; subst.
+      apply NoFreeVarsAfterClosingSa.
+    + exfalso.
+      unfold AsciiVars.eq in n0.
+      contradict n0. inversion H0. auto.
 Qed.
 
 Lemma RegionAbsFrv_3:
-   forall tyr rgns (x : VarId), 
+   forall tyr rgns (x : RgnName), 
      included (frv tyr) (set_union rgns (singleton_set x)) ->
      included (frv (close_var x tyr)) rgns. 
 Proof.
