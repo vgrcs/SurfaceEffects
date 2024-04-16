@@ -369,8 +369,8 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
            (update_rec_T (f, Ty_Arrow tyx effc tyc effe Ty_Effect) (x, tyx) ctxt,
              rgns, rho, ec, ee))) ->    
     (* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*)
-    TcInc (ctxt, rgns) ->
-    included (frv (Ty_Arrow tyx effc tyc effe Ty_Effect)) rgns ->
+    find_T x ctxt = Some tyx ->
+    find_T f ctxt = Some (Ty_Arrow tyx effc tyc effe Ty_Effect) ->
     (* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*)
     TcExp (update_rec_T (f, Ty_Arrow tyx effc tyc effe Ty_Effect) (x, tyx) ctxt,
         rgns, ec, tyc, effc) ->
@@ -415,7 +415,9 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
   forall ctxt rgns ef ea tya effc tyc effe efff effa,
     TcExp (ctxt, rgns, ef, Ty_Arrow tya effc tyc effe Ty_Effect, efff) ->
     TcExp (ctxt, rgns, ea, tya, effa) ->
+    (* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*)
     included (free_rgn_vars_in_eps effe) rgns ->
+    (* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*)
     TcExp (ctxt, rgns, Eff_App ef ea,
         Ty_Effect, Union_Static_Action (Union_Static_Action efff effa) effe)
 

@@ -152,6 +152,7 @@ Theorem Correctness_soundness_ext :
       ReadOnlyPhi p' ->
       TcHeap (h, stty) ->
       TcRho (rho, rgns) ->
+      TcInc (ctxt, rgns) ->
       TcEnv (stty, rho, env, ctxt) -> 
       TcExp (ctxt, rgns, ea, ty, static) ->
       p ⋞ eff.
@@ -167,7 +168,7 @@ Proof.
   dynamic_cases (dependent induction BS1) Case;
     intros h'' eff rgns ctxt stty ee_exp p';
     intros h_ h'_ v_ p_ HEqual BS2;
-    intros HEff HBt static ty HRonly HHeap HRho HEnv HExp. 
+    intros HEff HBt static ty HRonly HHeap HRho HInc HEnv HExp. 
   Case "cnt n".
     assert (Phi_Nil ⋞ eff) by (constructor).
     inversion H; subst.
@@ -213,7 +214,7 @@ Proof.
                              ? ? ? ? ? ? ?  TcRho_rho' TcInc' TcEnv_env' TcExp_abs [A B C D HSubst]  
                              | | |]; subst. 
     inversion TcExp_abs as [ | | | 
-                             ? ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
+                             ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec' TcExp_ee' 
                              | | | | | | | | | | | | | | | | | | | | |]; subst.
     rewrite <- HSubst in TcVal_cls.
     do 2 rewrite subst_rho_arrow in HSubst. 
@@ -275,6 +276,12 @@ Proof.
               with (stty:=sttya) (p':=bacts0); eauto using reflexivity.
             - eapply EvaluationEffectFromEffApp; eauto.
             - inversion HRonly as [ | | ? ? A B | ]. exact B.
+            - apply ExtendedTcInv_2. 
+              + assumption.
+              + inversion_clear TcInc' as [? ? HInc'].
+                now apply HInc' in H3.
+              + inversion_clear TcInc' as [? ? HInc'].
+                now apply HInc' in H4. 
             - { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
                   apply update_env.  
@@ -286,12 +293,21 @@ Proof.
         SSSCase "Mu_App ef ea0 << (⊤)".
           assert (H_ : bacts ⋞ None).
           { eapply IHBS1_3 
-              with (stty:=sttya) (ee:=Top); eauto.
+              with (stty:=sttya) (ee:=Top)
+                   (ctxt:=update_rec_T (f, Ty_Arrow tyx effc0 tyc effe0 Ty_Effect)
+                            (x, tyx) ctxt0); eauto.
             SSSSCase "Effect Evaluation". 
               eapply BS_Eff_Top. 
               auto.
             SSSSCase "Back Triangle". 
               econstructor.
+            SSSSCase "Extended Inc".
+              {apply ExtendedTcInv_2. 
+               - assumption.
+               - inversion_clear TcInc' as [? ? HInc'].
+                 now apply HInc' in H3.
+               - inversion_clear TcInc' as [? ? HInc'].
+                 now apply HInc' in H4.  }
             SSSSCase "Extended TcEnv".
               { apply update_env; simpl.  
                 - eapply ext_stores__env; eauto. 
@@ -339,9 +355,10 @@ Proof.
             eapply IHBS1_2 with (ee:=Empty); eauto. 
             - inversion HEff; subst. econstructor. reflexivity.
             - apply update_rho; auto.
+            - apply update_inc; auto.
             - eapply extended_rho; eauto. }
         SSCase "Rgn_App er w << (⊤)".  
-          { eapply IHBS1_2 with (ee:=Top); eauto using update_rho, extended_rho; 
+          { eapply IHBS1_2 with (ee:=Top); eauto using update_rho, update_inc, extended_rho; 
             induction eff; 
             try (solve [ constructor ]); inversion HEff.
             subst. econstructor. reflexivity.

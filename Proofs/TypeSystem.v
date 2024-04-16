@@ -2,7 +2,6 @@ Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Structures.OrderedType.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Sets.Ensembles.
-(*Require Import Ascii.*)
 Require Import String.
 Require Import Coq.ZArith.Znat.
 Require Import Coq.Program.Equality.
@@ -32,6 +31,7 @@ Module TypeSoundness.
   Import Expressions.
   Import Semantics.
   Import TypeFacts.
+  Import Ensembles.
 
 
 Lemma ST_find_Ext_1:
@@ -111,6 +111,8 @@ Lemma ST_find_Ext_Right:
     find_ST k (Functional_Map_Union_Sigma stty1 stty2) = Some t.
   Admitted.
 
+
+
 Lemma TcValExtended:
   forall  stty1 stty2 v1 v2 rho ty1 ty2,
     TcVal (stty1, v1, subst_rho rho ty1) ->
@@ -127,22 +129,10 @@ Proof.
     intros.
     + now rewrite Functional_Map_Union_find.
     + assumption.
-  - generalize dependent v1.
-    generalize dependent ty1.
-    generalize dependent stty1.
-    dependent induction H0; rewrite <- x; intros.
-    + constructor.
-    + constructor.
-    + constructor; auto. 
-      apply ST_find_Ext_Right. assumption.
-    + eapply TC_Cls; eauto.
-      apply ext_stores__env with (stty:=stty2); eauto.
-      apply ST_find_Ext_Right. 
-    + constructor.  
-    + constructor.
-      * admit.
-      * admit.
-    + constructor.    
+  - apply ext_stores__val with (stty:=stty2).
+    intros.
+    + apply ST_find_Ext_Right. assumption.
+    + assumption.
 Admitted.
 
 
@@ -376,7 +366,18 @@ Proof.
   contradict H. apply not_elem_of_dom. assumption.
 Qed.
  
-
+Lemma update_inc:
+  forall rgns ctxt x,
+    TcInc (ctxt, rgns) ->
+    TcInc (ctxt, set_union rgns (singleton_set x)).
+Proof.
+  intros.
+  econstructor. inversion H; subst.
+  intros. apply H1 in H0.
+  unfold included, set_union, Included in *.
+  intros. apply H0 in H2.
+  now apply Union_introl.
+Qed.  
 
 Lemma ty_sound:
   forall e env rho hp hp' v dynamic_eff,
@@ -384,6 +385,7 @@ Lemma ty_sound:
     forall stty ctxt rgns t static_eff,
       TcHeap (hp, stty) ->
       TcRho (rho, rgns) ->
+      TcInc (ctxt, rgns)->
       TcEnv (stty, rho, env, ctxt) ->
       TcExp (ctxt, rgns, e, t, static_eff) ->
       exists stty',
@@ -393,7 +395,7 @@ Lemma ty_sound:
 Proof.
   intros e env rho hp hp'  v dynamic_eff D. 
   dynamic_cases (dependent induction D) Case;
-  intros stty ctxt rgns t static_eff Hhp Hrho Henv Hexp; 
+  intros stty ctxt rgns t static_eff Hhp Hrho Hinc Henv Hexp; 
   inversion Hexp; subst.    
   Case "cnt n"%string.
     exists stty; (split; [| split]; auto). rewrite subst_rho_natural.
@@ -413,16 +415,25 @@ Proof.
   Case "mu_app".
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto. 
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto.  
-    eapply ext_stores__env; eauto.  
-    inversion TcVal_mu as [ | | | ? ? ? ? ? ? ? ?  TcRho_rho' TcEnv_env' TcExp_abs | | |] ; subst.      
-    inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst.  
-    rewrite <- H6 in TcVal_mu.   
-    do 2 rewrite subst_rho_arrow in H6. inversion H6.
+    eapply ext_stores__env; eauto.
+    inversion TcVal_mu as [ | | | ? ? ? ? ? ? ? TcRho_rho' TcRho_Inc' TcEnv_env' TcExp_abs | | |] ; subst.    
+    inversion TcExp_abs as [ | |  | ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec TcExp_ee | | | | | | | | | | | | | | | | | | | | | ]; subst.   
+    rewrite <- H5 in TcVal_mu.   
+    do 2 rewrite subst_rho_arrow in H5. inversion H5.  
     assert (SubstEq1: subst_rho rho' tyx = subst_rho rho tya) by assumption. 
-    assert (SubstEq2: subst_rho rho' tyc = subst_rho rho t) by assumption.
+    assert (SubstEq2: subst_rho rho' tyc = subst_rho rho t) by assumption. 
     rewrite <- SubstEq1 in TcVal_arg.
-    unfold update_rec_E, update_rec_T in *. 
-    edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto. simpl in *.
+    unfold update_rec_E, update_rec_T in *.     
+    edestruct IHD3 with (ctxt:=update_T (x, tyx)
+                                 (update_T (f, Ty_Arrow tyx effc0 tyc effe0 Ty_Effect) ctxt0))
+      as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto. simpl in *.
+    SCase "TcInc".
+    {apply ExtendedTcInv_2. 
+     - assumption.
+     - inversion_clear TcRho_Inc' as [? ? HInc].
+       now apply HInc in H1.
+     - inversion_clear TcRho_Inc' as [? ? HInc].
+       now apply HInc in H2.  }
     SCase "TcEnv".
       apply update_env. apply update_env. eapply ext_stores__env; eauto.  
       eapply ext_stores__val; eauto. eassumption.
@@ -431,40 +442,50 @@ Proof.
     SCase "TcVal".
       edestruct IHD1 as [sttyl [Weak1 [TcHeap1 TcVal_lam]]]; eauto. 
       inversion TcVal_lam as  [ | | | ? ? ? ? ? ? ?  TcRho_rho' TcInc'  TcEnv_env' TcExp_lam | | |]; subst.   
-      inversion TcExp_lam as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst.  
-      edestruct IHD2 as [sttyr [Weak2 [TcHeap2 TcVal_res]]]; eauto using update_env, ext_stores__env.
-      apply update_rho. assumption. assumption. eapply extended_rho; eauto. 
-      exists sttyr; intuition. 
-      rewrite subst_rho_forallrgn in H5.
-      rewrite subst_rho_forallrgn in H5.
-      inversion H5.  
-      unfold update_R in TcVal_res. 
-      simpl in TcVal_res. rewrite subst_add_comm in TcVal_res.
-      SSCase "abstraction body is well typed".
-        unfold subst_in_type in TcVal_res.
-        rewrite SUBST_AS_CLOSE_OPEN in TcVal_res; auto.
-        erewrite subst_rho_open_close in TcVal_res; eauto. 
-      SSCase "bound variable is free".
-        apply not_elem_of_dom.
-        eapply bound_var_is_fresh; eauto.
+      inversion TcExp_lam as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst.   
+      { edestruct IHD2 with (rgns:=set_union rgns0 (singleton_set x))
+        as [sttyr [Weak2 [TcHeap2 TcVal_res]]]; eauto using update_env, ext_stores__env.
+        - { apply update_rho; [ assumption | assumption]. }
+        - apply update_inc. assumption.
+        - eapply extended_rho; eauto.
+        - exists sttyr; intuition. 
+          rewrite subst_rho_forallrgn in H5.
+          rewrite subst_rho_forallrgn in H5.
+          inversion H5.  
+          unfold update_R in TcVal_res. 
+          simpl in TcVal_res. rewrite subst_add_comm in TcVal_res.
+          + unfold subst_in_type in TcVal_res.
+            rewrite SUBST_AS_CLOSE_OPEN in TcVal_res; auto.
+            erewrite subst_rho_open_close in TcVal_res; eauto. 
+          + apply not_elem_of_dom.
+            eapply bound_var_is_fresh; eauto. }
   Case "eff_app". 
     edestruct IHD1 as [sttym [Weak1 [TcHeap1 TcVal_mu]]]; eauto.
     edestruct IHD2 as [sttya [Weaka [TcHeapa TcVal_arg]]]; eauto using ext_stores__env.
     inversion TcVal_mu as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcInc' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ? ? TcExp_eb | | | | | | | | | | | | | | | | | | | |  ]; subst. 
-    edestruct IHD3 as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto.
+    edestruct IHD3 with (ctxt:=update_T (x, tyx)
+                                 (update_T (f, Ty_Arrow tyx effc0 tyc0 effe0 Ty_Effect) ctxt0))
+      as [sttyb [Weakb [TcHeapb TcVal_res]]]; eauto. simpl in *.
+    SCase "Extended Inc". 
+    {apply ExtendedTcInv_2. 
+     - assumption.
+     - inversion_clear TcInc' as [? ? HInc].
+       now apply HInc in H0.
+     - inversion_clear TcInc' as [? ? HInc].
+       now apply HInc in H1.  }
     SCase "Extended Env". 
-      apply update_env.
+      apply update_env. 
       SSCase "TcEnv". 
-      { apply update_env.
+      { apply update_env. 
         - eapply ext_stores__env; eauto.
         - rewrite <- H4 in TcVal_mu.  eapply ext_stores__val; eauto. }
       SSCase "TcVal".
         do 2 rewrite subst_rho_arrow in H4.
-        inversion H4.
+        inversion H4. 
         assert (SubstEq: subst_rho rho' tyx = subst_rho rho tya) by assumption.
         rewrite <- SubstEq in TcVal_arg.  eassumption. 
-    exists sttyb. intuition.
+        exists sttyb. intuition.
     rewrite subst_rho_effect. rewrite subst_rho_effect in TcVal_res.
     assumption.
   Case "par_pair".
@@ -648,6 +669,8 @@ Proof.
     exists stty. intuition. rewrite subst_rho_effect. constructor.
   Case "eff_empty".
     exists stty. intuition. rewrite subst_rho_effect. constructor.
-Qed.
+Admitted.
 
 End TypeSoundness.
+
+

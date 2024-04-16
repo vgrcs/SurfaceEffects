@@ -4,6 +4,8 @@ From stdpp Require Import list.
 From stdpp Require Import base.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
+Require Import String.
+
 Require Import Definitions.StaticActions.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.Regions.
@@ -11,6 +13,8 @@ Require Import Definitions.GTypes.
 Require Import Definitions.Keys.
 Require Import Definitions.Values.
 Require Import Definitions.Axioms.
+Require Import Definitions.Tactics.
+
 Require Import Proofs.RegionFacts.
 Require Import Proofs.EffectFacts.
 Require Import Proofs.LocallyNameless.
@@ -122,7 +126,7 @@ Proof.
                F (stty, rho, env, ctxt) end); eauto.
 Qed.
 
-
+  
 Lemma update_rho:
   forall rho rgns x v,
     TcRho (rho, rgns) ->
@@ -301,6 +305,56 @@ Proof.
     reflexivity.
 Qed.
 
+
+
+Lemma subst_rho_pair_uncurry : 
+  forall (a1 a2: RgnName*RgnVal) (b1 b2: Tau),
+    uncurry subst_in_type a1 (uncurry subst_in_type a2 (Ty_Pair b1 b2)) =
+      (Ty_Pair (uncurry subst_in_type a1 (uncurry subst_in_type a2 b1))
+         (uncurry subst_in_type a1 (uncurry subst_in_type a2 b2))).
+Proof.
+  intros.
+  destruct a1 as [x1 v1]; destruct a2 as [x2 v2]. simpl.
+  unfold uncurry, subst_in_type, subst_type; simpl; f_equal. 
+Qed.
+
+Lemma subst_rho_ref_uncurry : 
+  forall (a1 a2: RgnName*RgnVal) r (b: Tau),
+    uncurry subst_in_type a1 (uncurry subst_in_type a2 (Ty_Ref r b)) =
+      Ty_Ref  (uncurry subst_in_rgn a1 (uncurry subst_in_rgn a2 r))
+        (uncurry subst_in_type a1 (uncurry subst_in_type a2 b)).
+Proof.
+  intros.
+  destruct a1 as [x1 v1]; destruct a2 as [x2 v2]. simpl.
+  unfold uncurry, subst_in_type, subst_type; simpl; f_equal. 
+Qed.
+
+Lemma subst_rho_arrow_uncurry :
+  forall (a1 a2: RgnName*RgnVal) (e e': Epsilon)  (b1 b2 b3: Tau),
+    uncurry subst_in_type a1 (uncurry subst_in_type a2 (Ty_Arrow b1 e b2 e' b3)) =
+    Ty_Arrow (uncurry subst_in_type a1 (uncurry subst_in_type a2 b1))
+                (uncurry subst_in_eff a1 (uncurry subst_in_eff a2 e))
+                (uncurry subst_in_type a1 (uncurry subst_in_type a2 b2))
+                (uncurry subst_in_eff a1 (uncurry subst_in_eff a2 e'))
+                (uncurry subst_in_type a1 (uncurry subst_in_type a2 b3)).
+Proof.
+  intros.
+  destruct a1 as [x1 v1]; destruct a2 as [x2 v2]. simpl.
+  unfold uncurry, subst_in_type, subst_type; simpl; f_equal.
+Qed.
+
+
+Lemma subst_rho_forall_uncurry :
+  forall (a1 a2: RgnName*RgnVal) (e: Epsilon)  (b: Tau),
+    uncurry subst_in_type a1 (uncurry subst_in_type a2 (Ty_ForallRgn e b)) =
+      Ty_ForallRgn (uncurry subst_in_eff a1 (uncurry subst_in_eff a2 e))
+                      (uncurry subst_in_type a1 (uncurry subst_in_type a2 b)).
+Proof.
+  intros.
+  destruct a1 as [x1 v1]; destruct a2 as [x2 v2]. simpl.
+  unfold uncurry, subst_in_type, subst_type; simpl; f_equal. 
+Qed.
+              
 Lemma subst_type_aux_comm_uncurry :
   forall (j1 : nat) (a1 : RgnName * RgnVal) (j2 : nat) (a2 : RgnName * RgnVal)
          (b : Tau) (l : list(RgnName*RgnVal)),
@@ -312,102 +366,51 @@ Lemma subst_type_aux_comm_uncurry :
 Proof.
   intros.
   generalize dependent b.
-  dependent induction b; intros.
-  - unfold subst_in_type.
-    destruct a1; destruct a2. simpl.
-    reflexivity.
-    
-Admitted.
-  
-
-
-Lemma foldr_subst_rgn_app:
-  forall (f : RgnName → RgnVal → Region_in_Type → Region_in_Type),
-  forall (l1 l2 : list (RgnName * RgnVal)),    
-  forall k v (b : Region_in_Type),
-    f = subst_in_rgn ->
-    base.NoDup (l1 ++ l2) ->
-    (forall k' v' b',
-        (list_to_map l1 : Rho) !! k' = Some v ->
-       f k' v' (f k v b') = f k v (f k' v' b')) ->
-    foldr (uncurry f) b (l1 ++ (k, v) :: l2) =
-      foldr (uncurry f) (f k v b) (l1 ++ l2).
-Proof.
-  intros f.  
-  dependent induction l1; intros l2 k v b Hf HNoDup H. 
-  - rewrite app_nil_l. rewrite app_nil_l.
-    replace (f k v b) with (uncurry f (k,v) b) by (reflexivity).
-    rewrite <- foldr_snoc.
-    apply foldr_permutation.
-    + constructor.
-      * unfold Reflexive.
+  dependent induction b; intros;
+    try (solve [unfold subst_in_type;destruct a1; destruct a2;reflexivity]).
+  - do 2 rewrite subst_rho_pair_uncurry.
+    f_equal; auto.
+  - do 2 rewrite subst_rho_ref_uncurry.
+    f_equal; auto. 
+    destruct a1 as [x1 v1]; destruct a2 as [x2 v2]. simpl.
+    destruct (AsciiVars.eq_dec x1 x2).
+    + unfold AsciiVars.eq in e; subst. 
+      apply elem_of_list_lookup_2 in H0.
+      apply elem_of_list_lookup_2 in H1.
+      eapply Rho_SameKey_SameValue in H0; eauto. subst.
+      reflexivity.
+    + unfold subst_in_rgn.
+      apply subst_rgn_aux_comm. assumption.  
+  - do 2 rewrite subst_rho_arrow_uncurry.
+    f_equal; auto;  
+    destruct a1 as [x1 v1]; destruct a2 as [x2 v2]; simpl. 
+    + destruct (AsciiVars.eq_dec x1 x2). 
+      * unfold AsciiVars.eq in e1; subst. 
+        apply elem_of_list_lookup_2 in H0.
+        apply elem_of_list_lookup_2 in H1.
+        eapply Rho_SameKey_SameValue in H0; eauto. subst.
         reflexivity.
-      * unfold Transitive.
-        intuition. subst. reflexivity.
-    + solve_proper.
-    + intros. rewrite Hf.
-      eapply subst_rgn_aux_comm_uncurry with (l:=(k, v) :: l2); eauto.
-    + replace ((k, v) :: l2) with ( cons (k,v) nil ++ l2) by (simpl; reflexivity).
-      apply app_Permutation_comm.      
-  - simpl.  rewrite IHl1; clear IHl1. 
-    + reflexivity.
-    + assumption.
-    + apply NoDup_app. 
-      split.
-      * apply NoDup_app in HNoDup.
-        destruct HNoDup as [H1 H2].
-        apply list.NoDup_cons in H1.
-        destruct H1.
-        assumption.
-      * { split; apply NoDup_app in HNoDup; destruct HNoDup as [H1 H2]; destruct H2.
-          - apply list.NoDup_cons in H1.
-            destruct H1.
-            intros. apply H0.
-            apply elem_of_cons. right. assumption.
-          - assumption. }                  
-    + intros. apply H.        
-      destruct a as [ka va].
-      replace (list_to_map ((ka, va) :: l1))
-        with (<[ka:=va]>(list_to_map l1: Rho))
-        by (symmetry; apply list_to_map_cons).     
-      destruct (AsciiVars.eq_dec k' ka).
-      * unfold AsciiVars.eq in e. 
-        apply elem_of_list_to_map_2 in H0.
-        assert (va = v). 
-        eapply Rho_SameKey_SameValue; eauto.
-        admit.
-        subst. apply lookup_insert_Some. intuition.
-      * apply lookup_insert_Some.
-        right. unfold AsciiVars.eq in n. intuition.        
-Admitted.
-
-Lemma fold_add_rgn:
-  forall (f : RgnName → RgnVal → Region_in_Type → Region_in_Type),
-  forall (l : list (RgnName * RgnVal)),
-  forall (k: RgnName) (v: RgnVal) (b: Region_in_Type),
-    f = subst_in_rgn ->
-    base.NoDup l ->
-    (list_to_map l : Rho) !! k = None ->
-    (forall k' v' b',
-       (list_to_map l : Rho) !! k' = Some v ->
-       f k' v' (f k v b') = f k v (f k' v' b')) ->
-    foldr (uncurry f) b ( (k, v)::l) = foldr (uncurry f) (f k v b) l.
-Proof.
-  intros f l k v b Hf HNoDup H' H.
-  destruct (baz_2 l k v H') as [elems1 [elems2 [H1 H2]]].
-  rewrite <- H1.
-  rewrite <- H2.
-  apply foldr_subst_rgn_app; [ assumption | rewrite H2; assumption |].
-  intros k1 v1 b' In_k1_v1. apply H.
-  rewrite <- H2.
-  replace (list_to_map (elems1 ++ elems2))
-    with ((list_to_map elems1 : Rho) ∪ (list_to_map elems2: Rho))
-    by (symmetry; apply list_to_map_app).
-  apply lookup_union_Some_raw.
-  left. assumption.
+      * apply subst_eps_aux_comm. assumption.  
+    + destruct (AsciiVars.eq_dec x1 x2). 
+      * unfold AsciiVars.eq in e1; subst. 
+        apply elem_of_list_lookup_2 in H0.
+        apply elem_of_list_lookup_2 in H1.
+        eapply Rho_SameKey_SameValue in H0; eauto. subst.
+        reflexivity.
+      * apply subst_eps_aux_comm. assumption.  
+  - do 2 rewrite subst_rho_forall_uncurry.
+    f_equal; auto.
+    destruct a1 as [x1 v1]; destruct a2 as [x2 v2]; simpl. 
+    + destruct (AsciiVars.eq_dec x1 x2). 
+      * unfold AsciiVars.eq in e0; subst. 
+        apply elem_of_list_lookup_2 in H0.
+        apply elem_of_list_lookup_2 in H1.
+        eapply Rho_SameKey_SameValue in H0; eauto. subst.
+        reflexivity.
+      * apply subst_eps_aux_comm. assumption.
 Qed.
 
-
+  
 Lemma NoDup_cons_app:
   forall a (l1 l2 :  list (RgnName * RgnVal)),
     NoDup ((a :: l1).*1 ++ l2.*1) ->
@@ -430,17 +433,18 @@ Proof.
 Qed.
 
 Lemma NoDup_comm_some_function:
-  forall (f : RgnName → RgnVal → Tau → Tau),
+  forall A,
+  forall (f : RgnName → RgnVal → A → A),
   forall a k v (l1 l2 :  list (RgnName * RgnVal)),
     NoDup ((a :: l1).*1 ++ l2.*1) ->
-    (forall (k' : RgnName) (v' : RgnVal) (b' : Tau),
+    (forall (k' : RgnName) (v' : RgnVal) (b' : A),
         (list_to_map (a :: l1) : Rho) !! k' = Some v ->
         f k' v' (f k v b') = f k v (f k' v' b')) ->
-      forall (k' : RgnName) (v' : RgnVal) (b' : Tau),
+      forall (k' : RgnName) (v' : RgnVal) (b' : A),
         (list_to_map l1 : Rho) !! k' = Some v ->
         f k' v' (f k v b') = f k v (f k' v' b').
 Proof.
-  intros f a k v l1 l2 HNoDup H1 k' v' b' H0'.
+  intros A f a k v l1 l2 HNoDup H1 k' v' b' H0'.
   apply H1.
   destruct a as [ka va].
   replace (list_to_map ((ka, va) :: l1))
@@ -459,7 +463,72 @@ Proof.
     right. unfold AsciiVars.eq in n. intuition.    
 Qed.
 
-  
+Lemma foldr_subst_rgn_app:
+  forall (f : RgnName → RgnVal → Region_in_Type → Region_in_Type),
+  forall (l1 l2 : list (RgnName * RgnVal)),    
+  forall k v (b : Region_in_Type),
+    f = subst_in_rgn ->
+    base.NoDup (l1.*1++ l2.*1) ->
+    (forall k' v' b',
+        (list_to_map l1 : Rho) !! k' = Some v ->
+       f k' v' (f k v b') = f k v (f k' v' b')) ->
+    foldr (uncurry f) b (l1 ++ (k, v) :: l2) =
+      foldr (uncurry f) (f k v b) (l1 ++ l2).
+Proof.
+  intros f.  
+  dependent induction l1; intros l2 k v b Hf HNoDup H. 
+  - rewrite app_nil_l. rewrite app_nil_l.
+    replace (f k v b) with (uncurry f (k,v) b) by (reflexivity).
+    rewrite <- foldr_snoc.
+    apply foldr_permutation.
+    + constructor.
+      * unfold Reflexive.
+        reflexivity.
+      * unfold Transitive.
+        intuition. subst. reflexivity.
+    + solve_proper.
+    + intros. rewrite Hf.
+      eapply subst_rgn_aux_comm_uncurry with (l:=(k, v) :: l2); eauto.
+    + replace ((k, v) :: l2) with ( cons (k,v) nil ++ l2) by (simpl; reflexivity).
+      apply app_Permutation_comm.      
+  - simpl. rewrite IHl1; clear IHl1. 
+    + reflexivity.
+    + assumption.
+    + eapply NoDup_cons_app; eauto.
+    + eapply NoDup_comm_some_function; eauto.
+Qed.
+
+
+Lemma fold_add_rgn:
+  forall (f : RgnName → RgnVal → Region_in_Type → Region_in_Type),
+  forall (l : list (RgnName * RgnVal)),
+  forall (k: RgnName) (v: RgnVal) (b: Region_in_Type),
+    f = subst_in_rgn ->
+    base.NoDup l.*1 ->
+    (list_to_map l : Rho) !! k = None ->
+    (forall k' v' b',
+       (list_to_map l : Rho) !! k' = Some v ->
+       f k' v' (f k v b') = f k v (f k' v' b')) ->
+    foldr (uncurry f) b ( (k, v)::l) = foldr (uncurry f) (f k v b) l.
+Proof.
+  intros f l k v b Hf HNoDup H' H.
+  destruct (baz_2 l k v H') as [elems1 [elems2 [H1 H2]]].
+  rewrite <- H1.
+  rewrite <- H2.
+  apply foldr_subst_rgn_app.
+  - assumption.
+  - rewrite <- H2 in HNoDup.
+    replace (elems1.*1 ++ elems2.*1) with ((elems1 ++ elems2).*1).
+    assumption.
+    apply fmap_app.
+  - intros k1 v1 b' In_k1_v1. apply H.
+    rewrite <- H2.
+    replace (list_to_map (elems1 ++ elems2))
+      with ((list_to_map elems1 : Rho) ∪ (list_to_map elems2: Rho))
+      by (symmetry; apply list_to_map_app).
+    apply lookup_union_Some_raw.
+    left. assumption.
+Qed.
 
 Lemma fold_subst_type:
   forall (f : RgnName → RgnVal → Tau → Tau),
@@ -539,6 +608,7 @@ Proof.
   apply fold_add_rgn.
   - reflexivity.
   - assert (H' : base.NoDup (map_to_list rho)) by (apply NoDup_map_to_list).
+    apply rho_NoDup_map_fst.
     assumption.
   - replace (list_to_map (map_to_list rho)) with (rho)
       by (symmetry; apply list_to_map_to_list).
@@ -956,8 +1026,9 @@ Proof.
     intuition; eapply HFrv; eauto. contradict H0; apply NotFreeInEmptyEps.
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv tyc) rgns /\ included (free_rgn_vars_in_eps effc) rgns).
-    { eapply IHHExp1; eauto.  
-      simpl in H1. 
+    { eapply IHHExp1; eauto.
+      apply HFrv in H1. simpl in H1.
+
       assert (H': included (frv tyx) rgns) 
         by  (apply IncludedUnion_Name_1 in H1; destruct H1; assumption). 
       apply ExtendedTcInv_2; eauto. }
@@ -965,11 +1036,12 @@ Proof.
     { assert (H'' : included (frv Ty_Effect) rgns /\ 
                     included (free_rgn_vars_in_eps effe) rgns).
       eapply IHHExp2; eauto.
-      - simpl in H1. 
+      - apply HFrv in H1. simpl in H1.
         assert (H''': included (frv tyx) rgns) 
           by  (apply IncludedUnion_Name_1 in H1; destruct H1; assumption).  
         apply ExtendedTcInv_2; eauto. 
-      - split; auto.
+      - apply HFrv in H1. simpl in H1.
+        split; auto.
         intro. intro. contradict H2. apply NotFreeInEmptyEps. }
   - inversion HInc as [? ? HFrv]; subst.
     assert (H' : included (frv tyr) (set_union rgns (singleton_set x)) /\ 

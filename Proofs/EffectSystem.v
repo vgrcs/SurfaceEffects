@@ -23,7 +23,8 @@ Require Import Proofs.LocallyNameless.
 
 Module EffectSoundness.
 
-Import TypeSoundness.
+  Import TypeSoundness.
+  Import ComputedActions.
 
 Lemma EmptyInNil:
   forall st, Epsilon_Phi_Soundness (st, Phi_Nil).
@@ -104,11 +105,12 @@ Lemma eff_sound :
       TcEnv (stty, rho, env, ctxt) -> 
       TcExp (ctxt, rgns, e, ty, static_eff) ->     
       TcHeap (hp, stty) ->
+      TcInc (ctxt, rgns)->
       TcRho (rho, rgns) ->
       Epsilon_Phi_Soundness (fold_subst_eps rho static_eff, dynamic_eff).
 Proof.
   intros e hp hp' env rho v dynamic_eff D. 
-  intros stty ctxt rgns ty static_eff HTcEnv HTcExp HTcHeap HTcRho. 
+  intros stty ctxt rgns ty static_eff HTcEnv HTcExp HTcHeap HTcInc HTcRho. 
   dynamic_cases (dependent induction D) Case; inversion HTcExp; subst.
   Case "cnt n".
     apply EmptyInNil.
@@ -145,7 +147,7 @@ Proof.
 
     inversion TcVal_cls as  [ | | | ? ? ? ? ? ? ? TcRho_rho' TcInc' TcEnv_env' TcExp_abs | | |]; subst. 
     inversion TcExp_abs as [ | | | | ? ? ? ? ? ? ? ?  TcExp_eb | | | | | | | | | | | | | | | | | | | | ]; subst.  
-
+ 
     rewrite <- H5 in TcVal_cls. 
     do 2 rewrite subst_rho_arrow in H5. inversion H5. 
     rewrite <- H11 in TcVal_v'.
@@ -153,13 +155,20 @@ Proof.
     assert (Sb : Epsilon_Phi_Soundness (fold_subst_eps rho effc, bacts)).
     rewrite <- H12; eapply IHD3 with (stty := sttya) (rho:=rho'); eauto.
     SCase "Extended Env".
-      apply update_env.
+      apply update_env. 
       SSCase "TcEnv".
         { apply update_env.
           - eapply ext_stores__env; eauto.
           - eapply ext_stores__val; eauto. }
       SSCase "TcVal".
-         eassumption. 
+        eassumption.
+      SSCase "TcInc".
+        {apply ExtendedTcInv_2. 
+         - assumption.
+         - inversion_clear TcInc' as [? ? HInc].
+           now apply HInc in H1.
+         - inversion_clear TcInc' as [? ? HInc].
+           now apply HInc in H2.  }
     do 2 rewrite fold_dist_union.
     apply sound_comp; [| assumption].
     apply sound_comp; [|assumption].
@@ -187,8 +196,10 @@ Proof.
     replace (subst_eps x (Rgn_Const true false v') effr0) with (subst_in_eff x v' effr0)
       by (unfold subst_in_eff; reflexivity).
     rewrite <- subst_add_comm_eff; eauto.
-    eapply IHD2; eauto.
-    eapply extended_rho; eauto. apply update_rho; auto.
+    { eapply IHD2; eauto. 
+      - eapply extended_rho; eauto.
+      - apply update_inc. assumption.
+      - apply update_rho; auto. }
     apply not_elem_of_dom.
     eapply not_set_elem_not_in_rho; eauto. assumption.
   Case "eff_app".
@@ -230,7 +241,13 @@ Proof.
         + eapply ext_stores__val; eauto. }
     SCase "TcVal".
       eassumption.
-
+    SCase "TcInc".
+      {apply ExtendedTcInv_2. 
+       - assumption.
+       - inversion_clear TcInc' as [? ? HInc].
+         now apply HInc in H0.
+       - inversion_clear TcInc' as [? ? HInc].
+         now apply HInc in H1.  }
     do 2 rewrite fold_dist_union.
         apply sound_comp; [| assumption].
         apply sound_comp; [|assumption].
@@ -421,10 +438,9 @@ Proof.
   Case "eff_top".
     apply EmptyInNil.
   Case "eff_empty".
-    apply EmptyInNil.
+  apply EmptyInNil.
 Qed.
 
 
 End EffectSoundness.
-
 

@@ -42,22 +42,23 @@ Example PairParAux:
    forall stty ctxt rgns ty_e static_e,
      TcHeap (h'', stty) ->
      TcRho (rho, rgns) ->
+     TcInc (ctxt, rgns) ->
      TcEnv (stty, rho, env, ctxt) ->
      TcExp (ctxt, rgns, Mu_App ef ea, ty_e, static_e) ->
      acts_mu ⋞ theta /\ ReadOnlyPhi acts_eff.
 Proof.
-  intros.
-  inversion H4; subst.
-  assert (BackTriangle (ctxt, rgns, rho, Mu_App ef ea, Eff_App ef ea)) by (eapply H9).  
+  intros. 
   inversion H5; subst.
+  assert (BackTriangle (ctxt, rgns, rho, Mu_App ef ea, Eff_App ef ea)) by (eapply H10).  
+  inversion H6; subst.
   split.
   - eapply Correctness_soundness_ext with (ea:=Mu_App ef ea); eauto.
     assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff)) 
       by (eapply eff_sound; eauto). 
-    eapply ReadOnlyStaticImpliesReadOnlyPhi in H19; eauto.
+    eapply ReadOnlyStaticImpliesReadOnlyPhi in H20; eauto.
  -  assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff)) 
       by (eapply eff_sound; eauto). 
-    eapply ReadOnlyStaticImpliesReadOnlyPhi in H19; eauto.
+    eapply ReadOnlyStaticImpliesReadOnlyPhi in H20; eauto.
 Qed.
 
 Theorem Dynamic_DetTrace :
@@ -65,12 +66,14 @@ Theorem Dynamic_DetTrace :
     forall stty ctxt rgns t static_eff,
       TcHeap (heap, stty) ->
       TcRho (rho, rgns) ->
+      TcInc (ctxt, rgns) ->
       TcEnv (stty, rho, env, ctxt) ->
       TcExp (ctxt, rgns, exp, t, static_eff) ->
       (heap, env, rho, exp) ⇓ (heap', val', phi') ->
       Det_Trace phi'.
 Proof.
-  intros heap rho env exp heap' val' phi' stty ctxt rgns t static_eff HTcHeap HTcRho HTcEnv HTcExp HStep. 
+  intros heap rho env exp heap' val' phi' stty ctxt rgns t static_eff
+    HTcHeap HTcRho HTcInc HTcEnv HTcExp HStep. 
   generalize dependent stty.
   generalize dependent rgns.
   generalize dependent t.
@@ -117,13 +120,21 @@ Proof.
                                    TcEnv_env' TcExp_abs [A B C D HSubst] 
                                  | | |]; subst. 
         inversion TcExp_abs as [ | | | 
-                                 ? ? ? ? ? ? ? ? ? ?  HBt_ec_ee TcExp_ec' TcExp_ee' 
+                                 ? ? ? ? ? ? ? ? ? ? ? ? ?  TcExp_ec' TcExp_ee' 
                                  | | | | | | | | | | | | | | | | | | | | |]; subst.
         rewrite <- HSubst in TcVal_cls.
         do 2 rewrite subst_rho_arrow in HSubst. 
         inversion HSubst as [[H_tyx_tya A C D E]]; clear A C D E.
         rewrite <- H_tyx_tya in TcVal_v'.
-        { eapply IHHStep3; eauto using ext_stores__env.
+        { eapply IHHStep3
+            with (ctxt:=update_rec_T (f, Ty_Arrow tyx effc0 tyc effe0 Ty_Effect)
+                          (x, tyx) ctxt0); eauto using ext_stores__env.
+          - apply ExtendedTcInv_2. 
+            + assumption.
+            + inversion_clear TcInc' as [? ? HInc].
+              now apply HInc in H1.
+            + inversion_clear TcInc' as [? ? HInc].
+              now apply HInc in H2.
           - apply update_env; simpl.  
             + eapply ext_stores__env ; eauto. 
               apply update_env.  
@@ -152,8 +163,10 @@ Proof.
       do 2 rewrite subst_rho_forallrgn in HSubst.
       inversion HSubst as [[H_fold A]]; clear A.
       
-      { eapply IHHStep2 with (heap:=fheap); eauto. 
-       - apply update_rho; auto. 
+      { eapply IHHStep2 with (rgns:=set_union rgns0 (singleton_set x))
+                             (heap:=fheap); eauto. 
+        - apply update_rho; auto.
+        - apply update_inc; auto.          
        - eapply extended_rho; eauto. }   
   - inversion HTcExp; subst. 
     assert (clsTcVal :
@@ -178,7 +191,7 @@ Proof.
                                 TcEnv_env' TcExp_abs [A B C D HSubst] 
                               | | |]; subst. 
      inversion TcExp_abs as [ | | | 
-                              ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
+                              ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec' TcExp_ee' 
                               | | | | | | | | | | | | | | | | | | | | |]; subst.
      rewrite <- HSubst in TcVal_cls.
      do 2 rewrite subst_rho_arrow in HSubst. 
@@ -189,7 +202,15 @@ Proof.
      +  constructor.
         * eapply IHHStep1; eauto using ext_stores__env.
         * eapply IHHStep2; eauto using ext_stores__env.  
-     +  { eapply IHHStep3; eauto using ext_stores__env.
+     +  { eapply IHHStep3
+            with (ctxt:=update_rec_T (f, Ty_Arrow tyx effc0 tyc0 effe0 Ty_Effect)
+                          (x, tyx) ctxt0); eauto using ext_stores__env.
+          - apply ExtendedTcInv_2. 
+            + assumption.
+            + inversion_clear TcInc' as [? ? HInc].
+              now apply HInc in H0.
+            + inversion_clear TcInc' as [? ? HInc].
+              now apply HInc in H1.
           - apply update_env; simpl.  
             + eapply ext_stores__env ; eauto. 
               apply update_env.  
@@ -352,6 +373,7 @@ Theorem DynamicDeterminism_ext :
     forall stty ctxt rgns ty static,
      TcHeap (heap_a, stty) ->
      TcRho (rho, rgns) ->
+     TcInc (ctxt, rgns) ->
      TcEnv (stty, rho, env, ctxt) ->
      TcExp (ctxt, rgns, exp, ty, static) ->
      heap1 ≡@{Heap} heap2 /\ val1 = val2 /\ acts1 = acts2.
@@ -361,7 +383,7 @@ Proof.
   generalize dependent heap_b.
   dependent induction Dyn1; 
     intros heap_b Heq heap2 val2 acts2 Dyn2 stty ctxt rgns ty static
-      HTcHeap HTcRho HTcEnv HTcExp;
+      HTcHeap HTcRho HTcInc HTcEnv HTcExp;
   inversion Dyn2; subst;
   try (solve [intuition]).
   - intuition. rewrite H0 in H8. inversion H8; subst. reflexivity.
@@ -390,7 +412,7 @@ Proof.
                                TcEnv_env' TcExp_abs [A B C D HSubst] 
                              | | |]; subst. 
     inversion TcExp_abs as [ | | | 
-                             ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
+                             ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec' TcExp_ee' 
                              | | | | | | | | | | | | | | | | | | | | |]; subst.
     rewrite <- HSubst in TcVal_cls.
     do 2 rewrite subst_rho_arrow in HSubst. 
@@ -409,7 +431,14 @@ Proof.
     destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]; subst.
     
     assert ( RH3 : heap1 ≡@{Heap} heap2 /\ val1 = val2 /\ bacts = bacts0).
-    { eapply IHDyn1_3; eauto. 
+    { eapply IHDyn1_3 with (ctxt:=update_rec_T (f0, Ty_Arrow tyx effc0 tyc effe0 Ty_Effect)
+                                    (x0, tyx) ctxt0); eauto.
+      - apply ExtendedTcInv_2. 
+        + assumption.
+        + inversion_clear TcInc' as [? ? HInc].
+          now apply HInc in H3.
+        + inversion_clear TcInc' as [? ? HInc].
+          now apply HInc in H4.        
       - apply update_env; simpl.  
         + eapply ext_stores__env; eauto.  
           apply update_env.
@@ -450,8 +479,10 @@ Proof.
      rewrite H in H9. inversion H9; subst.
     
      assert ( RH2 : heap1 ≡@{Heap} heap2 /\ val1 = val2 /\ bacts = bacts0).
-     { eapply IHDyn1_2 with (heap_a:=fheap); eauto. 
+     { eapply IHDyn1_2 with (rgns:=set_union rgns0 (singleton_set x0))
+                            (heap_a:=fheap); eauto. 
        - apply update_rho; auto.
+       - apply update_inc; auto.  
        - eapply extended_rho; eauto. }
      
      destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. subst.
@@ -482,7 +513,7 @@ Proof.
                                 TcEnv_env' TcExp_abs [A B C D HSubst] 
                               | | |]; subst. 
      inversion TcExp_abs as [ | | | 
-                              ? ? ? ? ? ? ? ? ? ? HBt_ec_ee TcExp_ec' TcExp_ee' 
+                              ? ? ? ? ? ? ? ? ? ? ? ? ? TcExp_ec' TcExp_ee' 
                               | | | | | | | | | | | | | | | | | | | | |]; subst. 
      rewrite <- HSubst in TcVal_cls. 
      do 2 rewrite subst_rho_arrow in HSubst.
@@ -501,7 +532,14 @@ Proof.
      destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2. subst.
      
      assert ( RH3 : heap1 ≡@{Heap} heap2 /\  val1 = val2 /\ bacts = bacts0 ).  
-     { eapply IHDyn1_3; eauto.
+     { eapply IHDyn1_3 with (ctxt:=update_rec_T (f0, Ty_Arrow tyx effc0 tyc0 effe0 Ty_Effect)
+                                     (x0, tyx) ctxt0); eauto.
+       - apply ExtendedTcInv_2. 
+         + assumption.
+         + inversion_clear TcInc' as [? ? HInc].
+           now apply HInc in H4.
+         + inversion_clear TcInc' as [? ? HInc].
+           now apply HInc in H5.
        - apply update_env; simpl.  
           + eapply ext_stores__env ; eauto. 
                   apply update_env.  
@@ -800,21 +838,7 @@ Proof.
 Qed.
 
 
-Lemma EmptyTcRho :
-  TcRho (∅, Empty_set RgnName).
-Proof.
-  econstructor. intro.
-  split; intros.
-  - contradict H.
-    apply lookup_empty.
-  - contradiction.
-Qed.
- 
-Lemma EmptyTcEnv :
-    TcEnv (∅, ∅, ∅, ∅).
-Proof.
-  econstructor; intros; inversion H.
-Qed.
+
 
 Theorem Determinism : 
   forall exp heap1 heap2 val1 val2 acts1 acts2,
@@ -825,12 +849,21 @@ Theorem Determinism :
        heap1 ≡@{Heap} heap2 /\ val1 = val2 /\ acts1 = acts2.
 Proof.
   intros.
-  eapply DynamicDeterminism_ext with (ctxt:=∅); eauto.
+  eapply DynamicDeterminism_ext with (ctxt:=∅); eauto. 
   - apply TcHeapEmpty.
     + reflexivity.
     + econstructor.
- - apply EmptyTcRho. 
- - apply EmptyTcEnv.
+  - econstructor. intro.
+    split; intros.  
+    + contradict H2.
+      apply lookup_empty.
+    + contradiction.
+  - econstructor. intro.
+    intros. contradict H2.
+    unfold find_T.
+    replace (∅ !! x) with (None: option Tau) by (symmetry; apply lookup_empty).
+    auto.   
+ - econstructor; intros; inversion H2.
 Qed.
 
 
@@ -841,6 +874,4 @@ Lemma Determinism_new:
     (∅, ∅, ∅, e) ⇓ (h1, v1, phi_1) ->
     (∅, ∅, ∅, e) ⇓ (h2, v2, phi_2) ->
     h1 ≡@{Heap} h2 /\ v1 = v2 /\ phi_1 = phi_2.
-Proof.
-  intros.
 Admitted.
