@@ -1,18 +1,10 @@
 From stdpp Require Import gmap.
+From stdpp Require Import strings.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
-Require Import Coq.FSets.FMapAVL. 
-Require Import Coq.Structures.OrderedTypeEx.
-Require Import Coq.Arith.Peano_dec.
 Require Import Ascii String.
-Require Import Coq.Arith.EqNat.
-Require Import Coq.Arith.Mult.
-Require Import Coq.Arith.Plus.
-Require Import Coq.Arith.Minus.
 Require Import Coq.Lists.List.
-Require Import Coq.Arith.Compare_dec.
 
-Require Import Definitions.Keys.
 Require Import Definitions.GHeap.
 Require Import Definitions.Semantics.
 Require Import Definitions.Axioms.
@@ -336,9 +328,10 @@ Proof.
       by (apply H; left; reflexivity).
     inversion H0; subst. unfold update_H in *. simpl in *.
     inversion H0; subst. unfold update_H in *. simpl in *. 
-    destruct (RegionVars.eq_dec (r, l) (r0, l0)).
-    + inversion e. unfold fst, snd in *; subst.
-      destruct H2. reflexivity.
+    destruct (keys_eq_dec (r, l) (r0, l0)).
+    + unfold keys_eq, fst, snd, NPeano.Nat.eq in *.
+      destruct k; subst.
+      contradiction.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
       apply insert_commute. symmetry. assumption.
@@ -375,8 +368,8 @@ Proof.
        by (apply H; left; reflexivity).
     inversion H1; subst. unfold update_H in *. simpl in *.
     inversion H1; subst. unfold update_H in *. simpl in *. 
-    destruct (RegionVars.eq_dec (r, l) (r0, l0)).
-    + inversion e. unfold fst, snd in *; subst.
+    destruct (keys_eq_dec (r, l) (r0, l0)).
+    + unfold keys_eq, fst, snd, NPeano.Nat.eq in *; subst.
       inversion H1; subst. contradict H5. intuition.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
@@ -562,8 +555,8 @@ Proof.
     assert (Disjoint_Dynamic (DA_Alloc r l v) (DA_Write r0 l0 v0))
       by (apply H; left; reflexivity).
     inversion H0; subst. unfold update_H in *. simpl in *. 
-    destruct (RegionVars.eq_dec (r, l) (r0, l0)).
-    + inversion e. unfold fst, snd in *; subst.
+    destruct (keys_eq_dec (r, l) (r0, l0)).
+    + unfold keys_eq, fst, snd, NPeano.Nat.eq in *; subst.
       contradict H2. intuition.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
@@ -605,8 +598,9 @@ Proof.
     assert (Disjoint_Dynamic (DA_Write r l v) (DA_Alloc r0 l0 v0))
       by (apply H; left; reflexivity).
     inversion H1; subst. unfold update_H in *. simpl in *. 
-    destruct (RegionVars.eq_dec (r, l) (r0, l0)).
-    + inversion e. simpl in *. subst. contradict H3. reflexivity.
+    destruct (keys_eq_dec (r, l) (r0, l0)).
+    + unfold keys_eq, NPeano.Nat.eq in k; simpl in k; destruct k.
+      contradict H3. subst. reflexivity.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
       apply insert_commute. assumption.

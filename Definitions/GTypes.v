@@ -1,13 +1,12 @@
 From stdpp Require Import gmap.
+From stdpp Require Import strings.
 Require Import Coq.Sets.Ensembles.
 Require Import Ascii.
-Require Import Definitions.Keys.
 Require Import Definitions.Regions.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.StaticActions.
 Require Import Definitions.Values.
 Require Import Definitions.Expressions.
-
 
 Inductive Tau :=
   | Ty_Natural : Tau
@@ -195,24 +194,24 @@ Definition open_var (t : Tau) (x : VarId) : Tau :=
 
 
 (** begin of closings **)
-Definition closing_rgn_in_rgn (k : nat) (x: VarId) (t: Region_in_Type) : Region_in_Type
+Definition closing_rgn_in_rgn (k : nat) (x: RgnName) (t: Region_in_Type) : Region_in_Type
  := match t with
     | Rgn_Const _ _ _ => t
-    | Rgn_FVar _ _ n  => if AsciiVars.eq_dec n x then (Rgn_BVar true true k) else t
+    | Rgn_FVar _ _ n  => if ascii_eq_dec n x then (Rgn_BVar true true k) else t
     | Rgn_BVar _ _ _  => t
     end.
 
-Definition closing_rgn_in_sa (k : nat) (x: VarId) (sa: StaticAction) : StaticAction :=
+Definition closing_rgn_in_sa (k : nat) (x: RgnName) (sa: StaticAction) : StaticAction :=
   match sa with
   | SA_Alloc rgn => SA_Alloc (closing_rgn_in_rgn k x rgn)
   | SA_Read rgn  => SA_Read (closing_rgn_in_rgn k x rgn)
   | SA_Write rgn => SA_Write (closing_rgn_in_rgn k x rgn)
   end.
 
-Definition closing_rgn_in_eps(k : nat) (x: VarId) (eps: Epsilon) : Epsilon :=
+Definition closing_rgn_in_eps(k : nat) (x: RgnName) (eps: Epsilon) : Epsilon :=
   fun sa => exists sa', eps sa' /\ closing_rgn_in_sa k x sa' = sa.
 
-Fixpoint closing_rgn_exp (k: nat) (x: VarId) (t: Tau) {struct t} : Tau :=
+Fixpoint closing_rgn_exp (k: nat) (x: RgnName) (t: Tau) {struct t} : Tau :=
   match t with
   | Ty_Natural => t
   | Ty_Boolean => t
@@ -280,7 +279,7 @@ Inductive TcRgn : (Omega * Region_in_Expr) -> Prop :=
 Definition subst_rgn  (z : RgnName) (u : Region_in_Expr) (t: Region_in_Type) : Region_in_Type :=
   match t with
     | Rgn_Const _ _ r => t
-    | Rgn_FVar _ _ r  => if (AsciiVars.eq_dec z r) then mk_rgn_type u else t 
+    | Rgn_FVar _ _ r  => if (ascii_eq_dec z r) then mk_rgn_type u else t 
     | Rgn_BVar _ _ _  => t
   end.
 
@@ -384,7 +383,7 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
     not_set_elem rgns x ->
     lc_type tyr ->
     lc_type_eps effr ->
-    TcInc (ctxt, rgns) ->
+    (*TcInc (ctxt, rgns) ->*)
     (forall rho,
         BackTriangle (ctxt, set_union rgns (singleton_set x), rho, er, Empty)) ->
     TcExp (ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->

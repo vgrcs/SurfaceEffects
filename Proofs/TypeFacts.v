@@ -2,6 +2,8 @@ From stdpp Require Import gmap.
 From stdpp Require Import fin_maps.
 From stdpp Require Import list.
 From stdpp Require Import base.
+From stdpp Require Import strings.
+
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import String.
@@ -10,7 +12,6 @@ Require Import Definitions.StaticActions.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.Regions.
 Require Import Definitions.GTypes.
-Require Import Definitions.Keys.
 Require Import Definitions.Values.
 Require Import Definitions.Axioms.
 Require Import Definitions.Tactics.
@@ -138,8 +139,8 @@ Proof.
   econstructor.  
   intro r. split.
   - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
-    destruct (AsciiVars.eq_dec x r) as [c | c].
-    + unfold AsciiVars.eq in c; intros; subst.
+    destruct (ascii_eq_dec x r) as [c | c].
+    + intros; subst.
       unfold set_elem, set_union, singleton_set.
       apply Ensembles.Union_intror.
       apply Ensembles.In_singleton.
@@ -151,8 +152,8 @@ Proof.
         apply HRgn'. assumption.
       * eapply G_diff_keys_3 in H1; auto.  
   - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
-    destruct (AsciiVars.eq_dec x r) as [c | c].
-    + unfold AsciiVars.eq in c; intros; subst.
+    destruct (ascii_eq_dec x r) as [c | c].
+    + intros; subst.
       replace (<[r:=v]> rho !! r) with (Some v) by (symmetry; apply lookup_insert).
       intro H'. inversion H'.
     + destruct (HRgn' r).
@@ -175,16 +176,15 @@ Proof.
   intros r k1 k2 v1 v2 H.
   unfold Region_in_Type in r.
   dependent induction r; try (solve [simpl; reflexivity ]).
-  unfold subst_rgn. destruct (AsciiVars.eq_dec k1 k2).
+  unfold subst_rgn. destruct (ascii_eq_dec k1 k2).
   - inversion e. contradiction.
-  - simpl. destruct (AsciiVars.eq_dec k2 r).
-    + assert (~ AsciiVars.eq k1 r) by (inversion e; congruence).
-      unfold  AsciiVars.eq in *.
-      destruct (AsciiVars.eq_dec k1 r).
+  - simpl. destruct (ascii_eq_dec k2 r).
+    + assert (k1 <> r) by congruence.
+      destruct (ascii_eq_dec k1 r).
       * now absurd (k1=r).
-      * inversion e; subst; now destruct (AsciiVars.eq_dec r r).
-    + destruct (AsciiVars.eq_dec k1 r); [reflexivity |].
-      now destruct (AsciiVars.eq_dec k2 r).
+      * inversion e; subst; now destruct (ascii_eq_dec r r).
+    + destruct (ascii_eq_dec k1 r); [reflexivity |].
+      now destruct (ascii_eq_dec k2 r).
 Qed.  
 
 
@@ -245,9 +245,8 @@ Proof.
     rewrite app_nil_l. rewrite app_nil_r.
     split; reflexivity.
   - destruct a as [k' v'].
-    destruct (AsciiVars.eq_dec k k').
-    + unfold AsciiVars.eq in e. subst.
-      contradict H.
+    destruct (ascii_eq_dec k k').
+    + subst. contradict H.
       replace (list_to_map ((k', v') :: l)) with (<[k':=v']>(list_to_map l: Rho))
         by (symmetry; apply list_to_map_cons).
       apply NotNoneIsSome.
@@ -279,23 +278,19 @@ Proof.
     reflexivity.
   - unfold subst_in_rgn_alt.
     destruct a1. destruct a2. simpl.
-    destruct (AsciiVars.eq_dec r2 r); destruct (AsciiVars.eq_dec r0 r).
-    + unfold AsciiVars.eq in e; subst. unfold AsciiVars.eq in e0. subst.
-      { assert (HSubst: r1 = r3).
+    destruct (ascii_eq_dec r2 r); destruct (ascii_eq_dec r0 r); subst.
+    + { assert (HSubst: r1 = r3).
         apply Rho_SameKey_SameValue with (l:=l) (x:=r).
         - eapply elem_of_list_lookup_2; eauto.
         - eapply elem_of_list_lookup_2; eauto.
         - subst. reflexivity. }
-    + unfold AsciiVars.eq in e; subst. simpl.
-      destruct (AsciiVars.eq_dec r r).
+    + simpl. destruct (ascii_eq_dec r r).
       * reflexivity.
-      * unfold AsciiVars.eq in n0. contradiction.      
-    + unfold AsciiVars.eq in e; subst. simpl.
-      destruct (AsciiVars.eq_dec r r).
+      * contradiction.      
+    + simpl. destruct (ascii_eq_dec r r).
       * reflexivity.
-      * unfold AsciiVars.eq in n0; contradiction.
-    + simpl. destruct (AsciiVars.eq_dec r2 r); destruct (AsciiVars.eq_dec r0 r);
-        unfold AsciiVars.eq in *; subst.      
+      * contradiction.
+    + simpl. destruct (ascii_eq_dec r2 r); destruct (ascii_eq_dec r0 r); subst.      
       * contradiction.
       * contradiction.
       * contradiction.
@@ -373,9 +368,8 @@ Proof.
   - do 2 rewrite subst_rho_ref_uncurry.
     f_equal; auto. 
     destruct a1 as [x1 v1]; destruct a2 as [x2 v2]. simpl.
-    destruct (AsciiVars.eq_dec x1 x2).
-    + unfold AsciiVars.eq in e; subst. 
-      apply elem_of_list_lookup_2 in H0.
+    destruct (ascii_eq_dec x1 x2); subst.
+    + apply elem_of_list_lookup_2 in H0.
       apply elem_of_list_lookup_2 in H1.
       eapply Rho_SameKey_SameValue in H0; eauto. subst.
       reflexivity.
@@ -384,16 +378,14 @@ Proof.
   - do 2 rewrite subst_rho_arrow_uncurry.
     f_equal; auto;  
     destruct a1 as [x1 v1]; destruct a2 as [x2 v2]; simpl. 
-    + destruct (AsciiVars.eq_dec x1 x2). 
-      * unfold AsciiVars.eq in e1; subst. 
-        apply elem_of_list_lookup_2 in H0.
+    + destruct (ascii_eq_dec x1 x2); subst.
+      * apply elem_of_list_lookup_2 in H0.
         apply elem_of_list_lookup_2 in H1.
         eapply Rho_SameKey_SameValue in H0; eauto. subst.
         reflexivity.
       * apply subst_eps_aux_comm. assumption.  
-    + destruct (AsciiVars.eq_dec x1 x2). 
-      * unfold AsciiVars.eq in e1; subst. 
-        apply elem_of_list_lookup_2 in H0.
+    + destruct (ascii_eq_dec x1 x2); subst.
+      * apply elem_of_list_lookup_2 in H0.
         apply elem_of_list_lookup_2 in H1.
         eapply Rho_SameKey_SameValue in H0; eauto. subst.
         reflexivity.
@@ -401,9 +393,8 @@ Proof.
   - do 2 rewrite subst_rho_forall_uncurry.
     f_equal; auto.
     destruct a1 as [x1 v1]; destruct a2 as [x2 v2]; simpl. 
-    + destruct (AsciiVars.eq_dec x1 x2). 
-      * unfold AsciiVars.eq in e0; subst. 
-        apply elem_of_list_lookup_2 in H0.
+    + destruct (ascii_eq_dec x1 x2); subst.
+      * apply elem_of_list_lookup_2 in H0.
         apply elem_of_list_lookup_2 in H1.
         eapply Rho_SameKey_SameValue in H0; eauto. subst.
         reflexivity.
@@ -450,9 +441,8 @@ Proof.
   replace (list_to_map ((ka, va) :: l1))
     with (<[ka:=va]>(list_to_map l1: Rho))
     by (symmetry; apply list_to_map_cons).
-  destruct (AsciiVars.eq_dec k' ka).
-  - unfold AsciiVars.eq in e.
-    apply NoDup_app in HNoDup; destruct HNoDup as [Ha Hb]; destruct Hb.
+  destruct (ascii_eq_dec k' ka).
+  - apply NoDup_app in HNoDup; destruct HNoDup as [Ha Hb]; destruct Hb.
     assert (H1' : ka ∉ l1.*1 ∧ NoDup l1.*1)
       by (apply list.NoDup_cons; assumption).
     destruct H1'. rewrite e in H0'.
@@ -460,7 +450,7 @@ Proof.
     replace (list_to_map l1 !! ka) with (Some v) in H2.
     inversion H2.
   - apply lookup_insert_Some.
-    right. unfold AsciiVars.eq in n. intuition.    
+    right. intuition.    
 Qed.
 
 Lemma foldr_subst_rgn_app:
@@ -838,18 +828,16 @@ Proof.
   econstructor.    
   intros. unfold find_T in H, HFrv.
   unfold update_rec_T in H. simpl in H.
-  destruct (AsciiVars.eq_dec x0 x) as [c | c].
-  - inversion c; subst.
-    unfold update_T in H; simpl in H.    
+  destruct (ascii_eq_dec x0 x) as [c | c]; subst.  
+  - unfold update_T in H; simpl in H.    
     assert ( HSubst : <[x:=tyx]> (<[f:=Ty_Arrow tyx effc tyc effe Ty_Effect]> ctxt) !! x
                       = Some tyx)
       by (apply lookup_insert). 
     rewrite H in HSubst.
     inversion HSubst; subst.
     do 2 intro. eapply HFind1. assumption.
-  - destruct (AsciiVars.eq_dec x0 f) as [d | d].
+  - destruct (ascii_eq_dec x0 f) as [d | d].
     + inversion d; subst.
-      unfold AsciiVars.eq in c.
       eapply G_diff_keys_1 in H; auto.
       unfold update_T in H; simpl in H.
       assert ( HSame : forall x v (e : gmap VarId Tau), (<[ x:=v ]> e) !! x = Some v)
@@ -922,18 +910,16 @@ Proof.
     induction sa; reflexivity.
   - apply IHl;  clear IHl. 
     + destruct a as [k v].
-      destruct (AsciiVars.eq_dec x k).
-      * unfold AsciiVars.eq in e; subst.
-        contradict H1. apply NotNoneIsSome. exists v.
+      destruct (ascii_eq_dec x k); subst.
+      * contradict H1. apply NotNoneIsSome. exists v.
         apply lookup_insert.
       * apply not_elem_of_list_to_map_2 in H1.
         apply not_elem_of_list_to_map_1.
         assert ( x ≠ k ∧ x ∉ l.*1) by (apply not_elem_of_cons; assumption).
         intuition.
     + destruct a as [k v]. 
-      destruct (AsciiVars.eq_dec x k). 
-      * unfold AsciiVars.eq in e; subst.
-        intro. apply H2. unfold In in *.  
+      destruct (ascii_eq_dec x k); subst.
+      * intro. apply H2. unfold In in *.  
         unfold free_rgn_vars_in_eps, fold_subst_eps_alt in *.  
         destruct H as [sa [[sa' [Ha Hb]] Hc]]. 
         exists sa. split; [| assumption].
@@ -1053,10 +1039,10 @@ Proof.
     split; simpl.
     intuition.
     + unfold included, Included in *.
-      destruct H6; unfold In in *.
+      destruct H5; unfold In in *.
       * eapply RegionAbsFrv_1; eauto.
       * eapply RegionAbsFrv_3; eauto.
-    + intros. contradict H4. apply NotFreeInEmptyEps.
+    + intros. contradict H3. apply NotFreeInEmptyEps.
   - assert (H' : included (frv (Ty_Arrow tya effc t effe Ty_Effect)) rgns /\ 
                  included (free_rgn_vars_in_eps efff) rgns) by (eapply IHHExp1; eauto).
     assert (H'' : included (frv tya) rgns /\ 
@@ -1306,9 +1292,8 @@ Proof.
   dependent induction r0; intros.
   - rewrite subst_rho_rgn_const in H.
     simpl in H. contradiction.
-  - destruct (AsciiVars.eq_dec x r) as [c | c].
-    + inversion c; subst.   
-      inversion HRho; subst.   
+  - destruct (ascii_eq_dec x r) as [c | c]; subst.
+    + inversion HRho; subst.   
       contradict H.
       destruct (subst_rho_fvar_1 rho r) as [[v' H0] | H0]. 
       * rewrite H0. simpl. intro. contradiction.
@@ -1322,8 +1307,7 @@ Proof.
             rewrite H4 in H0. 
             inversion H0.
           - apply Union_introl. simpl. auto. }
-   + unfold AsciiVars.eq in c; subst.   
-     inversion HRho; subst.
+   + inversion HRho; subst.
      contradict H.
      destruct (subst_rho_fvar_1 rho r) as [[v' H0] | H0].
      * rewrite H0. simpl. intro. contradiction.
@@ -1480,24 +1464,20 @@ Proof.
   unfold find_E, update_E, find_T, update_T in *; simpl.
   clear HTc.
   - intros x0 v0 HF. (** "TcEnv is well-typed: HE" **)
-    destruct (AsciiVars.eq_dec x0 x) as [c | c].
-    + unfold AsciiVars.eq in c; intros. 
-      subst. exists t.
+    destruct (ascii_eq_dec x0 x) as [c | c]; subst.
+    + subst. exists t.
       apply lookup_insert.
-    + unfold AsciiVars.eq in c; intros. 
-      eapply G_diff_keys_1 in HF; auto; subst. 
+    + eapply G_diff_keys_1 in HF; auto; subst. 
       destruct (HE x0 v0) as [t0 HU] ; [auto | ] ; exists t0.
       eapply G_diff_keys_2; [ auto | exact HU]. 
   - intros x0 t0 HF. (** "TcEnv is well-typed: HT".  **)
-    destruct (AsciiVars.eq_dec x0 x) as [c | c]; 
-    unfold AsciiVars.eq in c; intros; subst.  
+    destruct (ascii_eq_dec x0 x) as [c | c]; intros; subst.    
     + exists v. apply lookup_insert.
     + eapply G_diff_keys_1 in HF; auto.
       destruct (HT x0 t0) as [x1 ?] ; [auto | ].
       exists x1; [eapply G_diff_keys_2]; auto.
   - intros x0 v0 t0 HFindE HFindT. (** "Type preservation: HV". **)
-    destruct (AsciiVars.eq_dec x0 x) as [c | c];
-    unfold AsciiVars.eq in c; intros; subst.
+    destruct (ascii_eq_dec x0 x) as [c | c]; intros; subst.
     + assert (<[x:=v]> env !! x = Some v) by (apply lookup_insert).
       rewrite H in HFindE.
       inversion HFindE; subst.

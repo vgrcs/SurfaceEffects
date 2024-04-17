@@ -1,10 +1,10 @@
+From stdpp Require Import strings.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Lists.List.
 
 Require Import Definitions.Axioms.
 Require Import Definitions.GHeap.
-Require Import Definitions.Keys.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.DynamicActions.
 Require Import Definitions.StaticActions.
@@ -675,7 +675,7 @@ Proof.
   intros. unfold Region_in_Type in r. 
   dependent induction r; simpl in *; do 2 intro.
   - inversion H0.
-  - destruct (AsciiVars.eq_dec r x); subst.
+  - destruct (ascii_eq_dec r x); subst.
     + simpl in *. inversion H0.
     + apply IncludedRemoveSingleton in H; auto.
   - inversion H0.
@@ -691,7 +691,7 @@ Proof.
   unfold Region_in_Type in r. dependent induction r; intro;
   unfold free_rgn_vars_in_rgn, closing_rgn_in_rgn in H.
   - inversion H.
-  - destruct (AsciiVars.eq_dec r x); subst.
+  - destruct (ascii_eq_dec r x); subst.
     + inversion H.
     + inversion H. apply n0. assumption.
   - inversion H.
@@ -725,21 +725,17 @@ Proof.
   unfold included, Included, In in H.
   destruct (H x0); auto.
   - exists sa'. intuition.
-    destruct (AsciiVars.eq_dec x x0); subst.
-    + contradict H2.
-      unfold AsciiVars.eq in e; subst.
+    destruct (ascii_eq_dec x x0); subst.
+    + contradict H2. subst.
       apply NoFreeVarsAfterClosingSa.
-    + unfold AsciiVars.eq in n0.
-      induction sa'; unfold Region_in_Type in r; dependent induction r; 
+    + induction sa'; unfold Region_in_Type in r; dependent induction r; 
         simpl in *; unfold free_rgn_vars_in_rgn in *;
-        try (solve [inversion H2 | destruct  (AsciiVars.eq_dec r x);
+        try (solve [inversion H2 | destruct  (ascii_eq_dec r x);
                                    subst; [inversion H2 | assumption]]).
-  - destruct (AsciiVars.eq_dec x x0); subst.
+  - destruct (ascii_eq_dec x x0); subst.
     + contradict H2.
-      unfold AsciiVars.eq in e; subst.
       apply NoFreeVarsAfterClosingSa.
     + exfalso.
-      unfold AsciiVars.eq in n0.
       contradict n0. inversion H0. auto.
 Qed.
 

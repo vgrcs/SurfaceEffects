@@ -1,18 +1,9 @@
 From stdpp Require Import gmap.
+From stdpp Require Import strings.
 
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
-Require Import Coq.Structures.OrderedTypeEx.
-Require Import Coq.Arith.Peano_dec.
-Require Import String.
-Require Import Coq.Arith.EqNat.
-Require Import Coq.Arith.Mult.
-Require Import Coq.Arith.Plus.
-Require Import Coq.Arith.Minus.
-Require Import Coq.Lists.List.
-Require Import Coq.Arith.Compare_dec.
 
-Require Import Definitions.Keys.
 Require Import Definitions.GHeap.
 Require Import Definitions.Tactics.
 Require Import Definitions.Semantics.

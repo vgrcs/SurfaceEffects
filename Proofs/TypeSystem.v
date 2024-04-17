@@ -1,14 +1,10 @@
-Require Import Coq.Arith.Peano_dec.
-Require Import Coq.Structures.OrderedType.
-Require Import Coq.Logic.FunctionalExtensionality.
+From stdpp Require Import gmap.
+From stdpp Require Import strings.
+
 Require Import Coq.Sets.Ensembles.
-Require Import String.
-Require Import Coq.ZArith.Znat.
 Require Import Coq.Program.Equality.
 
-From stdpp Require Import gmap.
 Require Import Definitions.Tactics.
-Require Import Definitions.Keys.
 Require Import Proofs.LocallyNameless.
 Require Import Definitions.GHeap. 
 Require Import Proofs.Determinism.
@@ -76,41 +72,6 @@ Lemma ST_find_Extend_Left:
 Proof.
   split; [apply ST_find_Ext_1 | apply ST_find_Ext_2].
 Qed.
-  
-
-
-Lemma TcHeap_Extended:
-  forall hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
-  	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2,
-    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
-    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
-    (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
-    TcHeap (heap_mu1, sttym) ->
-    TcHeap (heap_mu2, sttya) ->
-    TcHeap (hp', Functional_Map_Union_Sigma sttym sttya).
-Proof.
-  intros hp hp' ef1 ea1 ef2 ea2 v1 v2 env rho 
-  	heap heap_mu1 heap_mu2 sttym sttya acts_mu1 acts_mu2 Ha Hb Hc HTcHeap1 HTcHeap2.
-  inversion HTcHeap1 as [? ? TcHeap_STFind_1 TcHeap_HFind_1 TcHeap_tcVal_1]; subst;
-    inversion HTcHeap2 as [? ? TcHeap_STFind_2 TcHeap_HFind_2 TcHeap_tcVal_2]; subst;
-    constructor.
-  - apply H_Same_Domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
-    edestruct HSome; eauto.
-    + admit.
-    + admit.
-  - apply H_Same_Domain in HTcHeap1. destruct HTcHeap1 as [HNone HSome].
-    edestruct HSome; eauto.
-    + admit.
-    + admit.
-  - admit.
-Admitted.
-
-Lemma ST_find_Ext_Right:
-  forall (stty1 stty2 : Sigma) (k : SigmaKey) (t : Tau),
-    find_ST k stty2 = Some t ->
-    find_ST k (Functional_Map_Union_Sigma stty1 stty2) = Some t.
-  Admitted.
-
 
 
 Lemma TcValExtended:
@@ -131,8 +92,34 @@ Proof.
     + assumption.
   - apply ext_stores__val with (stty:=stty2).
     intros.
-    + apply ST_find_Ext_Right. assumption.
+    + admit.
     + assumption.
+Admitted.
+
+Lemma TcHeap_Extended:
+  forall heap env rho ef1 ef2 ea1 ea2 v1 v2 ty1 ty2 acts_mu1 acts_mu2
+         heap_mu1 heap_mu2 stty stty1 stty2 hp hp',
+    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
+    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
+    (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
+    TcVal (stty1, v1, subst_rho rho ty1) ->
+    TcVal (stty2, v2, subst_rho rho ty2) ->
+    TcHeap (hp, stty) ->
+    TcHeap (heap_mu1, stty1) ->
+    TcHeap (heap_mu2, stty2) ->
+    TcHeap (hp', Functional_Map_Union_Sigma stty1 stty2).
+Proof. 
+  intros.
+  econstructor. 
+  - intros. inversion H5; subst.   
+    assert (HFind_H : find_H k heap_mu1 = Some v) by admit.
+    apply H10 in HFind_H. destruct HFind_H as [t].
+    exists t. apply ST_find_Extend_Left. assumption.
+  - intros. inversion H5; subst.    
+    assert (HFind_ST : find_ST k stty1 = Some t )  by admit.
+    apply H11 in HFind_ST. destruct HFind_ST as [v].
+    exists v. admit.
+  - admit.
 Admitted.
 
 
@@ -160,17 +147,17 @@ Proof.
   unfold Region_in_Expr in w.
   dependent induction r; dependent induction Hlc1; simpl in *.
   - repeat rewrite subst_rho_rgn_const in *. auto.
-  - destruct (AsciiVars.eq_dec r0 x); subst; simpl in *.
+  - destruct (ascii_eq_dec r0 x); subst; simpl in *.
     + rewrite subst_rho_index in H. rewrite subst_rho_rgn_const in H. inversion H.
     + auto.
   - auto.
-  - destruct (AsciiVars.eq_dec r0 x); subst; simpl in *.
+  - destruct (ascii_eq_dec r0 x); subst; simpl in *.
     + rewrite subst_rho_index in H.
       destruct (subst_rho_fvar_1 rho r) as [[v0 H0] | H0];
       rewrite H0 in H; inversion H.
     + auto.
   - rewrite subst_rho_index in H. rewrite subst_rho_rgn_const in H. inversion H.
-  - destruct (AsciiVars.eq_dec r x); subst; simpl in *.
+  - destruct (ascii_eq_dec r x); subst; simpl in *.
     + repeat rewrite subst_rho_index in H. inversion H; subst.
       rewrite NPeano.Nat.eqb_refl.
       rewrite subst_rho_rgn_const.
@@ -520,10 +507,10 @@ Proof.
     destruct HTyped3 as[ stty3 [HC1  [HC2 HC3]]].
     destruct HTyped4 as[ stty4 [HD1  [HD2 HD3]]].  
     { exists (Functional_Map_Union_Sigma stty1 stty2).
-      split.
+      split. 
       + intros. eapply StoreTyping_Extended; eauto.
       + split.
-        * eapply TcHeap_Extended with(acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
+        * eapply TcHeap_Extended with (acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
         * eapply TcValExtended; eauto.
     }
   Case "cond_true".

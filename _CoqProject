@@ -1,5 +1,4 @@
 -R . Top0
-Definitions/Keys.v
 Definitions/Regions.v
 Definitions/Expressions.v
 Definitions/Values.v

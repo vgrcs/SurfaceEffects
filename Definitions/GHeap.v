@@ -10,19 +10,23 @@ Definition HeapVal := Val.
 Definition HeapKey := prod nat nat.
 Definition Heap := gmap HeapKey HeapVal.
 
-Definition keys_eq x y := Nat.eq (fst x) (fst y) /\ Nat.eq (snd x) (snd y).
+Definition HeapKey' := prod HeapKey nat.
+Definition Heap' := gmap HeapKey' HeapVal.
 
-Lemma keys_eq_dec : forall (k : nat * nat) (k' : nat * nat),
+Definition keys_eq (x y : HeapKey)
+  := Nat.eq (fst x) (fst y) /\ Nat.eq (snd x) (snd y).
+
+Lemma keys_eq_dec : forall (k : HeapKey) (k' : HeapKey),
     { keys_eq k k' } + { ~ keys_eq k k' }.
 Proof.
-  intros. unfold keys_eq, Nat.eq. destruct k as (r, l);
-    destruct k' as (r', l'); subst; simpl.
+  intros. unfold keys_eq, Nat.eq.  destruct k as [r l];
+    destruct k' as [r' l']; subst; simpl.
   destruct (eq_nat_dec r r'); destruct (eq_nat_dec l l'). 
   - left. unfold Nat.eq. auto.
   - right. intro. contradict n. intuition.
   - right. intro. contradict n. intuition.
   - right. intro. contradict n. intuition.
-Qed.    
+Qed. 
 
 
 (* Define an equivalence relation for MyType *)

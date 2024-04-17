@@ -1,10 +1,10 @@
 From stdpp Require Import gmap.
+From stdpp Require Import strings.
 Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import String.
 
 Require Import Definitions.Tactics.
-Require Import Definitions.Keys.
 Require Import Definitions.GHeap.
 Require Import Definitions.StaticActions.
 Require Import Definitions.DynamicActions.
