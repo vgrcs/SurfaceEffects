@@ -16,6 +16,8 @@ Require Import Proofs.RegionFacts.
 Require Import Proofs.TypeFacts.
 Require Import Proofs.HeapFacts.
 
+Require Import Proofs.Admitted.
+
 Module TypeSoundness.
 
   Import GHeap.
@@ -29,51 +31,7 @@ Module TypeSoundness.
   Import TypeFacts.
   Import Ensembles.
 
-
-Lemma ST_find_Ext_1:
-  forall k stty stty' x,
-    find_ST k stty = Some x ->
-    find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
-Proof.
-  intros.
-  unfold find_ST, Functional_Map_Union_Sigma in *.
-  replace (merge Merge_ST stty stty' !! k)
-    with (diag_None Merge_ST (stty !! k) (stty' !! k)) by
-    (rewrite lookup_merge; reflexivity).
-  destruct (stty !! k).
-  - inversion H; subst. unfold Merge_ST; simpl.
-    destruct (stty' !! k); reflexivity.
-  - inversion H.
-Qed.
-
-Lemma ST_find_Ext_2:
-  forall k sttym sttya t,
-    find_ST k (Functional_Map_Union_Sigma sttym sttya) = Some t ->
-    find_ST k sttym = Some t.
-Proof.
-  intros.
-  unfold find_ST, Functional_Map_Union_Sigma in *.
-  assert (H1: diag_None Merge_ST (sttym !! k) (sttya !! k) = Some t) by
-    (replace (diag_None Merge_ST (sttym !! k) (sttya !! k))
-      with (merge Merge_ST sttym sttya !! k)
-      by (rewrite lookup_merge; reflexivity); assumption).
-  clear H.
-  destruct (sttym !! k). 
-  - destruct (sttya !! k).
-    + inversion H1; subst. reflexivity.
-    + inversion H1; subst. reflexivity. 
-  - destruct (sttya !! k); inversion H1.
-Qed.    
-
-Lemma ST_find_Extend_Left:
-  forall k stty stty' x,
-    find_ST k stty = Some x <->
-      find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
-Proof.
-  split; [apply ST_find_Ext_1 | apply ST_find_Ext_2].
-Qed.
-
-
+(*
 Lemma TcValExtended:
   forall  stty1 stty2 v1 v2 rho ty1 ty2,
     TcVal (stty1, v1, subst_rho rho ty1) ->
@@ -88,40 +46,94 @@ Proof.
   econstructor. 
   - apply ext_stores__val with (stty:=stty1).
     intros.
-    + now rewrite Functional_Map_Union_find.
+    + now apply ST_find_Ext_1.
     + assumption.
   - apply ext_stores__val with (stty:=stty2).
-    intros.
+    intros. 
     + admit.
     + assumption.
 Admitted.
 
+
+Lemma FindAfterMultipleSteps_1:
+  forall heap env rho ef1 ef2 ea1 ea2 v1 v2 acts_mu1 acts_mu2
+         stty stty1 stty2
+         heap_mu1 heap_mu2 hp' k,
+     (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
+     (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
+     (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
+     TcHeap (heap, stty) ->
+     TcHeap (heap_mu1, stty1) ->
+     TcHeap (heap_mu2, stty2) ->
+     forall v,
+      find_H k hp' = Some v ->
+      (find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
+Admitted.
+
+
+Lemma FindAfterMultipleSteps_2:
+  forall heap env rho ef1 ef2 ea1 ea2 v1 v2 acts_mu1 acts_mu2
+         stty stty1 stty2
+         heap_mu1 heap_mu2 hp' k,
+     (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
+     (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
+     (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
+     TcHeap (heap, stty) ->
+     TcHeap (heap_mu1, stty1) ->
+     TcHeap (heap_mu2, stty2) ->
+     forall v,
+      (find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v) ->
+      find_H k hp' = Some v.
+Admitted.
+
+
 Lemma TcHeap_Extended:
   forall heap env rho ef1 ef2 ea1 ea2 v1 v2 ty1 ty2 acts_mu1 acts_mu2
-         heap_mu1 heap_mu2 stty stty1 stty2 hp hp',
+         heap_mu1 heap_mu2 stty stty1 stty2 hp',
+    (forall (l : SigmaKey) (t' : Tau),
+        find_ST l stty = Some t' → find_ST l stty1 = Some t') ->
+    (forall (l : SigmaKey) (t' : Tau),
+        find_ST l stty = Some t' → find_ST l stty2 = Some t') ->
     (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
     (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
-    (Phi_Par acts_mu1 acts_mu2, hp) ==>* (Phi_Nil, hp') ->
+    (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
     TcVal (stty1, v1, subst_rho rho ty1) ->
     TcVal (stty2, v2, subst_rho rho ty2) ->
-    TcHeap (hp, stty) ->
+    TcHeap (heap, stty) ->
     TcHeap (heap_mu1, stty1) ->
     TcHeap (heap_mu2, stty2) ->
     TcHeap (hp', Functional_Map_Union_Sigma stty1 stty2).
-Proof. 
-  intros.
+Proof.
   econstructor. 
-  - intros. inversion H5; subst.   
-    assert (HFind_H : find_H k heap_mu1 = Some v) by admit.
-    apply H10 in HFind_H. destruct HFind_H as [t].
-    exists t. apply ST_find_Extend_Left. assumption.
-  - intros. inversion H5; subst.    
-    assert (HFind_ST : find_ST k stty1 = Some t )  by admit.
-    apply H11 in HFind_ST. destruct HFind_ST as [v].
-    exists v. admit.
+  - intros.
+    assert (HFind_ParHeaps : find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
+    eapply FindAfterMultipleSteps_1; eauto.
+    destruct HFind_ParHeaps.
+    + inversion H7; subst.
+      apply H13 in H10. destruct H10 as [t].
+      exists t. apply ST_find_Ext_1. assumption.
+    + inversion H8; subst.
+      apply H13 in H10. destruct H10 as [t].
+      exists t.
+      eapply StoreTyping_Union_1; eauto. 
+      admit.
+  - intros. 
+    eapply StoreTyping_Union_2
+      with (sttya:=stty1) (sttyb:=stty2) in H9; eauto.    
+    destruct H9.
+    + inversion H7; subst.
+      apply H13 in H9. destruct H9 as [v].
+      exists v.
+       eapply FindAfterMultipleSteps_2
+         with (acts_mu2:=acts_mu2) (acts_mu1:=acts_mu1); eauto.
+    + inversion H8; subst.
+      apply H13 in H9. destruct H9 as [v].
+      exists v.
+       eapply FindAfterMultipleSteps_2
+         with (acts_mu2:=acts_mu2) (acts_mu1:=acts_mu1); eauto.      
   - admit.
 Admitted.
-
+                  
 
 Lemma subst_rho_eps_aux_1 :
  forall rho rho' n x e e1 sa sa',
@@ -130,7 +142,7 @@ Lemma subst_rho_eps_aux_1 :
    (fold_subst_eps rho e1) = (fold_subst_eps rho' (closing_rgn_in_eps n x e)) ->
    fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa n x sa') /\ e1 sa /\ e sa'.
 Admitted.
-
+*)
 
 Lemma subst_rho_open_close_rgn :
   forall rho n w v' rho' r r0 x,
@@ -349,7 +361,7 @@ Proof.
   inversion H1; subst.
   unfold not_set_elem in H2. unfold Ensembles.Complement in H2. 
   unfold not. intro.
-  apply H2. apply H0. 
+  apply H2. apply H4.
   contradict H. apply not_elem_of_dom. assumption.
 Qed.
  
@@ -364,7 +376,20 @@ Proof.
   unfold included, set_union, Included in *.
   intros. apply H0 in H2.
   now apply Union_introl.
-Qed.  
+Qed.
+
+
+Lemma TcRhoInjective_insert:
+  forall rho rgns k v,
+    not_set_elem rgns k ->
+    TcRho (rho, rgns)->
+    forall (x : RgnName) (y1 y2 : RgnVal),
+      (x, y1) ∈ map_to_list (<[k:=v]> rho) ->
+      (x, y2) ∈ map_to_list (<[k:=v]> rho) ->
+      y1 = y2.
+Admitted.
+             
+  
 
 Lemma ty_sound:
   forall e env rho hp hp' v dynamic_eff,
@@ -443,7 +468,8 @@ Proof.
           simpl in TcVal_res. rewrite subst_add_comm in TcVal_res.
           + unfold subst_in_type in TcVal_res.
             rewrite SUBST_AS_CLOSE_OPEN in TcVal_res; auto.
-            erewrite subst_rho_open_close in TcVal_res; eauto. 
+            erewrite subst_rho_open_close in TcVal_res; eauto.
+          + eapply TcRhoInjective_insert; eauto.
           + apply not_elem_of_dom.
             eapply bound_var_is_fresh; eauto. }
   Case "eff_app". 
@@ -508,7 +534,7 @@ Proof.
     destruct HTyped4 as[ stty4 [HD1  [HD2 HD3]]].  
     { exists (Functional_Map_Union_Sigma stty1 stty2).
       split. 
-      + intros. eapply StoreTyping_Extended; eauto.
+      + intros. eapply StoreTyping_Union_1; eauto.
       + split.
         * eapply TcHeap_Extended with (acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
         * eapply TcValExtended; eauto.

@@ -195,13 +195,15 @@ Proof.
     rewrite <- subst_as_close_open_eps.
     replace (subst_eps x (Rgn_Const true false v') effr0) with (subst_in_eff x v' effr0)
       by (unfold subst_in_eff; reflexivity).
-    rewrite <- subst_add_comm_eff; eauto.
-    { eapply IHD2; eauto. 
-      - eapply extended_rho; eauto.
-      - apply update_inc. assumption.
-      - apply update_rho; auto. }
-    apply not_elem_of_dom.
-    eapply not_set_elem_not_in_rho; eauto. assumption.
+    { rewrite <- subst_add_comm_eff; eauto. 
+      - eapply IHD2; eauto. 
+        + eapply extended_rho; eauto.
+        + apply update_inc. assumption.
+        + apply update_rho; auto.      
+      - eapply TcRhoInjective_insert; eauto.
+      - apply not_elem_of_dom.
+         eapply not_set_elem_not_in_rho; eauto. }
+    assumption.   
   Case "eff_app".
     assert (cls_TcVal : exists stty', 
              (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t')

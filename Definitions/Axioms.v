@@ -5,6 +5,8 @@ Require Import Definitions.Values.
 Require Import Definitions.GHeap.
 Require Import Definitions.Expressions.
 Require Import Definitions.GTypes.
+Require Import Definitions.Regions.
+
 
 (* Use these as constructors inside "Inductive Phi" *)
 Axiom Phi_Seq_Nil_L : forall phi, Phi_Seq Phi_Nil phi = phi.

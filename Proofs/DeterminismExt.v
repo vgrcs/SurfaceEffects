@@ -837,9 +837,6 @@ Proof.
     intuition.
 Qed.
 
-
-
-
 Theorem Determinism : 
   forall exp heap1 heap2 val1 val2 acts1 acts2,
     (∅, ∅, ∅, exp) ⇓ (heap1, val1, acts1) ->
@@ -853,11 +850,15 @@ Proof.
   - apply TcHeapEmpty.
     + reflexivity.
     + econstructor.
-  - econstructor. intro.
-    split; intros.  
-    + contradict H2.
-      apply lookup_empty.
-    + contradiction.
+  - econstructor; intros.
+    + replace (map_to_list ∅) with (nil:list (RgnName*RgnVal))
+        in H2 by (symmetry; apply map_to_list_empty).
+      contradict H2.
+      apply not_elem_of_nil.
+    + split; intros.  
+      * contradict H2.
+        apply lookup_empty.
+      * contradiction.
   - econstructor. intro.
     intros. contradict H2.
     unfold find_T.

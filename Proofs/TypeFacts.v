@@ -127,6 +127,64 @@ Proof.
                F (stty, rho, env, ctxt) end); eauto.
 Qed.
 
+
+Lemma ST_find_Ext_1:
+  forall k stty stty' x,
+    find_ST k stty = Some x ->
+    find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
+Proof.
+  intros.
+  unfold find_ST, Functional_Map_Union_Sigma in *.
+  replace (merge Merge_ST stty stty' !! k)
+    with (diag_None Merge_ST (stty !! k) (stty' !! k)) by
+    (rewrite lookup_merge; reflexivity).
+  destruct (stty !! k).
+  - inversion H; subst. unfold Merge_ST; simpl.
+    destruct (stty' !! k); reflexivity.
+  - inversion H.
+Qed.
+
+Lemma StoreTyping_Union_1:
+  forall stty sttya sttyb,
+    (forall (l : SigmaKey) (t' : Tau),
+       find_ST l stty = Some t' -> find_ST l sttya = Some t' ) ->
+    (forall (l : SigmaKey) (t' : Tau),
+       find_ST l stty = Some t' -> find_ST l sttyb = Some t' ) ->
+    (forall (l : SigmaKey) (t' : Tau),
+        find_ST l stty = Some t' ->
+        find_ST l (Functional_Map_Union_Sigma sttya sttyb) = Some t' ).
+Proof. 
+  intros stty sttya sttyb Ha Hb.
+  intros l t' H.
+  assert (H' : find_ST l stty = Some t') by assumption.
+  apply Ha in H.   apply Hb in H'.
+    unfold find_ST, Functional_Map_Union_Sigma in *.
+  replace (merge Merge_ST sttya sttyb !! l)
+    with (diag_None Merge_ST (sttya !! l) (sttyb !! l)) by
+    (rewrite lookup_merge; reflexivity).
+  destruct (sttya !! l); destruct (sttyb !! l); unfold Merge_ST; simpl.
+  - assumption.
+  - inversion H'.
+  - inversion H.  
+  - inversion H.
+Qed.
+
+Lemma StoreTyping_Union_2:
+  forall k t sttya sttyb,
+    find_ST k (Functional_Map_Union_Sigma sttya sttyb) = Some t ->
+    find_ST k sttya = Some t \/ find_ST k sttyb = Some t.
+Proof.
+  intros.
+  unfold find_ST, Functional_Map_Union_Sigma in *. 
+  replace (merge Merge_ST sttya sttyb !! k)
+    with (diag_None Merge_ST (sttya !! k) (sttyb !! k)) in H by
+    (rewrite lookup_merge; reflexivity).
+  destruct (sttya !! k); destruct (sttyb !! k); unfold Merge_ST in H; simpl in H.
+  - left. assumption.
+  - left. assumption.
+  - right. assumption.
+  - inversion H.  
+Qed.
   
 Lemma update_rho:
   forall rho rgns x v,
@@ -135,10 +193,10 @@ Lemma update_rho:
     TcRho (update_R (x, v) rho, set_union rgns (singleton_set x)).
 Proof.
   intros rho rgns x v HRho HFresh.
-  unfold update_R; simpl. 
-  econstructor.  
-  intro r. split.
-  - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
+  unfold update_R; simpl.
+  econstructor; [admit | intro r; split].
+  (*econstructor; [intros; inversion HRho; now apply H3 | intro r; split].*)
+  - inversion_clear HRho as [rho' rgns' HInj' HRgn'  HRho''].
     destruct (ascii_eq_dec x r) as [c | c].
     + intros; subst.
       unfold set_elem, set_union, singleton_set.
@@ -151,7 +209,7 @@ Proof.
         apply Ensembles.Union_introl. 
         apply HRgn'. assumption.
       * eapply G_diff_keys_3 in H1; auto.  
-  - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
+  - inversion_clear HRho as [rho' rgns' HInj' HRgn'  HRho''].
     destruct (ascii_eq_dec x r) as [c | c].
     + intros; subst.
       replace (<[r:=v]> rho !! r) with (Some v) by (symmetry; apply lookup_insert).
@@ -164,7 +222,7 @@ Proof.
         unfold is_Some in H2. now apply NotNoneIsSome in H2.
       * destruct H1; [apply H0; assumption |
                        inversion H1; subst; contradict c; reflexivity].
-Qed.
+Admitted.
 
 
 Lemma subst_type_rgn_comm_2:
@@ -263,6 +321,7 @@ Qed.
 Lemma subst_rgn_aux_comm_uncurry :
   forall (j1 : nat) (a1 : RgnName * RgnVal) (j2 : nat) (a2 : RgnName * RgnVal)
          (b : Region_in_Type) (l : list(RgnName*RgnVal)),
+    NoDup l.*1 ->
     j1 ≠ j2 ->
     l !! j1 = Some a1 ->
     l !! j2 = Some a2 ->
@@ -280,10 +339,14 @@ Proof.
     destruct a1. destruct a2. simpl.
     destruct (ascii_eq_dec r2 r); destruct (ascii_eq_dec r0 r); subst.
     + { assert (HSubst: r1 = r3).
-        apply Rho_SameKey_SameValue with (l:=l) (x:=r).
-        - eapply elem_of_list_lookup_2; eauto.
-        - eapply elem_of_list_lookup_2; eauto.
-        - subst. reflexivity. }
+        apply elem_of_list_lookup_2 in H1.
+        apply elem_of_list_lookup_2 in H2.
+        assert ((list_to_map l : Rho) !! r = Some r1)
+          by (eapply elem_of_list_to_map_1; eauto).
+        assert ((list_to_map l : Rho) !! r = Some r3)
+          by (eapply elem_of_list_to_map_1; eauto).
+        rewrite H3 in H4. inversion H4. auto.        
+        subst. reflexivity. }
     + simpl. destruct (ascii_eq_dec r r).
       * reflexivity.
       * contradiction.      
@@ -353,6 +416,7 @@ Qed.
 Lemma subst_type_aux_comm_uncurry :
   forall (j1 : nat) (a1 : RgnName * RgnVal) (j2 : nat) (a2 : RgnName * RgnVal)
          (b : Tau) (l : list(RgnName*RgnVal)),
+    (forall x y1 y2, (x,y1) ∈ l -> (x,y2) ∈ l -> y1 = y2) ->
     j1 ≠ j2 ->
     l !! j1 = Some a1 ->
     l !! j2 = Some a2 ->
@@ -369,9 +433,9 @@ Proof.
     f_equal; auto. 
     destruct a1 as [x1 v1]; destruct a2 as [x2 v2]. simpl.
     destruct (ascii_eq_dec x1 x2); subst.
-    + apply elem_of_list_lookup_2 in H0.
-      apply elem_of_list_lookup_2 in H1.
-      eapply Rho_SameKey_SameValue in H0; eauto. subst.
+    + apply elem_of_list_lookup_2 in H1.
+      apply elem_of_list_lookup_2 in H2.
+      eapply H in H1; eauto. subst.
       reflexivity.
     + unfold subst_in_rgn.
       apply subst_rgn_aux_comm. assumption.  
@@ -379,24 +443,24 @@ Proof.
     f_equal; auto;  
     destruct a1 as [x1 v1]; destruct a2 as [x2 v2]; simpl. 
     + destruct (ascii_eq_dec x1 x2); subst.
-      * apply elem_of_list_lookup_2 in H0.
-        apply elem_of_list_lookup_2 in H1.
-        eapply Rho_SameKey_SameValue in H0; eauto. subst.
+      * apply elem_of_list_lookup_2 in H1.
+        apply elem_of_list_lookup_2 in H2.
+        eapply H in H1; eauto. subst.
         reflexivity.
       * apply subst_eps_aux_comm. assumption.  
     + destruct (ascii_eq_dec x1 x2); subst.
-      * apply elem_of_list_lookup_2 in H0.
-        apply elem_of_list_lookup_2 in H1.
-        eapply Rho_SameKey_SameValue in H0; eauto. subst.
+      * apply elem_of_list_lookup_2 in H1.
+        apply elem_of_list_lookup_2 in H2.
+        eapply H in H1; eauto. subst.
         reflexivity.
       * apply subst_eps_aux_comm. assumption.  
   - do 2 rewrite subst_rho_forall_uncurry.
     f_equal; auto.
     destruct a1 as [x1 v1]; destruct a2 as [x2 v2]; simpl. 
     + destruct (ascii_eq_dec x1 x2); subst.
-      * apply elem_of_list_lookup_2 in H0.
-        apply elem_of_list_lookup_2 in H1.
-        eapply Rho_SameKey_SameValue in H0; eauto. subst.
+      * apply elem_of_list_lookup_2 in H1.
+        apply elem_of_list_lookup_2 in H2.
+        eapply H in H1; eauto. subst.
         reflexivity.
       * apply subst_eps_aux_comm. assumption.
 Qed.
@@ -458,7 +522,7 @@ Lemma foldr_subst_rgn_app:
   forall (l1 l2 : list (RgnName * RgnVal)),    
   forall k v (b : Region_in_Type),
     f = subst_in_rgn ->
-    base.NoDup (l1.*1++ l2.*1) ->
+    base.NoDup (l1.*1 ++ ((k,v)::l2).*1) ->
     (forall k' v' b',
         (list_to_map l1 : Rho) !! k' = Some v ->
        f k' v' (f k v b') = f k v (f k' v' b')) ->
@@ -489,18 +553,64 @@ Proof.
 Qed.
 
 
+Lemma NoDup_cons_app_comm:
+  forall k v (elems1 elems2 : list (RgnName*RgnVal)),
+    NoDup ((k, v) :: elems1 ++ elems2).*1 ->
+    NoDup (elems1.*1 ++ ((k, v) :: elems2).*1).
+Proof.
+  intros.
+  replace (((k, v) :: elems1 ++ elems2).*1)
+    with (((k, v) :: elems1).*1 ++ elems2.*1) in H
+      by (now rewrite <- fmap_app).
+  apply NoDup_app in H. destruct H.
+  replace (((k, v) :: elems1).*1)
+    with (k :: elems1.*1) in H0
+      by (symmetry; now rewrite fmap_cons).
+  assert (k ∉ elems1.*1 ∧ NoDup elems1.*1)
+    by (now apply NoDup_cons).
+  apply NoDup_app.
+  split.
+  - destruct H1; assumption.
+  - destruct H1; split.
+    + intros. destruct H0.
+      replace (((k, v) :: elems2).*1)
+        with (k::elems2.*1)
+        by (symmetry; now rewrite fmap_cons).
+      rewrite not_elem_of_cons.
+      destruct (ascii_eq_dec x k); subst. 
+      * contradict H1. assumption.
+      * {split.
+         - assumption.
+         - apply H0.
+           replace (((k, v) :: elems1).*1)
+             with (k::elems1.*1)
+             by (symmetry; now rewrite fmap_cons).
+           apply elem_of_cons. right. assumption. }        
+    +replace (((k, v) :: elems2).*1)
+       with (k::elems2.*1)
+       by (symmetry; now rewrite fmap_cons).
+     destruct H0.
+     apply NoDup_cons. split;[| assumption].
+     apply H0.
+     replace (((k, v) :: elems1).*1)
+       with (k::elems1.*1)
+       by (symmetry; now rewrite fmap_cons).
+     rewrite elem_of_cons.
+     intuition.
+Qed.
+
 Lemma fold_add_rgn:
   forall (f : RgnName → RgnVal → Region_in_Type → Region_in_Type),
   forall (l : list (RgnName * RgnVal)),
   forall (k: RgnName) (v: RgnVal) (b: Region_in_Type),
     f = subst_in_rgn ->
-    base.NoDup l.*1 ->
+    base.NoDup ((k,v)::l).*1 ->
     (list_to_map l : Rho) !! k = None ->
     (forall k' v' b',
        (list_to_map l : Rho) !! k' = Some v ->
        f k' v' (f k v b') = f k v (f k' v' b')) ->
     foldr (uncurry f) b ( (k, v)::l) = foldr (uncurry f) (f k v b) l.
-Proof.
+Proof.  
   intros f l k v b Hf HNoDup H' H.
   destruct (baz_2 l k v H') as [elems1 [elems2 [H1 H2]]].
   rewrite <- H1.
@@ -508,9 +618,7 @@ Proof.
   apply foldr_subst_rgn_app.
   - assumption.
   - rewrite <- H2 in HNoDup.
-    replace (elems1.*1 ++ elems2.*1) with ((elems1 ++ elems2).*1).
-    assumption.
-    apply fmap_app.
+    now apply NoDup_cons_app_comm.
   - intros k1 v1 b' In_k1_v1. apply H.
     rewrite <- H2.
     replace (list_to_map (elems1 ++ elems2))
@@ -525,6 +633,9 @@ Lemma fold_subst_type:
   forall (l1 l2 : list (RgnName * RgnVal)),    
   forall k v (b : Tau),
     f = subst_in_type ->
+    (forall x y1 y2,       
+        (x, y1) ∈ (k, v) :: l2 ->
+        (x, y2) ∈ (k, v) :: l2 -> y1 = y2) ->
     base.NoDup (l1.*1 ++ l2.*1) ->
     (forall k' v' b',
         (list_to_map l1 : Rho) !! k' = Some v ->
@@ -533,7 +644,7 @@ Lemma fold_subst_type:
       foldr (uncurry f) (f k v b) (l1 ++ l2).
 Proof.
   intros f.
-  induction l1; intros l2 k v b Hf HNoDup H.
+  induction l1; intros l2 k v b Hf HInj HNoDup H.
   - rewrite app_nil_l. rewrite app_nil_l.
     replace (f k v b) with (uncurry f (k,v) b) by (reflexivity).
     rewrite <- foldr_snoc.
@@ -551,6 +662,7 @@ Proof.
   - simpl. rewrite IHl1; clear IHl1. 
     + reflexivity.
     + assumption.
+    + assumption.      
     + eapply NoDup_cons_app; eauto.
     + eapply NoDup_comm_some_function; eauto.
 Qed.
@@ -561,6 +673,10 @@ Lemma fold_add_type:
   forall (l : list (RgnName * RgnVal)),
   forall (k: RgnName) (v: RgnVal) (b: Tau),
     f = subst_in_type ->
+    (forall x y1 y2,
+        (x, y1) ∈ (k, v)::l ->
+        (x, y2) ∈ (k, v)::l ->
+        y1 = y2) ->
     base.NoDup l.*1 ->
     (list_to_map l : Rho) !! k = None ->
     (forall k' v' b',
@@ -568,12 +684,21 @@ Lemma fold_add_type:
        f k' v' (f k v b') = f k v (f k' v' b')) ->
     foldr (uncurry f) b ( (k, v)::l) = foldr (uncurry f) (f k v b) l.
 Proof.
-  intros f l k v b Hf HNoDup H' H.
-  destruct (baz_2 l k v H') as [elems1 [elems2 [H1 H2]]].
+  intros f l k v b Hf HInj HNoDup H' H.
+  destruct (baz_2 l k v H') as [elems1 [elems2 [H1 H2]]]. 
   rewrite <- H1.
   rewrite <- H2.
   apply fold_subst_type.
   - assumption.
+  - intros. apply HInj with (x:=x).
+    + apply elem_of_cons in H0. destruct H0.
+      * apply  elem_of_cons. left. assumption.
+      * apply  elem_of_cons. right. rewrite <- H2.
+        apply elem_of_app. right. assumption.
+    + apply elem_of_cons in H3. destruct H3.
+      * apply  elem_of_cons. left. assumption.
+      * apply  elem_of_cons. right. rewrite <- H2.
+        apply elem_of_app. right. assumption.    
   - rewrite <- H2 in HNoDup.
     replace (elems1.*1 ++ elems2.*1) with ((elems1 ++ elems2).*1).
     assumption.
@@ -597,9 +722,12 @@ Proof.
   intros.
   apply fold_add_rgn.
   - reflexivity.
-  - assert (H' : base.NoDup (map_to_list rho)) by (apply NoDup_map_to_list).
-    apply rho_NoDup_map_fst.
-    assumption.
+  - econstructor.
+    + apply not_elem_of_list_to_map_2. simpl.
+      replace (list_to_map (map_to_list rho))
+        with rho by (symmetry; apply list_to_map_to_list).
+      assumption.
+    + apply NoDup_fst_map_to_list.
   - replace (list_to_map (map_to_list rho)) with (rho)
       by (symmetry; apply list_to_map_to_list).
     assumption.
@@ -619,12 +747,20 @@ Qed.
 
 Lemma subst_add_comm_rgn:
   forall k v (rho : Rho),
+    (forall  x y1 y2,
+        (x, y1) ∈ (map_to_list (<[k:=v]> rho)) ->
+        (x, y2) ∈ (map_to_list (<[k:=v]> rho)) -> y1 = y2) ->
     rho !! k = None ->
     forall rt, 
       fold_subst_rgn (<[ k:=v ]> rho) rt =
         fold_subst_rgn rho (subst_in_rgn k v rt).
 Proof.
-  intros. 
+  intros.
+  assert (k ∉ (map_to_list rho).*1)
+    by (apply not_elem_of_list_to_map;
+        replace (list_to_map (map_to_list rho)) with (rho)
+          by (symmetry; apply list_to_map_to_list);
+        assumption).  
   unfold fold_subst_rgn.
   do 2 rewrite subst_rgn_fold_foldr.
     replace (foldr (uncurry (λ (x : RgnName) (r : RgnVal) (rgn : Region_in_Type),
@@ -641,29 +777,90 @@ Proof.
   assert (map_to_list (<[k:=v]> rho) ≡ₚ (k, v) :: map_to_list rho)
     by (apply map_to_list_insert; assumption).
   
-  eapply  subst_add_comm_rgn_aux with (v:=v) (rt:=rt) in H.
-  unfold fold_subst_rgn_alt in H.
-  rewrite <- H.
-  
-  apply foldr_permutation.
+  eapply  subst_add_comm_rgn_aux with (v:=v) (rt:=rt) in H0.
+  unfold fold_subst_rgn_alt in H0. 
+  rewrite <- H0.
+  apply foldr_permutation. 
   - constructor.
     + unfold Reflexive.
       unfold Region_in_Type. dependent induction x; reflexivity.
     + unfold Transitive.
       unfold Region_in_Type. dependent induction x; intros; subst; reflexivity.
   - solve_proper.
-  - intros.  eapply subst_rgn_aux_comm_uncurry; eauto.
+  - intros.  eapply subst_rgn_aux_comm_uncurry; eauto.       
+    assert (NoDup ((map_to_list rho).*1)) by apply NoDup_fst_map_to_list.
+    assert (NoDup (((k,v)::(map_to_list rho)).*1)).  
+    apply NoDup_cons; auto.   
+    apply NoDup_fmap_1 in H7. 
+    apply NoDup_fmap_fst; [now apply H |].
+    apply NoDup_ListNoDup. apply NoDup_ListNoDup in H7.
+    apply Permutation_sym in H2. 
+    eapply Permutation_NoDup in H2; eauto.
   - assumption.
 Qed.
 
+(*
+Lemma Test:
+  forall (rho : Rho) k v,
+    (forall  x y1 y2,
+        (x, y1) ∈ (map_to_list (<[k:=v]> rho)) ->
+        (x, y2) ∈ (map_to_list (<[k:=v]> rho)) -> y1 = y2) ->
+    k ∉ (map_to_list rho).*1 ->
+    map_to_list (<[k:=v]> rho) ≡ₚ (k, v) :: map_to_list rho ->
+    NoDup (map_to_list (<[k:=v]> rho)).*1.
+Proof.
+  intros.
+  assert (NoDup ((map_to_list rho).*1)) by apply NoDup_fst_map_to_list.
+  assert (NoDup (((k,v)::(map_to_list rho)).*1)).
+  apply NoDup_cons; auto. 
+  apply NoDup_fmap_1 in H3.
+  apply NoDup_fmap_fst; [now apply H |].
+  apply NoDup_ListNoDup. apply NoDup_ListNoDup in H3.
+  apply Permutation_sym in H1.
+  eapply Permutation_NoDup in H1; eauto.
+Qed.  
+*)
+(*
+Lemma Test_2:
+  forall (rho : Rho) k v,
+    (forall  x y1 y2,
+        (x, y1) ∈ (map_to_list (<[k:=v]> rho)) ->
+        (x, y2) ∈ (map_to_list (<[k:=v]> rho)) -> y1 = y2) ->
+    rho !! k = None ->
+    NoDup (map_to_list (<[k:=v]> rho)).*1.
+Proof.
+  intros.
+  assert (k ∉ (map_to_list rho).*1).
+  apply not_elem_of_list_to_map.
+  replace (list_to_map (map_to_list rho)) with rho
+    by (symmetry; apply list_to_map_to_list).
+  assumption.
+              
+  eapply map_to_list_insert with (x:=v) in H0.
+  assert (NoDup ((map_to_list rho).*1))
+    by apply NoDup_fst_map_to_list.
+
+  assert (NoDup (((k,v)::(map_to_list rho)).*1)).
+  apply NoDup_cons; auto.
+  
+  apply NoDup_fmap_1 in H3.
+  apply NoDup_fmap_fst; [now apply H |].
+  apply NoDup_ListNoDup. apply NoDup_ListNoDup in H3.
+  apply Permutation_sym in H0.
+  eapply Permutation_NoDup in H0; eauto.
+Qed.  *)
+
 Lemma subst_add_comm_sa:
   forall k v rho,
+    (forall  x y1 y2,
+        (x, y1) ∈ (map_to_list (<[k:=v]> rho)) ->
+        (x, y2) ∈ (map_to_list (<[k:=v]> rho)) -> y1 = y2) ->
     rho !! k = None ->
     forall sa, 
       fold_subst_sa ((<[ k:=v ]> rho)) sa =
         fold_subst_sa rho (subst_in_sa k v sa).
 Proof.
-  intros k v rho H sa.
+  intros k v rho HInj H sa.
   destruct sa; unfold Region_in_Type in r; dependent induction r;
     try (solve [unfold fold_subst_sa, subst_in_sa, subst_sa;
                 f_equal; apply subst_add_comm_rgn; auto]).
@@ -672,12 +869,15 @@ Qed.
 
 Lemma subst_add_comm_eff :
   forall k v rho,
+    (forall  x y1 y2,
+        (x, y1) ∈ (map_to_list (<[k:=v]> rho)) ->
+        (x, y2) ∈ (map_to_list (<[k:=v]> rho)) -> y1 = y2) ->
     rho !! k = None ->
     forall eff, 
       fold_subst_eps (<[ k:=v ]> rho) eff
       = fold_subst_eps rho (subst_in_eff k v eff).
 Proof.
-  intros k v rho H eff. unfold fold_subst_eps.
+  intros k v rho HInj H eff. unfold fold_subst_eps.
   apply Extensionality_Ensembles; unfold Same_set, Included. 
   intuition; unfold Ensembles.In in *.
    - destruct H0 as [sa [H1 H2]].
@@ -693,15 +893,38 @@ Proof.
     exists sa'. rewrite subst_add_comm_sa; eauto.
 Qed.
 
+Lemma insert_preserves_NoDup:
+  forall x k (rho : Rho),
+    rho !! k = None ->
+    x ∈ (map_to_list rho).*1 ->
+    NoDup (k :: (map_to_list rho).*1) ->
+    x <> k.
+Proof.
+  intros.
+  assert (k ∉ (map_to_list rho).*1). 
+  apply not_elem_of_list_to_map.
+  replace (list_to_map (map_to_list rho)) with rho
+    by (symmetry; apply list_to_map_to_list).
+  assumption.
+  destruct (ascii_eq_dec x k).
+  - subst. apply NoDup_cons in H1. destruct H1. clear H1.
+    contradict H2. assumption.
+  - assumption.
+Qed.
+
+                    
 
 Lemma subst_add_comm :
   forall k v (rho : Rho),
+    (forall  x y1 y2,
+        (x, y1) ∈ (map_to_list (<[k:=v]> rho)) ->
+        (x, y2) ∈ (map_to_list (<[k:=v]> rho)) -> y1 = y2) ->
     rho !! k = None ->
     forall ty, 
       subst_rho (<[ k:=v ]> rho) ty =
         subst_rho rho (subst_in_type k v ty).
 Proof.
-  intros k v rho H ty.
+  intros k v rho HInj H ty.
   unfold subst_rho.
   do 2 rewrite subst_in_type_fold_foldr.
   assert (map_to_list (<[k:=v]> rho) ≡ₚ (k, v) :: map_to_list rho)
@@ -719,12 +942,65 @@ Proof.
   - assumption.
   - rewrite H1. 
     apply fold_add_type.
-    + reflexivity.
-    + assert (H' : base.NoDup (map_to_list rho)) by (apply NoDup_map_to_list).
-      now apply rho_NoDup_map_fst.
+    + reflexivity.  
+    + intros.
+      apply HInj with (x:=x). 
+      * assert (H' : rho !! k = None) by assumption.
+        assert (k ∉ (map_to_list rho).*1).
+        apply not_elem_of_list_to_map.
+        replace (list_to_map (map_to_list rho)) with rho
+          by (symmetry; apply list_to_map_to_list).
+        assumption.
+              
+        eapply map_to_list_insert with (x:=v) in H.
+        assert (NoDup ((map_to_list rho).*1))
+          by apply NoDup_fst_map_to_list.
+
+        assert (NoDup (((k,v)::(map_to_list rho)).*1)).
+        apply NoDup_cons; auto.
+
+        { destruct (ascii_eq_dec x k).        
+          - subst.
+            apply elem_of_map_to_list.
+            replace (<[k:=v]> rho !! k) with (Some v)
+              by (symmetry; apply lookup_insert).
+            f_equal.
+            admit.
+          - apply elem_of_map_to_list.
+            apply lookup_insert_Some.
+            right. split; [symmetry; assumption |].
+            apply elem_of_cons in H2. destruct H2.
+            + inversion H2; subst. contradiction.
+            + apply elem_of_list_to_map with (i:=x) (x:=y1) in H5.
+              replace ( list_to_map (map_to_list rho))
+                with rho in H5
+                  by (symmetry; apply list_to_map_to_list).
+              now apply H5.
+        }         
+      * assert (k ∉ (map_to_list rho).*1).
+        apply not_elem_of_list_to_map.
+        replace (list_to_map (map_to_list rho)) with rho
+          by (symmetry; apply list_to_map_to_list).
+        assumption.
+              
+        eapply map_to_list_insert with (x:=v) in H.
+        assert (NoDup ((map_to_list rho).*1))
+          by apply NoDup_fst_map_to_list.
+
+        assert (NoDup (((k,v)::(map_to_list rho)).*1)).
+        apply NoDup_cons; auto.
+
+        assert (x <> k). eapply insert_preserves_NoDup; eauto. admit. admit.
+        apply elem_of_cons in H3.  
+        { destruct H3.
+          - inversion H3; subst. contradiction.            
+          - apply elem_of_map_to_list.
+            apply lookup_insert_Some.
+            right. split; [symmetry; assumption |now apply elem_of_map_to_list]. }
+    +  apply NoDup_fst_map_to_list.
     + replace ( list_to_map (map_to_list rho))
         with rho
-        by (symmetry; apply list_to_map_to_list).
+        by (symmetry; apply list_to_map_to_list). 
       assumption.  
     + intros k0 v0 b0 H'.
       rewrite subst_type_type_comm_2.
@@ -734,7 +1010,7 @@ Proof.
         with rho in H'
             by (symmetry; apply list_to_map_to_list).
         rewrite H in H'. inversion H'.
-Qed.
+Admitted.
 
 
 Lemma not_set_elem_not_in_rho:
@@ -744,7 +1020,7 @@ Lemma not_set_elem_not_in_rho:
     x ∉ dom rho.
 Proof.
   intros rho rgns  x HRho H .
-  inversion_clear HRho as [rho' rgns' HRgn' HVal''].
+  inversion_clear HRho as [rho' rgns' HInj' HRgn' HVal''].
   unfold not_set_elem in H. unfold Ensembles.Complement in H.
   intro.
   apply elem_of_dom in H0. unfold is_Some in H0.
@@ -1250,13 +1526,23 @@ Proof.
   generalize dependent r.
   generalize dependent x.  
   dependent induction HTcVal; intros;
-    inversion HTcRho as [rho' rgns' HRgn HVal'']; subst;
+    inversion HTcRho as [rho' rgns' HInj HRgn HVal'']; subst;
   try (solve [ unfold subst_in_type;
                assert (rho !! x0  = None) 
                  by (eapply contrapositiveTcRho; eauto; apply HRgn);
                rewrite  SUBST_FRESH; [rewrite <- x; econstructor; eauto | 
                                       eapply subst_rho_free_vars; eauto]  ] ).
 Qed.
+
+Lemma TcRhoInjective_insert:
+  forall rho rgns k v,
+    not_set_elem rgns k ->
+    TcRho (rho, rgns)->
+    forall (x : RgnName) (y1 y2 : RgnVal),
+      (x, y1) ∈ map_to_list (<[k:=v]> rho) ->
+      (x, y2) ∈ map_to_list (<[k:=v]> rho) ->
+      y1 = y2.
+Admitted.
 
 Lemma extended_rho :
   forall stty rho env ctxt,
@@ -1268,11 +1554,12 @@ Lemma extended_rho :
 Proof.
   intros stty rho env ctxt HEnv x r rgns HRho HRgns. 
   inversion_clear HEnv as [ stty' rho' env' ctxt' HE HT HV].  
-  inversion_clear HRho as [rho' rgns' HRgn' HVal''].
+  inversion  HRho as [rho' rgns' HInj' HRgn' HVal'']; subst.
   constructor; auto.
-  intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl.
-  rewrite subst_add_comm. 
-  - eapply subst_rho_fresh_var; eauto. econstructor; auto. 
+  intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl. 
+  rewrite subst_add_comm.  
+  - eapply subst_rho_fresh_var; eauto. 
+  - eapply TcRhoInjective_insert; eauto.
   - unfold not_set_elem in HRgns. unfold Ensembles.Complement in HRgns.
     apply not_elem_of_dom.
     intro. apply elem_of_dom in H.
@@ -1293,18 +1580,18 @@ Proof.
   - rewrite subst_rho_rgn_const in H.
     simpl in H. contradiction.
   - destruct (ascii_eq_dec x r) as [c | c]; subst.
-    + inversion HRho; subst.   
+    + inversion HRho as [rho' rgns' HInj' HRgn' HVal'']; subst.   
       contradict H.
       destruct (subst_rho_fvar_1 rho r) as [[v' H0] | H0]. 
       * rewrite H0. simpl. intro. contradiction.
       * rewrite H0. simpl. intro. 
-        unfold set_elem, In in H1.
-        destruct H1 with (r:=r). 
-        { apply H3 in HInc.
+        unfold set_elem, In in HRgn'.
+        destruct HRgn' with (r:=r). 
+        { apply H2 in HInc.
           - apply NotNoneIsSome in HInc.
             destruct HInc. 
-            apply subst_rho_fvar_2 in H4.
-            rewrite H4 in H0. 
+            apply subst_rho_fvar_2 in H3.
+            rewrite H3 in H0. 
             inversion H0.
           - apply Union_introl. simpl. auto. }
    + inversion HRho; subst.
@@ -1327,7 +1614,7 @@ Lemma TcRhoIncludedNoFreeVarsEps_main:
 Proof.
   intros.
   apply TcRhoIncludedNoFreeVarsEps_find.
-  inversion H; subst. apply H3. apply H1.
+  inversion H; subst. apply H5. apply H1.
   unfold In.
   assumption.
 Qed.
@@ -1419,35 +1706,6 @@ Proof.
       unfold included, Included in *. 
       intros. apply HInc. 
       apply Union_intror. assumption.
-Qed.
-
-Lemma Functional_Map_Union_find:
-  forall sttya sttyb (k : SigmaKey),
-    find_ST k (Functional_Map_Union_Sigma sttya sttyb) = find_ST k sttya.
-Proof.
-  intros.  unfold find_ST, Functional_Map_Union_Sigma.
-  assert (merge Merge_ST sttya sttyb !! k = diag_None Merge_ST (sttya !! k) (sttyb !! k))
-    by (rewrite lookup_merge; reflexivity).
-  replace (merge Merge_ST sttya sttyb !! k)
-    with (diag_None Merge_ST (sttya !! k) (sttyb !! k)).
-  destruct (sttyb !! k); destruct (sttya !! k); unfold Merge_ST; simpl; reflexivity.
-Qed.
-
-Lemma StoreTyping_Extended:
-  forall stty sttya sttyb,
-    (forall (l : SigmaKey) (t' : Tau),
-       find_ST l stty = Some t' -> find_ST l sttya = Some t' ) ->
-    (forall (l : SigmaKey) (t' : Tau),
-       find_ST l stty = Some t' -> find_ST l sttyb = Some t' ) ->
-    (forall (l : SigmaKey) (t' : Tau),
-        find_ST l stty = Some t' ->
-        find_ST l (Functional_Map_Union_Sigma sttya sttyb) = Some t' ).
-Proof. 
-  intros stty sttya sttyb Ha Hb.
-  intros l t' H.
-  edestruct (Ha l t' H).
-  generalize l. 
-  apply Functional_Map_Union_find.
 Qed.
 
 

@@ -45,7 +45,9 @@ Definition update_ST (k: SigmaKey) (t: Tau) (m: Sigma) :=  <[ k := t ]>  m.
 
 Definition Merge_ST (v1 v2 : option Tau) : option Tau :=
   match (v1, v2) with
-  | (None, _) => None
+  | (None, None) => None
+  | (None, Some v) => Some v
+  | (Some v, None) => Some v                           
   | (Some v, _) => Some v
 end.
 
@@ -254,24 +256,28 @@ Inductive lc_type : Tau -> Prop :=
 
 
 Inductive TcRho : (Rho * Omega) -> Prop :=
-  | TC_Rho : forall rho rgns,
-               (forall r, rho !! r <> None <-> set_elem rgns r) ->
-               TcRho (rho, rgns).
+| TC_Rho : forall rho rgns,
+    (forall x y1 y2,
+        (x, y1) ∈ (map_to_list rho) ->
+        (x, y2) ∈ (map_to_list rho) ->
+        y1 = y2)  ->
+    (forall r, rho !! r <> None <-> set_elem rgns r) ->
+    TcRho (rho, rgns).
 
 Inductive TcInc : (Gamma * Omega) -> Prop :=
-     | Tc_Inc : forall ctxt rgns, 
-                  (forall x t, 
-                     find_T x ctxt = Some t -> included (frv t) rgns) ->
-                  TcInc (ctxt, rgns). 
+| Tc_Inc : forall ctxt rgns,
+    (forall x t,
+        find_T x ctxt = Some t -> included (frv t) rgns) ->
+    TcInc (ctxt, rgns). 
 
 Inductive TcRgn : (Omega * Region_in_Expr) -> Prop :=
-  | TC_Rgn_Const : forall rgns s,
-                      TcRgn (rgns, Rgn_Const true false s)
-  | TC_Rgn_Var   : forall rgns r,
-                      set_elem rgns r ->
-                      TcRgn (rgns, Rgn_FVar true false r).      
-
-
+| TC_Rgn_Const :
+  forall rgns s,
+    TcRgn (rgns, Rgn_Const true false s)
+| TC_Rgn_Var :
+  forall rgns r,
+    set_elem rgns r ->
+    TcRgn (rgns, Rgn_FVar true false r).      
 
 (** begin of substitutions **)
 
@@ -383,7 +389,6 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
     not_set_elem rgns x ->
     lc_type tyr ->
     lc_type_eps effr ->
-    (*TcInc (ctxt, rgns) ->*)
     (forall rho,
         BackTriangle (ctxt, set_union rgns (singleton_set x), rho, er, Empty)) ->
     TcExp (ctxt, set_union rgns (singleton_set x), er, tyr, effr) ->

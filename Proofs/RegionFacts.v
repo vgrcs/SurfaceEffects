@@ -14,20 +14,6 @@ Require Import Ascii.
 
 Import Ensembles.
 
-Axiom Rho_SameKey_SameValue:
-  forall (l: list(RgnName*RgnVal)),
-    (forall x y1 y2, (x,y1) ∈ l → (x,y2) ∈ l → y1 = y2).
-
-Lemma rho_NoDup_map_fst:
-  forall (rho : Rho),
-    base.NoDup (map_to_list rho) ->
-    base.NoDup ((map_to_list rho).*1).
-Proof.
-  intros.
-  apply NoDup_fmap_fst; auto.
-  apply Rho_SameKey_SameValue.
-Qed.
-
 
 Lemma find_R_in_list:
   forall (rho : Rho) (p : RgnName*RgnVal),
@@ -710,10 +696,7 @@ Proof.
   assert ((x,v) ∈ map_to_list rho) by (apply elem_of_map_to_list'; auto).
   unfold fold_subst_rgn. 
   rewrite subst_rgn_fold_foldr.   
-  assert (H' : base.NoDup (map_to_list rho)) by (apply NoDup_map_to_list).
-  assert (HNoDup: base.NoDup ((map_to_list rho).*1))
-    by (now apply rho_NoDup_map_fst).    
-  clear H'. 
+  assert (HNoDup: base.NoDup ((map_to_list rho).*1)) by apply NoDup_fst_map_to_list.
   induction (map_to_list rho); simpl.  
   - contradict H.
     apply not_elem_of_nil. 
@@ -1154,13 +1137,13 @@ Proof.
       destruct (subst_rho_fvar_1 rho r) as [[v' H1] | H1]. 
       * rewrite H1. simpl. intro. contradiction.
       * rewrite H1. simpl. intro. 
-        unfold set_elem, In in H2.
-        destruct H2 with (r:=r). 
-        { apply H4 in HInc.
+        unfold set_elem, In in H4.
+        destruct H4 with (r:=r).  
+        { apply H5 in HInc. 
           - apply NotNoneIsSome in HInc.
             destruct HInc.
-            apply subst_rho_fvar_2 in H5. 
-            rewrite H5 in H1. 
+            apply subst_rho_fvar_2 in H6. 
+            rewrite H6 in H1. 
             inversion H1.
           - apply Union_introl. simpl. auto. }
    + inversion HRho; subst.
@@ -1401,7 +1384,7 @@ Lemma TcRhoIncludedNoFreeVarsEps_main:
 Proof.
   intros.
   apply TcRhoIncludedNoFreeVarsEps_find.
-  inversion H; subst. apply H3. apply H1.
+  inversion H; subst. apply H5. apply H1.
   unfold In.
   assumption.
 Qed.
