@@ -84,26 +84,24 @@ Qed.
 Lemma FindAfterMultipleSteps:
   forall heap env rho ef1 ef2 ea1 ea2 v1 v2 acts_mu1 acts_mu2
          stty stty1 stty2
-         heap_mu1 heap_mu2 hp' k,
+         heap_mu1 heap_mu2 hp',
      (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
      (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
      (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
      TcHeap (heap, stty) ->
      TcHeap (heap_mu1, stty1) ->
      TcHeap (heap_mu2, stty2) ->
-     forall v,
+     forall k v,
       find_H k hp' = Some v <->
-      (find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
+        (find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
+Proof.
+  intros. generalize dependent v. generalize dependent k.
 Admitted.
 
 
 Lemma TcHeap_Extended:
   forall heap env rho ef1 ef2 ea1 ea2 v1 v2 ty1 ty2 acts_mu1 acts_mu2
          heap_mu1 heap_mu2 stty stty1 stty2 hp',
-    (forall (l : SigmaKey) (t' : Tau),
-        find_ST l stty = Some t' → find_ST l stty1 = Some t') ->
-    (forall (l : SigmaKey) (t' : Tau),
-        find_ST l stty = Some t' → find_ST l stty2 = Some t') ->
     (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
     (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
@@ -119,24 +117,24 @@ Proof.
     assert (HFind_ParHeaps : find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
     eapply FindAfterMultipleSteps; eauto. 
     destruct HFind_ParHeaps.
-    + inversion H7; subst.
-      apply H13 in H10. destruct H10 as [t].
+    + inversion H5; subst.
+      apply H11 in H8. destruct H8 as [t].
       exists t. apply StoreTyping_Union; eauto.
-    + inversion H8; subst.
-      apply H13 in H10. destruct H10 as [t].
+    + inversion H6; subst.
+      apply H11 in H8. destruct H8 as [t].
       exists t. 
       eapply StoreTyping_Union; eauto.
   - intros. 
     eapply StoreTyping_Union
-      with (sttya:=stty1) (sttyb:=stty2) in H9; eauto.    
-    destruct H9.
-    + inversion H7; subst.
-      apply H13 in H9. destruct H9 as [v].
+      with (sttya:=stty1) (sttyb:=stty2) in H7; eauto.    
+    destruct H7.
+    + inversion H5; subst.
+      apply H11 in H7. destruct H7 as [v].
       exists v.
        eapply FindAfterMultipleSteps
          with (acts_mu2:=acts_mu2) (acts_mu1:=acts_mu1); eauto.
-    + inversion H8; subst.
-      apply H13 in H9. destruct H9 as [v].
+    + inversion H6; subst.
+      apply H11 in H7. destruct H7 as [v].
       exists v.
        eapply FindAfterMultipleSteps
          with (acts_mu2:=acts_mu2) (acts_mu1:=acts_mu1); eauto.      
@@ -149,7 +147,7 @@ Lemma subst_rho_eps_aux_1 :
  forall rho rho' n x e e1 sa sa',
    lc_type_eps e ->
    lc_type_sa sa' ->
-   (fold_subst_eps rho e1) = (fold_subst_eps rho' (closing_rgn_in_eps n x e)) ->
+   fold_subst_eps rho e1 = (fold_subst_eps rho' (closing_rgn_in_eps n x e)) ->
    fold_subst_sa rho sa = fold_subst_sa rho' (closing_rgn_in_sa n x sa') /\ e1 sa /\ e sa'.
 Admitted.
 
