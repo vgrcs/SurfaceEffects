@@ -16,7 +16,6 @@ Proofs/RegionFacts.v
 Proofs/HeapFacts.v
 Proofs/EffectFacts.v
 Proofs/Determinism.v
-Proofs/Admitted.v
 Proofs/TypeSystem.v
 Proofs/EffectSystem.v
 Proofs/Correctness.v
