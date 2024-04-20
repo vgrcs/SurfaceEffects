@@ -29,63 +29,33 @@ Module TypeSoundness.
   Import TypeFacts.
   Import Ensembles.
 
- Lemma ST_find_Ext_1:
-  forall k stty stty' x,
-    find_ST k stty = Some x ->
-    find_ST k (Functional_Map_Union_Sigma stty stty') = Some x.
-Proof.
-  intros.
-  unfold find_ST, Functional_Map_Union_Sigma in *.
-  replace (merge Merge_ST stty stty' !! k)
-    with (diag_None Merge_ST (stty !! k) (stty' !! k)) by
-    (rewrite lookup_merge; reflexivity).
-  destruct (stty !! k).
-  - inversion H; subst. unfold Merge_ST; simpl.
-    destruct (stty' !! k); reflexivity.
-  - inversion H.
-Qed.
 
-Lemma StoreTyping_Union_1:
-  forall stty sttya sttyb,
-    (forall (l : SigmaKey) (t' : Tau),
-       find_ST l stty = Some t' -> find_ST l sttya = Some t' ) ->
-    (forall (l : SigmaKey) (t' : Tau),
-       find_ST l stty = Some t' -> find_ST l sttyb = Some t' ) ->
-    (forall (l : SigmaKey) (t' : Tau),
-        find_ST l stty = Some t' ->
-        find_ST l (Functional_Map_Union_Sigma sttya sttyb) = Some t' ).
-Proof. 
-  intros stty sttya sttyb Ha Hb.
-  intros l t' H.
-  assert (H' : find_ST l stty = Some t') by assumption.
-  apply Ha in H.   apply Hb in H'.
+Lemma StoreTyping_Union:
+  forall l t sttya sttyb,
+    find_ST l sttya = Some t \/ find_ST l sttyb = Some t <->
+    find_ST l (Functional_Map_Union_Sigma sttya sttyb) = Some t.
+Proof.
+  intros l t sttya sttyb.
+  split.
+  - intro.
     unfold find_ST, Functional_Map_Union_Sigma in *.
-  replace (merge Merge_ST sttya sttyb !! l)
-    with (diag_None Merge_ST (sttya !! l) (sttyb !! l)) by
-    (rewrite lookup_merge; reflexivity).
-  destruct (sttya !! l); destruct (sttyb !! l); unfold Merge_ST; simpl.
-  - assumption.
-  - inversion H'.
-  - inversion H.  
-  - inversion H.
-Qed.
-
-Lemma StoreTyping_Union_2:
-  forall k t sttya sttyb,
-    find_ST k (Functional_Map_Union_Sigma sttya sttyb) = Some t ->
-    find_ST k sttya = Some t \/ find_ST k sttyb = Some t.
-Proof.
-  intros.
-  unfold find_ST, Functional_Map_Union_Sigma in *. 
-  replace (merge Merge_ST sttya sttyb !! k)
-    with (diag_None Merge_ST (sttya !! k) (sttyb !! k)) in H by
-    (rewrite lookup_merge; reflexivity).
-  destruct (sttya !! k); destruct (sttyb !! k); unfold Merge_ST in H; simpl in H.
-  - left. assumption.
-  - left. assumption.
-  - right. assumption.
-  - inversion H.  
-Qed.
+    replace (merge Merge_ST sttya sttyb !! l)
+      with (diag_None Merge_ST (sttya !! l) (sttyb !! l)) by
+      (rewrite lookup_merge; reflexivity).
+    destruct (sttya !! l); destruct (sttyb !! l); unfold Merge_ST; simpl;
+      destruct H; try (solve [assumption | inversion H]).
+    admit.
+  - intro.
+    unfold find_ST, Functional_Map_Union_Sigma in *. 
+    replace (merge Merge_ST sttya sttyb !! l)
+      with (diag_None Merge_ST (sttya !! l) (sttyb !! l)) in H by
+        (rewrite lookup_merge; reflexivity).
+    destruct (sttya !! l); destruct (sttyb !! l); unfold Merge_ST in H; simpl in H.
+    + left. assumption.
+    + left. assumption.
+    + right. assumption.
+    + inversion H.  
+Admitted.
 
 
 Lemma TcValExtended:
@@ -102,13 +72,13 @@ Proof.
   econstructor. 
   - apply ext_stores__val with (stty:=stty1).
     intros.
-    + now apply ST_find_Ext_1.
+    + apply StoreTyping_Union. left. assumption.
     + assumption.
   - apply ext_stores__val with (stty:=stty2).
     intros. 
-    + admit.
+    + apply StoreTyping_Union. right. assumption.
     + assumption.
-Admitted.
+Qed.
 
 
 Lemma FindAfterMultipleSteps:
@@ -147,18 +117,17 @@ Proof.
   econstructor. 
   - intros.
     assert (HFind_ParHeaps : find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
-    eapply FindAfterMultipleSteps; eauto.
+    eapply FindAfterMultipleSteps; eauto. 
     destruct HFind_ParHeaps.
     + inversion H7; subst.
       apply H13 in H10. destruct H10 as [t].
-      exists t. apply ST_find_Ext_1. assumption.
+      exists t. apply StoreTyping_Union; eauto.
     + inversion H8; subst.
       apply H13 in H10. destruct H10 as [t].
-      exists t.
-      eapply StoreTyping_Union_1; eauto. 
-      admit.
+      exists t. 
+      eapply StoreTyping_Union; eauto.
   - intros. 
-    eapply StoreTyping_Union_2
+    eapply StoreTyping_Union
       with (sttya:=stty1) (sttyb:=stty2) in H9; eauto.    
     destruct H9.
     + inversion H7; subst.
@@ -171,7 +140,8 @@ Proof.
       exists v.
        eapply FindAfterMultipleSteps
          with (acts_mu2:=acts_mu2) (acts_mu1:=acts_mu1); eauto.      
-  - admit.
+  - intros. 
+    admit.
 Admitted.
                   
 
@@ -563,7 +533,7 @@ Proof.
     destruct HTyped4 as[ stty4 [HD1  [HD2 HD3]]].  
     { exists (Functional_Map_Union_Sigma stty1 stty2).
       split. 
-      + intros. eapply StoreTyping_Union_1; eauto.
+      + intros. eapply StoreTyping_Union; eauto.
       + split.
         * eapply TcHeap_Extended with (acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
         * eapply TcValExtended; eauto.
