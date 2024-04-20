@@ -257,10 +257,6 @@ Inductive lc_type : Tau -> Prop :=
 
 Inductive TcRho : (Rho * Omega) -> Prop :=
 | TC_Rho : forall rho rgns,
-    (forall x y1 y2,
-        (x, y1) ∈ (map_to_list rho) ->
-        (x, y2) ∈ (map_to_list rho) ->
-        y1 = y2)  ->
     (forall r, rho !! r <> None <-> set_elem rgns r) ->
     TcRho (rho, rgns).
 

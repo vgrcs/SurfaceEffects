@@ -136,50 +136,13 @@ Lemma not_set_elem_not_in_rho:
     x ∉ dom rho.
 Proof.
   intros rho rgns  x HRho H .
-  inversion_clear HRho as [rho' rgns' HInj' HRgn' HVal''].
+  inversion_clear HRho as [rho' rgns' HRgn' HVal''].
   unfold not_set_elem in H. unfold Ensembles.Complement in H.
   intro.
   apply elem_of_dom in H0. unfold is_Some in H0.
   apply NotNoneIsSome in H0.
     eapply HRgn' in H0. contradiction.
 Qed.
-
-
-Lemma TcRhoInjective_insert:
-  forall rho rgns k v,
-    not_set_elem rgns k ->
-    TcRho (rho, rgns)->
-    forall (x : RgnName) (y1 y2 : RgnVal),
-      (x, y1) ∈ map_to_list (<[k:=v]> rho) ->
-      (x, y2) ∈ map_to_list (<[k:=v]> rho) ->
-      y1 = y2.
-Proof.
-  intros.
-  assert (k ∉ dom rho) by (eapply not_set_elem_not_in_rho; eauto).
-  apply not_elem_of_dom_1 in H3.
-  assert (map_to_list (<[k:=v]> rho) ≡ₚ (k, v) :: map_to_list rho)
-    by (apply map_to_list_insert; assumption).  
-  inversion_clear H0 as [rho' rgns' HInj' HRgn'  HRho''].
-  eapply HInj' with (x:=x). 
-  -apply elem_of_map_to_list in H1.
-    apply elem_of_map_to_list in H2.
-    apply elem_of_map_to_list'. simpl.
-    destruct (ascii_eq_dec k x); subst.
-    + apply lookup_insert_Some in H1.
-      destruct H1; destruct H0.
-      * subst.
-        assert (<[x:=y1]> rho !! x = Some y1) by apply lookup_insert.
-        { destruct (Nat.eq_dec y1 y2).  
-          - subst. admit.
-          - replace (<[x:=y1]> rho !! x) with (Some y2) in H1.
-            inversion H1. subst. contradiction. }
-      * contradiction.  
-    + apply lookup_insert_Some in H1.
-      destruct H1; destruct H0.
-      * contradiction.
-      * assumption.  
-  - admit.
-Admitted.
 
 
 Lemma update_rho:
@@ -189,9 +152,9 @@ Lemma update_rho:
     TcRho (update_R (x, v) rho, set_union rgns (singleton_set x)).
 Proof.
   intros rho rgns x v HRho HFresh.
-  unfold update_R; simpl.    
-  econstructor; [eapply TcRhoInjective_insert;eauto | intro r; split].
-  - inversion_clear HRho as [rho' rgns' HInj' HRgn'  HRho''].
+  unfold update_R; simpl.
+  econstructor; split.
+  - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
     destruct (ascii_eq_dec x r) as [c | c].
     + intros; subst.
       unfold set_elem, set_union, singleton_set.
@@ -204,7 +167,7 @@ Proof.
         apply Ensembles.Union_introl. 
         apply HRgn'. assumption.
       * eapply G_diff_keys_3 in H1; auto.  
-  - inversion_clear HRho as [rho' rgns' HInj' HRgn'  HRho''].
+  - inversion_clear HRho as [rho' rgns' HRgn'  HRho''].
     destruct (ascii_eq_dec x r) as [c | c].
     + intros; subst.
       replace (<[r:=v]> rho !! r) with (Some v) by (symmetry; apply lookup_insert).
@@ -1386,7 +1349,7 @@ Proof.
   generalize dependent r.
   generalize dependent x.  
   dependent induction HTcVal; intros;
-    inversion HTcRho as [rho' rgns' HInj HRgn HVal'']; subst;
+    inversion HTcRho as [rho' rgns' HRgn HVal'']; subst;
   try (solve [ unfold subst_in_type;
                assert (rho !! x0  = None) 
                  by (eapply contrapositiveTcRho; eauto; apply HRgn);
@@ -1405,12 +1368,12 @@ Lemma extended_rho :
 Proof.
   intros stty rho env ctxt HEnv x r rgns HRho HRgns. 
   inversion_clear HEnv as [ stty' rho' env' ctxt' HE HT HV].  
-  inversion  HRho as [rho' rgns' HInj' HRgn' HVal'']; subst.
+  inversion  HRho as [rho' rgns' HRgn' HVal'']; subst.
   constructor; auto.
   intros x0 v0 t0 HE' HT'. eapply HV in HE'; eauto. unfold update_R. simpl. 
   rewrite subst_add_comm.  
-  - eapply subst_rho_fresh_var; eauto. 
-  - eapply TcRhoInjective_insert; eauto.
+  - eapply subst_rho_fresh_var; eauto.
+  - eapply map_to_list_unique with (m:=<[x:=r]> rho); eauto.
   - unfold not_set_elem in HRgns. unfold Ensembles.Complement in HRgns.
     apply not_elem_of_dom.
     intro. apply elem_of_dom in H.
@@ -1431,7 +1394,7 @@ Proof.
   - rewrite subst_rho_rgn_const in H.
     simpl in H. contradiction.
   - destruct (ascii_eq_dec x r) as [c | c]; subst.
-    + inversion HRho as [rho' rgns' HInj' HRgn' HVal'']; subst.   
+    + inversion HRho as [rho' rgns' HRgn' HVal'']; subst.   
       contradict H.
       destruct (subst_rho_fvar_1 rho r) as [[v' H0] | H0]. 
       * rewrite H0. simpl. intro. contradiction.
@@ -1465,7 +1428,7 @@ Lemma TcRhoIncludedNoFreeVarsEps_main:
 Proof.
   intros.
   apply TcRhoIncludedNoFreeVarsEps_find.
-  inversion H; subst. apply H5. apply H1.
+  inversion H; subst. apply H3. apply H1.
   unfold In.
   assumption.
 Qed.

@@ -1137,13 +1137,13 @@ Proof.
       destruct (subst_rho_fvar_1 rho r) as [[v' H1] | H1]. 
       * rewrite H1. simpl. intro. contradiction.
       * rewrite H1. simpl. intro. 
-        unfold set_elem, In in H4.
-        destruct H4 with (r:=r).  
-        { apply H5 in HInc. 
+        unfold set_elem, In in H2.
+        destruct H2 with (r:=r). 
+        { apply H4 in HInc.
           - apply NotNoneIsSome in HInc.
             destruct HInc.
-            apply subst_rho_fvar_2 in H6. 
-            rewrite H6 in H1. 
+            apply subst_rho_fvar_2 in H5. 
+            rewrite H5 in H1. 
             inversion H1.
           - apply Union_introl. simpl. auto. }
    + inversion HRho; subst.
@@ -1384,7 +1384,7 @@ Lemma TcRhoIncludedNoFreeVarsEps_main:
 Proof.
   intros.
   apply TcRhoIncludedNoFreeVarsEps_find.
-  inversion H; subst. apply H5. apply H1.
+  inversion H; subst. apply H3. apply H1.
   unfold In.
   assumption.
 Qed.

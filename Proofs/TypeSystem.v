@@ -371,7 +371,7 @@ Proof.
   inversion H1; subst.
   unfold not_set_elem in H2. unfold Ensembles.Complement in H2. 
   unfold not. intro.
-  apply H2. apply H4.
+  apply H2. apply H0.
   contradict H. apply not_elem_of_dom. assumption.
 Qed.
  
@@ -468,7 +468,7 @@ Proof.
           + unfold subst_in_type in TcVal_res.
             rewrite SUBST_AS_CLOSE_OPEN in TcVal_res; auto.
             erewrite subst_rho_open_close in TcVal_res; eauto.
-          + eapply TcRhoInjective_insert; eauto.
+          + eapply map_to_list_unique with (m:=<[x:=v']> rho'); eauto.
           + apply not_elem_of_dom.
             eapply bound_var_is_fresh; eauto. }
   Case "eff_app". 

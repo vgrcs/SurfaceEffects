@@ -200,7 +200,7 @@ Proof.
         + eapply extended_rho; eauto.
         + apply update_inc. assumption.
         + apply update_rho; auto.      
-      - eapply TcRhoInjective_insert; eauto.
+      - eapply map_to_list_unique with (m:=<[x:=v']> rho'); eauto.
       - apply not_elem_of_dom.
          eapply not_set_elem_not_in_rho; eauto. }
     assumption.   
