@@ -220,31 +220,31 @@ Proof.
   - constructor; inversion HTcExp; subst.
     + assert (HS1 : acts_mu1 ⋞ theta1 /\ ReadOnlyPhi acts_eff1). 
       { eapply PairParAux; eauto.  
-        - inversion H6; subst.
+        - inversion H7; subst.
           assert (BackTriangle (ctxt, rgns, rho, Mu_App ef1 ea1, Eff_App ef1 ea1))
-            by (eapply H7).
-          inversion H2; subst.
+            by (eapply H8).
+          inversion H3; subst.
           
           assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff1)) 
             by (eapply eff_sound; eauto). 
-          eapply ReadOnlyStaticImpliesReadOnlyPhi in H20; eauto.
+          eapply ReadOnlyStaticImpliesReadOnlyPhi in H21; eauto.
           assert (heap = heap_eff1)
-            by (destruct H as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
+            by (destruct H0 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
           now subst.
       }
 
       assert (HS2 : acts_mu2 ⋞ theta2 /\ ReadOnlyPhi acts_eff2).
       { eapply PairParAux; eauto.  
-        - inversion H11; subst.
+        - inversion H12; subst.
           assert (BackTriangle (ctxt, rgns, rho, Mu_App ef2 ea2, Eff_App ef2 ea2))
-            by (eapply H7). 
-          inversion H2; subst.
+            by (eapply H8). 
+          inversion H3; subst.
           
           assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff2)) 
             by (eapply eff_sound; eauto). 
-          eapply ReadOnlyStaticImpliesReadOnlyPhi in H20; eauto.
+          eapply ReadOnlyStaticImpliesReadOnlyPhi in H21; eauto.
           assert (heap =heap_eff2)
-            by ( destruct H as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).          
+            by ( destruct H0 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).          
           now subst. }
 
       destruct HS1, HS2. 
@@ -252,29 +252,29 @@ Proof.
     + eapply Det_trace_from_theta; try eassumption. 
       * assert (HS1 : acts_mu1 ⋞ theta1 /\ ReadOnlyPhi acts_eff1).
         { eapply PairParAux; eauto. 
-          - inversion H6; subst.
+          - inversion H7; subst.
             assert (BackTriangle (ctxt, rgns, rho, Mu_App ef1 ea1, Eff_App ef1 ea1))
-              by (eapply H7).
-            inversion H2; subst.
+              by (eapply H8).
+            inversion H3; subst.
             
             assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff1)) 
               by (eapply eff_sound; eauto). 
-            eapply ReadOnlyStaticImpliesReadOnlyPhi in H20; eauto.
+            eapply ReadOnlyStaticImpliesReadOnlyPhi in H21; eauto.
             assert (heap = heap_eff1)
-            by ( destruct H as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
+            by ( destruct H0 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
             now subst. }
         intuition.
       *  assert (HS2 : acts_mu2 ⋞ theta2 /\ ReadOnlyPhi acts_eff2).
          { eapply PairParAux; eauto.  
-           - inversion H11; subst.
+           - inversion H12; subst.
              assert (BackTriangle (ctxt, rgns, rho, Mu_App ef2 ea2, Eff_App ef2 ea2))
-               by (eapply H7). 
-             inversion H2; subst.
+               by (eapply H8). 
+             inversion H3; subst.
              
              assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff2)) 
                by (eapply eff_sound; eauto). 
-             eapply ReadOnlyStaticImpliesReadOnlyPhi in H20; eauto.
-             assert (heap =heap_eff2) by ( destruct H as [HA HB];
+             eapply ReadOnlyStaticImpliesReadOnlyPhi in H21; eauto.
+             assert (heap =heap_eff2) by ( destruct H0 as [HA HB];
                  unfold equiv, heap_equiv in HA, HB; auto).
              now subst. }
          intuition.
@@ -555,12 +555,12 @@ Proof.
     
     inversion HExp_mu1; subst.
     assert (BackTriangle (ctxt, rgns, rho, Mu_App ef1 ea1, Eff_App ef1 ea1))
-      by (eapply H6).
+      by (eapply H7).
     inversion HExp_mu2; subst.
     assert (BackTriangle (ctxt, rgns, rho, Mu_App ef2 ea2, Eff_App ef2 ea2))
-      by (eapply H8).
+      by (eapply H9).
  
-    inversion H2; inversion H3; subst.
+    inversion H3; inversion H4; subst.
           
     assert (Epsilon_Phi_Soundness (fold_subst_eps rho static_ee, acts_eff1)) 
       by (eapply eff_sound; eauto). 
@@ -590,11 +590,11 @@ Proof.
     
     { eapply IHDyn1_1; eauto.  
       - assert (heap_a =heap_eff1) by
-          ( destruct H as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
-        rewrite H38; reflexivity.
+          ( destruct H0 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
+        rewrite H40; reflexivity.
       - assert (heap_b = heap_eff0).
-        destruct H11 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto.
-                         rewrite H38. rewrite H38 in H13. assumption. }
+        destruct H14 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto.
+                         rewrite H40. rewrite H40 in H15. assumption. }
             
     destruct HR1 as [h_eq_1 [v_eq_1 a_eq_1]]. inversion v_eq_1.  subst.
     
@@ -616,16 +616,16 @@ Proof.
     assert (HS1 : acts_mu0 ⋞ theta0 ). 
     { eapply PairParAux; eauto.
       - assert (heap_b =heap_eff0) by
-          ( destruct H11 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
-         rewrite H38. rewrite <- H51 in H13. eassumption.
+          ( destruct H14 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
+         rewrite H40. rewrite <- H53 in H15. eassumption.
       - eapply EqualHeaps; eauto.  
     } inversion HExp_mu1.
     
     assert (HS2 : acts_mu3 ⋞ theta3 ).
     { eapply PairParAux; eauto.  
       - assert (heap_b =heap_eff3) by
-          ( destruct H11 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
-        rewrite H61. rewrite H61 in H14. eassumption.
+          ( destruct H14 as [HA HB]; unfold equiv, heap_equiv in HA, HB; auto).
+        rewrite H63. rewrite H63 in H16. eassumption.
       - eapply EqualHeaps; eauto. 
     } inversion HExp_mu2. 
     
@@ -638,14 +638,14 @@ Proof.
       subst. eapply Det_trace_from_theta; eauto; 
         [ eapply Dynamic_DetTrace in Dyn1_3 |
           eapply Dynamic_DetTrace in Dyn1_4]; eassumption.  
-      now inversion H78.
+      now inversion H80.
     * assert (Det_Trace (Phi_Par acts_mu0 acts_mu3))
         by (subst; eapply Det_trace_from_theta; eauto; 
             [ eapply Dynamic_DetTrace in Dyn1_3 |
               eapply Dynamic_DetTrace in Dyn1_4]; eassumption).
-      now inversion H78.
-    * rewrite <- H80. rewrite <- H81. eassumption.
-    * rewrite <- H80. rewrite <- H81. reflexivity.
+      now inversion H80.
+    * rewrite <- H82. rewrite <- H83. eassumption.
+    * rewrite <- H82. rewrite <- H83. reflexivity.
   - inversion HTcExp; subst;
     assert ( RH1 : cheap ≡@{Heap} cheap0 /\  Bit true = Bit true /\ cacts = cacts0 ).
     eapply IHDyn1_1; eauto.

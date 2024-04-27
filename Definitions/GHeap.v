@@ -145,3 +145,24 @@ Inductive TcHeap : (Heap * Sigma) -> Prop :=
 
 
 
+Lemma DisjointHeap_implies_DisjointStore:
+  forall heap1 heap2 stty1 stty2,
+    TcHeap(heap1, stty1) ->
+    TcHeap(heap2, stty2) ->
+    heap1 ##ₘ heap2 ->
+    stty1 ##ₘ stty2.
+Proof.
+  intros.
+  inversion H; subst. 
+  inversion H0; subst.
+  apply map_disjoint_spec. intros.
+  unfold find_ST in H5. unfold find_ST in H8.
+  apply H5 in H2.
+  apply H8 in H3.
+  assert (H' :forall i x y, heap1 !! i = Some x → heap2 !! i = Some y → False).
+  apply map_disjoint_spec. assumption.
+  destruct H2. destruct H3.
+  eapply H' in H2; eauto.
+Qed.
+  
+        

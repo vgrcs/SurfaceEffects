@@ -410,8 +410,8 @@ Proof.
                                | | | 
                                ? ? ? ? ? ? ? ? ? ? ? ?  HBt_1 HBt_2 HExp_mu1 HExp_mu2 HExp_eff1 HExp_eff2 
                                | | | | | | | | | | | | | | | | ]; subst. 
-    inversion HEff; subst. inversion H13; subst. 
-    inversion H6; subst. inversion H12; subst.  
+    inversion HEff; subst. inversion H14; subst. 
+    inversion H7; subst. inversion H13; subst.  
  
 
     assert (H' : acts_eff1 ⋞ effa1). 

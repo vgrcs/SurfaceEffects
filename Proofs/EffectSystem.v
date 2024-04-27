@@ -255,7 +255,7 @@ Proof.
         apply sound_comp; [|assumption].
         assumption.
   Case "par_pair".
-    destruct H; subst.      
+    destruct H0; subst.      
     assert (HA : Epsilon_Phi_Soundness (fold_subst_eps rho eff1, acts_mu1)).
     eapply IHD3; eauto.
     assert (HB : Epsilon_Phi_Soundness (fold_subst_eps rho eff2, acts_mu2)).
@@ -295,12 +295,12 @@ Proof.
         unfold Union_Static_Action.
         { apply Extensionality_Ensembles;
             unfold Same_set, Included; split; intros x HUnion; unfold Ensembles.In in *.
-          - inversion HUnion; subst; inversion H3; subst. 
+          - inversion HUnion; subst; inversion H4; subst. 
             + apply Union_introl. apply Union_introl. apply Union_introl. assumption.
             + apply Union_introl. apply Union_introl. apply Union_intror. assumption.
             + apply Union_intror. assumption. 
             + apply Union_introl. apply Union_intror. assumption.
-          - inversion HUnion; subst; inversion H3; subst. 
+          - inversion HUnion; subst; inversion H4; subst. 
             + apply Union_introl. assumption.
             + apply Union_intror. apply Union_intror. assumption.
             + apply Union_intror. apply Union_introl. assumption.

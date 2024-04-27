@@ -403,7 +403,6 @@ Definition subst_in_rgn_alt (r : RgnName) (v : RgnVal) (rgn : Region_in_Type)
   := subst_rgn r (Rgn_Const true false v) rgn.
 
 Definition fold_subst_rgn_alt (lrho : list(RgnName*RgnVal)) (rt : Region_in_Type)
-(*:= foldr (uncurry (fun x r rgn => subst_rgn x (Rgn_Const true false r) rgn)) rt lrho. *)
  := foldr (uncurry subst_in_rgn_alt) rt lrho.
                               
 
