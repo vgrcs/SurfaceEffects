@@ -5,6 +5,8 @@ Require Import Definitions.ComputedActions.
 Require Import Definitions.DynamicActions.
 Require Import Definitions.Expressions.
 Require Import Definitions.GTypes.
+Require Import String.
+Require Import Definitions.Tactics.
 
 Definition HeapVal := Val.
 Definition HeapKey := prod nat nat.
@@ -42,6 +44,40 @@ Proof.
   - intros x y z H1 H2. unfold equiv, heap_equiv in *. subst. reflexivity.
 Qed.
 
+Global Instance val_equiv : Equiv Val := λ a b, a = b.
+Global Instance val_equivalence : Equivalence (≡@{Val}).
+Admitted.
+
+Lemma Test:
+  forall (h1 h2: Heap) k x,
+    h1 ≡@{Heap} h2 ->
+    h1 !! k = Some x ->
+    ∃ y, h2 !! k = Some y ∧ x ≡@{Val} y.
+Proof.
+  intros.
+  apply map_equiv_lookup_l with (m1:=h1). 
+  inversion H; subst. reflexivity.
+  assumption.
+Qed.
+
+Lemma Test2:
+  forall (h1 h2: Heap),
+    h1 ≡@{Heap} h2 ->
+    ∀ k, h1 !! k ≡ h2 !! k.
+Proof.
+  intros.
+  inversion H; subst.
+  reflexivity.
+Qed.
+
+Lemma Test3:
+  forall (h1 h2: Heap),
+    h1 = h2 ->
+    h1 ≡@{Heap} h2.    
+Proof.
+  intros.
+  assumption.
+Qed.
 
 Axiom timestamp_Write: Val -> HeapVal.
 Axiom timestamp_Read : option HeapVal -> option Val.
@@ -70,8 +106,8 @@ Definition Merge_Function (v1 v2 : option HeapVal) : option HeapVal :=
       if (Nat.lt_dec (timestamp v1) (timestamp v2)) then Some v2 else Some v1
 end.
 
-Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap
-  := merge Merge_Function heap1 heap2.
+(*Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap
+  := merge Merge_Function heap1 heap2.*)
 
   
 
@@ -154,7 +190,7 @@ Lemma DisjointHeap_implies_DisjointStore:
 Proof.
   intros.
   inversion H; subst. 
-  inversion H0; subst.
+  inversion H0; subst.  
   apply map_disjoint_spec. intros.
   unfold find_ST in H5. unfold find_ST in H8.
   apply H5 in H2.
@@ -164,5 +200,90 @@ Proof.
   destruct H2. destruct H3.
   eapply H' in H2; eauto.
 Qed.
+
+
+Lemma TcHeap_none_implies_none:
+  forall heap stty,
+    TcHeap(heap, stty) ->
+    (forall (k : SigmaKey),
+        find_ST k stty = None -> find_H k heap = None).
+Admitted.
   
-        
+
+Lemma djt_heap_implies_djt_stty:
+  forall heap heap1 heap2 stty stty1 stty2,
+    TcHeap(heap, stty) ->
+    TcHeap(heap1, stty1) ->
+    TcHeap(heap2, stty2) ->
+    (heap1 ∖ heap) ##ₘ (heap2 ∖ heap) ->
+    (stty1 ∖ stty) ##ₘ (stty2 ∖ stty).
+Proof.
+  intros heap heap1 heap2 stty stty1 stty2 H1 H2 H3.
+  inversion H1. inversion H2. inversion H3. subst.
+  intro.
+  apply map_disjoint_spec. intros.
+  clear H6. clear H11. clear H16.
+  unfold find_ST in H5. unfold find_ST in H10. unfold find_ST in H15.
+  apply lookup_difference_Some in H0. destruct H0.
+  apply lookup_difference_Some in H7. destruct H7. clear H8.
+  apply H10 in H0.
+  apply H15 in H7.
+  assert (H' : forall i x y,
+             (heap1 ∖ heap) !! i = Some x -> (heap2 ∖ heap) !! i = Some y -> False).
+  apply map_disjoint_spec. assumption.
+  destruct H0. destruct H7.
+  assert (heap !! i = None). eapply TcHeap_none_implies_none; eauto.
+  assert ((heap1 ∖ heap) !! i = Some x0) by (apply lookup_difference_Some; auto).
+  assert ((heap2 ∖ heap) !! i = Some x1) by (apply lookup_difference_Some; auto).
+  eapply H' in H11; eauto.
+Qed.
+
+
+Lemma djt_heap_implies_djt_stty_2:
+  forall heap heap1 heap2 stty stty1 stty2,
+    TcHeap(heap, stty) ->
+    TcHeap(heap1, stty1) ->
+    TcHeap(heap2, stty2) ->
+    heap ∪ (heap1 ∖ heap) ##ₘ heap ∪ (heap2 ∖ heap) ->
+    stty ∪ (stty1 ∖ stty) ##ₘ stty ∪ (stty2 ∖ stty).
+Proof.
+  intros heap heap1 heap2 stty stty1 stty2 H1 H2 H3.
+  inversion H1. inversion H2. inversion H3. subst.
+  intro.
+  apply map_disjoint_spec. intros.
+  clear H6. clear H11. clear H16.
+  unfold find_ST in H5. unfold find_ST in H10. unfold find_ST in H15.
+  apply lookup_union_Some_raw in H0.
+  apply lookup_union_Some_raw in H7.
+  assert (H' : forall i x y,
+             (heap ∪ (heap1 ∖ heap)) !! i = Some x ->
+             (heap ∪ (heap2 ∖ heap)) !! i = Some y -> False)
+    by (apply map_disjoint_spec; assumption).
+  destruct H0; destruct H7.
+  - apply H5 in H0.
+    apply H5 in H6.
+    destruct H0. destruct H6. 
+    assert ((heap ∪ (heap1 ∖ heap)) !! i = Some x0)
+      by (apply lookup_union_Some_raw; left; assumption).
+    assert ((heap ∪ (heap2 ∖ heap)) !! i = Some x1)
+      by (apply lookup_union_Some_raw; left; assumption).    
+    eapply H' in H7; eauto.
+  - destruct H6.
+    rewrite H0 in H6. inversion H6.
+  - destruct H0.
+    rewrite H0 in H6. inversion H6.
+  - destruct H0. destruct H6.
+    apply lookup_difference_Some in H7. destruct H7. 
+    apply lookup_difference_Some in H8. destruct H8.
+    clear H11. clear H6. clear H12.
+    apply H10 in H7. apply H15 in H8.
+    destruct H7. destruct H8.
+    assert (heap !! i = None). eapply TcHeap_none_implies_none; eauto.
+    assert ((heap ∪ (heap1 ∖ heap)) !! i = Some x0)
+      by (apply lookup_union_Some_raw; right; split;
+          [auto | apply lookup_difference_Some; auto]).
+    assert ((heap ∪ (heap2 ∖ heap)) !! i = Some x1)
+      by (apply lookup_union_Some_raw; right; split;
+          [auto | apply lookup_difference_Some; auto]).
+    eapply H' in H11; eauto.
+Qed.

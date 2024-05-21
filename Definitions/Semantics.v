@@ -25,7 +25,8 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
 | BS_Val_Var :
   forall x v env rho heap phi,
     phi = Phi_Nil ->
-    find_E x env = Some v -> (heap, env, rho, Var x) ⇓ (heap, v, phi)
+    find_E x env = Some v ->
+    (heap, env, rho, Var x) ⇓ (heap, v, phi)
 
 | BS_Mu_Abs :
   forall f x ec ee env rho (heap fheap : Heap) phi,
@@ -72,7 +73,9 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
   forall env rho ea1 ef1 ea2 ef2 v1 v2 theta1 theta2
          (heap_eff1 heap_eff2 heap heap_mu1 heap_mu2 heap' : Heap)
          (phi acts_mu1 acts_mu2 acts_eff1 acts_eff2 : Phi),
-    heap_mu1 ##ₘ heap_mu2 ->
+    (*heap_mu1 ##ₘ heap_mu2 ->*)
+    (heap_mu1 ∖ heap) ##ₘ (heap_mu2 ∖ heap) ->
+    (*heap ∪ (heap_mu1 ∖ heap) ##ₘ heap ∪ (heap_mu2 ∖ heap) ->*)
     heap ≡@{Heap} heap_eff1 /\ heap ≡@{Heap} heap_eff2 ->
     (heap, env, rho, Eff_App ef1 ea1) ⇓ (heap_eff1, Eff theta1, acts_eff1) ->
     (heap, env, rho, Eff_App ef2 ea2) ⇓ (heap_eff2, Eff theta2, acts_eff2) ->
