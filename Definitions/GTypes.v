@@ -199,7 +199,7 @@ Definition open_var (t : Tau) (x : VarId) : Tau :=
 Definition closing_rgn_in_rgn (k : nat) (x: RgnName) (t: Region_in_Type) : Region_in_Type
  := match t with
     | Rgn_Const _ _ _ => t
-    | Rgn_FVar _ _ n  => if ascii_eq_dec n x then (Rgn_BVar true true k) else t
+    | Rgn_FVar _ _ n  => if ascii_dec n x then (Rgn_BVar true true k) else t
     | Rgn_BVar _ _ _  => t
     end.
 
@@ -281,7 +281,7 @@ Inductive TcRgn : (Omega * Region_in_Expr) -> Prop :=
 Definition subst_rgn  (z : RgnName) (u : Region_in_Expr) (t: Region_in_Type) : Region_in_Type :=
   match t with
     | Rgn_Const _ _ r => t
-    | Rgn_FVar _ _ r  => if (ascii_eq_dec z r) then mk_rgn_type u else t 
+    | Rgn_FVar _ _ r  => if (ascii_dec z r) then mk_rgn_type u else t 
     | Rgn_BVar _ _ _  => t
   end.
 

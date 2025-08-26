@@ -14,7 +14,6 @@ Require Import Ascii.
 
 Import Ensembles.
 
-
 Lemma find_R_in_list:
   forall (rho : Rho) (p : RgnName*RgnVal),
     rho !! p.1 = Some p.2 ->
@@ -55,13 +54,13 @@ Proof.
   unfold Region_in_Type.
   dependent induction r; intros; unfold subst_rgn; simpl.
   - reflexivity.
-  - destruct (ascii_eq_dec j2 r); destruct (ascii_eq_dec j1 r); simpl.
+  - destruct (ascii_dec j2 r); destruct (ascii_dec j1 r); simpl.
     + subst. contradiction.
-    + subst. destruct (ascii_eq_dec r r).
+    + subst. destruct (ascii_dec r r).
       * reflexivity.
       * contradiction.
     + reflexivity.
-    + subst. destruct (ascii_eq_dec j2 r); subst.
+    + subst. destruct (ascii_dec j2 r); subst.
       * contradiction.
       * reflexivity.
   - reflexivity.
@@ -76,13 +75,13 @@ Proof.
   intros j1 j2 z1 z2 sa H. induction sa.
   - generalize dependent r. unfold Region_in_Type. dependent induction r; simpl.
     + reflexivity.
-    + destruct (ascii_eq_dec j1 r); destruct (ascii_eq_dec j2 r); subst; simpl.
+    + destruct (ascii_dec j1 r); destruct (ascii_dec j2 r); subst; simpl.
       * contradiction.
-      * destruct (ascii_eq_dec r r); subst;
+      * destruct (ascii_dec r r); subst;
           [reflexivity | contradiction].
-      * destruct (ascii_eq_dec r r); subst;
+      * destruct (ascii_dec r r); subst;
           [reflexivity | contradiction].
-      * { destruct (ascii_eq_dec j1 r); destruct (ascii_eq_dec j2 r); subst; simpl.
+      * { destruct (ascii_dec j1 r); destruct (ascii_dec j2 r); subst; simpl.
           - contradiction.
           - contradiction.
           - contradiction.
@@ -90,13 +89,13 @@ Proof.
     + reflexivity.
   - generalize dependent r. unfold Region_in_Type. dependent induction r; simpl.
     + reflexivity.
-    + destruct (ascii_eq_dec j1 r); destruct (ascii_eq_dec j2 r); subst; simpl.
+    + destruct (ascii_dec j1 r); destruct (ascii_dec j2 r); subst; simpl.
       * contradiction.
-      * destruct (ascii_eq_dec r r); subst;
+      * destruct (ascii_dec r r); subst;
           [reflexivity | contradiction].
-      * destruct (ascii_eq_dec r r); subst;
+      * destruct (ascii_dec r r); subst;
           [reflexivity | contradiction].
-      * { destruct (ascii_eq_dec j1 r); destruct (ascii_eq_dec j2 r); subst; simpl.
+      * { destruct (ascii_dec j1 r); destruct (ascii_dec j2 r); subst; simpl.
           - contradiction.
           - contradiction.
           - contradiction.
@@ -104,13 +103,13 @@ Proof.
     + reflexivity.
   - generalize dependent r. unfold Region_in_Type. dependent induction r; simpl.
     + reflexivity.
-    + destruct (ascii_eq_dec j1 r); destruct (ascii_eq_dec j2 r); subst; simpl.
+    + destruct (ascii_dec j1 r); destruct (ascii_dec j2 r); subst; simpl.
       * contradiction.
-      * destruct (ascii_eq_dec r r); subst;
+      * destruct (ascii_dec r r); subst;
           [reflexivity | contradiction].
-      * destruct (ascii_eq_dec r r); subst;
+      * destruct (ascii_dec r r); subst;
           [reflexivity | contradiction].
-      * { destruct (ascii_eq_dec j1 r); destruct (ascii_eq_dec j2 r); subst; simpl.
+      * { destruct (ascii_dec j1 r); destruct (ascii_dec j2 r); subst; simpl.
           - contradiction.
           - contradiction.
           - contradiction.
@@ -136,7 +135,9 @@ Proof.
       * auto.
       * reflexivity.
     + rewrite <- H1. rewrite <- H2.
-      rewrite subst_sa_aux_comm;[reflexivity | symmetry; assumption].
+      rewrite subst_sa_aux_comm.
+      * reflexivity.
+      * auto.
   - destruct H1 as [sa [? ?]].  destruct H0 as [sa' [? ?]].   
     exists (subst_sa j2 (Rgn_Const true false z2) sa').
     split. 
@@ -202,7 +203,7 @@ Proof.
   - intros j1 j2 z1 z2 y ? ? ?.
     rewrite subst_rgn_aux_comm; auto.
   - reflexivity.
-Qed.    
+Qed.
     
 
 Lemma subst_rho_natural :
@@ -275,7 +276,7 @@ Proof.
    - reflexivity.
   - rewrite IHl. unfold subst_rgn.
     destruct a.  simpl. 
-    destruct (ascii_eq_dec r x).
+    destruct (ascii_dec r x).
     + simpl in H. subst. 
       contradict H. apply elem_of_cons. left. reflexivity.
     + reflexivity.
@@ -302,7 +303,7 @@ Proof.
        apply not_elem_of_list_to_map in H.
        apply not_elem_of_cons in H. destruct H. clear H0.
        destruct a.  simpl in *.
-       destruct (ascii_eq_dec r p.1).
+       destruct (ascii_dec r p.1).
        * contradict H. auto.
        * reflexivity.
      + apply not_elem_of_list_to_map in H.
@@ -661,7 +662,7 @@ Proof.
       apply subst_rho_rgn_const_aux.
     + rewrite H. 
       unfold subst_rgn.
-      destruct a. simpl. destruct (ascii_eq_dec r x).
+      destruct a. simpl. destruct (ascii_dec r x).
       * left. exists r0. reflexivity.
       * right. reflexivity. 
 Qed. 
@@ -681,7 +682,7 @@ Proof.
       apply subst_rho_rgn_const_aux.
     + rewrite H. 
       unfold subst_rgn.
-      destruct a. simpl. destruct (ascii_eq_dec r x).
+      destruct a. simpl. destruct (ascii_dec r x).
       * left. exists r0. reflexivity.
       * right. reflexivity. 
 Qed.
@@ -707,7 +708,7 @@ Proof.
           (λ (x0 : RgnName) (r : RgnVal) (rgn : Region_in_Type),
             subst_rgn x0 (Rgn_Const true false r) rgn)) (Rgn_FVar true true x) l))
         with (Rgn_FVar true true x).
-      * simpl. destruct (ascii_eq_dec x x). 
+      * simpl. destruct (ascii_dec x x). 
         reflexivity. contradiction.
       * { apply list.NoDup_cons in HNoDup.
           rewrite fold_subst_rho_free_vars_rgn_not_elem.
@@ -736,7 +737,7 @@ Proof.
             fold_subst_rgn rho (Rgn_FVar true true r) = Rgn_FVar true true r) 
       by (apply subst_rho_fvar_1).
     destruct (subst_rho_fvar_1 rho r) as [[v' H0] | H0]; simpl in *.
-    + destruct (ascii_eq_dec r x) as [c | c]; auto.
+    + destruct (ascii_dec r x) as [c | c]; auto.
       * inversion c; subst. intro.
         rewrite fold_subst_rho_free_vars_rgn_aux in H0; auto.
         inversion H0.
@@ -1032,7 +1033,7 @@ Proof.
   dependent induction r;
   unfold free_rgn_vars_in_rgn, subst_rgn in *; simpl.
   - inversion H.
-  - destruct (ascii_eq_dec k r); subst; simpl in *.
+  - destruct (ascii_dec k r); subst; simpl in *.
     + inversion H.
     + assumption.
   - inversion H.
@@ -1087,7 +1088,7 @@ Proof.
   unfold Region_in_Type in r; dependent induction r; simpl; 
   try (solve [ intro; contradict H | 
                intro; unfold free_rgn_vars_in_rgn in H;
-               destruct (ascii_eq_dec x r); subst; 
+               destruct (ascii_dec x r); subst; 
                [inversion H | inversion H; symmetry in H0; contradiction] ]).
 Qed.
 
@@ -1129,7 +1130,7 @@ Proof.
   dependent induction r0; intros.
   - rewrite subst_rho_rgn_const in H.
     simpl in H. contradiction.
-  - destruct (ascii_eq_dec x r) as [c | c].
+  - destruct (ascii_dec x r) as [c | c].
     + inversion c; subst.   
       inversion HRho; subst.   
       contradict H.
@@ -1165,17 +1166,17 @@ Proof.
   dependent induction r;
     unfold free_rgn_vars_in_rgn, subst_rgn in *; simpl;
     try( solve[intro; inversion H]).
-  - destruct (ascii_eq_dec x r); subst.
+  - destruct (ascii_dec x r); subst.
     + unfold free_rgn_vars_in_rgn.
       intro. inversion H.
     + unfold free_rgn_vars_in_rgn.
       intro. inversion H. subst. contradiction.
-  - destruct (ascii_eq_dec x r).
+  - destruct (ascii_dec x r).
     + unfold free_rgn_vars_in_rgn.
       intro. inversion H.
     + unfold free_rgn_vars_in_rgn.
       intro. inversion H. subst. contradiction.
-  - destruct (ascii_eq_dec x r).
+  - destruct (ascii_dec x r).
     + unfold free_rgn_vars_in_rgn.
       intro. inversion H.
     + unfold free_rgn_vars_in_rgn.
@@ -1197,7 +1198,7 @@ Proof.
   unfold free_rgn_vars_in_rgn, subst_rgn in *;
     simpl in *; try (solve
                        [assumption |
-                         destruct (ascii_eq_dec r r0); [inversion H0 |
+                         destruct (ascii_dec r r0); [inversion H0 |
                                                              assumption]]).
 Qed.
 
@@ -1223,7 +1224,7 @@ Lemma subst_rgn_not_elem_1:
 Proof.
   intros.
   unfold subst_rgn. simpl.
-  destruct (ascii_eq_dec r x); subst.
+  destruct (ascii_dec r x); subst.
   - contradiction.
   - reflexivity.
 Qed.

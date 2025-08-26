@@ -23,6 +23,7 @@ Require Import Proofs.LocallyNameless.
 Require Import Definitions.GHeap.
 
 Import Expressions.
+Import Ascii.
 
 Definition find_type_ext_stores_def  := 
    forall stty stty' l (t' : Tau),
@@ -192,17 +193,16 @@ Proof.
   intros r k1 k2 v1 v2 H.
   unfold Region_in_Type in r.
   dependent induction r; try (solve [simpl; reflexivity ]).
-  unfold subst_rgn. destruct (ascii_eq_dec k1 k2).
+  unfold subst_rgn. destruct (ascii_dec k1 k2).
   - inversion e. contradiction.
-  - simpl. destruct (ascii_eq_dec k2 r).
+  - simpl. destruct (ascii_dec k2 r).
     + assert (k1 <> r) by congruence.
-      destruct (ascii_eq_dec k1 r).
+      destruct (ascii_dec k1 r).
       * now absurd (k1=r).
-      * inversion e; subst; now destruct (ascii_eq_dec r r).
-    + destruct (ascii_eq_dec k1 r); [reflexivity |].
-      now destruct (ascii_eq_dec k2 r).
+      * inversion e; subst; now destruct (ascii_dec r r).
+    + destruct (ascii_dec k1 r); [reflexivity |].
+      now destruct (ascii_dec k2 r).
 Qed.  
-
 
 Lemma subst_type_sa_comm_2:
   forall sa k1 k2 v1 v2,
@@ -305,17 +305,22 @@ Proof.
           by (eapply elem_of_list_to_map_1; eauto).
         rewrite H3 in H4. inversion H4. auto.        
         subst. reflexivity. }
-    + simpl. destruct (ascii_eq_dec r r).
-      * reflexivity.
-      * contradiction.      
-    + simpl. destruct (ascii_eq_dec r r).
-      * reflexivity.
+    + destruct (ascii_dec r r); destruct (ascii_dec r0 r); simpl.
       * contradiction.
-    + simpl. destruct (ascii_eq_dec r2 r); destruct (ascii_eq_dec r0 r); subst.      
+      * destruct (ascii_dec r r); [reflexivity| contradiction].
       * contradiction.
       * contradiction.
+    + destruct (ascii_dec r r); destruct (ascii_dec r2 r); simpl.
       * contradiction.
-      * reflexivity.
+      * destruct (ascii_dec r r); [reflexivity| contradiction].
+      * contradiction.
+      * contradiction.  
+    + destruct (ascii_dec r2 r); destruct (ascii_dec r0 r); simpl.      
+      * contradiction.
+      * contradiction.
+      * contradiction.
+      * destruct (ascii_dec r2 r); destruct (ascii_dec r0 r);
+          try (solve [reflexivity| contradiction]).        
   - unfold subst_in_rgn_alt.
     destruct a1. destruct a2. simpl.
     reflexivity.

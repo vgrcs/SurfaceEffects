@@ -334,7 +334,7 @@ Proof.
       contradiction.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
-      apply insert_commute. symmetry. assumption.
+      apply insert_commute. auto.
   - do 2 constructor.    
   - econstructor. inversion HDisj; subst.
     assert (Disjoint_Dynamic (DA_Alloc r l v) (DA_Alloc r0 l0 v0))
@@ -560,7 +560,7 @@ Proof.
       contradict H2. intuition.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
-      apply insert_commute. symmetry. assumption.
+      apply insert_commute. auto.
   - inversion HDisj; subst.
     assert (Disjoint_Dynamic (DA_Alloc r l v) (DA_Write r0 l0 v0))
       by (apply H; left; reflexivity).

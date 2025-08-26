@@ -673,9 +673,9 @@ Lemma RegionAbsFrv_2:
     included (free_rgn_vars_in_rgn (closing_rgn_in_rgn n x r)) rgns.
 Proof.
   intros. unfold Region_in_Type in r. 
-  dependent induction r; simpl in *; do 2 intro.
+  dependent induction r; simpl in *; do 2 intro. 
   - inversion H0.
-  - destruct (ascii_eq_dec r x); subst.
+  - destruct (Ascii.ascii_dec r x); subst.
     + simpl in *. inversion H0.
     + apply IncludedRemoveSingleton in H; auto.
   - inversion H0.
@@ -691,7 +691,7 @@ Proof.
   unfold Region_in_Type in r. dependent induction r; intro;
   unfold free_rgn_vars_in_rgn, closing_rgn_in_rgn in H.
   - inversion H.
-  - destruct (ascii_eq_dec r x); subst.
+  - destruct (Ascii.ascii_dec r x); subst.
     + inversion H.
     + inversion H. apply n0. assumption.
   - inversion H.
@@ -730,7 +730,7 @@ Proof.
       apply NoFreeVarsAfterClosingSa.
     + induction sa'; unfold Region_in_Type in r; dependent induction r; 
         simpl in *; unfold free_rgn_vars_in_rgn in *;
-        try (solve [inversion H2 | destruct  (ascii_eq_dec r x);
+        try (solve [inversion H2 | destruct  (Ascii.ascii_dec r x);
                                    subst; [inversion H2 | assumption]]).
   - destruct (ascii_eq_dec x x0); subst.
     + contradict H2.

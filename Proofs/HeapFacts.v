@@ -347,9 +347,9 @@ Proof.
   - apply  H_diff_keys_2.
    + assumption.
    + apply  H_diff_keys_2.
-     * symmetry; assumption.
+     * auto.
      * assumption.
-  - symmetry; assumption.
+  - auto.
 Qed.
 
 

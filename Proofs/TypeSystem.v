@@ -1,5 +1,6 @@
 From stdpp Require Import gmap.
 From stdpp Require Import strings.
+From stdpp Require Import fin_maps.
 
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Program.Equality.
@@ -15,6 +16,7 @@ Require Import Proofs.EffectFacts.
 Require Import Proofs.RegionFacts.
 Require Import Proofs.TypeFacts.
 Require Import Proofs.HeapFacts.
+
 
 Module TypeSoundness.
 
@@ -107,18 +109,13 @@ Lemma StoreTyping_Union_2:
     find_ST l stty = Some t ->
     find_ST l sttya = Some t ->
     find_ST l sttyb = Some t ->
-    find_ST l (stty ∪ sttya ∖ stty ∪ sttyb ∖ stty) = Some t.
-Admitted.
-
-
-Lemma TcValExtended_2:
-  forall  stty stty1 stty2 v1 v2 rho ty1 ty2,
-    stty1 ∖ stty ##ₘ stty2 ∖ stty ->
-    TcVal (stty1, v1, subst_rho rho ty1) ->
-    TcVal (stty2, v2, subst_rho rho ty2) ->
-    TcVal
-    (stty ∪ stty1 ∖ stty ∪ stty2 ∖ stty, Pair (v1, v2), subst_rho rho (Ty_Pair ty1 ty2)).
-Admitted.
+    find_ST l (stty ∪ (sttya ∖ stty ∪ sttyb ∖ stty)) = Some t.
+Proof.
+  intros. unfold find_ST in *.
+  rewrite lookup_union_l' with (m2 := (sttya ∖ stty ∪ sttyb ∖ stty)).
+  assumption.
+  auto.
+Qed.
 
 Lemma TcValExtended:
   forall  stty1 stty2 v1 v2 rho ty1 ty2,
@@ -143,13 +140,39 @@ Proof.
     + assumption.
 Qed.
 
-
+Lemma TcValExtended_2:
+  forall  stty stty1 stty2 v1 v2 rho ty1 ty2,
+    stty1 ∖ stty ##ₘ stty2 ∖ stty ->
+    TcVal (stty1, v1, subst_rho rho ty1) ->
+    TcVal (stty2, v2, subst_rho rho ty2) ->
+    TcVal (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty), Pair (v1, v2),
+        subst_rho rho (Ty_Pair ty1 ty2)).
+Proof.
+   intros.
+  replace (subst_rho rho (Ty_Pair ty1 ty2))
+    with (Ty_Pair (subst_rho rho ty1) (subst_rho rho ty2))
+    by (now rewrite subst_rho_pair).
+  econstructor; eauto.
+   - apply ext_stores__val with (stty:=stty1). intros.
+     + apply StoreTyping_Union; auto.
+       * apply map_disjoint_union_r. split.
+         apply map_disjoint_difference_r. admit.
+         apply map_disjoint_difference_r. admit.
+       * right.
+         apply StoreTyping_Union; auto.
+         left.
+         { apply lookup_difference_Some. split.
+           - assumption.
+           - admit.               
+         }
+     + assumption.
+Admitted.
   
 Lemma FindAfterMultipleSteps:
   forall heap env rho ef1 ef2 ea1 ea2 v1 v2 acts_mu1 acts_mu2
          stty stty1 stty2
          heap_mu1 heap_mu2 hp',
-    heap_mu1 ##ₘ heap_mu2 ->
+    heap_mu1 ∖ heap ##ₘ heap_mu2 ∖ heap ->
     (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
     (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
     (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
@@ -161,24 +184,24 @@ Lemma FindAfterMultipleSteps:
         (find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
 Proof.
   intros.
-  assert (heap_mu1 ##ₘ heap_mu2) by admit.    
   assert (H'' : forall i, heap_mu1 !! i = None ∨ heap_mu2 !! i = None).
-  apply map_disjoint_alt. assumption.
+  apply map_disjoint_alt. admit.
   destruct (H'' k).
   - split; intros.
-    + right. admit.
-    + destruct H8.
-      * unfold find_H in H8.
-        replace (heap_mu1 !! k) with (None: option Val) in H8 by assumption.
-        inversion H8.
-      * admit.        
+    + right.
+      admit.
+    + destruct H7.
+      unfold find_H in H7.
+      assert(None = Some v). rewrite<- H7. auto. inversion H8.
+      admit.
   - split; intros.
     + left. admit.
-    + destruct H8.
+    + destruct H7.
       * admit.
-      * unfold find_H in H8.
-        replace (heap_mu2 !! k) with (None: option Val) in H8 by assumption.
-        inversion H8.
+      * unfold find_H in H7.
+        replace (heap_mu2 !! k) with (None: option Val)
+          in H7 by assumption.
+        inversion H7.
 Admitted.
 
 
@@ -194,12 +217,22 @@ Lemma TcHeap_Extended_2:
     TcHeap (heap, stty) ->
     TcHeap (heap_mu1, stty1) ->
     TcHeap (heap_mu2, stty2) ->
-    TcHeap (hp', stty ∪ stty1 ∖ stty ∪ stty2 ∖ stty).
+    TcHeap (hp', stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty)).
+Proof.
+    econstructor. 
+  - intros k v HFind.
+    assert (HFind_ParHeaps : find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v) by (eapply FindAfterMultipleSteps; eauto).
+    destruct HFind_ParHeaps. 
+    + inversion H6; subst.
+      apply H11 in H8. destruct H8 as [t].
+      exists t. apply StoreTyping_Union; eauto.
+      admit.
+      admit.
+    + admit.
 Admitted.
 
 
-
-Lemma TcHeap_Extended:
+(*Lemma TcHeap_Extended:
   forall heap env rho ef1 ef2 ea1 ea2 v1 v2 ty1 ty2 acts_mu1 acts_mu2
          heap_mu1 heap_mu2 stty stty1 stty2 hp',
     heap_mu1 ##ₘ heap_mu2 ->
@@ -245,7 +278,7 @@ Proof.
   - intros. 
     admit.
 Admitted.
-                  
+*)                  
 
 Lemma subst_rho_eps_aux_1 :
  forall rho rho' n x e e1 sa sa',
@@ -271,17 +304,17 @@ Proof.
   unfold Region_in_Expr in w.
   dependent induction r; dependent induction Hlc1; simpl in *.
   - repeat rewrite subst_rho_rgn_const in *. auto.
-  - destruct (ascii_eq_dec r0 x); subst; simpl in *.
+  - destruct (Ascii.ascii_dec r0 x); subst; simpl in *.
     + rewrite subst_rho_index in H. rewrite subst_rho_rgn_const in H. inversion H.
     + auto.
   - auto.
-  - destruct (ascii_eq_dec r0 x); subst; simpl in *.
+  - destruct (Ascii.ascii_dec r0 x); subst; simpl in *.
     + rewrite subst_rho_index in H.
       destruct (subst_rho_fvar_1 rho r) as [[v0 H0] | H0];
       rewrite H0 in H; inversion H.
     + auto.
   - rewrite subst_rho_index in H. rewrite subst_rho_rgn_const in H. inversion H.
-  - destruct (ascii_eq_dec r x); subst; simpl in *.
+  - destruct (Ascii.ascii_dec r x); subst; simpl in *.
     + repeat rewrite subst_rho_index in H. inversion H; subst.
       rewrite NPeano.Nat.eqb_refl.
       rewrite subst_rho_rgn_const.
@@ -633,7 +666,7 @@ Proof.
     destruct HTyped2 as[ stty2 [HB1  [HB2 HB3]]].
     destruct HTyped3 as[ stty3 [HC1  [HC2 HC3]]].
     destruct HTyped4 as[ stty4 [HD1  [HD2 HD3]]].  
-    { exists (stty ∪ (stty1 ∖ stty) ∪ (stty2 ∖ stty)).
+    { exists (stty ∪ ((stty1 ∖ stty) ∪ (stty2 ∖ stty))).
       split.  
       + assert (stty1 ∖ stty ##ₘ stty2 ∖ stty)
           by (eapply djt_heap_implies_djt_stty; eauto).

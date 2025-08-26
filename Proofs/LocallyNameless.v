@@ -82,11 +82,11 @@ Lemma CLOSED_SUBST_AS_CLOSE_OPEN_RGN : closed_subst_as_close_open_rgn.
 Proof.
   intros n r x u H. inversion H; subst; simpl.
   - reflexivity.
-  - destruct (ascii_eq_dec x r0).
-    + inversion e. destruct (ascii_eq_dec r0 r0); simpl.
+  - destruct (ascii_dec x r0).
+    + inversion e. destruct (ascii_dec r0 r0); simpl.
       * rewrite PeanoNat.Nat.eqb_refl. reflexivity.
       * contradict n0. reflexivity.
-    + destruct (ascii_eq_dec r0 x).
+    + destruct (ascii_dec r0 x).
       * symmetry in e. contradiction.
       * simpl. reflexivity.
 Qed.        
@@ -157,7 +157,7 @@ Proof.
   - f_equal;[ | apply IHt]. unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
     unfold Region_in_Type in r. dependent induction r. 
     + reflexivity.
-    + destruct (ascii_eq_dec r x); destruct (ascii_eq_dec x r).
+    + destruct (ascii_dec r x); destruct (ascii_dec x r).
       * rewrite PeanoNat.Nat.eqb_refl. reflexivity.
       * symmetry in e. contradiction.
       * symmetry in e. contradiction.
@@ -181,11 +181,11 @@ Proof.
   unfold closing_rgn_in_rgn, opening_rgn_in_rgn. 
   unfold Region_in_Type in r; dependent induction r; intros.
   - reflexivity.
-  - case (ascii_eq_dec r x); intros.
+  - case (ascii_dec r x); intros.
     + contradict H. inversion e; subst. unfold free_rgn_vars_in_rgn. apply In_singleton.
     + reflexivity.
   - case_eq (Nat.eqb n n0); intros; simpl; [ | reflexivity].
-    destruct (ascii_eq_dec x x).
+    destruct (ascii_dec x x).
     + apply Nat.eqb_eq in H0.  subst; reflexivity.
     + contradict n1. reflexivity.
 Qed.
@@ -237,12 +237,12 @@ Proof.
       by (intros; apply H; now apply Union_introl).
     f_equal; unfold Region_in_Type in r; dependent induction r; subst; simpl.
     + reflexivity.
-    + case (ascii_eq_dec r x); intros. subst.
+    + case (ascii_dec r x); intros. subst.
       * contradict H'. unfold free_rgn_vars_in_rgn. apply In_singleton.
       * reflexivity.
     + case_eq (Nat.eqb n n0); intros; simpl.
       * apply Nat.eqb_eq in H0; subst.
-        destruct (ascii_eq_dec x x);  [reflexivity | contradict n; reflexivity].
+        destruct (ascii_dec x x);  [reflexivity | contradict n; reflexivity].
       * reflexivity.
     + apply IHt. intros. apply H. now apply Union_intror.
     + apply IHt. intros. apply H. now apply Union_intror.
@@ -280,7 +280,7 @@ Lemma open_close_rgn :
 Proof. 
   intros. induction H; unfold opening_rgn_in_rgn, closing_rgn_in_rgn.
   - reflexivity.
-  - destruct (ascii_eq_dec r x).
+  - destruct (ascii_dec r x).
     + rewrite PeanoNat.Nat.eqb_refl.
       inversion e; subst.
       reflexivity.
@@ -412,14 +412,14 @@ Proof.
   intros x u n v r.
   unfold Region_in_Type in r.
   dependent induction r; try (solve [reflexivity]). 
-  - destruct (ascii_eq_dec r x). 
+  - destruct (ascii_dec r x). 
     + unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
       inversion e; subst.
-      destruct (ascii_eq_dec x x); [ | reflexivity].
+      destruct (ascii_dec x x); [ | reflexivity].
       unfold Region_in_Expr in u.
       dependent induction u; simpl; reflexivity.
     + unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
-      destruct (ascii_eq_dec x r); [ | reflexivity].
+      destruct (ascii_dec x r); [ | reflexivity].
       symmetry in e. contradiction.
   - unfold subst_rgn, opening_rgn_in_rgn, closing_rgn_in_rgn.
     case (Nat.eqb n0 n); [ | reflexivity].
@@ -482,7 +482,7 @@ Proof.
   unfold open_var.
   rewrite SUBST_OPEN; auto.
   unfold open. f_equal. simpl.
-  destruct (ascii_eq_dec x y).
+  destruct (ascii_dec x y).
   - inversion e. contradiction.
   - reflexivity.
 Qed.
@@ -510,7 +510,7 @@ Proof.
   - reflexivity.
   - unfold not, In, singleton_set in H.
     assert (x <> r) by (contradict H; apply singleton_eq; auto).
-    destruct (ascii_eq_dec x r).
+    destruct (ascii_dec x r).
     + inversion e. contradiction.
     + reflexivity.
   - reflexivity.
@@ -527,7 +527,7 @@ Proof.
   unfold free_rgn_vars_in_rgn in H; unfold In in *; 
   unfold Region_in_Type in r;
     dependent induction r;
-    try (solve [reflexivity |assert (x <> r) by (contradict H; now apply singleton_eq);destruct (ascii_eq_dec x r);[inversion e; contradiction | reflexivity]]). 
+    try (solve [reflexivity |assert (x <> r) by (contradict H; now apply singleton_eq);destruct (ascii_dec x r);[inversion e; contradiction | reflexivity]]). 
 Qed.
 
 Lemma subst_fresh_sa_ext :
@@ -618,7 +618,7 @@ Proof.
   intros x t u H1 H2. unfold open_var.
   replace (opening_rgn_exp 0 (Rgn_FVar true true x) t) with (open  (Rgn_FVar true true x) t) by (now unfold open).
   rewrite SUBST_OPEN; auto. f_equal.
-  - simpl in *; destruct (ascii_eq_dec x x); intros;
+  - simpl in *; destruct (ascii_dec x x); intros;
     [reflexivity | contradict n; reflexivity ].
   - symmetry. apply SUBST_FRESH. assumption.
 Qed .
