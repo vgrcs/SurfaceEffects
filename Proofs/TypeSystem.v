@@ -140,24 +140,41 @@ Proof.
     + assumption.
 Qed.
 
+Lemma WeakenigImpliesSubsetEq:
+forall stty stty',
+  (forall (l : SigmaKey) (t' : Tau),
+     find_ST l stty = Some t' -> find_ST l stty' = Some t') ->
+  stty ⊆ stty'.
+Proof.
+  intros stty stty' H.
+  apply map_subseteq_spec. auto.
+Qed.      
+  
 Lemma TcValExtended_2:
   forall  stty stty1 stty2 v1 v2 rho ty1 ty2,
     stty1 ∖ stty ##ₘ stty2 ∖ stty ->
+    (∀ (l : SigmaKey) (t' : Tau),
+        find_ST l stty = Some t' → find_ST l stty1 = Some t') ->
+    (∀ (l : SigmaKey) (t' : Tau),
+          find_ST l stty = Some t' → find_ST l stty2 = Some t') ->
     TcVal (stty1, v1, subst_rho rho ty1) ->
     TcVal (stty2, v2, subst_rho rho ty2) ->
     TcVal (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty), Pair (v1, v2),
         subst_rho rho (Ty_Pair ty1 ty2)).
 Proof.
-   intros.
+  intros.
   replace (subst_rho rho (Ty_Pair ty1 ty2))
     with (Ty_Pair (subst_rho rho ty1) (subst_rho rho ty2))
     by (now rewrite subst_rho_pair).
   econstructor; eauto.
-   - apply ext_stores__val with (stty:=stty1). intros.
+  - apply ext_stores__val with (stty:=stty1). intros.
      + apply StoreTyping_Union; auto.
-       * apply map_disjoint_union_r. split.
-         apply map_disjoint_difference_r. admit.
-         apply map_disjoint_difference_r. admit.
+       * apply map_disjoint_union_r.
+         { split.
+           - apply map_disjoint_difference_r.
+             now apply WeakenigImpliesSubsetEq.
+           - apply map_disjoint_difference_r.
+             now apply WeakenigImpliesSubsetEq.}
        * right.
          apply StoreTyping_Union; auto.
          left.
@@ -168,41 +185,30 @@ Proof.
      + assumption.
 Admitted.
   
-Lemma FindAfterMultipleSteps:
-  forall heap env rho ef1 ef2 ea1 ea2 v1 v2 acts_mu1 acts_mu2
-         stty stty1 stty2
-         heap_mu1 heap_mu2 hp',
-    heap_mu1 ∖ heap ##ₘ heap_mu2 ∖ heap ->
-    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
-    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
-    (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
-    TcHeap (heap, stty) ->
-    TcHeap (heap_mu1, stty1) ->
-    TcHeap (heap_mu2, stty2) ->
+Lemma DisjointImpliesSomeOrNone:
+  forall heap_1 heap_2,
+    heap_1 ##ₘ heap_2 ->
     forall k v,
-      find_H k hp' = Some v <->
-        (find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
+        (find_H k heap_1 = Some v -> find_H k heap_2 = None)
+         /\ (find_H k heap_2 = Some v -> find_H k heap_1 = None).
 Proof.
   intros.
-  assert (H'' : forall i, heap_mu1 !! i = None ∨ heap_mu2 !! i = None).
-  apply map_disjoint_alt. admit.
+  assert (H'' : forall i,
+             heap_1 !! i = None ∨ heap_2 !! i = None).
+  intro.
+  eapply map_disjoint_alt. auto.
   destruct (H'' k).
-  - split; intros.
-    + right.
-      admit.
-    + destruct H7.
-      unfold find_H in H7.
-      assert(None = Some v). rewrite<- H7. auto. inversion H8.
-      admit.
-  - split; intros.
-    + left. admit.
-    + destruct H7.
-      * admit.
-      * unfold find_H in H7.
-        replace (heap_mu2 !! k) with (None: option Val)
-          in H7 by assumption.
-        inversion H7.
-Admitted.
+  - split; intros.        
+    unfold find_H in H1.
+    replace (heap_1 !! k) with (None: option Val) in H1.
+    inversion H1.
+    + assumption.  
+  -  split; intros.
+     + assumption.
+     + unfold find_H in H1.
+      replace (heap_2 !! k) with (None: option Val) in H1.
+      inversion H1.
+Qed.
 
 
 Lemma TcHeap_Extended_2:
@@ -218,68 +224,9 @@ Lemma TcHeap_Extended_2:
     TcHeap (heap_mu1, stty1) ->
     TcHeap (heap_mu2, stty2) ->
     TcHeap (hp', stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty)).
-Proof.
-    econstructor. 
-  - intros k v HFind.
-    assert (HFind_ParHeaps : find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v) by (eapply FindAfterMultipleSteps; eauto).
-    destruct HFind_ParHeaps. 
-    + inversion H6; subst.
-      apply H11 in H8. destruct H8 as [t].
-      exists t. apply StoreTyping_Union; eauto.
-      admit.
-      admit.
-    + admit.
 Admitted.
 
-
-(*Lemma TcHeap_Extended:
-  forall heap env rho ef1 ef2 ea1 ea2 v1 v2 ty1 ty2 acts_mu1 acts_mu2
-         heap_mu1 heap_mu2 stty stty1 stty2 hp',
-    heap_mu1 ##ₘ heap_mu2 ->
-    (heap, env, rho, Mu_App ef1 ea1) ⇓ (heap_mu1, v1, acts_mu1) ->
-    (heap, env, rho, Mu_App ef2 ea2) ⇓ (heap_mu2, v2, acts_mu2) ->
-    (Phi_Par acts_mu1 acts_mu2, heap) ==>* (Phi_Nil, hp') ->
-    TcVal (stty1, v1, subst_rho rho ty1) ->
-    TcVal (stty2, v2, subst_rho rho ty2) ->
-    TcHeap (heap, stty) ->
-    TcHeap (heap_mu1, stty1) ->
-    TcHeap (heap_mu2, stty2) ->
-    TcHeap (hp', Functional_Map_Union_Sigma stty1 stty2).
-Proof.
-  econstructor. 
-  - intros k v HFind.
-    assert (HFind_ParHeaps : find_H k heap_mu1 = Some v \/ find_H k heap_mu2 = Some v).
-    eapply FindAfterMultipleSteps; eauto. 
-    destruct HFind_ParHeaps. 
-    + inversion H6; subst.
-      apply H11 in H8. destruct H8 as [t].
-      exists t. apply StoreTyping_Union; eauto.
-      eapply DisjointHeap_implies_DisjointStore; eauto.
-    + inversion H7; subst.
-      apply H11 in H8. destruct H8 as [t].
-      exists t. 
-      eapply StoreTyping_Union; eauto.
-      eapply DisjointHeap_implies_DisjointStore; eauto.
-  - intros. 
-    eapply StoreTyping_Union
-      with (sttya:=stty1) (sttyb:=stty2) in H8; eauto.    
-    destruct H8.
-    + inversion H6; subst.
-      apply H12 in H8. destruct H8 as [v].
-      exists v.
-       eapply FindAfterMultipleSteps
-         with (acts_mu2:=acts_mu2) (acts_mu1:=acts_mu1); eauto.
-    + inversion H7; subst.
-      apply H12 in H8. destruct H8 as [v].
-      exists v.
-       eapply FindAfterMultipleSteps
-         with (acts_mu2:=acts_mu2) (acts_mu1:=acts_mu1); eauto.
-    + eapply DisjointHeap_implies_DisjointStore; eauto.      
-  - intros. 
-    admit.
-Admitted.
-*)                  
-
+      
 Lemma subst_rho_eps_aux_1 :
  forall rho rho' n x e e1 sa sa',
    lc_type_eps e ->
@@ -673,9 +620,10 @@ Proof.
         intros.
         assert (find_ST l stty1 = Some t') by (apply HA1; auto).
         assert (find_ST l stty2 = Some t') by (apply HB1; auto).
-        intros. eapply StoreTyping_Union_2; eauto.        
+        intros. eapply StoreTyping_Union_2; eauto.
       + split.
-        * eapply TcHeap_Extended_2 with (acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
+        * eapply TcHeap_Extended_2
+            with (acts_mu1:=acts_mu1) (acts_mu2:=acts_mu2); eauto.
         * eapply TcValExtended_2; eauto.
           eapply djt_heap_implies_djt_stty; eauto.
     }
