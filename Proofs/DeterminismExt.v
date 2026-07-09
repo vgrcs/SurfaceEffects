@@ -6,9 +6,7 @@ Require Import Coq.Structures.OrderedTypeEx.
 Require Import Coq.Arith.Peano_dec.
 Require Import Ascii String.
 Require Import Coq.Arith.EqNat.
-Require Import Coq.Arith.Mult.
-Require Import Coq.Arith.Plus.
-Require Import Coq.Arith.Minus.
+Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Compare_dec.
 
@@ -20,7 +18,6 @@ Require Import Definitions.ComputedActions.
 Require Import Definitions.GHeap.
 Require Import Definitions.GTypes.
 Require Import Definitions.Regions.
-Require Import Definitions.Axioms.
 Require Import Proofs.EffectFacts.
 Require Import Proofs.TypeFacts.
 Require Import Proofs.HeapFacts.
@@ -735,7 +732,11 @@ Proof.
     eapply IHDyn1_2 with  (stty:=sttyb); eauto using ext_stores__env. 
     destruct RH2 as [h_eq_2 [v_eq_2 a_eq_2]]. inversion v_eq_2.
     
-    rewrite H0 in H13; inversion H13; subst. 
+    match goal with
+    | Hleft : find_R ?w ?rho = Some ?r_left,
+      Hright : find_R ?w ?rho = Some ?r_right |- _ =>
+        rewrite Hleft in Hright; inversion Hright; subst
+    end.
     intuition.
     unfold update_H; simpl.  now rewrite h_eq_2.
   - inversion HTcExp; subst.
@@ -865,10 +866,12 @@ Qed.
 
 
 Lemma Determinism_new:
-  forall stty (e : Expr) v1 v2 ty (env : Env)  (h1 h2 : Heap) phi_1 phi_2,
-    TcVal (stty, v1, ty) ->
-    TcVal(stty, v2, ty) ->    
+  forall (e : Expr) v1 v2 ty eff (h1 h2 : Heap) phi_1 phi_2,
     (∅, ∅, ∅, e) ⇓ (h1, v1, phi_1) ->
     (∅, ∅, ∅, e) ⇓ (h2, v2, phi_2) ->
+    TcExp (∅, Empty_set VarId, e, ty, eff) ->
     h1 ≡@{Heap} h2 /\ v1 = v2 /\ phi_1 = phi_2.
-Admitted.
+Proof.
+  intros.
+  eapply Determinism; eauto.
+Qed.

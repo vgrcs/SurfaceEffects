@@ -13,7 +13,6 @@ Require Import Definitions.Regions.
 Require Import Definitions.Values.
 Require Import Definitions.Expressions.
 Require Import Definitions.Semantics.
-Require Import Definitions.Axioms.
 Require Import Proofs.TypeSystem.
 Require Import Proofs.RegionFacts.
 Require Import Proofs.EffectFacts.
@@ -317,12 +316,12 @@ Proof.
     assert (Epsilon_Phi_Soundness (fold_subst_eps rho eff, cacts))
       by (eapply IHD1; eauto).
     do 2 rewrite fold_dist_union.
-    assert (Epsilon_Phi_Soundness (fold_subst_eps rho eff1, tacts)) by
-      (eapply IHD2 with (stty := sttyb); eauto using ext_stores__env).
+	    assert (Htacts : Epsilon_Phi_Soundness (fold_subst_eps rho eff1, tacts)) by
+	      (eapply IHD2 with (stty := sttyb); eauto using ext_stores__env).
 
-    eapply sound_comp; eauto.
-    replace tacts with (Phi_Seq tacts (Phi_Nil)) by (apply Phi_Seq_Nil_R). 
-    eapply sound_comp; [assumption | apply EmptyInNil].     
+	    destruct (sound_approx_inj (fold_subst_eps rho eff1) (fold_subst_eps rho eff2)
+	                tacts Htacts) as [Htacts' _].
+	    eapply sound_comp; eauto.
   Case "cond_false".
     assert (bool_TcVal : exists stty', 
              (forall l t', find_ST l stty = Some t' -> find_ST l stty' = Some t')
@@ -334,12 +333,12 @@ Proof.
     assert (Epsilon_Phi_Soundness (fold_subst_eps rho eff, cacts))
       by (eapply IHD1; eauto).
     do 2 rewrite fold_dist_union.
-    assert (Epsilon_Phi_Soundness (fold_subst_eps rho eff2, facts)) by
-      (eapply IHD2 with (stty := sttyb);  eauto using ext_stores__env).
-    
-    eapply sound_comp; eauto.
-    replace facts with (Phi_Seq (Phi_Nil) facts) by (apply Phi_Seq_Nil_L).
-    eapply sound_comp; [apply EmptyInNil | assumption].  
+	    assert (Hfacts : Epsilon_Phi_Soundness (fold_subst_eps rho eff2, facts)) by
+	      (eapply IHD2 with (stty := sttyb);  eauto using ext_stores__env).
+	    
+	    destruct (sound_approx_inj (fold_subst_eps rho eff2) (fold_subst_eps rho eff1)
+	                facts Hfacts) as [_ Hfacts'].
+	    eapply sound_comp; eauto.
   Case "new_ref e".
     assert (Epsilon_Phi_Soundness (fold_subst_eps rho  veff, vacts)) by (eapply IHD; eauto).
     rewrite fold_dist_union.
@@ -445,4 +444,3 @@ Qed.
 
 
 End EffectSoundness.
-

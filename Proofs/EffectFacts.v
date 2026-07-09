@@ -3,7 +3,6 @@ Require Import Coq.Program.Equality.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Lists.List.
 
-Require Import Definitions.Axioms.
 Require Import Definitions.GHeap.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.DynamicActions.
@@ -75,8 +74,8 @@ Proof.
    * rewrite H in H0. inversion H0.
 Qed.
 
-Lemma EmptyIsNil:
-  forall phi, phi ⋞ Theta_Empty -> phi = Phi_Nil.
+Lemma EmptyTraceIsNil:
+  forall phi, phi ⋞ Theta_Empty -> phi_as_list phi = nil.
 Proof.
   induction phi; intros.
   - reflexivity. 
@@ -93,13 +92,48 @@ Proof.
         destruct x; subst. intuition.
       * eapply IHDA_in_Theta; eauto.  apply EmptyUnionisEmptySet_2 in x.
         destruct x; subst. intuition.
-  - inversion H; subst. 
-    assert ( H_ : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H_.
-    assert ( H__ : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H__.
-    rewrite Phi_Par_Nil_R. reflexivity.
-  - assert ( H_ : phi1 = Phi_Nil ) by (apply IHphi1; inversion H; assumption); rewrite H_.
-    assert ( H__ : phi2 = Phi_Nil ) by (apply IHphi2; inversion H; assumption); rewrite H__.
-    rewrite Phi_Seq_Nil_R. reflexivity.
+  - inversion H; subst; simpl.
+    assert (H_ : phi_as_list phi1 = nil) by (apply IHphi1; assumption).
+    assert (H__ : phi_as_list phi2 = nil) by (apply IHphi2; assumption).
+    rewrite H_, H__. reflexivity.
+  - inversion H; subst; simpl.
+    assert (H_ : phi_as_list phi1 = nil) by (apply IHphi1; assumption).
+    assert (H__ : phi_as_list phi2 = nil) by (apply IHphi2; assumption).
+    rewrite H_, H__. reflexivity.
+Qed.
+
+Lemma ReadOnlyPhi_Seq_inv:
+  forall phi1 phi2,
+    ReadOnlyPhi (Phi_Seq phi1 phi2) ->
+    ReadOnlyPhi phi1 /\ ReadOnlyPhi phi2.
+Proof.
+  intros phi1 phi2 H.
+  inversion H; subst; split; assumption.
+Qed.
+
+Lemma ReadOnlyPhi_Par_inv:
+  forall phi1 phi2,
+    ReadOnlyPhi (Phi_Par phi1 phi2) ->
+    ReadOnlyPhi phi1 /\ ReadOnlyPhi phi2.
+Proof.
+  intros phi1 phi2 H.
+  inversion H; subst; split; assumption.
+Qed.
+
+Lemma EmptySoundReadOnlyPhi:
+  forall phi,
+    phi ⋞ Theta_Empty ->
+    ReadOnlyPhi phi.
+Proof.
+  induction phi; intros HSound.
+  - constructor.
+  - exfalso.
+    apply EmptyTraceIsNil in HSound.
+    simpl in HSound. discriminate.
+  - inversion HSound; subst.
+    constructor; [apply IHphi1 | apply IHphi2]; assumption.
+  - inversion HSound; subst.
+    constructor; [apply IHphi1 | apply IHphi2]; assumption.
 Qed.
 
 
@@ -725,14 +759,14 @@ Proof.
   unfold included, Included, In in H.
   destruct (H x0); auto.
   - exists sa'. intuition.
-    destruct (ascii_eq_dec x x0); subst.
+    destruct (Ascii.ascii_dec x x0); subst.
     + contradict H2. subst.
       apply NoFreeVarsAfterClosingSa.
     + induction sa'; unfold Region_in_Type in r; dependent induction r; 
         simpl in *; unfold free_rgn_vars_in_rgn in *;
         try (solve [inversion H2 | destruct  (Ascii.ascii_dec r x);
                                    subst; [inversion H2 | assumption]]).
-  - destruct (ascii_eq_dec x x0); subst.
+  - destruct (Ascii.ascii_dec x x0); subst.
     + contradict H2.
       apply NoFreeVarsAfterClosingSa.
     + exfalso.

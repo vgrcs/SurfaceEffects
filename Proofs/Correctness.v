@@ -17,8 +17,8 @@ Require Import Proofs.Determinism.
 Require Import Proofs.TypeSystem.
 Require Import Proofs.EffectSystem.
 Require Import Proofs.HeapFacts.
+Require Import Proofs.ReadOnlyDeterminism.
 Require Import Proofs.RegionFacts.
-Require Import Definitions.Axioms.
 
 Import EffectSoundness.
 Import TypeSoundness.
@@ -29,15 +29,37 @@ Import Semantics.
 
 
 Lemma EvaluationEffectFromEffApp:
- forall h'' env rho ef env' rho' f x ec' ee' ea aheap v eff facts1 aacts1 bacts1,
-   (h'', env, rho, Eff_App ef ea)
-     ⇓ (h'', eff, Phi_Seq (Phi_Seq facts1 aacts1) bacts1) ->
-   (aheap, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee')
-     ⇓ (h'', eff, bacts1).
+ forall h env rho ef env' rho' f x ec' ee' ea v eff
+        facts aacts eff_facts eff_aacts bacts,
+   (h, env, rho, ef) ⇓ (h, Cls (env', rho', Mu f x ec' ee'), facts) ->
+   (h, env, rho, ea) ⇓ (h, v, aacts) ->
+   (h, env, rho, Eff_App ef ea)
+     ⇓ (h, eff, Phi_Seq (Phi_Seq eff_facts eff_aacts) bacts) ->
+   ReadOnlyPhi facts ->
+   ReadOnlyPhi aacts ->
+   ReadOnlyPhi (Phi_Seq (Phi_Seq eff_facts eff_aacts) bacts) ->
+   (h, update_rec_E (f, Cls (env', rho', Mu f x ec' ee')) (x, v) env', rho', ee')
+     ⇓ (h, eff, bacts).
 Proof.
-  intros.
-  inversion H using MuAppAndEffAppShareArgument.  
-  intros. econstructor; eauto.  
+  intros h env rho ef env' rho' f x ec' ee' ea v eff
+    facts aacts eff_facts eff_aacts bacts
+    HFun HArg HEff HFunRO HArgRO HEffRO.
+  inversion HEff; subst.
+  repeat match goal with
+  | H : ReadOnlyPhi (Phi_Seq _ _) |- _ =>
+      inversion H; subst; clear H
+  end.
+  inversion H9; subst.
+  assert (HFunEq :
+            h ≡@{Heap} h /\
+            Cls (env', rho', Mu f x ec' ee') =
+            Cls (env'0, rho'0, Mu f0 x0 ec'0 ee'0))
+    by (eapply ReadOnlyEvalDeterminism; eauto).
+  destruct HFunEq as [_ HFunEq]. inversion HFunEq; subst.
+  assert (HArgEq : h ≡@{Heap} h /\ v = v')
+    by (eapply ReadOnlyEvalDeterminism; eauto).
+  destruct HArgEq as [_ HArgEq]. subst.
+  assumption.
 Qed. 
 
 
@@ -65,7 +87,9 @@ Lemma EvalTrueIsTrue:
   forall h h' h'' env rho e efft efff eff tacts,
   (h, env, rho, Cond e efft efff) ⇓ (h'', Eff eff, tacts) ->
   (h, env, rho, e) ⇓ (h', Bit true, Phi_Nil) ->
-  (h', env, rho, efft) ⇓ (h'', Eff eff, tacts).
+  exists tacts',
+    (h', env, rho, efft) ⇓ (h'', Eff eff, tacts') /\
+    tacts = Phi_Seq Phi_Nil tacts'.
 Proof.
   intros.
   inversion H; subst.
@@ -73,10 +97,8 @@ Proof.
      by (eapply DeterminismReadOnlyCond; eauto).
     assert ( HD :h ≡@{Heap} h') by (eapply EmptyTracePreservesHeap_1; eauto).
     destruct Hbit as [? [H_ ?]]; inversion H_; subst.
-    assert (Phi_Seq Phi_Nil tacts0 = tacts0) by (rewrite Phi_Seq_Nil_L; auto).
     unfold equiv, heap_equiv in H1; subst.
-    rewrite H2.
-    assumption.
+    exists tacts0. split; [assumption | reflexivity].
   - assert ( Hbit : h'≡@{Heap}   cheap /\ Bit true = Bit false /\  Phi_Nil = cacts )
       by (eapply DeterminismReadOnlyCond; eauto; 
           assert ( HD :h = h') by (eapply EmptyTracePreservesHeap_1; eauto); 
@@ -89,7 +111,9 @@ Lemma EvalFalseIsFalse:
 forall h h' h'' env rho e efft efff eff tacts,
   (h, env, rho, Cond e efft efff) ⇓ (h'', Eff eff, tacts) ->
   (h, env, rho, e) ⇓ (h', Bit false, Phi_Nil) ->
-  (h', env, rho, efff) ⇓ (h'', Eff eff, tacts).
+  exists facts',
+    (h', env, rho, efff) ⇓ (h'', Eff eff, facts') /\
+    tacts = Phi_Seq Phi_Nil facts'.
 Proof.
   intros.
   inversion H; subst.   
@@ -103,10 +127,78 @@ Proof.
     assert ( HD :h = h') by (eapply EmptyTracePreservesHeap_1; eauto).
     destruct Hbit as [? [H_ ?]]; inversion H_; subst.
     assert ( HD :h' = cheap) by (eapply EmptyTracePreservesHeap_1; eauto). 
-    assert (Phi_Seq Phi_Nil facts = facts) by (rewrite Phi_Seq_Nil_L; auto).
-    rewrite H2.
     unfold equiv, heap_equiv in H1; subst.
-    assumption.
+    exists facts. split; [assumption | reflexivity].
+Qed.
+
+Lemma EvalTrueIsTrue_EmptySound:
+  forall h h' h'' env rho e efft efff eff condacts effacts
+         stty ctxt rgns ty static,
+    TcHeap (h, stty) ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    TcExp (ctxt, rgns, e, ty, static) ->
+    (h, env, rho, Cond e efft efff) ⇓ (h'', Eff eff, effacts) ->
+    (h, env, rho, e) ⇓ (h', Bit true, condacts) ->
+    condacts ⋞ Theta_Empty ->
+    ReadOnlyPhi effacts ->
+    exists branch_acts,
+      (h', env, rho, efft) ⇓ (h'', Eff eff, branch_acts) /\
+      ReadOnlyPhi branch_acts.
+Proof.
+  intros h h' h'' env rho e efft efff eff condacts effacts
+    stty ctxt rgns ty static HTcHeap HTcRho HTcInc HTcEnv HTcExp
+    Hcond Htrue Hempty HRO.
+  inversion Hcond; subst.
+  - inversion HRO; subst.
+    assert (HcondRO : ReadOnlyPhi condacts)
+      by (eapply EmptySoundReadOnlyPhi; eauto).
+    assert (Hh_h' : h ≡@{Heap} h')
+      by (eapply ReadOnlyEvalPreservesHeap; eauto).
+    assert (Hh_cheap : h ≡@{Heap} cheap)
+      by (eapply ReadOnlyEvalPreservesHeap; eauto).
+    unfold equiv, heap_equiv in *; subst.
+    exists tacts. split; assumption.
+  - inversion HRO; subst.
+    assert (Hsame : true = false)
+      by (eapply EmptySoundReadOnlyBitDeterminism; eauto).
+    discriminate.
+Qed.
+
+Lemma EvalFalseIsFalse_EmptySound:
+  forall h h' h'' env rho e efft efff eff condacts effacts
+         stty ctxt rgns ty static,
+    TcHeap (h, stty) ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    TcExp (ctxt, rgns, e, ty, static) ->
+    (h, env, rho, Cond e efft efff) ⇓ (h'', Eff eff, effacts) ->
+    (h, env, rho, e) ⇓ (h', Bit false, condacts) ->
+    condacts ⋞ Theta_Empty ->
+    ReadOnlyPhi effacts ->
+    exists branch_acts,
+      (h', env, rho, efff) ⇓ (h'', Eff eff, branch_acts) /\
+      ReadOnlyPhi branch_acts.
+Proof.
+  intros h h' h'' env rho e efft efff eff condacts effacts
+    stty ctxt rgns ty static HTcHeap HTcRho HTcInc HTcEnv HTcExp
+    Hcond Hfalse Hempty HRO.
+  inversion Hcond; subst.
+  - inversion HRO; subst.
+    assert (Hsame : false = true)
+      by (eapply EmptySoundReadOnlyBitDeterminism; eauto).
+    discriminate.
+  - inversion HRO; subst.
+    assert (HcondRO : ReadOnlyPhi condacts)
+      by (eapply EmptySoundReadOnlyPhi; eauto).
+    assert (Hh_h' : h ≡@{Heap} h')
+      by (eapply ReadOnlyEvalPreservesHeap; eauto).
+    assert (Hh_cheap : h ≡@{Heap} cheap)
+      by (eapply ReadOnlyEvalPreservesHeap; eauto).
+    unfold equiv, heap_equiv in *; subst.
+    exists facts. split; assumption.
 Qed.
 
 Lemma DeterminismReadOnlyRefs :
@@ -262,11 +354,25 @@ Proof.
                            | ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?  TcExp_ef TcExp_ea HBt_ef HBt_ea HR_ef HR_ea 
                            | | | | | | | | | | | | | ]; subst. 
         SSSCase "Mu_App ef ea0 << Eff_App ef ea0".
-          assert (HD3 : bacts ⋞ eff). 
-          { eapply IHBS1_3
-              with (stty:=sttya) (p':=bacts0); eauto using reflexivity.
-            - eapply EvaluationEffectFromEffApp; eauto.
-            - inversion HRonly as [ | | ? ? A B | ]. exact B.
+            assert (HD3 : bacts ⋞ eff). 
+            { eapply IHBS1_3
+                with (stty:=sttya) (p':=bacts0); eauto; try reflexivity.
+              - assert (HfactsRO : ReadOnlyPhi facts).
+                { eapply ReadOnlyStaticImpliesReadOnlyPhi
+                    with (eps:=fold_subst_eps rho static_ef); eauto.
+                  eapply eff_sound; eauto. }
+                assert (Hfheap : h'' ≡@{Heap} fheap)
+                  by (eapply ReadOnlyEvalPreservesHeap; eauto).
+                unfold equiv, heap_equiv in Hfheap; subst.
+                assert (HaactsRO : ReadOnlyPhi aacts).
+                { eapply ReadOnlyStaticImpliesReadOnlyPhi
+                    with (eps:=fold_subst_eps rho static_ea); eauto.
+                  eapply eff_sound; eauto. }
+                assert (Haheap : fheap ≡@{Heap} aheap)
+                  by (eapply ReadOnlyEvalPreservesHeap; eauto).
+                unfold equiv, heap_equiv in Haheap; subst.
+                eapply EvaluationEffectFromEffApp; eauto.
+              - inversion HRonly as [ | | ? ? A B | ]. exact B.
             - apply ExtendedTcInv_2. 
               + assumption.
               + inversion_clear TcInc' as [? ? HInc'].
@@ -471,17 +577,23 @@ Proof.
           - constructor. reflexivity.
           - constructor. } 
         
-        apply EmptyUnionIsIdentity.
-        apply EmptyIsNil in H'. subst. 
-        apply PTS_Seq; [apply PTS_Nil |].
+          apply EmptyUnionIsIdentity.
+          apply PTS_Seq.
+          + eapply EmptyInAnyTheta; eauto.
 
-        unfold equiv, heap_equiv in H. symmetry in H.
-        rewrite UnionEmptyWithEffIsEff.
+          + unfold equiv, heap_equiv in H. symmetry in H; subst.
+            rewrite UnionEmptyWithEffIsEff.
  
-        { eapply IHBS1_2 with (ee:=efft)  (h_:=h) ; eauto.
-          - subst. eassumption.
-          - eapply EvalTrueIsTrue; eauto. 
-          - subst. assumption. }
+            { assert (HBranch :
+                        exists eff_tacts,
+                          (h, env, rho, efft) ⇓ (h'', Eff eff, eff_tacts) /\
+                          ReadOnlyPhi eff_tacts)
+                by (eapply EvalTrueIsTrue_EmptySound
+                      with (stty:=stty) (ctxt:=ctxt) (rgns:=rgns)
+                           (ty:=ty_e) (static:=static_e); eauto).
+              destruct HBranch as [eff_tacts [HEff_tacts HRonly_tacts]].
+              eapply IHBS1_2 with (ee:=efft) (h_:=h) (p':=eff_tacts); eauto.
+            }
       -  inversion HEff; subst.
          apply PhiInThetaTop. 
     }
@@ -498,17 +610,23 @@ Proof.
           - constructor. reflexivity.
           - constructor. } 
         
-        apply EmptyUnionIsIdentity.
-        apply EmptyIsNil in H'. subst. 
-        apply PTS_Seq; [apply PTS_Nil |].
+          apply EmptyUnionIsIdentity.
+          apply PTS_Seq.
+          + eapply EmptyInAnyTheta; eauto.
 
-         unfold equiv, heap_equiv in H. symmetry in H.
-        rewrite UnionEmptyWithEffIsEff.
+          + unfold equiv, heap_equiv in H. symmetry in H; subst.
+            rewrite UnionEmptyWithEffIsEff.
  
-        { eapply IHBS1_2 with (ee:=efff)  (h_:=h) ; eauto.
-          - subst. eassumption.
-          - eapply EvalFalseIsFalse; eauto. 
-          - subst. assumption. }
+            { assert (HBranch :
+                        exists eff_facts,
+                          (h, env, rho, efff) ⇓ (h'', Eff eff, eff_facts) /\
+                          ReadOnlyPhi eff_facts)
+                by (eapply EvalFalseIsFalse_EmptySound
+                      with (stty:=stty) (ctxt:=ctxt) (rgns:=rgns)
+                           (ty:=ty_e) (static:=static_e); eauto).
+              destruct HBranch as [eff_facts [HEff_facts HRonly_facts]].
+              eapply IHBS1_2 with (ee:=efff) (h_:=h) (p':=eff_facts); eauto.
+            }
       -  inversion HEff; subst.
          apply PhiInThetaTop. 
     }
@@ -579,12 +697,12 @@ Proof.
             inversion HExp; subst.
             eapply IHBS1_1 with (h_:=h''); eauto. 
             inversion HRonly; subst. assumption.
-          SSSCase "vacts ⋞ effb".  
-            inversion HEff; subst.    
-            inversion H10; subst.  
-            inversion HExp; subst. 
+            SSSCase "vacts ⋞ effb".  
+              inversion HEff; subst.
+              inversion H11; subst.
+              inversion HExp; subst. 
 
-            assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts))
+              assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts))
               by(eapply eff_sound; eauto).
 
             assert (HEq_1 : heap' = h'').
@@ -596,15 +714,27 @@ Proof.
             { eapply IHBS1_2 with (p':= phia1); eauto. 
               - unfold equiv, heap_equiv in HEqual; subst. eassumption.
               - rewrite HEq_1. eassumption.
-              - inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption.
+                - repeat match goal with
+                  | Hro : ReadOnlyPhi (Phi_Seq _ _) |- _ =>
+                      apply ReadOnlyPhi_Seq_inv in Hro; destruct Hro
+                  end; assumption.
               - rewrite HEq_1. assumption. }
             apply Theta_introl. assumption.
-        SSCase "Phi_Elem (DA_Write r l v0) ⊑ Union_Theta effa effb".    
-          inversion H10; subst. 
-          assert (Phi_Elem (DA_Write r l v0) ⋞ effb0). 
-          apply PTS_Elem. inversion H11; subst. 
-          rewrite H0 in H3. inversion H3; subst.
-          apply DAT_Write_Abs; apply In_singleton.
+          SSCase "Phi_Elem (DA_Write r l v0) ⊑ Union_Theta effa effb".    
+            inversion H11; subst.
+            assert (Phi_Elem (DA_Write r l v0) ⋞ effb0). 
+            apply PTS_Elem.
+            match goal with
+            | Hwrite : (_, _, _, WriteAbs _) ⇓ (_, Eff _, _) |- _ =>
+                inversion Hwrite; subst
+            end.
+            match goal with
+            | Hdyn : find_R ?w ?rho = Some ?r,
+              Heff : find_R ?w ?rho = Some ?r' |-
+                  DA_in_Theta (DA_Write ?r _ _) (Some (singleton_set (CA_WriteAbs ?r'))) =>
+                rewrite Hdyn in Heff; inversion Heff; subst
+            end.
+            apply DAT_Write_Abs; apply In_singleton.
           apply Theta_intror. apply Theta_intror. 
           assumption.
       SCase " Assign (Rgn2_Const true false r0) ea0 ev << (eff1 ⊕ (eff2 ⊕ WriteConc ea0))".
@@ -617,11 +747,11 @@ Proof.
              eapply IHBS1_1 with (h_:=h'');  eauto.
              inversion HRonly; subst. 
              assumption.
-           SSSCase "vacts ⋞ effb". 
-             inversion HExp; subst.  
-             inversion H10; subst.
+             SSSCase "vacts ⋞ effb". 
+               inversion HExp; subst.  
+               inversion H11; subst.
 
-             assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts)) by (eapply eff_sound; eauto).
+               assert (facts_Eff : Epsilon_Phi_Soundness (fold_subst_eps rho static_e1, aacts)) by (eapply eff_sound; eauto).
              
              assert (HEq_1 : heap' = h''). 
              { eapply ReadOnlyStaticImpliesReadOnlyPhi with (phi:=aacts) in HR.
@@ -632,21 +762,36 @@ Proof.
              { eapply IHBS1_2 with (p':= phia0);  eauto.
                - unfold equiv, heap_equiv in HEqual; subst. eassumption.
                - rewrite HEq_1. eassumption.
-               - inversion HRonly as [ | | ? ? X Y | ]; inversion X; inversion Y; assumption.
+                 - repeat match goal with
+                   | Hro : ReadOnlyPhi (Phi_Seq _ _) |- _ =>
+                       apply ReadOnlyPhi_Seq_inv in Hro; destruct Hro
+                   end; assumption.
                - rewrite HEq_1. assumption. }
              apply Theta_introl. assumption. 
-        SSCase "Phi_Elem (DA_Write r l v0) ⋞ Union_Theta effa effb".
-          inversion H10; subst. 
-          assert (Phi_Elem (DA_Write r l v0) ⋞ effb0).
-          apply PTS_Elem. inversion H11; subst.   
-          assert (HD: h'' ≡@{Heap} heap' /\
-                        Loc (Rgn_Const true false r1) l0 =
-                          Loc (Rgn_Const true false r0) l /\ Phi_Nil = aacts). 
-          eapply DeterminismReadOnlyRefs; eauto.
-          destruct HD as [? [H_ ?]]; inversion H_; subst.
-          inversion H0; subst.
-          apply DAT_Write_Conc; apply In_singleton.
-          apply Theta_intror. apply Theta_intror. assumption.
+          SSCase "Phi_Elem (DA_Write r l v0) ⋞ Union_Theta effa effb".
+            inversion H11; subst.
+            assert (Phi_Elem (DA_Write r l v0) ⋞ effb0).
+            apply PTS_Elem.
+            match goal with
+            | Hwrite : (_, _, _, WriteConc _) ⇓ (_, Eff _, _) |- _ =>
+                inversion Hwrite; subst
+            end.
+            match goal with
+            | Haddr : (h'', env, rho, ea0) ⇓
+                          (_, Loc (Rgn_Const true false ?rw) ?lw, Phi_Nil) |- _ =>
+                assert (HD: h'' ≡@{Heap} heap' /\
+                            Loc (Rgn_Const true false rw) lw =
+                              Loc (Rgn_Const true false r0) l /\
+                            Phi_Nil = aacts)
+                  by (eapply DeterminismReadOnlyRefs; eauto);
+                destruct HD as [? [H_ ?]]; inversion H_; subst
+            end.
+            match goal with
+            | Hfind : find_R (Rgn_Const true false _) _ = Some _ |- _ =>
+                simpl in Hfind; inversion Hfind; subst
+            end.
+            apply DAT_Write_Conc; apply In_singleton.
+            apply Theta_intror. apply Theta_intror. assumption.
       SCase "Assign w ea0 ev << (⊤)".
         inversion HEff; subst.   
         apply PhiInThetaTop.
@@ -809,5 +954,3 @@ Proof.
     inversion H; subst.
     inversion BS2; subst; assumption.  
 Qed.
-
-

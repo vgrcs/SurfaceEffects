@@ -156,39 +156,7 @@ Lemma subst_in_type_fold_foldr:
       (foldr (uncurry subst_in_type)) ty (map_to_list rho).
 Proof.
   intros rho tau.
-  apply (map_fold_foldr _ (map_to_list rho)).
-  - solve_proper.
-  - intros j1 j2 z1 z2 y ? ? ?.
-    induction y; try (solve [unfold subst_in_type, subst_type; simpl;reflexivity]).
-    + assert (Hr : forall r u t1 t2,
-                 subst_in_type r u (Ty_Pair t1 t2) =
-                   Ty_Pair (subst_in_type r u t1) (subst_in_type r u t2))
-        by (unfold subst_in_type, subst_type; simpl; f_equal).        
-      do 4 rewrite Hr. f_equal; assumption.
-    + assert (Hr : forall r u rgn ty,
-                 subst_in_type r u (Ty_Ref rgn ty) =
-                   Ty_Ref (subst_rgn r (Rgn_Const true false u) rgn)
-                     (subst_in_type r u ty))
-        by (unfold subst_in_type, subst_type; simpl; f_equal).   
-      do 4 rewrite Hr. f_equal; try (solve [assumption]).
-      rewrite subst_rgn_aux_comm; auto.      
-    + assert (Hr : forall r u aty ceff crty eeff erty,
-                 subst_in_type r u (Ty_Arrow aty ceff crty eeff erty) =
-                   Ty_Arrow (subst_in_type r u aty)
-                     (subst_in_eff r u ceff) (subst_in_type r u crty)
-                     (subst_in_eff r u eeff) (subst_in_type r u erty))
-        by (unfold subst_in_type, subst_type; simpl; f_equal).   
-      do 4 rewrite Hr. f_equal; try (solve [assumption]).
-      rewrite subst_eps_aux_comm; auto.
-      rewrite subst_eps_aux_comm; auto.
-    + assert (Hr : forall r u eff rty,
-                 subst_in_type r u (Ty_ForallRgn eff rty) =
-                   Ty_ForallRgn (subst_in_eff r u eff) (subst_in_type r u rty))
-        by (unfold subst_in_type, subst_type; simpl; f_equal).   
-      do 4 rewrite Hr.
-      f_equal; try (solve [assumption]).
-      rewrite subst_eps_aux_comm; auto.
-  - reflexivity.
+  apply map_fold_foldr.
 Qed.
 
 Lemma subst_rgn_fold_foldr:
@@ -198,11 +166,7 @@ Lemma subst_rgn_fold_foldr:
         rt (map_to_list rho).
 Proof.
   intros.
-  apply (map_fold_foldr _ (map_to_list rho)).
-  - solve_proper.
-  - intros j1 j2 z1 z2 y ? ? ?.
-    rewrite subst_rgn_aux_comm; auto.
-  - reflexivity.
+  apply map_fold_foldr.
 Qed.
     
 
@@ -710,16 +674,13 @@ Proof.
         with (Rgn_FVar true true x).
       * simpl. destruct (ascii_dec x x). 
         reflexivity. contradiction.
-      * { apply list.NoDup_cons in HNoDup.
-          rewrite fold_subst_rho_free_vars_rgn_not_elem.
-          - reflexivity. 
-          - destruct HNoDup.
-            assumption. }
+      * { rewrite fold_subst_rho_free_vars_rgn_not_elem.
+          - reflexivity.
+          - eapply NoDup_cons_1_1; eassumption. }
     + rewrite IHl.
       * destruct a. unfold subst_rgn. simpl. reflexivity.
       * assumption.
-      * apply list.NoDup_cons in HNoDup.
-        destruct HNoDup. assumption.
+      * eapply NoDup_cons_1_2; eassumption.
 Qed.
 
 
@@ -883,17 +844,30 @@ Lemma subst_rgn_fold_foldr_3:
         rt ((k, v)::l).
 Proof.
   intros.
-  apply (map_fold_foldr _ ((k, v)::l)).
+  rewrite subst_rgn_fold_foldr.
+  assert (Hperm :
+            map_to_list (<[k:=v]> (list_to_map l : Rho)) ≡ₚ (k, v) :: l).
+  { transitivity ((k, v) :: map_to_list (list_to_map l : Rho)).
+    - apply map_to_list_insert; assumption.
+    - apply perm_skip.
+      apply map_to_list_to_map; assumption. }
+  apply foldr_permutation.
+  - constructor.
+    + unfold Reflexive. reflexivity.
+    + unfold Transitive. intros. subst. reflexivity.
   - solve_proper.
-  - intros j1 j2 z1 z2 y ? ? ?.
-    rewrite subst_rgn_aux_comm; auto.
-  -  assert (map_to_list (<[k:=v]> (list_to_map l)) ≡ₚ
-              (k, v) :: map_to_list(list_to_map l))
-       by (apply map_to_list_insert; assumption).
-     rewrite H1.
-     rewrite map_to_list_to_map.
-     + reflexivity.
-     + assumption.
+  - intros j1 [x1 r1] j2 [x2 r2] rgn Hneq Hj1 Hj2.
+    simpl.
+    apply subst_rgn_aux_comm.
+    intro Heq. subst.
+    apply Hneq.
+    assert (HNoDupMap :
+              base.NoDup (map_to_list (<[k:=v]> (list_to_map l : Rho))).*1)
+      by apply NoDup_fst_map_to_list.
+    eapply NoDup_lookup; eauto;
+      rewrite list_lookup_fmap;
+      [rewrite Hj1 | rewrite Hj2]; reflexivity.
+  - assumption.
 Qed.
 
 
@@ -1000,7 +974,8 @@ Proof.
     destruct H as [sa [[sa' [H1 H2]] H3]];
     unfold free_rgn_vars_in_eps.
   - exists sa. split; [exists sa'; intuition | assumption].
-  - apply list.NoDup_cons in HNoDup. destruct HNoDup.
+  - pose proof (NoDup_cons_1_1 _ _ HNoDup) as HNotIn.
+    pose proof (NoDup_cons_1_2 _ _ HNoDup) as HNoDupTail.
     exists sa. split.
     + exists sa'. intuition.
       rewrite <- H2. 

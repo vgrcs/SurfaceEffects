@@ -125,6 +125,7 @@ Inductive BigStep   : (Heap * Env * Rho * Expr) -> (Heap * Val * Phi) -> Prop:=
     (heap, env, rho, ea) ⇓ (heap', Loc w l, aacts) ->
     (heap', env, rho, ev) ⇓ (heap'', v, vacts) ->
     find_R w rho = Some r ->
+    find_H (r, l) heap'' <> None ->
     phi = Phi_Seq (Phi_Seq aacts vacts) (Phi_Elem (DA_Write r l v)) ->
     (heap, env, rho, Assign w ea ev) ⇓ (update_H ((r, l), v) heap'', Unit, phi)
 

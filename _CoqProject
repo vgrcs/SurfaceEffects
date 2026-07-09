@@ -4,7 +4,6 @@ Definitions/Expressions.v
 Definitions/Values.v
 Definitions/ComputedActions.v
 Definitions/DynamicActions.v
-Definitions/Axioms.v
 Definitions/StaticActions.v
 Definitions/Tactics.v
 Definitions/GTypes.v
@@ -15,6 +14,7 @@ Proofs/TypeFacts.v
 Proofs/RegionFacts.v
 Proofs/HeapFacts.v
 Proofs/EffectFacts.v
+Proofs/ReadOnlyDeterminism.v
 Proofs/Determinism.v
 Proofs/TypeSystem.v
 Proofs/EffectSystem.v

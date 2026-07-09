@@ -7,7 +7,6 @@ Require Import Coq.Lists.List.
 
 Require Import Definitions.GHeap.
 Require Import Definitions.Semantics.
-Require Import Definitions.Axioms.
 Require Import Definitions.DynamicActions.
 Require Import Definitions.ComputedActions.
 Require Import Proofs.EffectFacts.
@@ -329,7 +328,7 @@ Proof.
     inversion H0; subst. unfold update_H in *. simpl in *.
     inversion H0; subst. unfold update_H in *. simpl in *. 
     destruct (keys_eq_dec (r, l) (r0, l0)).
-    + unfold keys_eq, fst, snd, NPeano.Nat.eq in *.
+    + unfold keys_eq, fst, snd, Nat.eq in *.
       destruct k; subst.
       contradiction.
     + clear n.
@@ -369,7 +368,7 @@ Proof.
     inversion H1; subst. unfold update_H in *. simpl in *.
     inversion H1; subst. unfold update_H in *. simpl in *. 
     destruct (keys_eq_dec (r, l) (r0, l0)).
-    + unfold keys_eq, fst, snd, NPeano.Nat.eq in *; subst.
+    + unfold keys_eq, fst, snd, Nat.eq in *; subst.
       inversion H1; subst. contradict H5. intuition.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
@@ -556,7 +555,7 @@ Proof.
       by (apply H; left; reflexivity).
     inversion H0; subst. unfold update_H in *. simpl in *. 
     destruct (keys_eq_dec (r, l) (r0, l0)).
-    + unfold keys_eq, fst, snd, NPeano.Nat.eq in *; subst.
+    + unfold keys_eq, fst, snd, Nat.eq in *; subst.
       contradict H2. intuition.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
@@ -599,7 +598,7 @@ Proof.
       by (apply H; left; reflexivity).
     inversion H1; subst. unfold update_H in *. simpl in *. 
     destruct (keys_eq_dec (r, l) (r0, l0)).
-    + unfold keys_eq, NPeano.Nat.eq in k; simpl in k; destruct k.
+    + unfold keys_eq, Nat.eq in k; simpl in k; destruct k.
       contradict H3. subst. reflexivity.
     + clear n.
       unfold equiv, heap_equiv in HEqual. rewrite HEqual.
@@ -815,10 +814,14 @@ Proof.
         heapA ≡@{Heap} heapB /\
         (Phi_Par phi2'0 phi0, heap1') ===> (Phi_Par phi2'0 phi2', heapA) /\
           (Phi_Par phi2 phi2', heap2') ===> (Phi_Par phi2'0 phi2', heapB)) by ( eapply IHHStep1; auto).
-    destruct H0  as [HA [ HB [HEq [Ht1 Ht2]]]].
-    exists HA, HB. repeat split; [assumption | | ].
-    + rewrite Phi_Seq_Nil_L. assumption.
-    + do 2 rewrite Phi_Seq_Nil_L. assumption.
+	    destruct H0  as [HA [ HB [HEq [Ht1 Ht2]]]].
+	    exists HA, HB. repeat split; [assumption | | ].
+	    + inversion Ht1; subst.
+	      * exfalso. eapply Phi_Heap_Step_Progress; eauto.
+	      * constructor. assumption.
+	    + inversion Ht2; subst.
+	      * constructor. constructor. assumption.
+	      * exfalso. eapply Phi_Heap_Step_Progress; eauto.
   - exists heap2', heap2'. split.
     + reflexivity.
     + split.
@@ -1269,7 +1272,7 @@ Proof.
       repeat eexists; try (eapply PHT_Step; eassumption); repeat constructor. assumption.
     - inversion H0.
     - inversion HDet; subst. destruct H5.
-      assert (HEqual': heapb ≡@{Heap} heapa) by (eauto using symmetry).
+      assert (HEqual': heapb ≡@{Heap} heapa) by (symmetry; assumption).
       edestruct (Par_Step_Equal_new phi0_1 phi0_2 phi1' phi2') as [heap3 [heap4 [? [? ?]]]]; try eassumption.
       exists (Phi_Par phi1' phi2'). exists heap4. exists heap3. 
       repeat eexists; try (eapply PHT_Step; eassumption); repeat constructor.
@@ -1656,12 +1659,12 @@ Proof.
   intros n1 n2 HSum.
   intros phi0 phi1 phi2 heapa heapb heap1 heap2 HEqual H0_1 H0_2 HDet. 
   dependent destruction H0_1.
-  - assert (HEqual' : heapb ≡@{Heap} heap1) by (eauto using symmetry).
+  - assert (HEqual' : heapb ≡@{Heap} heap1) by (symmetry; assumption).
     edestruct (Aux_Step_Ext_Heap _ _ _ _ _ _ H0_2 HEqual')
      as [heap2' [HEqual'' ?]].
     exists phi2; exists heap2'; exists heap2; exists n2; exists 0.
     repeat split; try (solve [lia]).
-    + eauto using symmetry.  
+    + symmetry; assumption.
     + assumption. (* phi1 walks into phi2 in n2 steps *)
     + apply PHT_Refl.  (* phi2 takes 0 steps *)
   - rename H0 into H0_1.  

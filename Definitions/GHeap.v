@@ -1,11 +1,11 @@
 From stdpp Require Import gmap.
+From Stdlib Require Import List Lia String.
 Require Import Definitions.Values.
 Require Import Definitions.Regions.
 Require Import Definitions.ComputedActions.
 Require Import Definitions.DynamicActions.
 Require Import Definitions.Expressions.
 Require Import Definitions.GTypes.
-Require Import String.
 Require Import Definitions.Tactics.
 
 Definition HeapVal := Val.
@@ -46,7 +46,10 @@ Qed.
 
 Global Instance val_equiv : Equiv Val := λ a b, a = b.
 Global Instance val_equivalence : Equivalence (≡@{Val}).
-Admitted.
+Proof.
+  unfold equiv, val_equiv.
+  split; congruence.
+Qed.
 
 Lemma Test:
   forall (h1 h2: Heap) k x,
@@ -79,37 +82,63 @@ Proof.
   assumption.
 Qed.
 
-Axiom timestamp_Write: Val -> HeapVal.
-Axiom timestamp_Read : option HeapVal -> option Val.
-Axiom timestamp : HeapVal -> nat.
-
 Definition find_H (k: HeapKey) (m: Heap) : option Val
   := m !! k.
 Definition update_H (p: HeapKey * Val) (m: Heap)
   :=  <[ fst p := snd p ]>  m.
 
-(* returns new address *)
-Axiom allocate_H : Heap -> nat -> nat.
-Axiom allocate_H_fresh : forall (m : Heap) (r: nat),
+Fixpoint max_location_for_region
+    (r : nat) (entries : list (HeapKey * HeapVal)) : nat :=
+  match entries with
+  | nil => 0
+  | ((r', l), _) :: entries' =>
+      let rest := max_location_for_region r entries' in
+      if Nat.eq_dec r r' then S (Nat.max l rest) else rest
+  end.
+
+Definition allocate_H (m : Heap) (r : nat) : nat :=
+  max_location_for_region r (map_to_list m).
+
+Lemma max_location_for_region_lt :
+  forall entries r l v,
+    In ((r, l), v) entries ->
+    l < max_location_for_region r entries.
+Proof.
+  induction entries as [| [[r' l'] v'] entries IH]; intros r l v HIn;
+    simpl in *.
+  - contradiction.
+  - destruct HIn as [HHead | HTail].
+    + inversion HHead; subst.
+      destruct (Nat.eq_dec r r); lia.
+    + destruct (Nat.eq_dec r r').
+      * specialize (IH r l v HTail). lia.
+      * eapply IH; eauto.
+Qed.
+
+Lemma allocate_H_fresh : forall (m : Heap) (r: nat),
   find_H (r, allocate_H m r) m = None.
-Axiom allocate_H_determ :
+Proof.
+  intros m r.
+  unfold find_H.
+  destruct (m !! (r, allocate_H m r)) eqn:HLookup; [| exact HLookup].
+  assert (HIn : ((r, allocate_H m r), h) ∈ map_to_list m).
+  { apply elem_of_map_to_list. exact HLookup. }
+  apply elem_of_list_In in HIn.
+  assert (Hlt : allocate_H m r < allocate_H m r).
+  { unfold allocate_H at 2.
+    eapply max_location_for_region_lt; eauto. }
+  lia.
+Qed.
+
+Lemma allocate_H_determ :
   forall (m1 m2 : Heap) (r: nat),
     m1 =@{Heap} m2 ->
     allocate_H m1 r = allocate_H m2 r.
-
-Definition Merge_Function (v1 v2 : option HeapVal) : option HeapVal :=
-  match (v1, v2) with
-  | (None, None) => None
-  | (None, Some v) => Some v
-  | (Some v, None) => Some v
-  | (Some v1, Some v2) =>
-      if (Nat.lt_dec (timestamp v1) (timestamp v2)) then Some v2 else Some v1
-end.
-
-(*Definition Functional_Map_Union_Heap (heap1 heap2 : Heap) : Heap
-  := merge Merge_Function heap1 heap2.*)
-
-  
+Proof.
+  intros m1 m2 r HEqual.
+  unfold equiv, heap_equiv in HEqual; subst.
+  reflexivity.
+Qed.
 
 Reserved Notation "phi_heap '===>' phi'_heap'" (at level 50, left associativity).
 Inductive Phi_Heap_Step : (Phi * Heap) -> (Phi * Heap) -> Prop :=
@@ -207,7 +236,14 @@ Lemma TcHeap_none_implies_none:
     TcHeap(heap, stty) ->
     (forall (k : SigmaKey),
         find_ST k stty = None -> find_H k heap = None).
-Admitted.
+Proof.
+  intros heap stty HTcHeap k HStoreNone.
+  destruct (find_H k heap) eqn:HHeapFind; auto.
+  inversion HTcHeap as [? ? HHeapStore _ _]; subst.
+  destruct (HHeapStore k v HHeapFind) as [t HStoreFind].
+  rewrite HStoreNone in HStoreFind.
+  discriminate.
+Qed.
   
 
 Lemma djt_heap_implies_djt_stty:
