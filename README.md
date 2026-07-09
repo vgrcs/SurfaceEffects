@@ -106,6 +106,10 @@ The main type soundness theorem is now stratified internally:
 - `TcHeap_Extended_2` is proved without an admission.
 - The `BS_Set_Ref` semantics includes the side condition that assignment only
   writes to an existing location after evaluating the assigned value.
+- Concrete read/write and write/write computed-action disjointness is based on
+  concrete address inequality `(region, location) <> (region, location)`, so
+  same-region accesses to distinct locations can be accepted by the parallel
+  disjointness check.
 
 The trace typing invariant records that dynamic allocation and write actions
 are justified by the final store typing. This is what makes the parallel heap
