@@ -12,6 +12,14 @@ theories/Runtime/Heap.v
 theories/Runtime/TraceSemantics.v
 theories/Runtime/HeapTyping.v
 theories/Runtime/Semantics.v
+theories/Runtime/SmallStep.v
+theories/Runtime/SmallStepFacts.v
+theories/Runtime/SmallStepParallel.v
+theories/Runtime/SmallStepTyping.v
+theories/Runtime/SmallStepSafetyFacts.v
+theories/Runtime/SmallStepProgress.v
+theories/Runtime/SmallStepPreservation.v
+theories/Runtime/SmallStepParallelPreservation.v
 theories/Meta/LocallyNameless.v
 theories/Meta/MapFacts.v
 theories/Meta/RegionSubstitutionFacts.v
