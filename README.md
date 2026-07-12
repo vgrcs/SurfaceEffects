@@ -3,6 +3,9 @@
 SurfaceEffects is a Rocq mechanization of a language with regions, heap
 effects, dynamic traces, parallel pairs, and effect soundness.
 
+For a paper-facing summary of the current mechanized proof state, theorem map,
+and remaining limitations, see [REPORT.md](REPORT.md).
+
 ## Current Build
 
 Known local toolchain:
@@ -63,9 +66,49 @@ theories/
     SmallStepParallel.v
     SmallStepTyping.v
     SmallStepSafetyFacts.v
+    SmallStepProgressBase.v
+    SmallStepReturnProgress.v
+    SmallStepEvalProgress.v
+    SmallStepRuntimeProgress.v
     SmallStepProgress.v
+    SmallStepRuntimeSubstShape.v
+    SmallStepRuntimeHeapShape.v
+    SmallStepRuntimeKontTyping.v
+    SmallStepRuntimeStateShape.v
+    SmallStepPreservationBase.v
+    SmallStepPreservationHeapShapeEvalCases.v
+    SmallStepPreservationHeapShapeHeadCases.v
+    SmallStepPreservationHeapShapeReturnCases.v
+    SmallStepPreservationHeapShapeCases.v
+    SmallStepPreservationKontShapeEvalCases.v
+    SmallStepPreservationKontShapeHeadCases.v
+    SmallStepPreservationKontShapeReturnCases.v
+    SmallStepPreservationKontShapeCases.v
+    SmallStepPreservationHeapSensitiveCases.v
+    SmallStepPreservationTheorems.v
     SmallStepPreservation.v
+    SmallStepExplicitStoreBase.v
+    SmallStepExplicitStoreHeap.v
+    SmallStepExplicitStoreHeadCases.v
+    SmallStepExplicitStoreEvalCases.v
+    SmallStepExplicitStoreReturnCases.v
+    SmallStepExplicitStoreBodyCases.v
+    SmallStepExplicitStoreCases.v
+    SmallStepExplicitStoreTheorems.v
+    SmallStepExplicitStore.v
+    SmallStepTraceSafety.v
+    SmallStepParallelPreservationBase.v
+    SmallStepParallelTyping.v
+    SmallStepParallelStepPreservation.v
+    SmallStepParallelProgress.v
+    SmallStepParallelSafety.v
     SmallStepParallelPreservation.v
+    SmallStepParallelTraceTyping.v
+    SmallStepParallelTraceSafe.v
+    SmallStepParallelCheckedTraceSafety.v
+    SmallStepParallelCheckedTerminal.v
+    SmallStepParallelTraceSafety.v
+    SmallStepSequentialSoundness.v
 
   Typing/
     TypeSyntax.v
@@ -138,106 +181,100 @@ updates are synchronized into the other branch state, and two finished branches
 return a pair to the outer continuation. It also proves the first operational
 facts for that relation: heap agreement is preserved by one step and finite
 traces, interleaving traces compose, and the checked initial state can start by
-stepping either branch. `SmallStepParallelPreservation.v` introduces the first
-typed invariant for interleaving configurations,
-`WTPairParStateRuntimeHeapShape`, plus explicit-store state and pair-state
-invariants `WTStateRuntimeHeapShapeAt` and
-`WTPairParStateRuntimeHeapShapeAt`. It also defines the stronger
-`WTPairParStateRuntimeHeapShapeAtStrong` invariant, which records the outer
-continuation as `WTKontRuntime stty (Ty_Pair tleft tright) tout k` and derives
-the completed-branches return case from that continuation typing. It proves
-checked-initial typing, retyping of an idle branch under a heap/store extension,
-forgetful bridges back to the hidden-store invariants, preservation for wrapped
-ordinary small-step states, preservation for the completed-branches return step,
-conditional left/right branch preservation lemmas, and a parametric full
-`PairParStep` preservation theorem
-`WTPairParStateRuntimeHeapShapeAtStrong_step_preservation_with_active` assuming
-the active-branch interface `WTStateRuntimeHeapShapeAtStepPreservation`, and
-lifts it to finite interleaving traces with
-`WTPairParStateRuntimeHeapShapeAtStrong_steps_preservation_with_active`. The
-abstract-effect typing rules now require `TcRgn` for `AllocAbs`, `ReadAbs`, and
-`WriteAbs`, which lets typed states derive eval-head region readiness. The same
-file defines state- and pair-level terminal, not-stuck, and eval-head readiness
-predicates, proves that heap synchronization preserves idle-branch readiness,
-and proves not-stuck theorems for hidden-store and strong explicit-store
-interleaving states. These progress results require preserved branch heap
-agreement and the same `PairParCheckDecidable` premise used by the ordinary
-small-step progress theorem. The checked-initial corollary
-`pairpar_checked_initial_never_stuck_typed` packages those premises for the
-successful checked branch, and `pairpar_checked_initial_steps_safety` combines
-finite-trace preservation, store extension, preserved branch heap agreement, and
-not-stuckness for each reached checked interleaving state. If such a trace
-terminates, `pairpar_checked_initial_terminal_value` extracts the final value's
-type and runtime shape. The `KDone` corollaries
-`pairpar_checked_initial_kdone_steps_safety` and
-`pairpar_checked_initial_kdone_terminal_value` specialize these endpoints to the
-checked pair expression itself, and
-`pairpar_checked_initial_kdone_terminal_pair` decomposes a terminal result into
-typed/runtime-shaped pair components. `TraceTypingFacts.v` now bridges linear
-small-step traces to sequential `Phi` summaries via `trace_as_phi`; using that
-bridge, `SmallStepParallelPreservation.v` proves
-`WTStateRuntimeHeapShapeAt_steps_trace_typed` for ordinary finite `Steps` traces
-and the initial-state wrappers `initial_state_steps_trace_typed` and
-`initial_state_terminal_value_with_trace`. The ordinary safety wrappers
-`WTStateRuntimeHeapShapeAt_steps_safety_with_trace` and
-`initial_state_steps_safety_with_trace` add not-stuckness to the same
-preservation, store-extension, and trace-typing package. The ordinary
-finite-prefix safety statements `WTStateRuntimeHeapShapeAt_never_stuck_typed`
-and `initial_state_never_stuck_typed` expose the same nonterminating-program
-safety idea without requiring a terminal state. The compact predicate
-`StateTraceSafeAt` and wrappers `WTStateRuntimeHeapShapeAt_trace_safe_typed` and
-`initial_state_trace_safe_typed` package ordinary finite-prefix preservation,
-store extension, not-stuckness, and trace typing under one name. It also proves
-`WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed` plus the checked
-corollary `pairpar_checked_initial_steps_trace_typed`, so every finite checked
-interleaving trace is accompanied by a `TcPhi` proof at the reached store. The
-packaged safety corollaries `pairpar_checked_initial_steps_safety_with_trace`
-and `pairpar_checked_initial_kdone_steps_safety_with_trace` combine that trace
-typing evidence with preservation, store extension, branch heap agreement, and
-not-stuckness. The pair-level predicate `PairParTraceSafeAt` and wrappers
-`WTPairParStateRuntimeHeapShapeAtStrong_trace_safe_typed`,
-`pairpar_checked_initial_trace_safe_typed`, and
-`pairpar_checked_initial_kdone_trace_safe_typed` give the same compact
-finite-prefix safety package for checked interleavings. Terminal wrappers
-`pairpar_checked_initial_terminal_value_with_trace`,
-`pairpar_checked_initial_kdone_terminal_value_with_trace`, and
-`pairpar_checked_initial_kdone_terminal_pair_with_trace` carry the same trace
-typing evidence through final-value and final-pair extraction.
+stepping either branch. The explicit-store ordinary preservation layer is split
+by dependency. `SmallStepExplicitStoreBase.v` introduces
+`WTStateRuntimeHeapShapeAt` and the forget/re-heap lemmas under `StoreExtends`.
+`SmallStepExplicitStoreHeap.v` handles the heap-sensitive dereference,
+assignment, and allocation completion cases and defines the active-branch
+interface `WTStateRuntimeHeapShapeAtStepPreservation`.
+The same-store case library is split into
+`SmallStepExplicitStoreHeadCases.v`, `SmallStepExplicitStoreEvalCases.v`,
+`SmallStepExplicitStoreReturnCases.v`, and
+`SmallStepExplicitStoreBodyCases.v`, with `SmallStepExplicitStoreCases.v` kept
+as a re-export facade. `SmallStepExplicitStoreTheorems.v` assembles
+`WTStateRuntimeHeapShapeAt_step_preservation`, and
+`SmallStepExplicitStore.v` re-exports the explicit-store layer.
+
+`TraceTypingFacts.v` bridges linear small-step traces to sequential `Phi`
+summaries via `trace_as_phi`. `SmallStepTraceSafety.v` uses that bridge to prove
+ordinary finite-prefix trace safety: `WTStateRuntimeHeapShapeAt_steps_trace_typed`,
+the initial-state wrappers, the compact `StateTraceSafeAt` predicate, never-stuck
+wrappers for potentially diverging executions, and terminal extractors such as
+`StateTraceSafeAt_terminal_value` and
+`initial_state_terminal_value_with_trace`.
+
+The checked interleaving proof is split similarly.
+`SmallStepParallelPreservationBase.v` introduces the shared re-heap and
+done-continuation interfaces. `SmallStepParallelTyping.v` owns the weak,
+strong, and erased pair-level typing predicates, including
+`WTPairParStateRuntimeHeapShapeAtStrong`. `SmallStepParallelStepPreservation.v`
+proves one-step and finite-trace `PairParStep` preservation.
+`SmallStepParallelProgress.v` owns pair-level terminal, not-stuck, eval-head
+readiness, and never-stuck theorems. `SmallStepParallelSafety.v` packages the
+checked-initial non-trace safety and terminal-value corollaries.
+`SmallStepParallelPreservation.v` is the re-export facade for those layers.
+
+The checked trace layer is split into four files.
+`SmallStepParallelTraceTyping.v` proves
+`WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed`.
+`SmallStepParallelTraceSafe.v` packages finite-prefix checked interleaving
+safety as `PairParTraceSafeAt` and gives the generic terminal extractors.
+`SmallStepParallelCheckedTraceSafety.v` provides the checked-initial trace
+safety wrappers, while `SmallStepParallelCheckedTerminal.v` owns the
+checked-initial terminal extractors ending in `_with_trace`, including
+`pairpar_checked_initial_kdone_terminal_pair_with_trace`.
+`SmallStepParallelTraceSafety.v` is the re-export facade for those trace layers.
+`SmallStepSequentialSoundness.v` packages the reviewer-facing staged
+`Pair_Par` dispatch facts: a successful check exposes the checked interleaving
+start state while the ordinary continuation path begins with the first
+computational application, and a failed check steps directly into that same
+sequential fallback path. It also provides typed wrappers for fallback
+preservation and checked-interleaving trace safety.
 `SmallStepTyping.v` introduces the first lightweight
 `WTKont` and `WTState` invariants plus indexed
 `WTKontTyped`/`WTStateTyped` relations for the preservation proof to build on.
 `SmallStepSafetyFacts.v` records the initial not-stuck facts for terminal
-well-typed states. `SmallStepProgress.v` proves the first eval-state progress
-lemma for supported sequential heads whose abstract-effect regions are resolved,
-plus return-frame progress for explicitly ready frames. It also introduces a
-stricter `RuntimeValShape` predicate with canonical-shape lemmas and progress
-corollaries for arithmetic, boolean, closure, effect, and concrete-reference
-frames. `WTKontTyped` now records the concrete-region restriction for reference
-frames that the source typing rules already require. `WTStateRuntimeShape`
-packages typed states together with runtime value shape and proves a conditional
-not-stuck theorem for sequential/resolved eval states, return states, and done
-states. Closure cases of `RuntimeValShape` now remember the captured
+well-typed states. The progress layer is split into four modules.
+`SmallStepProgressBase.v` defines `SequentialHead`,
+`EvalHeadRegionsResolved`, the stricter `RuntimeValShape` and
+`RuntimeEnvShape` predicates, and their canonical-shape, environment, and store
+extension lemmas. `SmallStepReturnProgress.v` defines `ReturnFrameReady` and
+proves return-frame progress from typing plus runtime shape. `SmallStepEvalProgress.v`
+proves eval-state progress for supported sequential heads whose abstract-effect
+regions are resolved. `SmallStepRuntimeProgress.v` packages those facts into
+the runtime-shaped state predicates and conditional not-stuck theorems, while
+`SmallStepProgress.v` re-exports the layer. `WTKontTyped` now records the
+concrete-region restriction for reference frames that the source typing rules
+already require. Closure cases of `RuntimeValShape` now remember the captured
 runtime-shaped environment and expose inversion lemmas for recursive and
-region-polymorphic closures. `SmallStepPreservation.v` adds two preservation
-layers. The first records why eval continuations must be indexed by
-`subst_rho rho t`. The second
-introduces `WTKontRuntime`, a runtime-substituted continuation relation, and
-`WTStateRuntimeKontShape`, which carries the `TcInc` premise needed for closure
-values. It now proves preservation for pure head steps, frame-introducing eval
-steps, conditionals, arithmetic frames, concrete read/write summary frames,
-concat frames, `KDone`, application/effect-application eval-argument frames,
-application/effect-application body-entry frames, region-application body-entry
-frames, assignment eval-value, and assignment write completion. A stronger
-`WTStateRuntimeHeapShape` layer adds a runtime heap-shape invariant, lifts the
-same-heap preservation cases, proves the heap-sensitive completion steps for
-allocation, dereference, assignment, and the staged `Pair_Par` frames, and
-assembles them into the general one-step theorem
-`WTStateRuntimeHeapShape_step_preservation`; it also lifts this to finite traces
-with `WTStateRuntimeHeapShape_steps_preservation` and the initial-state
-corollary `WTStateRuntimeHeapShape_initial_steps_preservation`. These theorems
-are intentionally stated at the heap-shaped layer, because dereference
-preservation needs runtime-shape evidence for values read from the heap.
-The same layer now also exposes and handles the dynamic-check boundary for
+region-polymorphic closures. The hidden-store preservation stack is now split
+into smaller runtime files. `SmallStepRuntimeSubstShape.v` records the first
+substitution-indexed state shape and the head preservation facts that justify
+indexing eval continuations by `subst_rho rho t`. `SmallStepRuntimeHeapShape.v`
+introduces `RuntimeHeapShape` and its update lemmas.
+`SmallStepRuntimeKontTyping.v` owns `WTKontRuntime` plus the store-extension and
+environment/substitution helpers. `SmallStepRuntimeStateShape.v` introduces
+`WTStateRuntimeKontShape` and `WTStateRuntimeHeapShape`, and
+`SmallStepPreservationBase.v` re-exports these foundational layers.
+The same-heap heap-shaped cases are grouped by role in
+`SmallStepPreservationHeapShapeEvalCases.v`,
+`SmallStepPreservationHeapShapeHeadCases.v`, and
+`SmallStepPreservationHeapShapeReturnCases.v`; the matching continuation-shaped
+cases live in `SmallStepPreservationKontShapeEvalCases.v`,
+`SmallStepPreservationKontShapeHeadCases.v`, and
+`SmallStepPreservationKontShapeReturnCases.v`. The shorter
+`SmallStepPreservationHeapShapeCases.v` and
+`SmallStepPreservationKontShapeCases.v` files re-export those clusters.
+`SmallStepPreservationHeapSensitiveCases.v` handles allocation, dereference,
+assignment, body-entry cases, and staged `Pair_Par` frames.
+`SmallStepPreservationTheorems.v` assembles the general
+one-step theorem `WTStateRuntimeHeapShape_step_preservation`, lifts it to finite
+traces with `WTStateRuntimeHeapShape_steps_preservation`, and contains the
+dynamic-check progress boundary. `SmallStepPreservation.v` is now the re-export
+facade for those layers. These theorems are intentionally stated at the
+heap-shaped layer, because dereference preservation needs runtime-shape evidence
+for values read from the heap. The final theorem layer also exposes and handles
+the dynamic-check boundary for
 staged `Pair_Par`: `PairParCheckState` identifies the frame where both computed
 summaries have been evaluated, `pairpar_check_state_ready` shows that a
 successful `Disjointness`/`Conflictness` check can step into the checked
@@ -257,9 +294,15 @@ content has been split into heap operations, trace semantics, and heap typing.
 The small-step migration has started with a continuation machine in
 `SmallStep.v`, basic reusable facts in `SmallStepFacts.v`, and a lightweight
 typed-state layer plus indexed continuation typing in
-`SmallStepTyping.v`/`SmallStepSafetyFacts.v`/`SmallStepProgress.v`, followed by
-the first preservation-shaped invariant and preservation lemmas in
-`SmallStepPreservation.v`; the existing big-step semantics remains the
+`SmallStepTyping.v`/`SmallStepSafetyFacts.v`, followed by the progress stack in
+`SmallStepProgressBase.v`, `SmallStepReturnProgress.v`,
+`SmallStepEvalProgress.v`, and `SmallStepRuntimeProgress.v`, then the
+hidden-store preservation base in `SmallStepRuntimeSubstShape.v`,
+`SmallStepRuntimeHeapShape.v`, `SmallStepRuntimeKontTyping.v`,
+`SmallStepRuntimeStateShape.v`, and the `SmallStepPreservationBase.v` facade,
+the heap-shaped and continuation-shaped eval/head/return case clusters,
+`SmallStepPreservationHeapSensitiveCases.v`, and
+`SmallStepPreservationTheorems.v`; the existing big-step semantics remains the
 terminating reference semantics. Application and effect-application body entry
 now re-establish both `TcEnv` and `RuntimeEnvShape` by extending the captured
 closure environment with the recursive closure and argument value.
@@ -272,25 +315,40 @@ small-step machine takes a successful check into the checked computational path
 and a failed check into the sequential fallback path; both paths are currently
 implemented with the same sequential continuation frames in the staging
 machine, while `SmallStepParallel.v` provides the separate interleaving target
-relation for the checked branch. `SmallStepParallelPreservation.v` now packages
-typed preservation facts for that target relation, including weak and strong
-common-store invariants for the two running branches. The active-branch interface
-returns the new store typing, `StoreExtends` evidence, and runtime heap shape
-produced by each branch step. The heap-sensitive completion cases now have
-explicit-store lemmas:
+relation for the checked branch.
+
+The explicit-store active-branch preservation layer is now factored into small
+runtime strata. `SmallStepExplicitStoreBase.v` owns
+`WTStateRuntimeHeapShapeAt`, the bridge back to `WTStateRuntimeHeapShape`, and
+the re-heap lemmas used when an idle branch is synchronized to a newer heap.
+`SmallStepExplicitStoreHeap.v` proves the heap-sensitive completion cases:
 dereference preserves the current store, assignment preserves the current store
 while updating an existing heap cell, and reference allocation returns the
-freshly extended store typing. A reusable same-store packager handles the common
-result shape, and explicit-store same-store lemmas now cover the pure heads,
-eval/control frames, staged `Pair_Par` frames, and application/region/effect
-body-entry frames. These lemmas are assembled into
+freshly extended store typing. It also defines the active-branch interface
+`WTStateRuntimeHeapShapeAtStepPreservation` and the reusable same-store
+packager. `SmallStepExplicitStoreCases.v` contains the pure head,
+eval/control-frame, staged `Pair_Par`, and application/region/effect body-entry
+cases through four smaller files: `SmallStepExplicitStoreHeadCases.v`,
+`SmallStepExplicitStoreEvalCases.v`,
+`SmallStepExplicitStoreReturnCases.v`, and
+`SmallStepExplicitStoreBodyCases.v`. `SmallStepExplicitStoreCases.v` re-exports
+those case clusters. `SmallStepExplicitStoreTheorems.v` assembles
 `WTStateRuntimeHeapShapeAt_step_preservation`, closing the active-branch
-interface `WTStateRuntimeHeapShapeAtStepPreservation`. The checked
+interface, and `SmallStepExplicitStore.v` is the facade that re-exports the
+whole explicit-store layer.
+
+The checked-interleaving preservation stack is now split into base, typing,
+step-preservation, progress, and safety layers.
+`SmallStepParallelPreservationBase.v` packages the common-store retyping
+helpers and done-continuation interface for the two running branches.
+`SmallStepParallelTyping.v` owns the weak, strong, and erased pair-level
+typing predicates and their checked-initial constructors. The checked
 non-parametric theorems
 `WTPairParStateRuntimeHeapShapeAtStrong_step_preservation` and
 `WTPairParStateRuntimeHeapShapeAtStrong_steps_preservation` now give strong
-explicit-store preservation for one-step and finite `PairParStep` executions.
-The same file now proves pair-level not-stuck theorems
+explicit-store preservation for one-step and finite `PairParStep` executions
+from `SmallStepParallelStepPreservation.v`.
+`SmallStepParallelProgress.v` proves pair-level not-stuck theorems
 `WTPairParStateRuntimeHeapShape_not_stuck`,
 `WTPairParStateRuntimeHeapShapeAtStrong_not_stuck`, and
 `WTPairParStateRuntimeHeapShapeAtStrong_steps_not_stuck`, under branch
@@ -302,7 +360,8 @@ which in turn give the scheduler-facing theorem
 run-level readiness premise. The endpoint corollary
 `pairpar_checked_initial_never_stuck_typed` applies this result directly to the
 checked initial interleaving state built after a successful dynamic effect check.
-The companion theorem `pairpar_checked_initial_steps_safety` returns both the
+`SmallStepParallelSafety.v` owns the non-trace endpoint theorems. The companion
+theorem `pairpar_checked_initial_steps_safety` returns both the
 preserved strong pair invariant, store-extension evidence, preserved branch
 heap agreement, and not-stuckness for any finite checked interleaving trace.
 The terminal corollary `pairpar_checked_initial_terminal_value` says that any
@@ -313,32 +372,37 @@ the corresponding runtime value shape. The no-continuation corollaries
 statements to output type `subst_rho rho (Ty_Pair ty1 ty2)`.
 `pairpar_checked_initial_kdone_terminal_pair` further exposes the terminal value
 as `Pair (v1, v2)` with components typed and runtime-shaped at
-`subst_rho rho ty1` and `subst_rho rho ty2`. The generic trace bridge
+`subst_rho rho ty1` and `subst_rho rho ty2`. `SmallStepParallelPreservation.v`
+re-exports these three layers for downstream files. The generic trace bridge
 `trace_as_phi` lives in `TraceTypingFacts.v` and turns emitted dynamic-action
 lists into sequential `Phi` summaries; `phi_as_list_trace_as_phi` proves that
 converting the summary back with `phi_as_list` recovers the original trace.
-Using it,
-`WTStateRuntimeHeapShapeAt_steps_trace_typed` proves that ordinary finite
-`Steps` traces preserve explicit typing and produce `TcPhi` evidence at the
-final store. The wrappers `WTStateRuntimeHeapShapeAt_steps_safety_with_trace`
-and `initial_state_steps_safety_with_trace` add not-stuckness, while
-`WTStateRuntimeHeapShapeAt_never_stuck_typed` and
-`initial_state_never_stuck_typed` expose finite-prefix safety for potentially
-diverging ordinary executions. `StateTraceSafeAt` packages these ordinary
-finite-prefix conclusions into a reusable predicate.
-`initial_state_terminal_value_with_trace` specializes the result to terminating
-initial states.
-`WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed` proves that finite
-checked interleavings produce traces satisfying `TcPhi` at the final store. The
-checked-initial wrapper `pairpar_checked_initial_steps_trace_typed` packages the
-same result for the surface-effect checked branch, and the safety wrappers
-`pairpar_checked_initial_steps_safety_with_trace` and
-`pairpar_checked_initial_kdone_steps_safety_with_trace` expose trace typing
-alongside the existing not-stuck and preservation conclusions. The terminal
-variants ending in `_with_trace` similarly expose `TcPhi` evidence for final
-values and decomposed final pairs.
-`PairParTraceSafeAt` packages the checked-interleaving finite-prefix conclusions
-under one predicate.
+`SmallStepTraceSafety.v` uses it to prove that ordinary finite `Steps` traces
+preserve explicit typing and produce `TcPhi` evidence at the final store. It
+also packages ordinary finite-prefix safety as `StateTraceSafeAt`, exposes
+never-stuck wrappers for potentially diverging ordinary executions, and provides
+terminal-value extraction with trace evidence.
+
+The checked trace layer is factored similarly.
+`SmallStepParallelTraceTyping.v` proves that finite checked interleavings
+produce traces satisfying `TcPhi` at the final store.
+`SmallStepParallelTraceSafe.v` defines `PairParTraceSafeAt` and proves the
+generic terminal extractors `PairParTraceSafeAt_terminal_value` and
+`PairParTraceSafeAt_kdone_terminal_pair`. `SmallStepParallelCheckedTraceSafety.v`
+exposes checked-initial trace typing alongside preservation, store extension,
+branch heap agreement, and not-stuckness. `SmallStepParallelCheckedTerminal.v`
+owns the checked-initial terminal variants ending in `_with_trace`, recovering
+typed final values, decomposed final pairs, and trace evidence.
+`SmallStepParallelTraceSafety.v` re-exports the full checked trace layer.
+`SmallStepSequentialSoundness.v` makes the staged check/fallback story explicit:
+`pairpar_check_decidable_dispatch` splits on the dynamic effect check,
+`pairpar_check_fail_sequential_preservation` proves the failed-check sequential
+target preserves explicit runtime typing,
+`pairpar_check_fail_sequential_trace_safe` lifts the failed branch to ordinary
+finite-prefix trace safety, `pairpar_check_pass_checked_trace_safe` connects a
+successful check to the safe checked interleaving theorem, and
+`pairpar_check_decidable_trace_safe` packages the success/failure trace-safety
+split in one theorem.
 Trace replay and read-only trace/evaluation lemmas have been moved from
 `HeapFacts.v` into `TraceFacts.v`, and downstream files now import the trace
 facts explicitly when they need them. The old compatibility wrappers have also

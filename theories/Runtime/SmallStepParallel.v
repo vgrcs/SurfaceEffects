@@ -8,36 +8,6 @@ Require Import theories.Core.Expressions.
 Require Import theories.Core.Values.
 Require Import theories.Core.DynamicActions.
 
-Definition state_heap (state : State) : Heap :=
-  match state with
-  | StEval heap _ _ _ _ => heap
-  | StReturn heap _ _ => heap
-  | StDone heap _ => heap
-  end.
-
-Definition with_state_heap (heap : Heap) (state : State) : State :=
-  match state with
-  | StEval _ env rho e k => StEval heap env rho e k
-  | StReturn _ v k => StReturn heap v k
-  | StDone _ v => StDone heap v
-  end.
-
-Lemma state_heap_with_state_heap :
-  forall heap state,
-    state_heap (with_state_heap heap state) = heap.
-Proof.
-  intros heap state.
-  destruct state; reflexivity.
-Qed.
-
-Lemma with_state_heap_state_heap :
-  forall state,
-    with_state_heap (state_heap state) state = state.
-Proof.
-  intros state.
-  destruct state; reflexivity.
-Qed.
-
 Inductive PairParState : Type :=
 | PPS_State : State -> PairParState
 | PPS_Run : State -> State -> Kont -> PairParState.
