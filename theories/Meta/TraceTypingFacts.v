@@ -4,6 +4,7 @@ Require Import Coq.Program.Equality.
 Require Import theories.Core.DynamicActions.
 Require Import theories.Core.Values.
 Require Import theories.Runtime.Heap.
+Require Import theories.Runtime.HeapTyping.
 Require Import theories.Runtime.TraceSemantics.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
@@ -100,6 +101,102 @@ Proof.
   unfold TcPhi.
   intros stty phi1 phi2 H1 H2 k v HUpdate.
   inversion HUpdate; subst; eauto.
+Qed.
+
+Fixpoint trace_as_phi (trace : Trace) : Phi :=
+  match trace with
+  | nil => Phi_Nil
+  | da :: trace' => Phi_Seq (Phi_Elem da) (trace_as_phi trace')
+  end.
+
+Lemma TcPhi_seq_inv_l :
+  forall stty phi1 phi2,
+    TcPhi stty (Phi_Seq phi1 phi2) ->
+    TcPhi stty phi1.
+Proof.
+  unfold TcPhi.
+  intros stty phi1 phi2 HTcPhi k v HUpdate.
+  apply (HTcPhi k v).
+  now apply PU_Seq_L.
+Qed.
+
+Lemma TcPhi_seq_inv_r :
+  forall stty phi1 phi2,
+    TcPhi stty (Phi_Seq phi1 phi2) ->
+    TcPhi stty phi2.
+Proof.
+  unfold TcPhi.
+  intros stty phi1 phi2 HTcPhi k v HUpdate.
+  apply (HTcPhi k v).
+  now apply PU_Seq_R.
+Qed.
+
+Lemma TcPhi_trace_as_phi_app :
+  forall stty trace1 trace2,
+    TcPhi stty (trace_as_phi trace1) ->
+    TcPhi stty (trace_as_phi trace2) ->
+    TcPhi stty (trace_as_phi (trace1 ++ trace2)).
+Proof.
+  intros stty trace1.
+  induction trace1 as [| da trace1 IH]; intros trace2 HTcTrace1 HTcTrace2.
+  - exact HTcTrace2.
+  - simpl in *.
+    apply TcPhi_seq.
+    + eapply TcPhi_seq_inv_l; eauto.
+    + apply IH.
+      * eapply TcPhi_seq_inv_r; eauto.
+      * exact HTcTrace2.
+Qed.
+
+Lemma TcPhi_trace_as_phi_single :
+  forall stty da,
+    TcPhi stty (Phi_Elem da) ->
+    TcPhi stty (trace_as_phi (da :: nil)).
+Proof.
+  intros stty da HTcPhi.
+  simpl.
+  apply TcPhi_seq; [exact HTcPhi | apply TcPhi_nil].
+Qed.
+
+Lemma TcPhi_elem_read :
+  forall stty r l v,
+    TcPhi stty (Phi_Elem (DA_Read r l v)).
+Proof.
+  unfold TcPhi.
+  intros stty r l v k value HUpdate.
+  inversion HUpdate.
+Qed.
+
+Lemma TcPhi_elem_alloc_from_heap :
+  forall stty heap r l v,
+    TcHeap (heap, stty) ->
+    find_H (r, l) heap = Some v ->
+    TcPhi stty (Phi_Elem (DA_Alloc r l v)).
+Proof.
+  unfold TcPhi.
+  intros stty heap r l v HTcHeap HFind k value HUpdate.
+  inversion HUpdate; subst.
+  inversion HTcHeap as [? ? HHeapStore _ HHeapVal]; subst.
+  destruct (HHeapStore (r, l) v HFind) as (t & HFindST).
+  exists t.
+  split; [exact HFindST |].
+  eapply HHeapVal; eauto.
+Qed.
+
+Lemma TcPhi_elem_write_from_heap :
+  forall stty heap r l v,
+    TcHeap (heap, stty) ->
+    find_H (r, l) heap = Some v ->
+    TcPhi stty (Phi_Elem (DA_Write r l v)).
+Proof.
+  unfold TcPhi.
+  intros stty heap r l v HTcHeap HFind k value HUpdate.
+  inversion HUpdate; subst.
+  inversion HTcHeap as [? ? HHeapStore _ HHeapVal]; subst.
+  destruct (HHeapStore (r, l) v HFind) as (t & HFindST).
+  exists t.
+  split; [exact HFindST |].
+  eapply HHeapVal; eauto.
 Qed.
 
 Lemma Phi_Heap_Step_preserves_updates :

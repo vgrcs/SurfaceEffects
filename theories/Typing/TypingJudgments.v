@@ -171,10 +171,12 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
 
 | TC_Alloc_Abs :
   forall ctxt rgns r,
+    TcRgn (rgns, r) ->
     TcExp (ctxt, rgns, AllocAbs r, Ty_Effect, Empty_Static_Action)
 
 | TC_Read_Abs :
   forall ctxt rgns r,
+    TcRgn (rgns, r) ->
     TcExp (ctxt, rgns, ReadAbs r, Ty_Effect, Empty_Static_Action)
 
 | TC_Read_Conc :
@@ -184,6 +186,7 @@ Inductive TcExp : (Gamma * Omega  * Expr * Tau * Epsilon) -> Prop :=
 
 | TC_Write_Abs :
   forall ctxt rgns r,
+    TcRgn (rgns, r) ->
     TcExp (ctxt, rgns,  WriteAbs r, Ty_Effect, Empty_Static_Action)
 
 | TC_Write_Conc :

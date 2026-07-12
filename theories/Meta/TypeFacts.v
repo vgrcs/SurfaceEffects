@@ -427,9 +427,9 @@ Proof.
       * apply H5.
       * apply H7.
       * apply H9. 
-  - assert (H1 : included (frv Ty_Natural) rgns /\ 
-                 included (free_rgn_vars_in_eps eff1) rgns)
-      by (eapply IHHExp1; eauto).
+	  - assert (H1 : included (frv Ty_Natural) rgns /\ 
+	                 included (free_rgn_vars_in_eps eff1) rgns)
+	      by (eapply IHHExp1; eauto).
     assert (H2 : included (frv Ty_Natural) rgns /\ 
                  included (free_rgn_vars_in_eps eff2) rgns)
       by (eapply IHHExp2; eauto).
@@ -468,17 +468,26 @@ Proof.
       by (eapply IHHExp2; eauto).
     destruct H1 as [H3 H4].
     destruct H2 as [H5 H6].
-    split.
-    + do 2 intro. apply H3. assumption.
-    + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
-  - assert (H1 : included (frv (Ty_Ref (Rgn_Const true true r) t0)) rgns /\ 
-                 included (free_rgn_vars_in_eps eff) rgns)
-      by (eapply IHHExp; eauto).
-    destruct H1 as [H2 H3].
-    intuition. inversion H.
-  - assert (H1 : included (frv (Ty_Ref (Rgn_Const true true r) t0)) rgns /\ 
-                 included (free_rgn_vars_in_eps eff) rgns)
-      by (eapply IHHExp; eauto).
+	    split.
+	    + do 2 intro. apply H3. assumption.
+	    + intro. apply IncludedUnion_Static_Action_4; [apply H4 | apply H6].
+	  - split; intros x HFree.
+	    + inversion HFree.
+	    + contradict HFree. apply NotFreeInEmptyEps.
+	  - split; intros x HFree.
+	    + inversion HFree.
+	    + contradict HFree. apply NotFreeInEmptyEps.
+	  - assert (H1 : included (frv (Ty_Ref (Rgn_Const true true r) t0)) rgns /\ 
+	                 included (free_rgn_vars_in_eps eff) rgns)
+	      by (eapply IHHExp; eauto).
+	    destruct H1 as [H2 H3].
+	    intuition. inversion H.
+	  - split; intros x HFree.
+	    + inversion HFree.
+	    + contradict HFree. apply NotFreeInEmptyEps.
+	  - assert (H1 : included (frv (Ty_Ref (Rgn_Const true true r) t0)) rgns /\ 
+	                 included (free_rgn_vars_in_eps eff) rgns)
+	      by (eapply IHHExp; eauto).
     destruct H1 as [H2 H3].
     intuition. inversion H.
   - assert (H1 : included (frv Ty_Effect) rgns /\ 

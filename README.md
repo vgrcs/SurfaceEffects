@@ -142,11 +142,52 @@ stepping either branch. `SmallStepParallelPreservation.v` introduces the first
 typed invariant for interleaving configurations,
 `WTPairParStateRuntimeHeapShape`, plus explicit-store state and pair-state
 invariants `WTStateRuntimeHeapShapeAt` and
-`WTPairParStateRuntimeHeapShapeAt`. It proves checked-initial typing, retyping
-of an idle branch under a heap/store extension, forgetful bridges back to the
-hidden-store invariants, preservation for wrapped ordinary small-step states,
-preservation for the completed-branches return step, and conditional left/right
-branch preservation lemmas. `SmallStepTyping.v` introduces the first lightweight
+`WTPairParStateRuntimeHeapShapeAt`. It also defines the stronger
+`WTPairParStateRuntimeHeapShapeAtStrong` invariant, which records the outer
+continuation as `WTKontRuntime stty (Ty_Pair tleft tright) tout k` and derives
+the completed-branches return case from that continuation typing. It proves
+checked-initial typing, retyping of an idle branch under a heap/store extension,
+forgetful bridges back to the hidden-store invariants, preservation for wrapped
+ordinary small-step states, preservation for the completed-branches return step,
+conditional left/right branch preservation lemmas, and a parametric full
+`PairParStep` preservation theorem
+`WTPairParStateRuntimeHeapShapeAtStrong_step_preservation_with_active` assuming
+the active-branch interface `WTStateRuntimeHeapShapeAtStepPreservation`, and
+lifts it to finite interleaving traces with
+`WTPairParStateRuntimeHeapShapeAtStrong_steps_preservation_with_active`. The
+abstract-effect typing rules now require `TcRgn` for `AllocAbs`, `ReadAbs`, and
+`WriteAbs`, which lets typed states derive eval-head region readiness. The same
+file defines state- and pair-level terminal, not-stuck, and eval-head readiness
+predicates, proves that heap synchronization preserves idle-branch readiness,
+and proves not-stuck theorems for hidden-store and strong explicit-store
+interleaving states. These progress results require preserved branch heap
+agreement and the same `PairParCheckDecidable` premise used by the ordinary
+small-step progress theorem. The checked-initial corollary
+`pairpar_checked_initial_never_stuck_typed` packages those premises for the
+successful checked branch, and `pairpar_checked_initial_steps_safety` combines
+finite-trace preservation, store extension, preserved branch heap agreement, and
+not-stuckness for each reached checked interleaving state. If such a trace
+terminates, `pairpar_checked_initial_terminal_value` extracts the final value's
+type and runtime shape. The `KDone` corollaries
+`pairpar_checked_initial_kdone_steps_safety` and
+`pairpar_checked_initial_kdone_terminal_value` specialize these endpoints to the
+checked pair expression itself, and
+`pairpar_checked_initial_kdone_terminal_pair` decomposes a terminal result into
+typed/runtime-shaped pair components. `TraceTypingFacts.v` now bridges linear
+small-step traces to sequential `Phi` summaries via `trace_as_phi`; using that
+bridge, `SmallStepParallelPreservation.v` proves
+`WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed` plus the checked
+corollary `pairpar_checked_initial_steps_trace_typed`, so every finite checked
+interleaving trace is accompanied by a `TcPhi` proof at the reached store. The
+packaged safety corollaries `pairpar_checked_initial_steps_safety_with_trace`
+and `pairpar_checked_initial_kdone_steps_safety_with_trace` combine that trace
+typing evidence with preservation, store extension, branch heap agreement, and
+not-stuckness. Terminal wrappers
+`pairpar_checked_initial_terminal_value_with_trace`,
+`pairpar_checked_initial_kdone_terminal_value_with_trace`, and
+`pairpar_checked_initial_kdone_terminal_pair_with_trace` carry the same trace
+typing evidence through final-value and final-pair extraction.
+`SmallStepTyping.v` introduces the first lightweight
 `WTKont` and `WTState` invariants plus indexed
 `WTKontTyped`/`WTStateTyped` relations for the preservation proof to build on.
 `SmallStepSafetyFacts.v` records the initial not-stuck facts for terminal
@@ -216,11 +257,58 @@ and a failed check into the sequential fallback path; both paths are currently
 implemented with the same sequential continuation frames in the staging
 machine, while `SmallStepParallel.v` provides the separate interleaving target
 relation for the checked branch. `SmallStepParallelPreservation.v` now packages
-the first typed preservation facts for that target relation, including a
-common-store invariant for the two running branches. The next proof step is
-extracting the concrete heap/store-extension evidence produced by each active
-branch step, and then assembling the conditional left/right branch lemmas into a
-full preservation theorem for `PairParStep`.
+typed preservation facts for that target relation, including weak and strong
+common-store invariants for the two running branches. The active-branch interface
+returns the new store typing, `StoreExtends` evidence, and runtime heap shape
+produced by each branch step. The heap-sensitive completion cases now have
+explicit-store lemmas:
+dereference preserves the current store, assignment preserves the current store
+while updating an existing heap cell, and reference allocation returns the
+freshly extended store typing. A reusable same-store packager handles the common
+result shape, and explicit-store same-store lemmas now cover the pure heads,
+eval/control frames, staged `Pair_Par` frames, and application/region/effect
+body-entry frames. These lemmas are assembled into
+`WTStateRuntimeHeapShapeAt_step_preservation`, closing the active-branch
+interface `WTStateRuntimeHeapShapeAtStepPreservation`. The checked
+non-parametric theorems
+`WTPairParStateRuntimeHeapShapeAtStrong_step_preservation` and
+`WTPairParStateRuntimeHeapShapeAtStrong_steps_preservation` now give strong
+explicit-store preservation for one-step and finite `PairParStep` executions.
+The same file now proves pair-level not-stuck theorems
+`WTPairParStateRuntimeHeapShape_not_stuck`,
+`WTPairParStateRuntimeHeapShapeAtStrong_not_stuck`, and
+`WTPairParStateRuntimeHeapShapeAtStrong_steps_not_stuck`, under branch
+heap-agreement and eval-head readiness assumptions. The stricter abstract-effect
+typing rules support `TcExp_eval_head_regions_resolved` and the finite-trace
+readiness theorem `WTPairParStateRuntimeHeapShapeAtStrong_steps_eval_heads_resolved`,
+which in turn give the scheduler-facing theorem
+`WTPairParStateRuntimeHeapShapeAtStrong_never_stuck_typed` without a separate
+run-level readiness premise. The endpoint corollary
+`pairpar_checked_initial_never_stuck_typed` applies this result directly to the
+checked initial interleaving state built after a successful dynamic effect check.
+The companion theorem `pairpar_checked_initial_steps_safety` returns both the
+preserved strong pair invariant, store-extension evidence, preserved branch
+heap agreement, and not-stuckness for any finite checked interleaving trace.
+The terminal corollary `pairpar_checked_initial_terminal_value` says that any
+terminal checked interleaving result is typed at the expected output type and has
+the corresponding runtime value shape. The no-continuation corollaries
+`pairpar_checked_initial_kdone_steps_safety` and
+`pairpar_checked_initial_kdone_terminal_value` specialize the safety and terminal
+statements to output type `subst_rho rho (Ty_Pair ty1 ty2)`.
+`pairpar_checked_initial_kdone_terminal_pair` further exposes the terminal value
+as `Pair (v1, v2)` with components typed and runtime-shaped at
+`subst_rho rho ty1` and `subst_rho rho ty2`. The generic trace bridge
+`trace_as_phi` lives in `TraceTypingFacts.v` and turns emitted dynamic-action
+lists into sequential `Phi` summaries. Using it,
+`WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed` proves that finite
+checked interleavings produce traces satisfying `TcPhi` at the final store. The
+checked-initial wrapper `pairpar_checked_initial_steps_trace_typed` packages the
+same result for the surface-effect checked branch, and the safety wrappers
+`pairpar_checked_initial_steps_safety_with_trace` and
+`pairpar_checked_initial_kdone_steps_safety_with_trace` expose trace typing
+alongside the existing not-stuck and preservation conclusions. The terminal
+variants ending in `_with_trace` similarly expose `TcPhi` evidence for final
+values and decomposed final pairs.
 Trace replay and read-only trace/evaluation lemmas have been moved from
 `HeapFacts.v` into `TraceFacts.v`, and downstream files now import the trace
 facts explicitly when they need them. The old compatibility wrappers have also
