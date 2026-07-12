@@ -17,6 +17,7 @@ Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
 Require Import theories.Meta.HeapFacts.
 Require Import theories.Meta.RegionSubstitutionFacts.
+Require Import theories.Meta.StoreFacts.
 Require Import theories.Meta.TraceTypingFacts.
 Require Import theories.Meta.TypeFacts.
 Require Import theories.Meta.TypingWeakeningFacts.
@@ -381,25 +382,6 @@ Proof.
   - eapply WTStateRuntimeHeapShapeAt_reheap_store_ext; eauto.
   - eapply HActive; eauto.
   - eapply WTKontRuntime_store_ext; eauto.
-Qed.
-
-Lemma StoreExtends_refl :
-  forall stty,
-    StoreExtends stty stty.
-Proof.
-  intros stty k t HFind.
-  exact HFind.
-Qed.
-
-Lemma StoreExtends_trans :
-  forall stty1 stty2 stty3,
-    StoreExtends stty1 stty2 ->
-    StoreExtends stty2 stty3 ->
-    StoreExtends stty1 stty3.
-Proof.
-  intros stty1 stty2 stty3 HExt12 HExt23 k t HFind.
-  apply HExt23.
-  now apply HExt12.
 Qed.
 
 Lemma WTStateRuntimeHeapShapeAt_deref_done_step_preservation :
@@ -2961,6 +2943,260 @@ Proof.
     apply H_same_key_1.
 Qed.
 
+Theorem WTStateRuntimeHeapShapeAt_steps_trace_typed :
+  forall state tout stty trace state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    Steps state trace state' ->
+    exists stty',
+      WTStateRuntimeHeapShapeAt state' tout stty' /\
+      StoreExtends stty stty' /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros state tout stty trace state' HWT HSteps.
+  revert tout stty HWT.
+  induction HSteps as [state | state label state1 trace state2 HStep HSteps IH];
+    intros tout stty HWT.
+  - exists stty.
+    split; [exact HWT |].
+    split; [apply StoreExtends_refl | apply TcPhi_nil].
+  - destruct
+      (WTStateRuntimeHeapShapeAt_step_preservation
+        state tout stty label state1 HWT HStep)
+      as (stty1 & HWT1 & _ & _ & HExt1).
+    destruct (IH tout stty1 HWT1) as (stty2 & HWT2 & HExt2 & HTcTrace).
+    pose proof
+      (WTStateRuntimeHeapShapeAt_step_label_typed
+        state tout stty label state1 tout stty1 HWT HStep HWT1)
+      as HTcLabel1.
+    pose proof
+      (TcPhi_weaken
+        stty1 stty2 (trace_as_phi (label_trace label))
+        HExt2 HTcLabel1)
+      as HTcLabel2.
+    exists stty2.
+    split; [exact HWT2 |].
+    split; [eapply StoreExtends_trans; eauto |].
+    apply TcPhi_trace_as_phi_app; assumption.
+Qed.
+
+Lemma WTStateRuntimeHeapShapeAt_initial :
+  forall heap env rho e stty ctxt rgns t eff,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    WTStateRuntimeHeapShapeAt
+      (initial_state heap env rho e) (subst_rho rho t) stty.
+Proof.
+  intros heap env rho e stty ctxt rgns t eff
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp.
+  unfold initial_state.
+  eapply WTSRHSA_Eval with (ctxt := ctxt) (rgns := rgns) (t := t)
+    (eff := eff); eauto.
+  constructor.
+Qed.
+
+Theorem initial_state_steps_trace_typed :
+  forall heap env rho e stty ctxt rgns t eff trace state',
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    Steps (initial_state heap env rho e) trace state' ->
+    exists stty',
+      WTStateRuntimeHeapShapeAt state' (subst_rho rho t) stty' /\
+      StoreExtends stty stty' /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros heap env rho e stty ctxt rgns t eff trace state'
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  eapply WTStateRuntimeHeapShapeAt_steps_trace_typed; eauto.
+  eapply WTStateRuntimeHeapShapeAt_initial; eauto.
+Qed.
+
+Theorem WTStateRuntimeHeapShapeAt_steps_safety_with_trace :
+  PairParCheckDecidable ->
+  forall state tout stty trace state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    Steps state trace state' ->
+    exists stty',
+      WTStateRuntimeHeapShapeAt state' tout stty' /\
+      StoreExtends stty stty' /\
+      NotStuck state' /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros HDec state tout stty trace state' HWT HSteps.
+  destruct
+    (WTStateRuntimeHeapShapeAt_steps_trace_typed
+      state tout stty trace state' HWT HSteps)
+    as (stty' & HWT' & HExt & HTcTrace).
+  assert (HReady' : StateEvalHeadRegionsResolved state').
+  {
+    eapply WTStateRuntimeHeapShapeAt_eval_heads_resolved; eauto.
+  }
+  assert (HNotStuck' : NotStuck state').
+  {
+    eapply WTStateRuntimeHeapShape_not_stuck; eauto.
+    eapply WTStateRuntimeHeapShapeAt_forget; eauto.
+  }
+  exists stty'. split; [exact HWT' |].
+  split; [exact HExt |].
+  split; [exact HNotStuck' | exact HTcTrace].
+Qed.
+
+Theorem initial_state_steps_safety_with_trace :
+  PairParCheckDecidable ->
+  forall heap env rho e stty ctxt rgns t eff trace state',
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    Steps (initial_state heap env rho e) trace state' ->
+    exists stty',
+      WTStateRuntimeHeapShapeAt state' (subst_rho rho t) stty' /\
+      StoreExtends stty stty' /\
+      NotStuck state' /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros HDec heap env rho e stty ctxt rgns t eff trace state'
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  eapply WTStateRuntimeHeapShapeAt_steps_safety_with_trace; eauto.
+  eapply WTStateRuntimeHeapShapeAt_initial; eauto.
+Qed.
+
+Definition StateTraceSafeAt (state : State) (tout : Tau) (stty : Sigma) : Prop :=
+  forall trace state',
+    Steps state trace state' ->
+    exists stty',
+      WTStateRuntimeHeapShapeAt state' tout stty' /\
+      StoreExtends stty stty' /\
+      NotStuck state' /\
+      TcPhi stty' (trace_as_phi trace).
+
+Theorem WTStateRuntimeHeapShapeAt_trace_safe_typed :
+  PairParCheckDecidable ->
+  forall state tout stty,
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    StateTraceSafeAt state tout stty.
+Proof.
+  intros HDec state tout stty HWT trace state' HSteps.
+  eapply WTStateRuntimeHeapShapeAt_steps_safety_with_trace; eauto.
+Qed.
+
+Theorem initial_state_trace_safe_typed :
+  PairParCheckDecidable ->
+  forall heap env rho e stty ctxt rgns t eff,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    StateTraceSafeAt (initial_state heap env rho e) (subst_rho rho t) stty.
+Proof.
+  intros HDec heap env rho e stty ctxt rgns t eff
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp.
+  eapply WTStateRuntimeHeapShapeAt_trace_safe_typed; eauto.
+  eapply WTStateRuntimeHeapShapeAt_initial; eauto.
+Qed.
+
+Definition StateNeverStuck (state : State) : Prop :=
+  forall trace state',
+    Steps state trace state' ->
+    NotStuck state'.
+
+Theorem WTStateRuntimeHeapShapeAt_never_stuck_typed :
+  PairParCheckDecidable ->
+  forall state tout stty,
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    StateNeverStuck state.
+Proof.
+  intros HDec state tout stty HWT trace state' HSteps.
+  destruct
+    (WTStateRuntimeHeapShapeAt_steps_safety_with_trace
+      HDec state tout stty trace state' HWT HSteps)
+    as (_ & _ & _ & HNotStuck & _).
+  exact HNotStuck.
+Qed.
+
+Theorem initial_state_never_stuck_typed :
+  PairParCheckDecidable ->
+  forall heap env rho e stty ctxt rgns t eff,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    StateNeverStuck (initial_state heap env rho e).
+Proof.
+  intros HDec heap env rho e stty ctxt rgns t eff
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp.
+  eapply WTStateRuntimeHeapShapeAt_never_stuck_typed; eauto.
+  eapply WTStateRuntimeHeapShapeAt_initial; eauto.
+Qed.
+
+Lemma WTStateRuntimeHeapShapeAt_done_value :
+  forall heap v tout stty,
+    WTStateRuntimeHeapShapeAt (StDone heap v) tout stty ->
+    TcHeap (heap, stty) /\
+    RuntimeHeapShape heap stty /\
+    TcVal (stty, v, tout) /\
+    RuntimeValShape stty tout v.
+Proof.
+  intros heap v tout stty HWT.
+  dependent destruction HWT.
+  split; [exact H |].
+  split; [exact H0 |].
+  split; [exact H1 | exact H2].
+Qed.
+
+Theorem initial_state_terminal_value_with_trace :
+  forall heap env rho e stty ctxt rgns t eff trace heap' v,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    Steps (initial_state heap env rho e) trace (StDone heap' v) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v, subst_rho rho t) /\
+      RuntimeValShape stty' (subst_rho rho t) v /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros heap env rho e stty ctxt rgns t eff trace heap' v
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  destruct
+    (initial_state_steps_trace_typed
+      heap env rho e stty ctxt rgns t eff trace (StDone heap' v)
+      HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps)
+    as (stty' & HWT' & HExt & HTcTrace).
+  destruct
+    (WTStateRuntimeHeapShapeAt_done_value heap' v (subst_rho rho t) stty' HWT')
+    as (HTcHeap' & HHeapShape' & HTcVal' & HValShape').
+  exists stty'. split; [exact HExt |].
+  split; [exact HTcHeap' |].
+  split; [exact HHeapShape' |].
+  split; [exact HTcVal' |].
+  split; [exact HValShape' | exact HTcTrace].
+Qed.
+
 Lemma WTPairParStateRuntimeHeapShapeAtStrong_step_label_typed :
   forall state tout stty label state' stty',
     WTPairParStateRuntimeHeapShapeAtStrong state tout stty ->
@@ -3040,6 +3276,43 @@ Proof.
     apply TcPhi_trace_as_phi_app; assumption.
 Qed.
 
+Definition PairParTraceSafeAt
+    (state : PairParState) (tout : Tau) (stty : Sigma) : Prop :=
+  forall trace state',
+    PairParSteps state trace state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong state' tout stty' /\
+      StoreExtends stty stty' /\
+      PairParRunHeapsAgree state' /\
+      PairParNotStuck state' /\
+      TcPhi stty' (trace_as_phi trace).
+
+Theorem WTPairParStateRuntimeHeapShapeAtStrong_trace_safe_typed :
+  PairParCheckDecidable ->
+  forall state tout stty,
+    WTPairParStateRuntimeHeapShapeAtStrong state tout stty ->
+    PairParRunHeapsAgree state ->
+    PairParTraceSafeAt state tout stty.
+Proof.
+  intros HDec state tout stty HWT HAgree trace state' HSteps.
+  destruct
+    (WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed
+      state tout stty trace state' HWT HSteps)
+    as (stty' & HWT' & HExt & HTcTrace).
+  assert (HAgree' : PairParRunHeapsAgree state').
+  {
+    eapply pairpar_steps_preserve_heap_agreement; eauto.
+  }
+  pose proof
+    (WTPairParStateRuntimeHeapShapeAtStrong_never_stuck_typed
+      HDec state tout stty HWT HAgree)
+    as HNeverStuck.
+  exists stty'. split; [exact HWT' |].
+  split; [exact HExt |].
+  split; [exact HAgree' |].
+  split; [exact (HNeverStuck trace state' HSteps) | exact HTcTrace].
+Qed.
+
 Theorem pairpar_checked_initial_steps_trace_typed :
   forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     ty1 ty2 eff1 eff2 tout trace state',
@@ -3066,6 +3339,59 @@ Proof.
     HTcExp1 HTcExp2 HKont HSteps.
   eapply WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed; eauto.
   eapply WTPairParStateRuntimeHeapShapeAtStrong_checked_initial; eauto.
+Qed.
+
+Theorem pairpar_checked_initial_trace_safe_typed :
+  PairParCheckDecidable ->
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
+    PairParTraceSafeAt
+      (pairpar_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+      tout stty.
+Proof.
+  intros HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcExp1 HTcExp2 HKont.
+  eapply WTPairParStateRuntimeHeapShapeAtStrong_trace_safe_typed; eauto.
+  - eapply WTPairParStateRuntimeHeapShapeAtStrong_checked_initial; eauto.
+  - apply pairpar_checked_initial_heaps_agree.
+Qed.
+
+Theorem pairpar_checked_initial_kdone_trace_safe_typed :
+  PairParCheckDecidable ->
+  forall heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    ty1 ty2 eff1 eff2,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    PairParTraceSafeAt
+      (pairpar_checked_initial heap env rho ef1 ea1 ef2 ea2 KDone)
+      (subst_rho rho (Ty_Pair ty1 ty2)) stty.
+Proof.
+  intros HDec heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    ty1 ty2 eff1 eff2
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcExp1 HTcExp2.
+  eapply
+    (pairpar_checked_initial_trace_safe_typed
+      HDec heap env rho ef1 ea1 ef2 ea2 KDone stty ctxt rgns
+      ty1 ty2 eff1 eff2 (subst_rho rho (Ty_Pair ty1 ty2))); eauto.
+  constructor.
 Qed.
 
 Theorem pairpar_checked_initial_steps_safety_with_trace :

@@ -577,23 +577,6 @@ Inductive WTKontRuntime : Sigma -> Tau -> Tau -> Kont -> Prop :=
       WTKontRuntime stty Ty_Effect tout k ->
       WTKontRuntime stty Ty_Effect tout (KConcatR theta k).
 
-Definition StoreExtends (stty stty' : Sigma) : Prop :=
-  forall k t,
-    find_ST k stty = Some t ->
-    find_ST k stty' = Some t.
-
-Lemma StoreExtends_update_fresh :
-  forall stty k t,
-    find_ST k stty = None ->
-    StoreExtends stty (update_ST k t stty).
-Proof.
-  intros stty k t HFresh k0 t0 HFind.
-  unfold StoreExtends, find_ST, update_ST in *.
-  destruct (decide (k0 = k)); subst.
-  - rewrite HFresh in HFind. discriminate.
-  - eapply G_diff_keys_2; eauto.
-Qed.
-
 Lemma WTKontRuntime_store_ext :
   forall stty tin tout k,
     WTKontRuntime stty tin tout k ->

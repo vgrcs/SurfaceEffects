@@ -109,6 +109,14 @@ Fixpoint trace_as_phi (trace : Trace) : Phi :=
   | da :: trace' => Phi_Seq (Phi_Elem da) (trace_as_phi trace')
   end.
 
+Lemma phi_as_list_trace_as_phi :
+  forall trace,
+    phi_as_list (trace_as_phi trace) = trace.
+Proof.
+  induction trace as [| da trace IH]; simpl; auto.
+  now rewrite IH.
+Qed.
+
 Lemma TcPhi_seq_inv_l :
   forall stty phi1 phi2,
     TcPhi stty (Phi_Seq phi1 phi2) ->

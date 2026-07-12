@@ -176,13 +176,29 @@ checked pair expression itself, and
 typed/runtime-shaped pair components. `TraceTypingFacts.v` now bridges linear
 small-step traces to sequential `Phi` summaries via `trace_as_phi`; using that
 bridge, `SmallStepParallelPreservation.v` proves
+`WTStateRuntimeHeapShapeAt_steps_trace_typed` for ordinary finite `Steps` traces
+and the initial-state wrappers `initial_state_steps_trace_typed` and
+`initial_state_terminal_value_with_trace`. The ordinary safety wrappers
+`WTStateRuntimeHeapShapeAt_steps_safety_with_trace` and
+`initial_state_steps_safety_with_trace` add not-stuckness to the same
+preservation, store-extension, and trace-typing package. The ordinary
+finite-prefix safety statements `WTStateRuntimeHeapShapeAt_never_stuck_typed`
+and `initial_state_never_stuck_typed` expose the same nonterminating-program
+safety idea without requiring a terminal state. The compact predicate
+`StateTraceSafeAt` and wrappers `WTStateRuntimeHeapShapeAt_trace_safe_typed` and
+`initial_state_trace_safe_typed` package ordinary finite-prefix preservation,
+store extension, not-stuckness, and trace typing under one name. It also proves
 `WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed` plus the checked
 corollary `pairpar_checked_initial_steps_trace_typed`, so every finite checked
 interleaving trace is accompanied by a `TcPhi` proof at the reached store. The
 packaged safety corollaries `pairpar_checked_initial_steps_safety_with_trace`
 and `pairpar_checked_initial_kdone_steps_safety_with_trace` combine that trace
 typing evidence with preservation, store extension, branch heap agreement, and
-not-stuckness. Terminal wrappers
+not-stuckness. The pair-level predicate `PairParTraceSafeAt` and wrappers
+`WTPairParStateRuntimeHeapShapeAtStrong_trace_safe_typed`,
+`pairpar_checked_initial_trace_safe_typed`, and
+`pairpar_checked_initial_kdone_trace_safe_typed` give the same compact
+finite-prefix safety package for checked interleavings. Terminal wrappers
 `pairpar_checked_initial_terminal_value_with_trace`,
 `pairpar_checked_initial_kdone_terminal_value_with_trace`, and
 `pairpar_checked_initial_kdone_terminal_pair_with_trace` carry the same trace
@@ -299,7 +315,19 @@ statements to output type `subst_rho rho (Ty_Pair ty1 ty2)`.
 as `Pair (v1, v2)` with components typed and runtime-shaped at
 `subst_rho rho ty1` and `subst_rho rho ty2`. The generic trace bridge
 `trace_as_phi` lives in `TraceTypingFacts.v` and turns emitted dynamic-action
-lists into sequential `Phi` summaries. Using it,
+lists into sequential `Phi` summaries; `phi_as_list_trace_as_phi` proves that
+converting the summary back with `phi_as_list` recovers the original trace.
+Using it,
+`WTStateRuntimeHeapShapeAt_steps_trace_typed` proves that ordinary finite
+`Steps` traces preserve explicit typing and produce `TcPhi` evidence at the
+final store. The wrappers `WTStateRuntimeHeapShapeAt_steps_safety_with_trace`
+and `initial_state_steps_safety_with_trace` add not-stuckness, while
+`WTStateRuntimeHeapShapeAt_never_stuck_typed` and
+`initial_state_never_stuck_typed` expose finite-prefix safety for potentially
+diverging ordinary executions. `StateTraceSafeAt` packages these ordinary
+finite-prefix conclusions into a reusable predicate.
+`initial_state_terminal_value_with_trace` specializes the result to terminating
+initial states.
 `WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed` proves that finite
 checked interleavings produce traces satisfying `TcPhi` at the final store. The
 checked-initial wrapper `pairpar_checked_initial_steps_trace_typed` packages the
@@ -309,12 +337,15 @@ same result for the surface-effect checked branch, and the safety wrappers
 alongside the existing not-stuck and preservation conclusions. The terminal
 variants ending in `_with_trace` similarly expose `TcPhi` evidence for final
 values and decomposed final pairs.
+`PairParTraceSafeAt` packages the checked-interleaving finite-prefix conclusions
+under one predicate.
 Trace replay and read-only trace/evaluation lemmas have been moved from
 `HeapFacts.v` into `TraceFacts.v`, and downstream files now import the trace
 facts explicitly when they need them. The old compatibility wrappers have also
-been removed from `_CoqProject`. Store-extension facts now live in
-`StoreFacts.v`, and the trace typing invariant plus its heap-replay lemmas live
-in `TraceTypingFacts.v`. Generic finite-map lookup/update lemmas live in
+been removed from `_CoqProject`. The `StoreExtends` relation and its basic
+reflexivity, transitivity, and fresh-update facts now live in `StoreFacts.v`,
+and the trace typing invariant plus its heap-replay lemmas live in
+`TraceTypingFacts.v`. Generic finite-map lookup/update lemmas live in
 `MapFacts.v`, store-weakening facts live in `TypingWeakeningFacts.v`, and
 low-level region substitution/fold lemmas live in `RegionSubstitutionFacts.v`.
 `RegionFacts.v` now keeps the higher-level `TcRho` no-free-vars theorem family.

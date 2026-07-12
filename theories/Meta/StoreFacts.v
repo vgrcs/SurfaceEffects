@@ -5,6 +5,7 @@ From stdpp Require Import list.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
 Require Import theories.Core.Values.
+Require Import theories.Meta.MapFacts.
 Require Import theories.Meta.RegionFacts.
 Require Import theories.Meta.TypingWeakeningFacts.
 
@@ -119,6 +120,42 @@ forall stty stty',
 Proof.
   intros stty stty' H.
   apply map_subseteq_spec. auto.
+Qed.
+
+Definition StoreExtends (stty stty' : Sigma) : Prop :=
+  forall k t,
+    find_ST k stty = Some t ->
+    find_ST k stty' = Some t.
+
+Lemma StoreExtends_refl :
+  forall stty,
+    StoreExtends stty stty.
+Proof.
+  intros stty k t HFind.
+  exact HFind.
+Qed.
+
+Lemma StoreExtends_trans :
+  forall stty1 stty2 stty3,
+    StoreExtends stty1 stty2 ->
+    StoreExtends stty2 stty3 ->
+    StoreExtends stty1 stty3.
+Proof.
+  intros stty1 stty2 stty3 HExt12 HExt23 k t HFind.
+  apply HExt23.
+  now apply HExt12.
+Qed.
+
+Lemma StoreExtends_update_fresh :
+  forall stty k t,
+    find_ST k stty = None ->
+    StoreExtends stty (update_ST k t stty).
+Proof.
+  intros stty k t HFresh k0 t0 HFind.
+  unfold StoreExtends, find_ST, update_ST in *.
+  destruct (decide (k0 = k)); subst.
+  - rewrite HFresh in HFind. discriminate.
+  - eapply G_diff_keys_2; eauto.
 Qed.
 
 Lemma TcValExtended_2:
