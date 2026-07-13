@@ -1,4 +1,5 @@
 From stdpp Require Import gmap.
+From stdpp Require Import fin_maps.
 Require Import Coq.Program.Equality.
 
 Require Import theories.Core.DynamicActions.
@@ -10,6 +11,7 @@ Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
 Require Import theories.Meta.TypingWeakeningFacts.
 Require Import theories.Meta.HeapFacts.
+Require Import theories.Meta.StoreFacts.
 
 Inductive Phi_Updates : SigmaKey -> Val -> Phi -> Prop :=
 | PU_Alloc : forall r l v,
@@ -525,4 +527,113 @@ Proof.
               (or_introl HAlloc)) as [HNilAlloc | HDone].
   - exfalso. eapply Phi_Allocates_nil_false; eauto.
   - assumption.
+Qed.
+
+Lemma TcHeap_Extended_PhiPar :
+  forall heap phi1 phi2 heap1 heap2 stty stty1 stty2 hp',
+    heap1 ∖ heap ##ₘ heap2 ∖ heap ->
+    (phi1, heap) ==>* (Phi_Nil, heap1) ->
+    (phi2, heap) ==>* (Phi_Nil, heap2) ->
+    (Phi_Par phi1 phi2, heap) ==>* (Phi_Nil, hp') ->
+    TcPhi stty1 phi1 ->
+    TcPhi stty2 phi2 ->
+    TcHeap (heap, stty) ->
+    StoreExtends stty stty1 ->
+    StoreExtends stty stty2 ->
+    TcHeap (heap1, stty1) ->
+    TcHeap (heap2, stty2) ->
+    TcHeap (hp', stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty)).
+Proof.
+  intros heap phi1 phi2 heap1 heap2 stty stty1 stty2 hp'
+    HheapDisj Hsteps1 Hsteps2 Hpar HTcPhi1 HTcPhi2
+    HTcHeap Hext1 Hext2 HTcHeap1 HTcHeap2.
+  assert (HsttyDisj : stty1 ∖ stty ##ₘ stty2 ∖ stty)
+    by (eapply djt_heap_implies_djt_stty; eauto).
+  constructor.
+  - intros k v HfindHp.
+    destruct (Phi_Heap_Steps_lookup_source
+                (Phi_Par phi1 phi2) heap Phi_Nil hp' k v Hpar HfindHp)
+      as [HfindBase | Hupdate].
+    + inversion HTcHeap as [? ? HHeapStore _ _]; subst.
+      destruct (HHeapStore k v HfindBase) as [t HfindStty].
+      exists t. eapply StoreTyping_Extended_Base; eauto.
+    + inversion Hupdate; subst.
+      * match goal with
+        | H : Phi_Updates k v phi1 |- _ =>
+            destruct (HTcPhi1 k v H) as [t [HfindStty1 _]]
+        end.
+        exists t. eapply StoreTyping_Extended_Left; eauto.
+      * match goal with
+        | H : Phi_Updates k v phi2 |- _ =>
+            destruct (HTcPhi2 k v H) as [t [HfindStty2 _]]
+        end.
+        exists t. eapply StoreTyping_Extended_Right; eauto.
+  - intros k t HfindStore.
+    unfold find_ST in HfindStore.
+    apply lookup_union_Some_raw in HfindStore.
+    destruct HfindStore as [HfindBaseStore | [HbaseNone HfindDiffs]].
+    + inversion HTcHeap as [? ? _ HStoreHeap _]; subst.
+      destruct (HStoreHeap k t HfindBaseStore) as [v HfindHeap].
+      eapply Phi_Heap_Steps_preserves_domain; eauto.
+    + apply lookup_union_Some_raw in HfindDiffs.
+      destruct HfindDiffs as [HfindDiff1 | [_ HfindDiff2]].
+      * apply lookup_difference_Some in HfindDiff1.
+        destruct HfindDiff1 as [HfindStty1 HfindBaseNone].
+        inversion HTcHeap1 as [? ? _ HStoreHeap1 _]; subst.
+        destruct (HStoreHeap1 k t HfindStty1) as [v HfindHeap1].
+        assert (HfindHeapNone : find_H k heap = None).
+        { eapply TcHeap_none_implies_none; eauto. }
+        assert (Halloc : Phi_Allocates k phi1).
+        { eapply Phi_Heap_Steps_alloc_source; eauto. }
+        eapply Phi_Heap_Steps_alloc_done; eauto.
+        now apply PA_Par_L.
+      * apply lookup_difference_Some in HfindDiff2.
+        destruct HfindDiff2 as [HfindStty2 HfindBaseNone].
+        inversion HTcHeap2 as [? ? _ HStoreHeap2 _]; subst.
+        destruct (HStoreHeap2 k t HfindStty2) as [v HfindHeap2].
+        assert (HfindHeapNone : find_H k heap = None).
+        { eapply TcHeap_none_implies_none; eauto. }
+        assert (Halloc : Phi_Allocates k phi2).
+        { eapply Phi_Heap_Steps_alloc_source; eauto. }
+        eapply Phi_Heap_Steps_alloc_done; eauto.
+        now apply PA_Par_R.
+  - intros k v t HfindHp HfindStore.
+    destruct (Phi_Heap_Steps_lookup_source
+                (Phi_Par phi1 phi2) heap Phi_Nil hp' k v Hpar HfindHp)
+      as [HfindBase | Hupdate].
+    + inversion HTcHeap as [? ? HHeapStore _ HHeapVals]; subst.
+      destruct (HHeapStore k v HfindBase) as [t0 HfindStty].
+      assert (HfindStore0 :
+                find_ST k (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty)) = Some t0)
+        by (eapply StoreTyping_Extended_Base; eauto).
+      assert (t = t0)
+        by (eapply PairType_unique_type; eauto).
+      subst.
+      eapply ext_stores__val with (stty:=stty); eauto.
+      intros l t' Hfind. eapply StoreTyping_Extended_Base; eauto.
+    + inversion Hupdate; subst.
+      * match goal with
+        | H : Phi_Updates k v phi1 |- _ =>
+            destruct (HTcPhi1 k v H) as [t1 [HfindStty1 HTcVal1]]
+        end.
+        assert (HfindStore1 :
+                  find_ST k (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty)) = Some t1)
+          by (eapply StoreTyping_Extended_Left; eauto).
+        assert (t = t1)
+          by (eapply PairType_unique_type; eauto).
+        subst.
+        eapply ext_stores__val with (stty:=stty1); eauto.
+        intros l t' Hfind. eapply StoreTyping_Extended_Left; eauto.
+      * match goal with
+        | H : Phi_Updates k v phi2 |- _ =>
+            destruct (HTcPhi2 k v H) as [t2 [HfindStty2 HTcVal2]]
+        end.
+        assert (HfindStore2 :
+                  find_ST k (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty)) = Some t2)
+          by (eapply StoreTyping_Extended_Right; eauto).
+        assert (t = t2)
+          by (eapply PairType_unique_type; eauto).
+        subst.
+        eapply ext_stores__val with (stty:=stty2); eauto.
+        intros l t' Hfind. eapply StoreTyping_Extended_Right; eauto.
 Qed.

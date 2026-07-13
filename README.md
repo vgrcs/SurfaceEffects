@@ -109,6 +109,8 @@ theories/
     SmallStepParallelCheckedTerminal.v
     SmallStepParallelTraceSafety.v
     SmallStepSequentialSoundness.v
+    SmallStepStructuredTrace.v
+    SmallStepPaperTheorems.v
 
   Typing/
     TypeSyntax.v
@@ -229,7 +231,21 @@ checked-initial terminal extractors ending in `_with_trace`, including
 start state while the ordinary continuation path begins with the first
 computational application, and a failed check steps directly into that same
 sequential fallback path. It also provides typed wrappers for fallback
-preservation and checked-interleaving trace safety.
+preservation, checked-interleaving trace safety, and terminal-value extraction
+after the decidable check split.
+`SmallStepStructuredTrace.v` adds an instrumented `Phi`-trace layer for future
+adequacy work. It keeps ordinary finite-prefix traces available as structured
+`StepsPhi`, records checked computation steps with separate left/right branch
+traces, and gives `Pair_Par` trace shapes whose effect-summary phase is
+`Phi_Par`-structured before either checked computation branches or sequential
+fallback. It also proves the structured checked/fallback split
+`pairpar_check_decidable_phi_trace_safe` and terminal extractor
+`pairpar_check_decidable_phi_terminal_value`, plus terminal component
+extractors for successful checked runs and sequential fallback runs.
+`SmallStepPaperTheorems.v` provides stable paper-facing theorem names:
+`PaperSmallStepFinitePrefixSafety`, `PaperSmallStepTerminalSoundness`,
+`PaperPairParCheckedOrFallbackTraceSafety`, and
+`PaperPairParCheckedOrFallbackTerminalSoundness`.
 `SmallStepTyping.v` introduces the first lightweight
 `WTKont` and `WTState` invariants plus indexed
 `WTKontTyped`/`WTStateTyped` relations for the preservation proof to build on.
@@ -402,7 +418,29 @@ target preserves explicit runtime typing,
 finite-prefix trace safety, `pairpar_check_pass_checked_trace_safe` connects a
 successful check to the safe checked interleaving theorem, and
 `pairpar_check_decidable_trace_safe` packages the success/failure trace-safety
-split in one theorem.
+split in one theorem. `pairpar_check_decidable_terminal_value` adds the matching
+terminal-value extractor for both checked and fallback outcomes.
+`SmallStepPaperTheorems.v` re-exposes these results through the stable names
+`PaperSmallStepFinitePrefixSafety`, `PaperSmallStepTerminalSoundness`,
+`PaperPairParCheckedOrFallbackTraceSafety`, and
+`PaperPairParCheckedOrFallbackTerminalSoundness`.
+`SmallStepStructuredTrace.v` is the first adequacy-oriented trace layer: it
+does not replace the paper-facing list-trace theorems, but it records the
+branch structure needed to align future small-step terminal runs with the
+big-step trace shape
+`Phi_Seq (Phi_Par acts_eff1 acts_eff2) (Phi_Par acts_mu1 acts_mu2)`. Its
+structured checked-trace predicate `PairParPhiTraceSafeAt` preserves heap
+agreement, not-stuckness, and typed `Phi` evidence for each branch component.
+The component extractors keep independent effect-summary store typings visible,
+while `StepsPhi_replays_heap` supplies heap replay for ordinary structured
+small-step traces. `PairParStepsPhi_run_split_replays_heap` and
+`PairParStepsPhi_checked_replays_heap` now replay the successful checked
+computation as a branch-parallel `Phi_Par` phase followed by the continuation
+trace. `PairParBranchReplayWitness` records the independent branch replay
+premises needed for heap joining, and
+`PairParStepsPhi_checked_branch_replay_join` combines those premises with the
+checked run to invoke `TcHeap_Extended_PhiPar`. The next adequacy-side gap is
+to derive that witness from checked-disjointness and trace soundness.
 Trace replay and read-only trace/evaluation lemmas have been moved from
 `HeapFacts.v` into `TraceFacts.v`, and downstream files now import the trace
 facts explicitly when they need them. The old compatibility wrappers have also

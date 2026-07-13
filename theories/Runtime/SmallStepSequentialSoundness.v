@@ -22,6 +22,7 @@ Require Import theories.Core.StaticActions.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
 Require Import theories.Meta.StoreFacts.
+Require Import theories.Meta.TraceTypingFacts.
 
 Definition PairParCheckPass (theta1 theta2 : Theta) : Prop :=
   Disjointness theta1 theta2 /\ ~ Conflictness theta1 theta2.
@@ -337,4 +338,74 @@ Proof.
     eapply pairpar_check_pass_checked_trace_safe; eauto.
   - right. split; [exact HFail |].
     eapply pairpar_check_fail_sequential_trace_safe; eauto.
+Qed.
+
+Theorem pairpar_check_decidable_terminal_value :
+  PairParCheckDecidable ->
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout theta1 theta2,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
+    (PairParCheckPass theta1 theta2 /\
+      forall trace heap' v,
+        PairParSteps
+          (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+          trace (PPS_State (StDone heap' v)) ->
+        exists stty',
+          StoreExtends stty stty' /\
+          TcHeap (heap', stty') /\
+          RuntimeHeapShape heap' stty' /\
+          TcVal (stty', v, tout) /\
+          RuntimeValShape stty' tout v /\
+          TcPhi stty' (trace_as_phi trace)) \/
+    (PairParCheckFail theta1 theta2 /\
+      forall trace heap' v,
+        Steps
+          (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
+          trace (StDone heap' v) ->
+        exists stty',
+          StoreExtends stty stty' /\
+          TcHeap (heap', stty') /\
+          RuntimeHeapShape heap' stty' /\
+          TcVal (stty', v, tout) /\
+          RuntimeValShape stty' tout v /\
+          TcPhi stty' (trace_as_phi trace)).
+Proof.
+  intros HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout theta1 theta2
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcExp1 HTcExp2 HKont.
+  destruct
+    (pairpar_check_decidable_trace_safe
+      HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+      ty1 ty2 eff1 eff2 tout theta1 theta2
+      HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+      HTcExp1 HTcExp2 HKont)
+    as [(HPass & HSafe) | (HFail & stty_seq & HExtSeq & HSafe)].
+  - left.
+    split; [exact HPass |].
+    intros trace heap' v HSteps.
+    eapply PairParTraceSafeAt_terminal_value; eauto.
+  - right.
+    split; [exact HFail |].
+    intros trace heap' v HSteps.
+    destruct
+      (StateTraceSafeAt_terminal_value
+        (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
+        tout stty_seq trace heap' v HSafe HSteps)
+      as (stty' & HExtFinal & HTcHeap' & HHeapShape' & HTcVal' &
+          HValShape' & HTcTrace).
+    exists stty'. split.
+    + eapply StoreExtends_trans; eauto.
+    + split; [exact HTcHeap' |].
+      split; [exact HHeapShape' |].
+      split; [exact HTcVal' |].
+      split; [exact HValShape' | exact HTcTrace].
 Qed.

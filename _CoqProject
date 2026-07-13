@@ -60,6 +60,8 @@ theories/Runtime/SmallStepParallelCheckedTraceSafety.v
 theories/Runtime/SmallStepParallelCheckedTerminal.v
 theories/Runtime/SmallStepParallelTraceSafety.v
 theories/Runtime/SmallStepSequentialSoundness.v
+theories/Runtime/SmallStepStructuredTrace.v
+theories/Runtime/SmallStepPaperTheorems.v
 theories/Meta/LocallyNameless.v
 theories/Meta/MapFacts.v
 theories/Meta/RegionSubstitutionFacts.v
