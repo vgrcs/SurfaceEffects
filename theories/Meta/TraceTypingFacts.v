@@ -1,5 +1,6 @@
 From stdpp Require Import gmap.
 From stdpp Require Import fin_maps.
+From Stdlib Require Import List.
 Require Import Coq.Program.Equality.
 
 Require Import theories.Core.DynamicActions.
@@ -527,6 +528,71 @@ Proof.
               (or_introl HAlloc)) as [HNilAlloc | HDone].
   - exfalso. eapply Phi_Allocates_nil_false; eauto.
   - assumption.
+Qed.
+
+Lemma Phi_Allocates_in_phi_as_list :
+  forall k phi,
+    Phi_Allocates k phi ->
+    exists v,
+      In (DA_Alloc (fst k) (snd k) v) (phi_as_list phi).
+Proof.
+  intros k phi HAlloc.
+  induction HAlloc; simpl.
+  - exists v. left. reflexivity.
+  - destruct IHHAlloc as [v HIn].
+    exists v. apply in_or_app. now left.
+  - destruct IHHAlloc as [v HIn].
+    exists v. apply in_or_app. now right.
+  - destruct IHHAlloc as [v HIn].
+    exists v. apply in_or_app. now left.
+  - destruct IHHAlloc as [v HIn].
+    exists v. apply in_or_app. now right.
+Qed.
+
+Lemma Disjoint_Traces_no_common_alloc :
+  forall phi1 phi2 k,
+    Disjoint_Traces (phi_as_list phi1) (phi_as_list phi2) ->
+    Phi_Allocates k phi1 ->
+    Phi_Allocates k phi2 ->
+    False.
+Proof.
+  intros phi1 phi2 k HDisjoint HAlloc1 HAlloc2.
+  destruct k as [r l].
+  destruct (Phi_Allocates_in_phi_as_list (r, l) phi1 HAlloc1)
+    as [v1 HIn1].
+  destruct (Phi_Allocates_in_phi_as_list (r, l) phi2 HAlloc2)
+    as [v2 HIn2].
+  simpl in *.
+  inversion HDisjoint as [? ? HDisjointActions]; subst.
+  pose proof
+    (HDisjointActions
+      (DA_Alloc r l v1) (DA_Alloc r l v2) HIn1 HIn2)
+    as HDynamicDisjoint.
+  inversion HDynamicDisjoint; subst.
+  match goal with
+  | Hneq : (r, l) <> (r, l) |- _ => apply Hneq; reflexivity
+  end.
+Qed.
+
+Lemma Phi_Heap_Steps_disjoint_deltas :
+  forall phi1 phi2 heap heap1 heap2,
+    Disjoint_Traces (phi_as_list phi1) (phi_as_list phi2) ->
+    (phi1, heap) ==>* (Phi_Nil, heap1) ->
+    (phi2, heap) ==>* (Phi_Nil, heap2) ->
+    heap1 ∖ heap ##ₘ heap2 ∖ heap.
+Proof.
+  intros phi1 phi2 heap heap1 heap2 HDisjoint HSteps1 HSteps2.
+  apply map_disjoint_spec.
+  intros k v1 v2 HFind1 HFind2.
+  apply lookup_difference_Some in HFind1.
+  apply lookup_difference_Some in HFind2.
+  destruct HFind1 as [HFindHeap1 HBaseNone1].
+  destruct HFind2 as [HFindHeap2 HBaseNone2].
+  assert (HAlloc1 : Phi_Allocates k phi1).
+  { eapply Phi_Heap_Steps_alloc_source; eauto. }
+  assert (HAlloc2 : Phi_Allocates k phi2).
+  { eapply Phi_Heap_Steps_alloc_source; eauto. }
+  eapply Disjoint_Traces_no_common_alloc; eauto.
 Qed.
 
 Lemma TcHeap_Extended_PhiPar :

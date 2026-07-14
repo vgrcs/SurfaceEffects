@@ -90,7 +90,11 @@ The runtime proof stack is now stratified into explicit dependency layers:
   success/failure trace-safety theorem surface.
 - `SmallStepStructuredTrace.v`: adequacy-oriented `Phi` trace instrumentation,
   including branch-structured effect-summary traces.
+- `SmallStepEffectSoundness.v`: effect-budgeted continuation/state invariant
+  for the future small-step static-effect soundness theorem.
 - `SmallStepPaperTheorems.v`: stable theorem names for paper citations.
+- `Determinism/SmallStepStructuredReplay.v`: theta-soundness bridge from
+  checked-disjoint surface summaries to branch replay/join witnesses.
 
 The facade modules remain for stable imports, but non-facade runtime files now
 avoid importing the broad facades directly.
@@ -396,6 +400,54 @@ Important definitions and theorems:
   is the ordinary small-step finite-prefix relation indexed directly by a
   structured `Phi` trace rather than by `list DynamicAction`.
 
+- `Phi_Static_Effect` and `Phi_Static_Effect_sound`
+  live in `theories/Meta/EffectFacts.v`. They compute a precise static-action
+  envelope for any structured dynamic trace and prove that the trace is sound
+  with respect to that envelope.
+
+- `Phi_Static_Effect_least` and
+  `Epsilon_Phi_Soundness_iff_phi_static_included`
+  prove that this envelope is the least static effect that can justify the
+  trace. Consequently, the remaining declared-effect goal can be stated as an
+  inclusion:
+  `Included StaticAction (Phi_Static_Effect phi) (fold_subst_eps rho static_eff)`.
+
+- `fold_dist_union`, `fold_subst_rgn_mk_rgn_type_find_R`, and the
+  `Epsilon_Phi_Soundness_*_find_R` lemmas live in
+  `theories/Meta/EffectFacts.v`. They connect a runtime region lookup
+  `find_R w rho = Some r` to the folded singleton static effects for
+  allocation, read, and write labels. These are the per-frame facts needed by
+  the `WTKontEffect` continuation budget invariant.
+
+- `label_phi_static_sound` and `StepsPhi_trace_static_sound`
+  expose the same self-soundness property at the small-step label and
+  structured-run levels.
+
+- `WTKontEffect` and `WTStateEffectAt`
+  live in `theories/Runtime/SmallStepEffectSoundness.v`. They refine the
+  existing runtime continuation/state typing with an explicit static-effect
+  budget.
+
+- `WTKontEffect_forget`, `WTStateEffectAt_forget`, and
+  `WTStateEffectAt_initial`
+  prove that the effect-budgeted invariant is conservative over the existing
+  explicit-store runtime typing and is available for initially typed states.
+
+- `WTKontEffect_ref_done_label_included`,
+  `WTKontEffect_deref_done_label_included`, and
+  `WTKontEffect_assign_done_label_included`
+  prove the first dynamic-label budget cases: allocation, read, and write
+  labels emitted by continuation frames are included in the frame's static
+  budget.
+
+- `WTStateEffectAt_*_step_budget` lemmas cover all ordinary `Step`
+  constructors, including closure-entry/body cases and `Pair_Par`
+  checked/fallback frames. `WTStateEffectAt_step_budget` assembles the case
+  library into a one-step static-effect budget theorem, and
+  `WTStateEffectAt_steps_budget` lifts it to finite `Steps` prefixes:
+  the static effect computed from `trace_as_phi trace` plus the residual
+  state budget is included in the original declared budget.
+
 - `WTStateRuntimeHeapShapeAt_steps_phi_trace_typed`
   proves that explicitly typed ordinary states remain explicitly typed and
   emit a well-typed structured trace.
@@ -449,6 +501,123 @@ Important definitions and theorems:
   the checked run supplies the `Phi_Par` replay and the continuation replay,
   while the branch witnesses supply the per-branch replay/typing hypotheses
   needed for the heap/store join.
+
+- `PairParStepsPhi_checked_pass_sound_branch_steps_join`
+  lives in `theories/Determinism/SmallStepStructuredReplay.v`. It derives trace
+  disjointness from `phi_left ⋞ theta_left`, `phi_right ⋞ theta_right`, and
+  `PairParCheckPass theta_left theta_right`, then combines independent branch
+  `StepsPhi` runs with the checked interleaving run to produce the replay
+  witness and joined heap typing.
+
+- `pairpar_check_pass_steps_phi_to_sequential`
+  prefixes any ordinary sequential continuation run with the successful
+  check-state step. This records that the source `Pair_Par` machine still steps
+  to the ordinary sequential tuple continuation after a successful check.
+
+- `pairpar_check_fail_steps_phi_to_fallback`
+  prefixes any ordinary fallback run with the failed check-state step.
+
+- `PairParCheckedStructuredStepsPhi_source_check_dispatch`
+  decomposes a successful structured checked run into its effect-summary traces,
+  pass evidence, the ordinary source check-state step, and the separate checked
+  interleaving run.
+
+- `PairParFallbackStructuredStepsPhi_erases_from_check_state`
+  proves that a structured fallback run erases to an ordinary `StepsPhi` prefix
+  from the source check state to the fallback result.
+
+- `StepsPhi_initial_terminal_continue`
+  is the generic continuation-lifting bridge: a terminal `KDone` run can be
+  replayed under another continuation by replacing the final `Step_Done` with
+  the continuation's next silent step.
+
+- `StepsPhi_readonly_preserves_heap`
+  reuses `ReadOnlyPhi_Heap_Steps_preserves_heap` through `StepsPhi_replays_heap`
+  to show that any read-only structured small-step trace leaves the heap
+  unchanged.
+
+- `StepsPhi_readonly_static_effect_preserves_heap`
+  derives the same heap-neutrality result from
+  `ReadOnlyStatic (Phi_Static_Effect phi)` plus the generic trace
+  self-soundness theorem.
+
+- `PairParSequentialEffectSummaryStepsPhi`
+  records the ordinary source order for the effect-summary phase. The first
+  summary starts from the original heap; the second starts from the heap
+  produced by the first summary.
+
+- `pairpar_effect_summary_steps_phi_heap_neutral`
+  specializes read-only heap preservation to one terminating effect-summary
+  evaluation.
+
+- `effect_summary_trace_readonly_from_static_soundness`
+  ports the old big-step proof pattern: static read-only plus
+  `Epsilon_Phi_Soundness` gives `ReadOnlyPhi`.
+
+- `pairpar_effect_summary_steps_phi_readonly_from_static_soundness`
+  specializes that wrapper to one terminating structured small-step
+  effect-summary run.
+
+- `PairParEffectSummaryStepsPhi_sequential_when_first_heap_unchanged`
+  turns independent summary witnesses into source-sequential summary witnesses
+  when the first summary leaves the heap unchanged.
+
+- `PairParSequentialEffectSummaryStepsPhi_independent_when_first_heap_unchanged`
+  turns source-sequential summary witnesses back into independent summary
+  witnesses under the same heap-neutrality assumption.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_pass_prefix`
+  proves that a source-initial `Pair_Par` expression reaches the ordinary
+  sequential tuple start after a successful check, with an erased dynamic trace
+  equal to the two sequential summary traces.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_fail_prefix`
+  proves the same source-prefix result for failed checks and fallback.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_pass_independent_prefix`
+  combines the source pass prefix with the independent summary witness when the
+  first effect-summary trace is read-only.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_fail_independent_prefix`
+  gives the analogous combined bridge for failed checks.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_pass_static_sound_prefix`
+  replaces the raw `ReadOnlyPhi` premise with the old static-read-only plus
+  `Epsilon_Phi_Soundness` pattern in the pass case.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_fail_static_sound_prefix`
+  gives the analogous static-soundness wrapper for failed checks.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_pass_static_included_prefix`
+  and `PairParSequentialEffectSummaryStepsPhi_source_fail_static_included_prefix`
+  are the inclusion-shaped versions of the previous two theorems. They replace
+  the `Epsilon_Phi_Soundness` premise with
+  `Included StaticAction (Phi_Static_Effect phi_eff1)
+     (fold_subst_eps rho static_eff1)`.
+
+- `PairParSequentialEffectSummaryStepsPhi_source_pass_trace_static_prefix`
+  and `PairParSequentialEffectSummaryStepsPhi_source_fail_trace_static_prefix`
+  use the trace's own computed static envelope instead of a declared source
+  effect. These are staging theorems for adequacy work: they prove the
+  source-prefix/independent-summary bridge whenever the first summary trace's
+  computed static envelope is read-only.
+
+- `PairPar_source_static_summary_checked_branch_join_exists`
+  lives in `theories/Determinism/SmallStepStructuredReplay.v`. It packages the
+  source summary prefix, the independent summary witness, and the checked
+  computation branch replay/join into one theorem under the static-read-only
+  plus `Epsilon_Phi_Soundness` assumptions for the first summary.
+
+- `PairPar_source_trace_static_summary_checked_branch_join_exists`
+  is the corresponding staging theorem under
+  `ReadOnlyStatic (Phi_Static_Effect phi_eff1)`. It avoids any new semantic
+  commitment about declared source effects while preserving the same source
+  prefix and checked branch replay/join conclusion.
+
+- `PairPar_source_static_included_summary_checked_branch_join_exists`
+  packages the same replay/join conclusion under the declared-effect inclusion
+  premise. This is the theorem the future small-step static-effect soundness
+  proof should feed directly.
 
 - `pairpar_check_decidable_phi_trace_safe`
   is the structured-trace counterpart of
@@ -517,9 +686,28 @@ ordinary structured runs such as effect-summary branches and fallback runs, and
 `PairParStepsPhi_checked_replays_heap` supplies replay for the whole checked
 computation trace. The new `PairParBranchReplayWitness` and
 `PairParStepsPhi_checked_branch_replay_join` bridge the replay facts to
-`TcHeap_Extended_PhiPar` once independent branch witnesses are available. The
-remaining independence gap is to derive those witnesses from checked
-disjointness plus trace soundness, rather than assuming them as premises.
+`TcHeap_Extended_PhiPar` once independent branch witnesses are available.
+`SmallStepStructuredReplay.v` now derives the trace-disjointness part from
+checked-disjointness plus trace soundness and packages the result for
+independent branch `StepsPhi` runs. The meta layer also gives a computed static
+envelope for any structured trace (`Phi_Static_Effect`), proves that every
+trace is sound with respect to that envelope, and proves that the envelope is
+least among all sound static effects for the trace. The check-state bridge is now explicit:
+successful checks expose both the ordinary source step to the sequential tuple
+continuation and the separate structured checked interleaving relation, while
+failed structured runs erase to an ordinary fallback `StepsPhi` prefix. The
+source-initial effect-summary prefix is also explicit for the sequential source
+order, and the source-sequential and independent summary relations coincide
+when the first summary is heap-neutral. Read-only traces are now proved
+heap-neutral, and the source-prefix bridge packages the independent summary
+witness under a `ReadOnlyPhi` premise. The old big-step read-only pattern is
+also exposed as a small wrapper: `ReadOnlyStatic` plus
+`Epsilon_Phi_Soundness` gives `ReadOnlyPhi`. The replay layer now packages this
+source summary prefix together with the checked computation branch replay/join.
+The replay layer also exposes a trace-static staging version using
+`ReadOnlyStatic (Phi_Static_Effect phi_eff1)`. The remaining independence gap is
+to prove the inclusion from the computed envelope to the declared
+`fold_subst_eps rho static_eff` obtained from static typing.
 
 ## Addressing The Reviewer Comment
 
@@ -597,19 +785,28 @@ The mechanization is now substantially cleaner, but some limits remain:
   successful check; the ordinary machine itself still steps through the
   continuation frames sequentially.
 - `SmallStepStructuredTrace.v` records the adequacy-oriented trace shape and
-  now replays ordinary `StepsPhi` plus successful checked computation traces,
-  but it is not yet connected to all ordinary source-level `Pair_Par` runs or
-  to the big-step judgment.
+  now replays ordinary `StepsPhi` plus successful checked computation traces.
+  It also connects checked/fallback structured runs to the ordinary source
+  check-state prefix and connects source-initial `Pair_Par` executions through
+  the sequential effect-summary phase. It bridges sequential and independent
+  summaries for first-summary traces that are read-only or are statically
+  sound with respect to a read-only static effect. It now also computes a
+  precise static envelope for each structured trace, proves trace
+  self-soundness, and proves that the envelope is least among static effects
+  sound for that trace. The small-step theorem that includes this computed
+  envelope in the declared static effect from typing is not yet proved.
 - A true equivalence theorem with a separately defined sequential tuple rule
   would require adding that rule or relation first.
 
 Useful next theorem targets:
 
-1. Derive `PairParBranchReplayWitness` from checked-disjointness and trace
-   soundness.
-2. A bridge from ordinary source-level `Pair_Par` executions to the structured
-   checked/fallback instrumentation.
-3. A terminal small-step/big-step adequacy theorem using the structured trace
+1. A small-step static-effect soundness theorem for effect-summary
+   evaluations, proving
+   `Included StaticAction (Phi_Static_Effect phi) (fold_subst_eps rho static_eff)`.
+   The `WTStateEffectAt_steps_budget` theorem now provides the finite-prefix
+   budget skeleton for ordinary small-step traces; the next internal step is
+   connecting it to the paper-facing terminal/static-summary statements.
+2. A terminal small-step/big-step adequacy theorem using the structured trace
    shape.
-4. A separate sequential tuple relation, if the paper wants a direct
+3. A separate sequential tuple relation, if the paper wants a direct
    `[E-PAR]` versus `[E-SEQ]` theorem.
