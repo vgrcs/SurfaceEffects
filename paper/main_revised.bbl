@@ -1,0 +1,72 @@
+\begin{thebibliography}{9}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Arenaz et~al.(2004)Arenaz, Touri{\~n}o, and Doallo]{arenaz2004}
+Manuel Arenaz, Juan Touri{\~n}o, and Ram{\'o}n Doallo.
+\newblock An inspector-executor algorithm for irregular assignment
+  parallelization.
+\newblock In \emph{Parallel and Distributed Processing and Applications},
+  volume 3358 of \emph{Lecture Notes in Computer Science}, pages 4--15.
+  Springer, 2004.
+\newblock \doi{10.1007/978-3-540-30566-8_4}.
+
+\bibitem[Bocchino et~al.(2009)Bocchino, Adve, Dig, Adve, Heumann, Komuravelli,
+  Overbey, Simmons, Sung, and Vakilian]{bocchino2009}
+Robert~L. Bocchino, Jr., Vikram~S. Adve, Danny Dig, Sarita~V. Adve, Stephen
+  Heumann, Rakesh Komuravelli, Jeffrey Overbey, Patrick Simmons, Hyojin Sung,
+  and Mohsen Vakilian.
+\newblock A type and effect system for deterministic parallel {J}ava.
+\newblock \emph{SIGPLAN Not.}, 44\penalty0 (10):\penalty0 97--116, 2009.
+
+\bibitem[Chargu{\'e}raud(2012)]{chargueraud2012}
+Arthur Chargu{\'e}raud.
+\newblock The locally nameless representation.
+\newblock \emph{Journal of Automated Reasoning}, 49\penalty0 (3):\penalty0
+  363--408, 2012.
+
+\bibitem[Flanagan et~al.(2006)Flanagan, Freund, and Tomb]{flanagan2006}
+Cormac Flanagan, Stephen~N. Freund, and Aaron Tomb.
+\newblock Hybrid types, invariants, and refinements for imperative objects.
+\newblock In \emph{International Workshop on Foundations and Developments of
+  Object-Oriented Languages (FOOL)}, 2006.
+
+\bibitem[Kawaguchi et~al.(2012)Kawaguchi, Rondon, Bakst, and
+  Jhala]{kawaguchi2012}
+Ming Kawaguchi, Patrick Rondon, Alexander Bakst, and Ranjit Jhala.
+\newblock Deterministic parallelism via liquid effects.
+\newblock \emph{SIGPLAN Not.}, 47\penalty0 (6):\penalty0 45--54, 2012.
+
+\bibitem[Kulkarni et~al.(2007)Kulkarni, Pingali, Walter, Ramanarayanan, Bala,
+  and Chew]{kulkarni2007}
+Milind Kulkarni, Keshav Pingali, Bruce Walter, Ganesh Ramanarayanan, Kavita
+  Bala, and L.~Paul Chew.
+\newblock Optimistic parallelism requires abstractions.
+\newblock \emph{SIGPLAN Not.}, 42\penalty0 (6):\penalty0 211--222, 2007.
+
+\bibitem[Long et~al.(2013)Long, Bagherzadeh, and Rajan]{long2013}
+Yuheng Long, Mehdi Bagherzadeh, and Hridesh Rajan.
+\newblock Open effects: A hybrid type-and-effect system to tackle the open
+  world assumption and its application to optimistic concurrency.
+\newblock Technical Report TR13-04a, Iowa State University, 2013.
+
+\bibitem[Lucassen and Gifford(1988)]{lucassen1988}
+John~M. Lucassen and David~K. Gifford.
+\newblock Polymorphic effect systems.
+\newblock In \emph{Proceedings of the 15th ACM SIGPLAN-SIGACT Symposium on
+  Principles of Programming Languages (POPL '88)}, pages 47--57, New York, NY,
+  USA, 1988. ACM.
+
+\bibitem[Tzannes et~al.(2019)Tzannes, Heumann, Eloussi, Vakilian, Adve, and
+  Han]{tzannes2019}
+Alexandros Tzannes, Stephen~T. Heumann, Lamyaa Eloussi, Mohsen Vakilian,
+  Vikram~S. Adve, and Michael Han.
+\newblock Region and effect inference for safe parallelism.
+\newblock \emph{Automated Software Engineering}, 26\penalty0 (2):\penalty0
+  463--509, 2019.
+\newblock \doi{10.1007/s10515-019-00257-3}.
+
+\end{thebibliography}
