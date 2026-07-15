@@ -137,3 +137,61 @@ Proof.
     end;
     split; reflexivity.
 Qed.
+
+Lemma terminal_steps_refl :
+  forall state trace state',
+    Terminal state ->
+    Steps state trace state' ->
+    trace = nil /\ state' = state.
+Proof.
+  intros state trace state' HTerminal HSteps.
+  induction HSteps.
+  - split; reflexivity.
+  - exfalso. eapply terminal_no_step; eauto.
+Qed.
+
+Theorem steps_terminal_state_deterministic :
+  forall state trace1 state1,
+    Steps state trace1 state1 ->
+    Terminal state1 ->
+    forall trace2 state2,
+      Steps state trace2 state2 ->
+      Terminal state2 ->
+      trace1 = trace2 /\ state1 = state2.
+Proof.
+  intros state trace1 state1 HSteps1 HTerminal1.
+  induction HSteps1 as
+    [state | state label state' trace state'' HStep HSteps IH];
+    intros trace2 state2 HSteps2 HTerminal2.
+  - destruct (terminal_steps_refl state trace2 state2 HTerminal1 HSteps2)
+      as [HTrace HState].
+    subst. split; reflexivity.
+  - inversion HSteps2 as
+      [| ? label2 state2' trace2' state2'' HStep2 HSteps2']; subst.
+    + exfalso. eapply terminal_no_step; eauto.
+    + destruct (step_deterministic _ _ _ _ _ HStep HStep2)
+        as [HLabel HState].
+      subst.
+      destruct (IH HTerminal1 _ _ HSteps2' HTerminal2)
+        as [HTrace HFinal].
+      subst. split; reflexivity.
+Qed.
+
+Theorem Steps_terminal_deterministic :
+  forall state trace1 heap1 v1 trace2 heap2 v2,
+    Steps state trace1 (StDone heap1 v1) ->
+    Steps state trace2 (StDone heap2 v2) ->
+    trace1 = trace2 /\ heap1 = heap2 /\ v1 = v2.
+Proof.
+  intros state trace1 heap1 v1 trace2 heap2 v2 HSteps1 HSteps2.
+  destruct
+    (steps_terminal_state_deterministic
+      state trace1 (StDone heap1 v1) HSteps1
+      (Terminal_Done heap1 v1)
+      trace2 (StDone heap2 v2) HSteps2
+      (Terminal_Done heap2 v2))
+    as [HTrace HState].
+  split; [exact HTrace |].
+  inversion HState; subst.
+  split; reflexivity.
+Qed.

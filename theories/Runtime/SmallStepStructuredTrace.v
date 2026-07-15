@@ -91,6 +91,37 @@ Proof.
     econstructor; eauto.
 Qed.
 
+Theorem StepsPhi_terminal_deterministic :
+  forall state phi1 heap1 v1 phi2 heap2 v2,
+    StepsPhi state phi1 (StDone heap1 v1) ->
+    StepsPhi state phi2 (StDone heap2 v2) ->
+    phi_as_list phi1 = phi_as_list phi2 /\
+    heap1 = heap2 /\
+    v1 = v2.
+Proof.
+  intros state phi1 heap1 v1 phi2 heap2 v2 HSteps1 HSteps2.
+  eapply Steps_terminal_deterministic;
+    eapply StepsPhi_as_steps; eauto.
+Qed.
+
+Theorem StepsPhi_effect_terminal_deterministic :
+  forall state phi1 heap1 theta1 phi2 heap2 theta2,
+    StepsPhi state phi1 (StDone heap1 (Eff theta1)) ->
+    StepsPhi state phi2 (StDone heap2 (Eff theta2)) ->
+    phi_as_list phi1 = phi_as_list phi2 /\
+    heap1 = heap2 /\
+    theta1 = theta2.
+Proof.
+  intros state phi1 heap1 theta1 phi2 heap2 theta2 HSteps1 HSteps2.
+  destruct
+    (StepsPhi_terminal_deterministic
+      state phi1 heap1 (Eff theta1) phi2 heap2 (Eff theta2)
+      HSteps1 HSteps2)
+    as [HTrace [HHeap HVal]].
+  inversion HVal; subst.
+  repeat split; assumption.
+Qed.
+
 Lemma steps_as_StepsPhi :
   forall state trace state',
     Steps state trace state' ->
@@ -1727,6 +1758,33 @@ Proof.
     HSummary HReadOnly.
   inversion HSummary; subst.
   eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
+Qed.
+
+Theorem PairParSequentialEffectSummaryStepsPhi_readonly_heap_neutral :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
+    PairParSequentialEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    ReadOnlyPhi phi_eff1 ->
+    ReadOnlyPhi phi_eff2 ->
+    heap_eff1 = heap /\ heap_eff2 = heap.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
+    HSummary HReadOnly1 HReadOnly2.
+  inversion HSummary; subst.
+  pose proof
+    (pairpar_effect_summary_steps_phi_heap_neutral
+      heap env rho ef1 ea1 phi_eff1 heap_eff1 theta1
+      H HReadOnly1) as HHeap1.
+  pose proof
+    (pairpar_effect_summary_steps_phi_heap_neutral
+      heap_eff1 env rho ef2 ea2 phi_eff2 heap_eff2 theta2
+      H0 HReadOnly2) as HHeap2.
+  split.
+  - exact HHeap1.
+  - transitivity heap_eff1; assumption.
 Qed.
 
 Theorem PairParEffectSummaryStepsPhi_sequential_when_first_readonly :

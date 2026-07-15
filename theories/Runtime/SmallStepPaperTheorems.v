@@ -15,10 +15,13 @@ Require Import theories.Runtime.SmallStepExplicitStoreBase.
 Require Import theories.Runtime.SmallStepTraceSafety.
 Require Import theories.Runtime.SmallStepParallelTraceSafe.
 Require Import theories.Runtime.SmallStepSequentialSoundness.
+Require Import theories.Runtime.SmallStepStructuredTrace.
+Require Import theories.Runtime.SmallStepCorrectness.
 Require Import theories.Core.Regions.
 Require Import theories.Core.Expressions.
 Require Import theories.Core.Values.
 Require Import theories.Core.ComputedActions.
+Require Import theories.Core.DynamicActions.
 Require Import theories.Core.StaticActions.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
@@ -132,4 +135,93 @@ Theorem PaperPairParCheckedOrFallbackTerminalSoundness :
           TcPhi stty' (trace_as_phi trace)).
 Proof.
   exact pairpar_check_decidable_terminal_value.
+Qed.
+
+Theorem PaperPairParSummaryPassSmallStepSoundPrefix :
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Eff_App ef1 ea1, Ty_Effect, static_eff1) ->
+    PairParSequentialEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
+    PairParCheckPass theta1 theta2 ->
+    exists phi_source,
+      PairParEffectSummaryStepsPhi
+        heap env rho ef1 ea1 ef2 ea2
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+      StepsPhi
+        (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
+        phi_source
+        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
+      phi_as_list phi_source =
+        phi_as_list phi_eff1 ++ phi_as_list phi_eff2.
+Proof.
+  exact PairParSequentialEffectSummaryStepsPhi_source_pass_small_step_sound_prefix.
+Qed.
+
+Theorem PaperPairParSummaryFailSmallStepSoundPrefix :
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Eff_App ef1 ea1, Ty_Effect, static_eff1) ->
+    PairParSequentialEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
+    PairParCheckFail theta1 theta2 ->
+    exists phi_source,
+      PairParEffectSummaryStepsPhi
+        heap env rho ef1 ea1 ef2 ea2
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+      StepsPhi
+        (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
+        phi_source
+        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
+      phi_as_list phi_source =
+        phi_as_list phi_eff1 ++ phi_as_list phi_eff2.
+Proof.
+  exact PairParSequentialEffectSummaryStepsPhi_source_fail_small_step_sound_prefix.
+Qed.
+
+Theorem PaperSmallStepTerminalDeterminism :
+  forall state trace1 heap1 v1 trace2 heap2 v2,
+    Steps state trace1 (StDone heap1 v1) ->
+    Steps state trace2 (StDone heap2 v2) ->
+    trace1 = trace2 /\ heap1 = heap2 /\ v1 = v2.
+Proof.
+  exact Steps_terminal_deterministic.
+Qed.
+
+Theorem PaperSmallStepStructuredTerminalDeterminism :
+  forall state phi1 heap1 v1 phi2 heap2 v2,
+    StepsPhi state phi1 (StDone heap1 v1) ->
+    StepsPhi state phi2 (StDone heap2 v2) ->
+    phi_as_list phi1 = phi_as_list phi2 /\
+    heap1 = heap2 /\
+    v1 = v2.
+Proof.
+  exact StepsPhi_terminal_deterministic.
+Qed.
+
+Theorem PaperSmallStepStructuredEffectTerminalDeterminism :
+  forall state phi1 heap1 theta1 phi2 heap2 theta2,
+    StepsPhi state phi1 (StDone heap1 (Eff theta1)) ->
+    StepsPhi state phi2 (StDone heap2 (Eff theta2)) ->
+    phi_as_list phi1 = phi_as_list phi2 /\
+    heap1 = heap2 /\
+    theta1 = theta2.
+Proof.
+  exact StepsPhi_effect_terminal_deterministic.
 Qed.

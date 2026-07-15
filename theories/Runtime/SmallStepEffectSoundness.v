@@ -3311,3 +3311,140 @@ Proof.
         exact HInc1.
       * eapply Included_static_step_cons; eauto.
 Qed.
+
+Theorem WTStateEffectAt_initial_steps_budget :
+  forall heap env rho e stty ctxt rgns t eff trace state',
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    Steps (initial_state heap env rho e) trace state' ->
+    exists stty' eps',
+      StoreExtends stty stty' /\
+      WTStateEffectAt state' (subst_rho rho t) stty' eps' /\
+      Included StaticAction
+        (Union_Static_Action
+          (Phi_Static_Effect (trace_as_phi trace))
+          eps')
+        (fold_subst_eps rho eff).
+Proof.
+  intros heap env rho e stty ctxt rgns t eff trace state'
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  eapply WTStateEffectAt_steps_budget; eauto.
+  eapply WTStateEffectAt_initial; eauto.
+Qed.
+
+Theorem WTStateEffectAt_initial_terminal_trace_budget :
+  forall heap env rho e stty ctxt rgns t eff trace heap' v,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    Steps (initial_state heap env rho e) trace (StDone heap' v) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v, subst_rho rho t) /\
+      RuntimeValShape stty' (subst_rho rho t) v /\
+      Included StaticAction
+        (Phi_Static_Effect (trace_as_phi trace))
+        (fold_subst_eps rho eff).
+Proof.
+  intros heap env rho e stty ctxt rgns t eff trace heap' v
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  destruct
+    (WTStateEffectAt_initial_steps_budget
+      heap env rho e stty ctxt rgns t eff trace (StDone heap' v)
+      HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps)
+    as (stty' & eps' & HExt & HState' & HInc).
+  inversion HState'; subst.
+  exists stty'.
+  split; [exact HExt |].
+  split; [eauto |].
+  split; [eauto |].
+  split; [eauto |].
+  split; [eauto |].
+  eapply Included_static_trans; [apply Included_static_union_l |].
+  exact HInc.
+Qed.
+
+Theorem WTStateEffectAt_initial_effect_terminal_trace_budget :
+  forall heap env rho e stty ctxt rgns eff trace heap' theta,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, Ty_Effect, eff) ->
+    Steps (initial_state heap env rho e) trace (StDone heap' (Eff theta)) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      Included StaticAction
+        (Phi_Static_Effect (trace_as_phi trace))
+        (fold_subst_eps rho eff).
+Proof.
+  intros heap env rho e stty ctxt rgns eff trace heap' theta
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  destruct
+    (WTStateEffectAt_initial_terminal_trace_budget
+      heap env rho e stty ctxt rgns Ty_Effect eff trace heap' (Eff theta)
+      HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps)
+    as (stty' & HExt & HTcHeap' & HHeapShape' & _ & _ & HInc).
+  exists stty'.
+  split; [exact HExt |].
+  split; [exact HTcHeap' |].
+  split; [exact HHeapShape' |].
+  exact HInc.
+Qed.
+
+Theorem small_step_eff_sound :
+  forall heap env rho e stty ctxt rgns t eff trace heap' v,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    Steps (initial_state heap env rho e) trace (StDone heap' v) ->
+    Epsilon_Phi_Soundness
+      (fold_subst_eps rho eff, trace_as_phi trace).
+Proof.
+  intros heap env rho e stty ctxt rgns t eff trace heap' v
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  destruct
+    (WTStateEffectAt_initial_terminal_trace_budget
+      heap env rho e stty ctxt rgns t eff trace heap' v
+      HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps)
+    as (_ & _ & _ & _ & _ & _ & HInc).
+  apply Epsilon_Phi_Soundness_of_phi_static_included.
+  exact HInc.
+Qed.
+
+Theorem small_step_effect_summary_eff_sound :
+  forall heap env rho e stty ctxt rgns eff trace heap' theta,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, Ty_Effect, eff) ->
+    Steps (initial_state heap env rho e) trace (StDone heap' (Eff theta)) ->
+    Epsilon_Phi_Soundness
+      (fold_subst_eps rho eff, trace_as_phi trace).
+Proof.
+  intros heap env rho e stty ctxt rgns eff trace heap' theta
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  eapply small_step_eff_sound; eauto.
+Qed.

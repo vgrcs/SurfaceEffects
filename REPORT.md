@@ -35,6 +35,13 @@ The paper-facing wrappers are:
 
 - `PaperSmallStepFinitePrefixSafety`;
 - `PaperSmallStepTerminalSoundness`;
+- `PaperSmallStepTerminalDeterminism`;
+- `PaperSmallStepStructuredTerminalDeterminism`;
+- `PaperSmallStepStructuredEffectTerminalDeterminism`;
+- `SmallStepDynamicDeterminism_ext`;
+- `SmallStepStructuredDynamicDeterminism_ext`;
+- `SmallStepDeterminism`;
+- `SmallStepStructuredDeterminism`;
 - `PaperPairParCheckedOrFallbackTraceSafety`;
 - `PaperPairParCheckedOrFallbackTerminalSoundness`.
 
@@ -92,9 +99,20 @@ The runtime proof stack is now stratified into explicit dependency layers:
   including branch-structured effect-summary traces.
 - `SmallStepEffectSoundness.v`: effect-budgeted continuation/state invariant
   for the future small-step static-effect soundness theorem.
+- `SmallStepCorrectness.v`: composition layer that derives structured
+  checked `Pair_Par` source-prefix correctness from the small-step
+  effect-summary soundness theorem.
 - `SmallStepPaperTheorems.v`: stable theorem names for paper citations.
 - `Determinism/SmallStepStructuredReplay.v`: theta-soundness bridge from
   checked-disjoint surface summaries to branch replay/join witnesses.
+- `Soundness/SmallStepCorrectnessBridge.v`: explicit bridge from matched
+  terminal small-step traces plus corresponding big-step traces to the old
+  `BackTriangle` correctness theorem.
+- `Soundness/SmallStepCorrectnessDirect.v`: beginning of the direct small-step
+  port of `Correctness_soundness_ext`, currently proving the empty-trace
+  support lemma, pure terminal cases, `Top`, direct arithmetic/conditional
+  summary cases, reference/read/write cases, and the first direct application
+  summary case without appealing to big-step adequacy.
 
 The facade modules remain for stable imports, but non-facade runtime files now
 avoid importing the broad facades directly.
@@ -428,6 +446,32 @@ Important definitions and theorems:
   existing runtime continuation/state typing with an explicit static-effect
   budget.
 
+- `terminal_steps_refl`, `steps_terminal_state_deterministic`, and
+  `Steps_terminal_deterministic`
+  live in `theories/Runtime/SmallStepFacts.v`. They lift one-step determinism
+  of `Step` to terminal ordinary `Steps` runs: if two runs from the same state
+  both terminate, their traces, final heaps, and final values coincide.
+  `PaperSmallStepTerminalDeterminism` is the stable paper-facing alias.
+
+- `SmallStepDynamicDeterminism_ext` and `SmallStepDeterminism`
+  live in `theories/Determinism/SmallStepDeterminismExt.v`. They are the
+  small-step analogues of `DynamicDeterminism_ext` and `Determinism`: two
+  terminating small-step evaluations of the same well-typed expression, from
+  equivalent starting heaps, finish with equivalent heaps, equal values, and
+  equal emitted traces. `SmallStepStructuredDynamicDeterminism_ext` and
+  `SmallStepStructuredDeterminism` give the corresponding `StepsPhi` versions,
+  with trace equality stated through `phi_as_list`.
+
+- `StepsPhi_terminal_deterministic` and
+  `StepsPhi_effect_terminal_deterministic`
+  live in `theories/Runtime/SmallStepStructuredTrace.v`. They lift ordinary
+  terminal determinism to structured `StepsPhi` runs. The trace equality is
+  stated as equality of `phi_as_list`, not syntactic equality of `Phi`, because
+  silent transitions may create different `Phi_Nil`/`Phi_Seq` shapes with the
+  same emitted dynamic actions. The paper-facing aliases are
+  `PaperSmallStepStructuredTerminalDeterminism` and
+  `PaperSmallStepStructuredEffectTerminalDeterminism`.
+
 - `WTKontEffect_forget`, `WTStateEffectAt_forget`, and
   `WTStateEffectAt_initial`
   prove that the effect-budgeted invariant is conservative over the existing
@@ -447,6 +491,321 @@ Important definitions and theorems:
   `WTStateEffectAt_steps_budget` lifts it to finite `Steps` prefixes:
   the static effect computed from `trace_as_phi trace` plus the residual
   state budget is included in the original declared budget.
+  `WTStateEffectAt_initial_steps_budget` specializes this to initially typed
+  expressions. `WTStateEffectAt_initial_terminal_trace_budget` removes the
+  residual budget for terminal runs, and
+  `WTStateEffectAt_initial_effect_terminal_trace_budget` specializes the result
+  to terminating effect-summary expressions. `small_step_eff_sound` packages
+  the inclusion result as the old-style `Epsilon_Phi_Soundness` conclusion for
+  terminal small-step runs. `small_step_effect_summary_eff_sound` is the
+  effect-summary-specific specialization.
+
+- `SmallStepCorrectness.v`
+  composes the effect-budget theorem with the branch-structured trace layer.
+  `Epsilon_Phi_Soundness_of_trace_as_phi_phi_as_list` bridges the normalized
+  list trace used by ordinary `Steps` and the branch-shaped `Phi` trace used by
+  `StepsPhi`. `Phi_Theta_Soundness_of_trace_as_phi_phi_as_list` gives the
+  analogous bridge for computed-summary soundness, and
+  `ReadOnlyPhi_trace_as_phi_phi_as_list` carries read-only evidence to the
+  normalized list trace when the old big-step theorem needs that shape.
+  `PairParSequentialEffectSummaryStepsPhi_first_small_step_sound`
+  derives the first effect-summary branch's `Epsilon_Phi_Soundness` from its
+  typed terminating small-step execution.
+  `StepsPhi_effect_summary_readonly_from_small_step_sound` and
+  `StepsPhi_effect_summary_heap_neutral_from_small_step_sound` derive
+  read-only traces and heap neutrality for typed terminating effect summaries
+  from small-step soundness. The pass/fail wrappers
+  `PairParSequentialEffectSummaryStepsPhi_source_pass_small_step_sound_prefix`
+  and
+  `PairParSequentialEffectSummaryStepsPhi_source_fail_small_step_sound_prefix`
+  reuse the existing structured replay theorems without assuming a separate
+  big-step soundness premise.
+
+- `Soundness/SmallStepCorrectnessBridge.v`
+  makes the remaining adequacy boundary explicit. The theorems
+  `small_step_structured_correctness_from_big_step_traces` and
+  `small_step_list_correctness_from_big_step_traces` prove that, if a terminal
+  small-step run is accompanied by the corresponding big-step evaluation with
+  the same trace, the existing `Correctness_soundness_ext` theorem yields
+  `phi ⋞ theta`.
+  `small_step_structured_correctness_from_big_step_normalized_traces` covers
+  the more realistic structured case where the supplied big-step trace is
+  `trace_as_phi (phi_as_list phi)` for the structured small-step trace `phi`.
+  These theorems do not prove that every terminal small-step run has such a
+  big-step counterpart.
+
+- `Soundness/SmallStepCorrectnessDirect.v`
+  starts the direct terminal small-step port of `Correctness_soundness_ext`.
+  `StepsPhi_terminal_trace_nil_from_nil_steps` uses terminal determinism to
+  show that a structured terminal run has an empty action list whenever a
+  canonical empty-trace terminal run exists.
+  `Correctness_soundness_ext_small_step_empty_trace` packages the reusable
+  empty-trace soundness fact, and
+  `StepsPhi_terminal_inv_step` gives the first decomposition helper for
+  terminal structured runs: a deterministic first step can be peeled off while
+  preserving the tail run and emitted trace equation.
+  `StepsPhi_append_kont_terminal_decompose` and
+  `StepsPhi_initial_with_kont_terminal_decompose` provide the converse
+  direction for continuation replay: any terminal run under an appended
+  continuation contains a terminal run of the focused `KDone` computation and
+  the residual continuation run. This is the key new tool for the small-step
+  correctness theorem without a second computation evaluation.
+  `Correctness_soundness_ext_small_step_num_case`,
+  `Correctness_soundness_ext_small_step_bool_case`,
+  `Correctness_soundness_ext_small_step_var_case`,
+  `Correctness_soundness_ext_small_step_var_typed_case`,
+  `Correctness_soundness_ext_small_step_mu_abs_case`, and
+  `Correctness_soundness_ext_small_step_rgn_abs_case` discharge the pure base
+  cases directly over terminal `StepsPhi` runs.
+  `Correctness_soundness_ext_small_step_top_summary_case` handles the
+  `BT_Top_Approx` shape directly: a terminal `Top` summary run computes
+  `Theta_Top`, so any structured body trace is sound.
+  `StepsPhi_cond_true_from_guard_branch` and
+  `StepsPhi_cond_false_from_guard_branch` compose terminal guard and selected
+  branch runs into terminal `Cond` runs while preserving the concatenated
+  action-list shape.
+  `Correctness_soundness_ext_small_step_cond_join_case` is the corresponding
+  soundness combinator: an empty-sound guard trace plus a branch trace sound
+  for `theta` yields a condition trace sound for `theta`. The true/false
+  composed variants package this replay plus soundness step, and the true/false
+  terminal variants use structured terminal determinism to transfer that
+  package to any terminal run from the same condition state.
+  `StepsPhi_cond_true_summary_terminal_theta` and
+  `StepsPhi_cond_false_summary_terminal_theta` identify the final theta of a
+  terminal summary `Cond e efft efff` run with the selected branch-summary
+  theta. The true/false summary-terminal wrappers then state the computational
+  condition cases against that actual terminal summary theta.
+  `StepsPhi_mu_app_from_fun_arg_body`,
+  `StepsPhi_eff_app_from_fun_arg_body`, and
+  `StepsPhi_rgn_app_from_fun_body` now provide the same branch-shaped replay
+  spine for applications. The corresponding composed and terminal
+  `Correctness_soundness_ext_small_step_*_app_*_case` theorems join component
+  soundness premises and use terminal determinism to cover arbitrary terminal
+  application executions.
+  `Correctness_soundness_ext_small_step_mu_app_summary_terminal_case` bridges a
+  terminal `Eff_App` summary run to the matching computational `Mu_App` trace,
+  and
+  `Correctness_soundness_ext_small_step_rgn_app_empty_summary_terminal_case`
+  does the analogous region-application case against an actual terminal
+  `Empty` summary. These are intentionally premise-driven stepping stones; the
+  full direct induction still has to derive the component premises from typing,
+  read-only evidence, and recursive `BackTriangle` hypotheses.
+  `StepsPhi_pair_par_from_components` replays the staged ordinary `Pair_Par`
+  path through effect summary 1, effect summary 2, computation 1, computation
+  2, and the final pair return. The pass/fallback replay wrappers instantiate
+  the single generic check step with either `Step_PairPar_EvalMu1` or
+  `Step_PairPar_FallbackMu1`. The composed and terminal pair-par theorems join
+  the four component soundness premises into
+  `Union_Theta (Union_Theta theta1 theta2) (Union_Theta theta_mu1 theta_mu2)`
+  and then use terminal determinism to cover arbitrary terminal `Pair_Par`
+  executions. `Correctness_soundness_ext_small_step_pair_par_checked_composed_case`
+  and
+  `Correctness_soundness_ext_small_step_pair_par_checked_terminal_case` package
+  those two branches behind the existing `PairParCheckDecidable` assumption.
+  The derived
+  `Correctness_soundness_ext_small_step_pair_par_same_summary_*` theorem family
+  covers the closer paper-facing invariant where the computation branches are
+  already known sound against the two thetas computed by the effect-summary
+  phase, so the full staged `Pair_Par` trace is sound against
+  `Union_Theta theta1 theta2`. The
+  `Correctness_soundness_ext_small_step_pair_par_same_summary_readonly_terminal_case`
+  and
+  `Correctness_soundness_ext_small_step_pair_par_same_summary_static_readonly_terminal_case`
+  variants use summary-trace read-only evidence, or static read-only evidence
+  plus `Epsilon_Phi_Soundness`, to show that the sequentially staged summary
+  heaps are definitionally equal to the source heap before applying the checked
+  terminal theorem.
+  `Correctness_soundness_ext_small_step_pair_par_same_summary_sequential_readonly_terminal_case`
+  phrases the same result over the structured
+  `PairParSequentialEffectSummaryStepsPhi` summary witness, which is the cleaner
+  hook for later direct-induction cases.
+  `Correctness_soundness_ext_small_step_pair_par_same_summary_typed_readonly_terminal_case`
+  removes those explicit `Epsilon_Phi_Soundness` premises by deriving both
+  summary-trace read-only facts from typed small-step effect soundness.
+  `StepsPhi_nested_concat_summary_terminal_theta` and
+  `Correctness_soundness_ext_small_step_pair_par_bt_summary_terminal_case`
+  cover the actual four-part `BT_Pair_Par` summary shape
+  `(eff1 ⊕ eff2) ⊕ (eff3 ⊕ eff4)`: they identify the terminal theta of the
+  nested summary expression and then apply the general checked/fallback
+  `Pair_Par` terminal theorem.
+  `PairParSequentialEffectSummaryStepsPhi_readonly_heap_neutral` records the
+  reusable runtime version of that heap-neutrality fact for the whole
+  two-summary staging phase, while
+  `PairParSequentialEffectSummaryStepsPhi_readonly_from_small_step_sound` and
+  `PairParSequentialEffectSummaryStepsPhi_readonly_heap_neutral_from_small_step_sound`
+  are the corresponding typed runtime wrappers.
+  `StepsPhi_binary_from_left_right` factors the same continuation-replay
+  pattern for strict left-to-right binary operators. Its specializations cover
+  `Plus`, `Minus`, `Times`, and `Eq`, and
+  `Correctness_soundness_ext_small_step_binary_join_case` plus the four
+  composed variants package the corresponding direct soundness steps. The four
+  binary terminal variants again use deterministic terminal equality to make
+  the result independent of the particular terminal derivation.
+  `StepsPhi_{plus,minus,times,eq}_terminal_decompose` go in the reverse
+  direction: from one terminal binary-operator run they recover the two
+  terminal numeric operand runs and the final result equation.
+  `Correctness_soundness_ext_small_step_binary_union_join_case` and the
+  `_union_composed_case`/`_union_terminal_case` variants for `Plus`, `Minus`,
+  `Times`, and `Eq` match the `BackTriangle` shape more directly: the left
+  component may be sound for `theta1`, the right component for `theta2`, and
+  the whole operator trace is sound for `Union_Theta theta1 theta2`.
+  `StepsPhi_concat_summary_terminal_theta` then identifies the theta produced
+  by an actual terminal `Concat` summary run.
+  `StepsPhi_concat_terminal_decompose` and
+  `StepsPhi_concat_effect_terminal_decompose` recover the two component
+  summary runs from a terminal `Concat` run. The four
+  `Correctness_soundness_ext_small_step_*_summary_terminal_case` wrappers for
+  `Plus`, `Minus`, `Times`, and `Eq` state the binary computational cases
+  directly against that terminal summary theta.
+  `Correctness_soundness_ext_small_step_*_summary_terminal_direct_case` for
+  `Plus`, `Minus`, `Times`, and `Eq` strengthen this interface: they take the
+  whole terminal computation run and whole terminal `Concat` summary run,
+  recover both branch runs internally, use typed read-only heap neutrality for
+  the left operand, and then invoke the recursive branch-soundness premises.
+  `StepsPhi_cond_terminal_decompose` and
+  `Correctness_soundness_ext_small_step_cond_summary_terminal_direct_case`
+  provide the analogous direct conditional shape, including deterministic
+  exclusion of mismatched summary/computation guard branches.
+  The same file now includes terminal summary facts for `AllocAbs`, `ReadAbs`,
+  `WriteAbs`, `ReadConc`, `WriteConc`, and `Concat`. The singleton lemmas
+  `Phi_Theta_Soundness_*_singleton` connect dynamic heap actions to the
+  computed-action summaries they require, while
+  `Correctness_soundness_ext_small_step_concat_composed_case` and
+  `Correctness_soundness_ext_small_step_concat_terminal_case` package the
+  direct soundness step for summary concatenation.
+  `StepsPhi_readconc_terminal_from_arg` and
+  `StepsPhi_writeconc_terminal_from_arg` use terminal determinism to extract
+  the concrete singleton theta from terminal `ReadConc`/`WriteConc` summary
+  runs. The abstract summary-terminal wrappers for `Ref`, `DeRef`, and
+  `Assign` similarly consume terminal `AllocAbs`, `ReadAbs`, and `WriteAbs`
+  summary runs through the existing primitive terminal facts.
+  `Correctness_soundness_ext_small_step_deref_conc_summary_terminal_case`
+  and
+  `Correctness_soundness_ext_small_step_assign_conc_summary_terminal_case`
+  then use those extracted summaries to state the concrete read/write cases
+  against the actual terminal summary theta.
+  `StepsPhi_right_nested_concat_summary_terminal_theta` and the
+  `Correctness_soundness_ext_small_step_{ref_abs,deref_abs,assign_abs}_bt_summary_terminal_case`
+  wrappers cover the actual abstract-reference `BackTriangle` summary shapes
+  `eff ⊕ AllocAbs`, `eff ⊕ ReadAbs`, and `eff1 ⊕ (eff2 ⊕ WriteAbs)`, using
+  terminal determinism to identify the theta produced by the full summary
+  expression before applying the computational reference theorem. The concrete
+  assignment shape `eff1 ⊕ (eff2 ⊕ WriteConc ea)` is covered by
+  `Correctness_soundness_ext_small_step_assign_conc_bt_summary_readonly_terminal_case`,
+  with `ReadOnlyPhi` premises on the two preceding summary phases to recover
+  heap neutrality before matching the final concrete write summary.
+  The computational reference side now has labelled continuation replay for
+  `Ref`, `DeRef`, and `Assign`, plus composed direct soundness cases for
+  abstract allocation/read/write and concrete read/write summaries. The
+  new `StepsPhi_ref_terminal_decompose` and
+  `StepsPhi_deref_terminal_decompose` lemmas recover the argument run and
+  heap/action witnesses from the whole terminal computation run.
+  `Correctness_soundness_ext_small_step_ref_abs_bt_summary_terminal_direct_case`,
+  `Correctness_soundness_ext_small_step_deref_abs_bt_summary_terminal_direct_case`,
+  and
+  `Correctness_soundness_ext_small_step_deref_conc_summary_terminal_direct_case`
+  use those decomposers to remove externally supplied argument runs from the
+  corresponding allocation/read correctness steps. The
+  corresponding `_terminal_case` theorems expose the same facts for arbitrary
+  terminal executions by applying
+  `Correctness_soundness_ext_small_step_terminal_transfer`.
+  `theories/Soundness/SmallStepPaperSoundness.v` adds stable paper-facing
+  aliases for the direct correctness layer:
+  `PaperSmallStepRefAbsBTSummaryCorrectness`,
+  `PaperSmallStepDerefAbsBTSummaryCorrectness`,
+  `PaperSmallStepAssignAbsBTSummaryCorrectness`,
+  `PaperSmallStepAssignAbsBTSummaryHeterogeneousRecursiveCorrectness`,
+  `PaperSmallStepAssignConcBTSummaryReadonlyCorrectness`,
+  `PaperSmallStepAssignConcBTSummaryAddressAgreementCorrectness`,
+  `PaperSmallStepAssignConcBTSummaryHeterogeneousHeapCorrectness`,
+  `PaperSmallStepAssignConcBTSummaryHeapCompatibleCorrectness`,
+  `PaperSmallStepMuAppSummaryDirectCorrectness`,
+  `PaperSmallStepRgnAppEmptySummaryDirectCorrectness`,
+  `PaperSmallStepPairParBTSummaryCorrectness`, and
+  `PaperSmallStepPairParBTSummaryDirectCorrectness`. The checked-branch bridge
+  `PaperSmallStepPairParCheckPassBranchTraceDisjoint` exposes the local step
+  from a successful `PairParCheckPass` and branch soundness facts to the
+  `PairParBranchTraceDisjoint` premise used below;
+  `PaperSmallStepPairParCheckPassDependentBranchTraceDisjoint` is the sharper
+  dependent form where the right-branch soundness premise receives the left
+  branch terminal run that produced its starting heap.
+  `PaperSmallStepPairParEffAppSummaryPassCorrectness` is the corresponding
+  successful-check correctness theorem for the `BT_Pair_Par` shape where the
+  computation branches are summarized by the actual checked `Eff_App`
+  expressions. `PaperSmallStepPairParEffAppSummaryCheckedOrFallback` packages
+  the terminal checked/fallback split for the same shape: either the actual
+  checked summaries fail the check, or the successful-check branch is sound.
+  `PaperSmallStepPairParEffAppBackTriangleCheckedOrFallback` lifts that split
+  to the corresponding `BackTriangle` premise, which is the form needed by the
+  direct induction.
+  It now also exposes
+  `PaperSmallStepAssignAbsBTSummaryHeterogeneousRecursiveCorrectness` for the
+  absolute-write recursive case with a separately started read-only summary
+  run,
+  `PaperSmallStepAssignConcBTSummaryAddressAgreementCorrectness` for the
+  concrete-write case when the summary-side replay of the address expression
+  agrees with the actual concrete address,
+  `PaperSmallStepAssignConcBTSummaryHeterogeneousHeapCorrectness` for the same
+  case phrased through `HeterogeneousHeapForExpr`, whose premise includes
+  `HeterogeneousHeapForPhi` agreement over the address trace's
+  `PhiReadFootprint`,
+  `PaperSmallStepAssignConcBTSummaryHeapCompatibleCorrectness` for the sharper
+  version whose recursive premise also receives the named heap-compatibility
+  evidence for both the address and value subexpressions,
+  `PaperSmallStepPairParBackTriangleHeterogeneousRecursiveCorrectness` for the
+  concrete `BT_Pair_Par` induction branch,
+  `PaperSmallStepPairParBackTriangleHeapCompatibleCorrectness` for the sharper
+  `BT_Pair_Par` branch with an explicit `PairParBranchHeapCompatible` premise,
+  `PaperSmallStepPairParBackTriangleTraceDisjointCorrectness` for the same
+  `BT_Pair_Par` branch with the weaker trace-disjoint premise,
+  and
+  `PaperSmallStepBackTriangleTerminalHeterogeneousRecursiveCorrectness` for the
+  all-head terminal dispatcher, and
+  `PaperSmallStepBackTriangleTerminalHeapCompatibleCorrectness` for the
+  corresponding dispatcher over the heap-compatible recursive premise plus the
+  named `PairParBranchHeapCompatibleRecursivePremise`, and
+  `PaperSmallStepBackTriangleTerminalTraceDisjointCorrectness` for the same
+  dispatcher when branch compatibility is obtained from the named
+  `PairParBranchTraceDisjointRecursivePremise`. Internally,
+  `HeterogeneousHeapForExpr_from_readonly_replay` and
+  `PairParBranchTraceDisjoint_implies_heap_compatible` now isolate the
+  read-only replay argument needed for this step.
+  `PairParBranchTraceDisjoint_from_check_heterogeneous_recursive` derives the
+  local trace-disjoint premise from a successful check plus the heterogeneous
+  recursive correctness premise for the two `Mu_App ... ◀ Eff_App ...`
+  branches. `PairParBranchHeapCompatible_from_check_heterogeneous_recursive`
+  packages the same result in the heap-compatible form consumed by the sharper
+  `Pair_Par` proof.
+  `StepsPhi_pair_par_terminal_decompose_checked` records the pass/fallback
+  witness from a terminal `Pair_Par` run, and
+  `StepsPhi_pair_par_terminal_decompose_checked_heap_compatible_or_fallback`
+  combines that witness with typed read-only summary heap neutrality to return
+  either fallback or the successful-check heap-compatibility invariant. These
+  wrappers deliberately
+  keep their recursive premises explicit; they are stable names for the
+  recursive induction step, not a closed global induction theorem.
+  The application-summary port now has
+  `Correctness_soundness_ext_small_step_mu_app_summary_terminal_direct_case`,
+  exposed under that paper-facing name. This theorem
+  recovers the function, argument, and body runs from terminal `Mu_App` and
+  `Eff_App` executions, aligns the shared function/argument phases by
+  small-step determinism, and applies the body correctness premise to the
+  summary body trace directly. The region-application port now has
+  `Correctness_soundness_ext_small_step_rgn_app_empty_summary_terminal_direct_case`,
+  exposed as `PaperSmallStepRgnAppEmptySummaryDirectCorrectness`; it recovers
+  the function/body runs from the terminal `Rgn_App` execution and matches them
+  against the terminal `Empty` summary.
+  `StepsPhi_pair_par_after_check_terminal_decompose` and
+  `StepsPhi_pair_par_terminal_decompose` are the next direct `Pair_Par`
+  decomposition tools: they recover both effect-summary runs, both computation
+  runs, the final pair value, and the four-part trace equation from a single
+  terminal `Pair_Par` execution.
+  `Correctness_soundness_ext_small_step_pair_par_bt_summary_terminal_direct_case`,
+  exposed as `PaperSmallStepPairParBTSummaryDirectCorrectness`, combines that
+  runtime decomposition with decomposition of the nested summary expression.
+  It proves the four-part `BT_Pair_Par` summary theorem directly over the
+  actual terminal `Pair_Par` and nested-summary runs, and it no longer needs
+  `PairParCheckDecidable`.
 
 - `WTStateRuntimeHeapShapeAt_steps_phi_trace_typed`
   proves that explicitly typed ordinary states remain explicitly typed and
@@ -587,6 +946,11 @@ Important definitions and theorems:
 
 - `PairParSequentialEffectSummaryStepsPhi_source_fail_static_sound_prefix`
   gives the analogous static-soundness wrapper for failed checks.
+
+- `PaperPairParSummaryPassSmallStepSoundPrefix` and
+  `PaperPairParSummaryFailSmallStepSoundPrefix`
+  are the stable paper-facing aliases for the corresponding small-step-derived
+  pass/fail source-prefix wrappers in `SmallStepCorrectness.v`.
 
 - `PairParSequentialEffectSummaryStepsPhi_source_pass_static_included_prefix`
   and `PairParSequentialEffectSummaryStepsPhi_source_fail_static_included_prefix`

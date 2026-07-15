@@ -288,3 +288,55 @@ Proof.
     destruct ((stty1 ∖ stty) !! l) eqn:Hdiff1; auto.
     exfalso. eapply Hdisj_spec; eauto.
 Qed.
+
+Lemma TcVal_Extended_Left :
+  forall stty stty1 stty2 v t,
+    stty1 ∖ stty ##ₘ stty2 ∖ stty ->
+    StoreExtends stty stty1 ->
+    TcVal (stty1, v, t) ->
+    TcVal (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty), v, t).
+Proof.
+  intros stty stty1 stty2 v t Hdisj Hext HTcVal.
+  eapply (ext_stores__val stty1); [| exact HTcVal].
+  intros l t' Hfind.
+  eapply StoreTyping_Extended_Left; eauto.
+Qed.
+
+Lemma TcVal_Extended_Right :
+  forall stty stty1 stty2 v t,
+    stty1 ∖ stty ##ₘ stty2 ∖ stty ->
+    StoreExtends stty stty2 ->
+    TcVal (stty2, v, t) ->
+    TcVal (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty), v, t).
+Proof.
+  intros stty stty1 stty2 v t Hdisj Hext HTcVal.
+  eapply (ext_stores__val stty2); [| exact HTcVal].
+  intros l t' Hfind.
+  eapply StoreTyping_Extended_Right; eauto.
+Qed.
+
+Lemma TcEnv_Extended_Left :
+  forall stty stty1 stty2 rho env ctxt,
+    stty1 ∖ stty ##ₘ stty2 ∖ stty ->
+    StoreExtends stty stty1 ->
+    TcEnv (stty1, rho, env, ctxt) ->
+    TcEnv (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty), rho, env, ctxt).
+Proof.
+  intros stty stty1 stty2 rho env ctxt Hdisj Hext HTcEnv.
+  eapply (ext_stores__env stty1); [| exact HTcEnv].
+  intros l t' Hfind.
+  eapply StoreTyping_Extended_Left; eauto.
+Qed.
+
+Lemma TcEnv_Extended_Right :
+  forall stty stty1 stty2 rho env ctxt,
+    stty1 ∖ stty ##ₘ stty2 ∖ stty ->
+    StoreExtends stty stty2 ->
+    TcEnv (stty2, rho, env, ctxt) ->
+    TcEnv (stty ∪ (stty1 ∖ stty ∪ stty2 ∖ stty), rho, env, ctxt).
+Proof.
+  intros stty stty1 stty2 rho env ctxt Hdisj Hext HTcEnv.
+  eapply (ext_stores__env stty2); [| exact HTcEnv].
+  intros l t' Hfind.
+  eapply StoreTyping_Extended_Right; eauto.
+Qed.
