@@ -79,6 +79,52 @@ Definition find_H (k: HeapKey) (m: Heap) : option Val
 Definition update_H (p: HeapKey * Val) (m: Heap)
   :=  <[ fst p := snd p ]>  m.
 
+Definition HeapLookupEquivalent (h1 h2 : Heap) : Prop :=
+  forall k, find_H k h1 = find_H k h2.
+
+Global Instance HeapLookupEquivalent_equivalence :
+  Equivalence HeapLookupEquivalent.
+Proof.
+  split.
+  - intros h k. reflexivity.
+  - intros h1 h2 H k. symmetry. apply H.
+  - intros h1 h2 h3 H12 H23 k.
+    rewrite H12. apply H23.
+Qed.
+
+Lemma heap_equiv_lookup_equivalent :
+  forall h1 h2,
+    h1 ≡@{Heap} h2 ->
+    HeapLookupEquivalent h1 h2.
+Proof.
+  intros h1 h2 HEqual.
+  unfold equiv, heap_equiv in HEqual.
+  subst.
+  intros k.
+  reflexivity.
+Qed.
+
+Lemma heap_lookup_equivalent_eq :
+  forall h1 h2,
+    HeapLookupEquivalent h1 h2 ->
+    h1 = h2.
+Proof.
+  intros h1 h2 HLookup.
+  apply map_eq.
+  intros k.
+  apply HLookup.
+Qed.
+
+Lemma heap_lookup_equivalent_heap_equiv :
+  forall h1 h2,
+    HeapLookupEquivalent h1 h2 ->
+    h1 ≡@{Heap} h2.
+Proof.
+  intros h1 h2 HLookup.
+  apply heap_lookup_equivalent_eq.
+  exact HLookup.
+Qed.
+
 Fixpoint max_location_for_region
     (r : nat) (entries : list (HeapKey * HeapVal)) : nat :=
   match entries with
