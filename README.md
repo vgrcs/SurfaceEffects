@@ -252,8 +252,8 @@ fallback. It also proves the structured checked/fallback split
 extractors for successful checked runs and sequential fallback runs.
 `SmallStepPaperTheorems.v` provides stable paper-facing theorem names:
 `PaperSmallStepFinitePrefixSafety`, `PaperSmallStepTerminalSoundness`,
-`PaperPairParCheckedOrFallbackTraceSafety`, and
-`PaperPairParCheckedOrFallbackTerminalSoundness`. These four are the current
+`PaperPairParCheckedOrBlockedTraceSafety`, and
+`PaperPairParCheckedOrBlockedTerminalSoundness`. These four are the current
 theorem map cited by the revised paper. The file also exposes
 `PaperSmallStepTerminalDeterminism`, which says two terminal ordinary
 small-step runs from the same state have the same emitted trace, final heap,
@@ -261,7 +261,12 @@ and final value. The structured counterparts
 `PaperSmallStepStructuredTerminalDeterminism` and
 `PaperSmallStepStructuredEffectTerminalDeterminism` give the same result for
 terminal `StepsPhi` runs, with equality stated for `phi_as_list` rather than
-syntactic `Phi` equality. `theories/Determinism/SmallStepDeterminismExt.v`
+syntactic `Phi` equality.
+`PaperPairParCheckedArbitraryScheduleTerminalDeterminism` is the checked
+parallel counterpart: two terminal checked `Pair_Par` runs from the same start,
+whose left/right branch traces are sound under the same successful check,
+finish with the same heap and value without requiring the two schedules to use
+the same branch projection. `theories/Determinism/SmallStepDeterminismExt.v`
 adds the full small-step replacements for the old terminating big-step
 determinism statements: `SmallStepDynamicDeterminism_ext`,
 `SmallStepStructuredDynamicDeterminism_ext`, `SmallStepDeterminism`, and
@@ -446,8 +451,10 @@ split in one theorem. `pairpar_check_decidable_terminal_value` adds the matching
 terminal-value extractor for both checked and fallback outcomes.
 `SmallStepPaperTheorems.v` re-exposes these results through the stable names
 `PaperSmallStepFinitePrefixSafety`, `PaperSmallStepTerminalSoundness`,
-`PaperPairParCheckedOrFallbackTraceSafety`, and
-`PaperPairParCheckedOrFallbackTerminalSoundness`.
+`PaperPairParCheckedOrBlockedTraceSafety`, and
+`PaperPairParCheckedOrBlockedTerminalSoundness`, plus
+`PaperPairParCheckedArbitraryScheduleTerminalDeterminism` for terminal
+checked-parallel schedule independence.
 `SmallStepStructuredTrace.v` is the first adequacy-oriented trace layer: it
 does not replace the paper-facing list-trace theorems, but it records the
 branch structure needed to align future small-step terminal runs with the

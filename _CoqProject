@@ -63,7 +63,6 @@ theories/Runtime/SmallStepSequentialSoundness.v
 theories/Runtime/SmallStepStructuredTrace.v
 theories/Runtime/SmallStepEffectSoundness.v
 theories/Runtime/SmallStepCorrectness.v
-theories/Runtime/SmallStepPaperTheorems.v
 theories/Meta/LocallyNameless.v
 theories/Meta/MapFacts.v
 theories/Meta/RegionSubstitutionFacts.v
@@ -80,6 +79,8 @@ theories/Meta/TraceTypingFacts.v
 theories/Determinism/ReadOnlyDeterminism.v
 theories/Determinism/Determinism.v
 theories/Determinism/SmallStepStructuredReplay.v
+theories/Determinism/SmallStepPairParScheduleDeterminism.v
+theories/Runtime/SmallStepPaperTheorems.v
 theories/Determinism/SmallStepDeterminismExt.v
 theories/Soundness/TypeSystem.v
 theories/Soundness/EffectSystem.v

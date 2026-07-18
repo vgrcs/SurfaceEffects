@@ -34,8 +34,9 @@ The paper-facing wrappers are:
 
 - `PaperSmallStepFinitePrefixSafety`;
 - `PaperSmallStepTerminalSoundness`;
-- `PaperPairParCheckedOrFallbackTraceSafety`;
-- `PaperPairParCheckedOrFallbackTerminalSoundness`.
+- `PaperPairParCheckedOrBlockedTraceSafety`;
+- `PaperPairParCheckedOrBlockedTerminalSoundness`;
+- `PaperPairParCheckedArbitraryScheduleTerminalDeterminism`.
 
 These are stable theorem-map names for the mechanization notes. The revised
 paper states the corresponding results only in mathematical notation, without
@@ -101,6 +102,9 @@ The runtime proof stack is now stratified into explicit dependency layers:
 - `SmallStepPaperTheorems.v`: stable theorem names for paper citations.
 - `Determinism/SmallStepStructuredReplay.v`: theta-soundness bridge from
   checked-disjoint surface summaries to branch replay/join witnesses.
+- `Determinism/SmallStepPairParScheduleDeterminism.v`: local branch
+  commutation, checked schedule normalization, and terminal checked-parallel
+  schedule determinism.
 - `Soundness/SmallStepCorrectnessBridge.v`: explicit bridge from matched
   terminal small-step traces plus corresponding big-step traces to the old
   `BackTriangle` correctness theorem.
@@ -383,11 +387,14 @@ not depend on internal proof-stratification filenames.
 - `PaperSmallStepTerminalSoundness`
   wraps `initial_state_terminal_value_with_trace`.
 
-- `PaperPairParCheckedOrFallbackTraceSafety`
+- `PaperPairParCheckedOrBlockedTraceSafety`
   wraps `pairpar_check_decidable_trace_safe`.
 
-- `PaperPairParCheckedOrFallbackTerminalSoundness`
+- `PaperPairParCheckedOrBlockedTerminalSoundness`
   wraps `pairpar_check_decidable_terminal_value`.
+
+- `PaperPairParCheckedArbitraryScheduleTerminalDeterminism`
+  wraps `PairParCheckedArbitraryScheduleTerminalDeterminism`.
 
 ## Proof Explanation: `pairpar_check_decidable_trace_safe`
 
@@ -504,6 +511,15 @@ Important definitions and theorems:
   same emitted dynamic actions. The paper-facing aliases are
   `PaperSmallStepStructuredTerminalDeterminism` and
   `PaperSmallStepStructuredEffectTerminalDeterminism`.
+
+- `PairParCheckedArbitraryScheduleTerminalDeterminism`
+  lives in `theories/Determinism/SmallStepPairParScheduleDeterminism.v`. It
+  states that two terminal checked `Pair_Par` runs from the same initial heap,
+  environment, region substitution, and branch programs finish with equal heaps
+  and equal values whenever each run's left and right branch traces are sound
+  under the same successful check. It does not require the two executions to
+  use the same branch projection. The paper-facing alias is
+  `PaperPairParCheckedArbitraryScheduleTerminalDeterminism`.
 
 - `WTKontEffect_forget`, `WTStateEffectAt_forget`, and
   `WTStateEffectAt_initial`

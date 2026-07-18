@@ -28,6 +28,7 @@ Require Import theories.Typing.TypingJudgments.
 Require Import theories.Meta.StoreFacts.
 Require Import theories.Meta.EffectFacts.
 Require Import theories.Meta.TraceTypingFacts.
+Require Import theories.Determinism.SmallStepPairParScheduleDeterminism.
 
 Theorem PaperSmallStepFinitePrefixSafety :
   PairParCheckDecidable ->
@@ -237,4 +238,31 @@ Theorem PaperSmallStepStructuredEffectTerminalDeterminism :
     theta1 = theta2.
 Proof.
   exact StepsPhi_effect_terminal_deterministic.
+Qed.
+
+Theorem PaperPairParCheckedArbitraryScheduleTerminalDeterminism :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi_state1 phi_left1 phi_right1
+    phi_state2 phi_left2 phi_right2
+    heap1 heap2 v1 v2 theta_left theta_right,
+    PairParCheckPass theta_left theta_right ->
+    phi_left1 ⋞ theta_left ->
+    phi_right1 ⋞ theta_right ->
+    phi_left2 ⋞ theta_left ->
+    phi_right2 ⋞ theta_right ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi_state1
+      phi_left1
+      phi_right1
+      (PPS_State (StDone heap1 v1)) ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi_state2
+      phi_left2
+      phi_right2
+      (PPS_State (StDone heap2 v2)) ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  exact PairParCheckedArbitraryScheduleTerminalDeterminism.
 Qed.

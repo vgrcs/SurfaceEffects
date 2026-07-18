@@ -1,5 +1,6 @@
-From stdpp Require Import gmap.
+From stdpp Require Import fin_maps gmap.
 From Stdlib Require Import List Lia String.
+From Stdlib Require Import Sorting.Permutation.
 Require Import theories.Core.Values.
 
 Definition HeapVal := Val.
@@ -131,8 +132,30 @@ Fixpoint max_location_for_region
   | nil => 0
   | ((r', l), _) :: entries' =>
       let rest := max_location_for_region r entries' in
-      if Nat.eq_dec r r' then S (Nat.max l rest) else rest
+      if Nat.eq_dec r r' then Nat.max (S l) rest else rest
   end.
+
+Lemma max_location_for_region_perm :
+  forall entries1 entries2 r,
+    Permutation entries1 entries2 ->
+    max_location_for_region r entries1 =
+    max_location_for_region r entries2.
+Proof.
+  intros entries1 entries2 r HPerm.
+  induction HPerm as
+    [| x entries1 entries2 _ IH
+    | x y entries
+    | entries1 entries2 entries3 _ IH12 _ IH23].
+  - reflexivity.
+  - destruct x as [[rx lx] vx]; simpl.
+    destruct (Nat.eq_dec r rx); rewrite IH; reflexivity.
+  - destruct x as [[rx lx] vx].
+    destruct y as [[ry ly] vy].
+    simpl.
+    destruct (Nat.eq_dec r rx);
+      destruct (Nat.eq_dec r ry); lia.
+  - transitivity (max_location_for_region r entries2); assumption.
+Qed.
 
 Definition allocate_H (m : Heap) (r : nat) : nat :=
   max_location_for_region r (map_to_list m).
@@ -176,4 +199,57 @@ Proof.
   intros m1 m2 r HEqual.
   unfold equiv, heap_equiv in HEqual; subst.
   reflexivity.
+Qed.
+
+Lemma allocate_H_update_existing :
+  forall heap r k old_value new_value,
+    find_H k heap = Some old_value ->
+    allocate_H (update_H (k, new_value) heap) r =
+    allocate_H heap r.
+Proof.
+  intros heap r k old_value new_value HFind.
+  unfold allocate_H, update_H, find_H in *.
+  assert (HDeleteLookup : delete k heap !! k = None)
+    by apply lookup_delete.
+  pose proof
+    (map_to_list_insert (delete k heap) k new_value HDeleteLookup)
+    as HNew.
+  pose proof
+    (map_to_list_insert (delete k heap) k old_value HDeleteLookup)
+    as HOld.
+  rewrite <- (insert_delete_insert heap k new_value).
+  replace (map_to_list heap)
+    with (map_to_list (<[k:=old_value]> (delete k heap)))
+    by (rewrite (insert_delete heap k old_value HFind); reflexivity).
+  transitivity
+    (max_location_for_region r
+      ((k, new_value) :: map_to_list (delete k heap))).
+  - apply max_location_for_region_perm. exact HNew.
+  - transitivity
+      (max_location_for_region r
+        ((k, old_value) :: map_to_list (delete k heap))).
+    + destruct k as [rk lk]. reflexivity.
+    + symmetry. apply max_location_for_region_perm. exact HOld.
+Qed.
+
+Lemma allocate_H_update_fresh_different_region :
+  forall heap r r_other l_other value,
+    r_other <> r ->
+    find_H (r_other, l_other) heap = None ->
+    allocate_H (update_H ((r_other, l_other), value) heap) r =
+    allocate_H heap r.
+Proof.
+  intros heap r r_other l_other value HRegionNe HFresh.
+  unfold allocate_H, update_H, find_H in *.
+  pose proof
+    (map_to_list_insert heap (r_other, l_other) value HFresh)
+    as HInsert.
+  transitivity
+    (max_location_for_region r
+      (((r_other, l_other), value) :: map_to_list heap)).
+  - apply max_location_for_region_perm. exact HInsert.
+  - simpl.
+    destruct (Nat.eq_dec r r_other) as [HEq | _].
+    + subst. contradiction.
+    + reflexivity.
 Qed.
