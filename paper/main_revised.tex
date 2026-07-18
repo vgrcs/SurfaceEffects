@@ -12,7 +12,6 @@
 % ------------------------------------------------------------------
 % Notation macros
 % ------------------------------------------------------------------
-\newcommand{\eval}{\Downarrow}                        % big-step evaluation
 \newcommand{\desc}{\mathrel{\blacktriangleleft}}      % "correctly described by" relation
 \newcommand{\conflict}{\mathrel{\otimes}}             % conflict / disjointness relation
 \newcommand{\elemconf}{\mathrel{\square}}             % element-wise conflict (aux relation)
@@ -45,6 +44,8 @@
 \newcommand{\Disjoint}{\mathsf{Disjoint}}
 \newcommand{\DetTrace}{\mathsf{Det}}
 \newcommand{\MapDisjoint}{\mathsf{MapDisjoint}}
+\newcommand{\trsum}{\mathcal{T}}
+\newcommand{\Aug}{\mathsf{Aug}}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
@@ -73,16 +74,14 @@ a well-typed summary term that may depend on run-time values, is statically
 related to the computation, and is evaluated before the computation to obtain
 computed effects used by the parallel scheduling rule. We formalize static
 effects, dynamic traces, surface-effect terms, and evaluated computed effects.
-The mechanized development proves that a verified summary soundly
-approximates the dynamic trace of the computation. For well-typed evaluations,
-pairwise-disjoint and non-conflicting computed summaries imply a deterministic
-parallel trace; replay of such a trace yields equivalent final heaps, and
-big-step evaluation is deterministic for terminating runs. A complementary
-small-step continuation-machine development proves finite-prefix type and
-trace safety for prefixes of potentially diverging executions, including the
-staged success/failure behavior of the dynamic parallel check. The calculus
-therefore separates static verification of
-executable summaries from a run-time scheduling decision. We do not assume a
+The mechanized development proves that verified summaries soundly approximate
+computation traces. Pairwise-disjoint and non-conflicting computed summaries
+imply deterministic structured traces, and the continuation-machine semantics
+proves finite-prefix type and trace safety for prefixes of potentially
+diverging executions, terminal soundness for completed runs, and the staged
+success/failure behavior of the dynamic parallel check. The calculus therefore
+separates static verification of executable summaries from a run-time
+scheduling decision. We do not assume a
 constant or bounded cost for summary evaluation: the precision and evaluation
 cost of a programmer-written summary remain design choices to be assessed
 independently of the soundness result.
@@ -180,19 +179,20 @@ Dynamic access tracking & $\phi_1 \conflict \phi_2$ & per-access tracking/valida
 
 Let $\ptuple{e_1}{e_2}$ be the syntax construct for implicit-parallel tuples of
 the surface language (see Section~\ref{sec:syntax}). The dynamic semantics is a
-big-step semantics using a call-by-value strategy denoted by the relation
-($\eval$) between an initial heap ($H$) and an expression ($e$) on the
-left-hand side and a value ($v$), a final heap ($H'$) and a trace ($\phi$) on
-the right-hand side (see Section~\ref{sec:opsem}). The static semantics uses
-type-and-effect judgments in the form of $\Gamma \vdash e : \tau\,!\,\epsilon$,
-where $\Gamma$ is a typing context, $e$ is an expression, $\tau$ is a type and
-$\epsilon$ is a static effect (see Section~\ref{sec:staticsem}). On the one
-hand, the static semantics of surface effects defines the back-triangle
-relation ($\desc$) to denote that the computational expression $e$ is correctly
-described by the effect summary $\thetahat$ (an expression of the surface
-effects mini-language). On the other hand, the effect summary is dynamically
-evaluated to a set of computed effects, $\Theta$, at run-time that soundly
-describe ($\sqsupseteq$) the trace produced by the evaluation of $e$.
+continuation machine whose states contain a heap, an environment, a region map,
+an expression or returned value, and a continuation stack. A finite execution
+emits a list of dynamic actions, which is converted into the structured traces
+used by the effect soundness theorems (see Section~\ref{sec:opsem}). The static
+semantics uses type-and-effect judgments in the form of
+$\Gamma \vdash e : \tau\,!\,\epsilon$, where $\Gamma$ is a typing context, $e$
+is an expression, $\tau$ is a type and $\epsilon$ is a static effect (see
+Section~\ref{sec:staticsem}). On the one hand, the static semantics of surface
+effects defines the back-triangle relation ($\desc$) to denote that the
+computational expression $e$ is correctly described by the effect summary
+$\thetahat$ (an expression of the surface effects mini-language). On the other
+hand, the effect summary is dynamically evaluated to a set of computed effects,
+$\Theta$, at run time that soundly describe ($\sqsupseteq$) the trace produced
+by the execution of $e$.
 
 Static region/effect systems such as DPJ make non-interference a modular
 compile-time obligation, but region-level summaries may merge concrete accesses
@@ -229,12 +229,12 @@ The contributions of this paper are:
   \item a mechanized approximation theorem showing that a verified summary
         soundly covers the dynamic trace of its computation;
   \item a mechanized scheduler-soundness chain from safe computed summaries to
-        deterministic parallel traces, heap uniqueness under trace replay, and
-        determinism of well-typed big-step evaluation;
-  \item a mechanized small-step safety layer showing that every finite prefix
-        of a well-typed execution remains type safe, trace typed, and not
-        stuck, with explicit theorems for the checked and fallback outcomes of
-        the dynamic parallel check.
+        deterministic structured traces and heap uniqueness under trace
+        replay;
+  \item a mechanized continuation-machine safety layer showing that every
+        finite prefix of a well-typed execution remains type safe, trace typed,
+        and not stuck, plus explicit terminal theorems for the checked and
+        fallback outcomes of the dynamic parallel check.
 \end{itemize}
 
 The rest of this paper is organized as follows. We start by presenting a
@@ -316,8 +316,8 @@ Four objects must be kept distinct throughout the development:
         They abstract memory accesses at region granularity, e.g.\
         $\Rs(\rho)$, $\Ws(\rho)$, and $\As(\rho)$.
   \item \textbf{Dynamic traces} ($\phi$) are run-time traces produced by
-        big-step evaluation. Their elements record concrete allocation, read,
-        and write actions at region/location pairs.
+        continuation-machine executions. Their elements record concrete
+        allocation, read, and write actions at region/location pairs.
   \item \textbf{Surface-effect terms} ($\thetahat$) are first-class expressions
         of the effect-summary mini-language. They may contain ordinary
         expressions whose run-time values determine the summary.
@@ -354,59 +354,13 @@ presented in Section~\ref{sec:correctness}.
 \section{Operational Semantics}
 \label{sec:opsem}
 
-The mechanization uses two operational layers. The big-step semantics is the
-terminating reference semantics used by the trace-approximation and
-determinism theorems. A separate small-step continuation machine is used for
-finite-prefix safety: it reasons about every finite sequence of run-time steps,
-including prefixes of executions that may diverge. This paper therefore does
-not identify the two semantics by an adequacy theorem; the big-step layer
-supports terminating determinism, while the small-step layer supports run-time
-safety.
+The paper-facing operational semantics is a continuation-machine semantics. It
+is call-by-value and emits labels during execution. Silent labels record
+administrative motion through the continuation stack; action labels record
+concrete allocation, read, and write events. Finite executions therefore cover
+both terminating runs and finite prefixes of runs that may diverge.
 
-The environment $E$ stores variable bindings, i.e.\ variables bound to values
-that are in the scope of $E$. Accordingly, region variables are in scope in
-respect to $P$. The big-step relation ($\eval$) is from an initial heap $H$ and
-an expression $e$ into some value $v$, some final heap $H'$, and some effect
-trace $\phi$. Recursive functions are defined as
-$\mu f. \lambda x. \{e_b \mid e_e\}$, by letting $f$ occur free in the body.
-Evaluation of computational and effect applications is described by rules
-[E-CAPP] and [E-EAPP], respectively. The mechanized syntax contains a single
-implicit-parallel tuple constructor, whose big-step rule is [E-PAR]; there is no
-separate [E-SEQ] constructor or rule in the Coq development. Rule [E-PAR]
-evaluates the two summaries first and requires both
-$\Disjoint(\Theta_1,\Theta_2)$ and
-$\neg(\Theta_1 \conflict \Theta_2)$. The two computations are evaluated from
-the same initial heap to produce component traces, and the parallel trace is
-replayed by the small-step trace semantics to a final heap. The rule also
-requires the heap extensions allocated independently by the branches to be map
-disjoint.
-
-The scheduler-soundness argument is therefore not encoded as an unexplained
-existential heap premise. Approximation of the component traces by their
-computed summaries transports summary-level disjointness and conflict absence
-to the dynamic actions; this yields a deterministic parallel trace. The
-confluence result for deterministic trace replay then establishes equivalence
-of final heaps, as summarized in Appendix~\ref{app:determinism}.
-
-Effect-summary evaluation must not modify the heap seen by the computation. In
-the mechanized [E-EAPP] rule, the function, argument, and effect body all
-evaluate on the same heap and return that heap. The static development proves
-the corresponding read-only property from summary typing and effect soundness.
-A summary may \emph{denote} an allocation through an abstract allocation action
-without performing an allocation while the summary itself is evaluated.
-
-The small-step machine has states for expression evaluation, value return to a
-continuation, and final values. Its labels are either silent or a concrete
-dynamic action, and finite lists of labels are converted to dynamic traces by
-the mechanized function \texttt{trace\_as\_phi}. The small-step rule for
-\texttt{Pair\_Par} evaluates the two effect applications first. If the computed
-summaries pass the disjointness and non-conflict check, the checked
-interleaving relation is available for the two computational applications. If
-the check fails, the ordinary continuation machine follows the sequential
-fallback path. This explicit fallback belongs to the small-step safety layer;
-it is not a separate source-level [E-SEQ] tuple rule.
-
-\paragraph{Operational semantics definitions.}
+\paragraph{Machine domains.}
 \begin{align*}
 E \in \mathit{Env} &\triangleq \mathit{Variables} \rightharpoonup \mathit{Values} && \text{(variable assignment)}\\
 P \in \mathit{Rgn} &\triangleq \mathit{RgnVars} \rightharpoonup \mathit{RgnConst} && \text{(regions in scope)}\\
@@ -415,135 +369,213 @@ H \in \mathit{Heap} &\triangleq \mathit{Addr} \rightharpoonup \mathit{Values} &&
 v \in \mathit{Values} &\triangleq \mathbb{N} + \mathbb{B} + \mathit{Addr} + \mathit{Closures} + \Theta + () + (v,v) && \text{(dynamic values)}
 \end{align*}
 
-\paragraph{Big-step operational semantics
-($E;P \vdash H; e \eval v; H'; \phi$).}
+Machine states and labels are:
+\[
+\begin{array}{rcl}
+s &::=& \langle H,E,P,e,k\rangle
+      \mid \langle H,v,k\rangle
+      \mid \mathsf{done}(H,v),\\[1mm]
+\ell &::=& \tau \mid \mathsf{act}(a),\\[1mm]
+a &::=& \Alloc(l\at r,v)\mid \Read(l\at r,v)\mid \Write(l\at r,v).
+\end{array}
+\]
+The initial state for expression $e$ is
+$\mathsf{init}(H,E,P,e)=\langle H,E,P,e,\mathsf{doneK}\rangle$.
+The one-step relation is written $s\xrightarrow{\ell}s'$, and its reflexive
+transitive closure is written $s\xrightarrow{\alpha *}s'$, where $\alpha$ is
+the list of emitted dynamic actions. We write $\Phi(\alpha)$ for the
+structured trace obtained from the action list $\alpha$, and
+$s\xrightarrow{\Phi}s'$ when a structured trace is used directly.
+
+Continuations contain one frame per evaluation context. The frames used below
+include application frames
+$K^\mu_f(e_a,E,P,k)$ and $K^\mu_a(E,P,f,x,e_b,e_s,k)$ for computational
+application, analogous frames $K^e_f$ and $K^e_a$ for effect application,
+heap-operation frames for allocation, dereference, and assignment, and
+parallel frames
+\[
+K^{par}_1(e_{f1},e_{a1},e_{f2},e_{a2},E,P,k),\quad
+K^{par}_2(e_{f1},e_{a1},e_{f2},e_{a2},E,P,\Theta_1,k),
+\]
+$K^{par}_{\mu1}(e_{f2},e_{a2},E,P,k)$, and
+$K^{par}_{\mu2}(v_1,k)$.
+
+\paragraph{Representative small-step rules.}
 
 \begin{mathpar}
-\inferrule*[lab=E-Const]{ }
-  {E;P \vdash H;\, \mathsf{const}\; n \eval n;\, H;\, \Nil}
+\inferrule*[lab=S-Const]{ }
+  {\langle H,E,P,\mathsf{const}\;n,k\rangle
+   \xrightarrow{\tau}
+   \langle H,n,k\rangle}
 
-\inferrule*[lab=E-Var]{E(x) = v}
-  {E;P \vdash H;\, \mathsf{var}\; x \eval v;\, H;\, \Nil}
+\inferrule*[lab=S-Var]{E(x)=v}
+  {\langle H,E,P,x,k\rangle
+   \xrightarrow{\tau}
+   \langle H,v,k\rangle}
 
-\inferrule*[lab=E-Bool]{ }
-  {E;P \vdash H;\, \mathsf{bool}\; b \eval b;\, H;\, \Nil}
+\inferrule*[lab=S-Done]{ }
+  {\langle H,v,\mathsf{doneK}\rangle
+   \xrightarrow{\tau}
+   \mathsf{done}(H,v)}
 
-\inferrule*[lab=E-Closures]
-  {\varphi = \mu f. \lambda x. \{e_b \mid e_e\} \;\vee\; \varphi = \Lambda\rho. e}
-  {E;P \vdash H;\, \varphi \eval \langle E, P, \varphi\rangle;\, H;\, \Nil}
+\inferrule*[lab=S-Clos]
+  {\varphi=\mu f.\lambda x.\{e_b\mid e_s\}\;\vee\;\varphi=\Lambda\rho.e}
+  {\langle H,E,P,\varphi,k\rangle
+   \xrightarrow{\tau}
+   \langle H,\langle E,P,\varphi\rangle,k\rangle}
 
-\inferrule*[lab=E-Capp]
-  {v_f = \langle E', P', \mu f. \lambda x. \{e_b \mid e_e\}\rangle \\
-   E;P \vdash H;\, e_f \eval v_f;\, H';\, \phi_f \\
-   E'' = E'[f \mapsto v_f][x \mapsto v_a] \\
-   E;P \vdash H';\, e_a \eval v_a;\, H'';\, \phi_a \\
-   E'';P' \vdash H'';\, e_b \eval v_b;\, H''';\, \phi_b}
-  {E;P \vdash H;\, \capp e_f\, e_a \eval v_b;\, H''';\, \phi_f \bullet \phi_a \bullet \phi_b}
+\inferrule*[lab=S-Capp-Fun]{ }
+  {\langle H,E,P,\capp e_f\,e_a,k\rangle
+   \xrightarrow{\tau}
+   \langle H,E,P,e_f,K^\mu_f(e_a,E,P,k)\rangle}
 
-\inferrule*[lab=E-Eapp]
-  {v_f = \langle E', P', \mu f. \lambda x. \{e_b \mid e_e\}\rangle \\
-   E;P \vdash H;\, e_f \eval v_f;\, H;\, \phi_f \\
-   E'' = E'[f \mapsto v_f][x \mapsto v_a] \\
-   E;P \vdash H;\, e_a \eval v_a;\, H;\, \phi_a \\
-   E'';P' \vdash H;\, e_e \eval \Theta_e;\, H;\, \phi_e}
-  {E;P \vdash H;\, \eapp e_f\, e_a \eval \Theta_e;\, H;\,
-   \phi_f \bullet \phi_a \bullet \phi_e}
+\inferrule*[lab=S-Capp-Arg]
+  {v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_f,K^\mu_f(e_a,E,P,k)\rangle
+   \xrightarrow{\tau}
+   \langle H,E,P,e_a,K^\mu_a(E',P',f,x,e_b,e_s,k)\rangle}
 
-\inferrule*[lab=E-Rgn-App]
-  {E;P \vdash H;\, e_r \eval \langle E', P', \Lambda\rho. e_b\rangle;\, H';\, \phi_1 \\
-   E';P'[\rho \mapsto r] \vdash H';\, e_b \eval v;\, H'';\, \phi_2 \\
-   P(p) = r}
-  {E;P \vdash H;\, e_r[p] \eval v;\, H'';\, \phi_1 \bullet \phi_2}
+\inferrule*[lab=S-Capp-Body]
+  {E''=E'[f\mapsto v_f][x\mapsto v_a] \\
+   v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_a,K^\mu_a(E',P',f,x,e_b,e_s,k)\rangle
+   \xrightarrow{\tau}
+   \langle H,E'',P',e_b,k\rangle}
 
-\inferrule*[lab=E-Par]
-  {E;P \vdash H;\, \eapp e_f\, e_a \eval \Theta_1;\, H_{e1};\, \phi_1 \\
-   E;P \vdash H;\, \eapp e_g\, e_b \eval \Theta_2;\, H_{e2};\, \phi_2 \\
-   H \equiv H_{e1} \;\wedge\; H \equiv H_{e2} \\
-   \Disjoint(\Theta_1,\Theta_2) \;\wedge\;
-      \neg(\Theta_1 \conflict \Theta_2) \\
-   E;P \vdash H;\, \capp e_f\, e_a \eval v_L;\, H_L;\, \phi_L \\
-   E;P \vdash H;\, \capp e_g\, e_b \eval v_R;\, H_R;\, \phi_R \\
-   \MapDisjoint(H_L \setminus H, H_R \setminus H) \\
-   (\phi_L \,\|\, \phi_R,H) \Rightarrow^{*} (\Nil,H')}
-  {E;P \vdash H;\, \ptuple{e_f\, e_a}{e_g\, e_b} \eval (v_L, v_R);\, H';\,
-   (\phi_1 \,\|\, \phi_2) \bullet (\phi_L \,\|\, \phi_R)}
+\inferrule*[lab=S-Eapp-Fun]{ }
+  {\langle H,E,P,\eapp e_f\,e_a,k\rangle
+   \xrightarrow{\tau}
+   \langle H,E,P,e_f,K^e_f(e_a,E,P,k)\rangle}
 
-\inferrule*[lab=E-Cond-1]
-  {E;P \vdash H;\, e \eval \mathsf{true};\, H';\, \phi \\
-   E;P \vdash H';\, e_t \eval v;\, H'';\, \phi_t}
-  {E;P \vdash H;\, \cond e\, e_t\, e_f \eval v;\, H'';\, \phi \bullet \phi_t}
+\inferrule*[lab=S-Eapp-Arg]
+  {v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_f,K^e_f(e_a,E,P,k)\rangle
+   \xrightarrow{\tau}
+   \langle H,E,P,e_a,K^e_a(E',P',f,x,e_b,e_s,k)\rangle}
 
-\inferrule*[lab=E-Cond-2]
-  {E;P \vdash H;\, e \eval \mathsf{false};\, H';\, \phi \\
-   E;P \vdash H';\, e_f \eval v;\, H'';\, \phi_f}
-  {E;P \vdash H;\, \cond e\, e_t\, e_f \eval v;\, H'';\, \phi \bullet \phi_f}
+\inferrule*[lab=S-Eapp-Body]
+  {E''=E'[f\mapsto v_f][x\mapsto v_a] \\
+   v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_a,K^e_a(E',P',f,x,e_b,e_s,k)\rangle
+   \xrightarrow{\tau}
+   \langle H,E'',P',e_s,k\rangle}
 
-\inferrule*[lab=E-Alloc]
-  {E;P \vdash H;\, e \eval v;\, H';\, \phi \\
-   P(p) = r \\
-   \mathsf{fresh}(H',r)=l}
-  {E;P \vdash H;\, \alloc p\; e \eval l\at r;\, H'[(r,l) \mapsto v];\,
-   \phi \bullet \Alloc(l\at r)}
+\inferrule*[lab=S-Alloc]
+  {P(p)=r \qquad \mathsf{fresh}(H,r)=l}
+  {\langle H,v,K^{ref}(p,P,k)\rangle
+   \xrightarrow{\mathsf{act}(\Alloc(l\at r,v))}
+   \langle H[(r,l)\mapsto v],l\at r,k\rangle}
 
-\inferrule*[lab=E-Get]
-  {E;P \vdash H;\, e \eval l\at r;\, H';\, \phi \\
-   P(p) = r \\
-   H'(r,l) = v}
-  {E;P \vdash H;\, \getop p\; e \eval v;\, H';\, \phi \bullet \Read(l\at r)}
+\inferrule*[lab=S-Get]
+  {P(p)=r \qquad H(r,l)=v}
+  {\langle H,l\at r,K^{get}(p,P,k)\rangle
+   \xrightarrow{\mathsf{act}(\Read(l\at r,v))}
+   \langle H,v,k\rangle}
 
-\inferrule*[lab=E-Set]
-  {E;P \vdash H;\, e_r \eval l\at r;\, H';\, \phi_r \\
-   E;P \vdash H';\, e_v \eval v;\, H'';\, \phi_v \\
-   P(p) = r}
-  {E;P \vdash H;\, \setop p\; e_r\, e_v \eval ();\, H''[(r,l) \mapsto v];\,
-   \phi_r \bullet \phi_v \bullet \Write(l\at r)}
-
-\inferrule*[lab=E-Plus]
-  {E;P \vdash H;\, e_a \eval v_a;\, H';\, \phi_a \\
-   E;P \vdash H';\, e_b \eval v_b;\, H'';\, \phi_b}
-  {E;P \vdash H;\, \mathsf{plus}\; e_a\, e_b \eval v_a + v_b;\, H'';\,
-   \phi_a \bullet \phi_b}
-
-\inferrule*[lab=E-Eq]
-  {E;P \vdash H;\, e_a \eval v_a;\, H';\, \phi_a \\
-   E;P \vdash H';\, e_b \eval v_b;\, H'';\, \phi_b}
-  {E;P \vdash H;\, \mathsf{eq}\; e_a\, e_b \eval
-   (v_a = v_b\, ?\, \mathsf{true} : \mathsf{false});\, H'';\,
-   \phi_a \bullet \phi_b}
+\inferrule*[lab=S-Set]
+  {P(p)=r \qquad H(r,l)\neq\bot}
+  {\langle H,v,K^{set}(p,l,P,k)\rangle
+   \xrightarrow{\mathsf{act}(\Write(l\at r,v))}
+   \langle H[(r,l)\mapsto v],(),k\rangle}
 \end{mathpar}
 
 \paragraph{Evaluation of surface effects.}
 
+Surface-effect expressions are ordinary expressions whose values are computed
+effects. Abstract summaries return region-level actions without touching the
+heap; concrete summaries first evaluate their argument and then return a
+concrete computed action.
+
 \begin{mathpar}
-\inferrule*[lab=E-Abst-Alloc]{P(p) = r}
-  {E;P \vdash H;\, \Ahat(p) \eval \As(r);\, H;\, \Nil}
+\inferrule*[lab=S-Abst-Read]{P(p)=r}
+  {\langle H,E,P,\Rhat(p),k\rangle
+   \xrightarrow{\tau}
+   \langle H,\Rs(r),k\rangle}
 
-\inferrule*[lab=E-Abst-Read]{P(p) = r}
-  {E;P \vdash H;\, \Rhat(p) \eval \Rs(r);\, H;\, \Nil}
+\inferrule*[lab=S-Abst-Write]{P(p)=r}
+  {\langle H,E,P,\What(p),k\rangle
+   \xrightarrow{\tau}
+   \langle H,\Ws(r),k\rangle}
 
-\inferrule*[lab=E-Abst-Write]{P(p) = r}
-  {E;P \vdash H;\, \What(p) \eval \Ws(r);\, H;\, \Nil}
+\inferrule*[lab=S-Abst-Alloc]{P(p)=r}
+  {\langle H,E,P,\Ahat(p),k\rangle
+   \xrightarrow{\tau}
+   \langle H,\As(r),k\rangle}
 
-\inferrule*[lab=E-Conc-Read]
-  {E;P \vdash H;\, e \eval l\at r;\, H';\, \Nil}
-  {E;P \vdash H;\, \Readhat(e) \eval \Read(l\at r);\, H';\, \Nil}
+\inferrule*[lab=S-Conc-Read]{ }
+  {\langle H,l\at r,K^{read}(k)\rangle
+   \xrightarrow{\tau}
+   \langle H,\Read(l\at r),k\rangle}
 
-\inferrule*[lab=E-Conc-Write]
-  {E;P \vdash H;\, e \eval l\at r;\, H';\, \Nil}
-  {E;P \vdash H;\, \Writehat(e) \eval \Write(l\at r);\, H';\, \Nil}
+\inferrule*[lab=S-Conc-Write]{ }
+  {\langle H,l\at r,K^{write}(k)\rangle
+   \xrightarrow{\tau}
+   \langle H,\Write(l\at r),k\rangle}
 
-\inferrule*[lab=E-Concat]
-  {E;P \vdash H;\, e_a \eval v_a;\, H;\, \phi_a \\
-   E;P \vdash H;\, e_b \eval v_b;\, H;\, \phi_b}
-  {E;P \vdash H;\, e_a \oplus e_b \eval v_a \cup v_b;\, H;\,
-   \phi_a \bullet \phi_b}
+\inferrule*[lab=S-Concat]{ }
+  {\langle H,\Theta_2,K^{concat}(\Theta_1,k)\rangle
+   \xrightarrow{\tau}
+   \langle H,\Theta_1\cup\Theta_2,k\rangle}
 
-\inferrule*[lab=E-Top]{ }
-  {E;P \vdash H;\, \Top \eval \top;\, H;\, \Nil}
+\inferrule*[lab=S-Top]{ }
+  {\langle H,E,P,\Top,k\rangle
+   \xrightarrow{\tau}
+   \langle H,\top,k\rangle}
 
-\inferrule*[lab=E-Empty]{ }
-  {E;P \vdash H;\, \Pure \eval \emptyset;\, H;\, \Nil}
+\inferrule*[lab=S-Empty]{ }
+  {\langle H,E,P,\Pure,k\rangle
+   \xrightarrow{\tau}
+   \langle H,\emptyset,k\rangle}
 \end{mathpar}
+
+\paragraph{Implicit-parallel tuples.}
+The syntax contains a single staged tuple constructor
+$\ptuple{e_{f1}\,e_{a1}}{e_{f2}\,e_{a2}}$. The machine first evaluates the two
+effect applications and obtains computed summaries $\Theta_1$ and $\Theta_2$:
+\begin{mathpar}
+\inferrule*[lab=S-Par-Eff1]{ }
+  {\langle H,E,P,\ptuple{e_{f1}\,e_{a1}}{e_{f2}\,e_{a2}},k\rangle
+   \xrightarrow{\tau}
+   \langle H,E,P,\eapp e_{f1}\,e_{a1},
+     K^{par}_1(e_{f1},e_{a1},e_{f2},e_{a2},E,P,k)\rangle}
+
+\inferrule*[lab=S-Par-Eff2]{ }
+  {\langle H,\Theta_1,
+     K^{par}_1(e_{f1},e_{a1},e_{f2},e_{a2},E,P,k)\rangle
+   \xrightarrow{\tau}
+   \langle H,E,P,\eapp e_{f2}\,e_{a2},
+     K^{par}_2(e_{f1},e_{a1},e_{f2},e_{a2},E,P,\Theta_1,k)\rangle}
+\end{mathpar}
+At that point the dynamic guard is
+\[
+\mathsf{Pass}(\Theta_1,\Theta_2)
+\quad\triangleq\quad
+\Disjoint(\Theta_1,\Theta_2)\land\neg(\Theta_1\conflict\Theta_2).
+\]
+If the guard fails, the ordinary continuation machine follows the sequential
+fallback path:
+\[
+\langle H,\Theta_2,K^{par}_2(\cdots,\Theta_1,k)\rangle
+\xrightarrow{\tau}
+\langle H,E,P,\capp e_{f1}\,e_{a1},
+  K^{par}_{\mu1}(e_{f2},e_{a2},E,P,k)\rangle.
+\]
+The same concrete continuation frame also represents the sequential prefix
+used after the check succeeds. The checked-interleaving behavior for successful
+checks is stated by a separate structured transition relation
+\[
+s_{\parallel}\xrightarrow{\alpha}_{\parallel}s',
+\]
+which runs the two computational applications from the same source heap and
+records their branch traces separately. The theorem statements in
+Section~\ref{sec:smallstep} connect this checked relation and the sequential
+fallback path to one uniform safety story. There is no separate source-level
+sequential tuple constructor.
+
+Effect-summary evaluation is proved read-only from typing: if a well-typed
+summary execution emits a read-only trace, the final heap is the initial heap.
+A summary may \emph{denote} an allocation through an abstract allocation action
+without performing an allocation while the summary itself is evaluated.
 
 \section{Disjointness of Evaluated Surface Effects}
 \label{sec:disjoint}
@@ -553,8 +585,8 @@ $\Theta_1 \conflict \Theta_2$ is existential: it holds when the sets contain a
 pair of computed actions in the conflict relation. In contrast,
 $\Disjoint(\Theta_1,\Theta_2)$ is universal: every action represented by the
 left summary must be disjoint from every action represented by the right
-summary. Rule [E-PAR] requires \emph{both} disjointness and absence of a
-computed conflict. This distinction is important because the determinism proof
+summary. The dynamic tuple guard requires \emph{both} disjointness and absence
+of a computed conflict. This distinction is important because scheduler safety
 uses disjointness to transport non-overlap to all dynamic actions and uses
 conflict absence to rule out the explicit dynamic read--write and write--write
 conflict constructors.
@@ -565,7 +597,8 @@ in the same region are therefore disjoint. Read--read pairs are always
 disjoint. When an abstract write or allocation action is involved, region
 inequality is required because the summary does not identify a concrete
 location. The distinguished value $\top$ conflicts with every computed effect
-and has no disjointness constructor, so it cannot enable [E-PAR].
+and has no disjointness constructor, so it cannot enable the checked
+interleaving path.
 
 \paragraph{Deciding disjointness.}
 
@@ -589,14 +622,14 @@ and has no disjointness constructor, so it cannot enable [E-PAR].
   {\Theta \conflict \top}
 \end{mathpar}
 
-The small-step progress and safety theorems are stated under the premise
-\begin{quote}
-\texttt{PairParCheckDecidable}
-\end{quote}
-For every pair of computed summaries, either the disjointness/non-conflict
-check succeeds or its negation holds. This is the logical decision boundary
-used by the mechanization. The current development does not additionally
-certify a boolean implementation of the check by a reflection theorem.
+The small-step progress and safety theorems assume that the guard is decidable:
+\[
+\forall \Theta_1,\Theta_2.\;
+\mathsf{Pass}(\Theta_1,\Theta_2)\lor
+\neg\mathsf{Pass}(\Theta_1,\Theta_2).
+\]
+The current development does not additionally certify a boolean implementation
+of the check by a reflection theorem.
 
 \section{Static Semantics}
 \label{sec:staticsem}
@@ -613,14 +646,12 @@ rule [T-CAPP] declares the return type of a computational application,
 $\mathsf{capp}$, and the same reasoning is made for $\mathsf{eapp}$ (whose
 return type is always $\mathsf{eff}$).
 
-Because logical (Leibniz) equality is used by the \textsc{Coq} theorem prover
-in order to mechanize the soundness theorems about surface effects, e.g.\ type
-soundness, types need to be locally nameless \citep{chargueraud2012}, so that
-quantified types are equivalent up to $\alpha$-conversion. Bound variables are
-represented with de Bruijn indices and free-variable names are left unchanged.
-In fact, the use of syntactical identity modulo $\alpha$-equivalence inside
-\textsc{Coq} proofs simplifies the substitution semantics by means of
-$\beta$-reduction at type level because types are locally nameless.
+Because the mechanization uses logical equality when proving soundness
+properties about surface effects, types are represented in a locally nameless
+style \citep{chargueraud2012}, so that quantified types are equivalent up to
+$\alpha$-conversion. Bound variables are represented with de Bruijn indices
+and free-variable names are left unchanged. This representation lets
+substitution be stated directly by type-level $\beta$-reduction.
 
 %% TODO: the complete table of typing rules (T-VAR, T-CONST, T-ABST, T-CAPP,
 %% T-EAPP, T-RGN-ABST, T-ALLOC, T-GET, T-SET, T-PAR, ...) was heavily garbled
@@ -643,9 +674,11 @@ $\sem{\phi} \subseteq \emptyset$ holds, then $\phi = \Nil$.
 \end{corollary}
 
 \begin{lemma}[Read-only traces of dynamic effects imply no side-effects]
-Given that $\ReadOnly(\phi)$, the big-step evaluation rule
-$E;P \vdash H; e \eval v; H'; \phi$ implies that $H \equiv H'$ up to key-value
-pairs.
+Given that $\ReadOnly(\phi)$, a terminal structured execution
+\[
+\mathsf{init}(H,E,P,e)\xrightarrow{\phi}\mathsf{done}(H',v)
+\]
+implies that $H \equiv H'$ up to key-value pairs.
 \end{lemma}
 
 \begin{lemma}[Read-only static effects imply read-only traces of dynamic
@@ -664,7 +697,7 @@ of expressions, $e$, and surface effects, $\thetahat$, as they were previously
 defined in Section~\ref{sec:syntax}. Informally, given a set of syntax-directed
 inference rules, the correctness of surface effects implies that if
 $\Gamma; \Delta \vdash e \desc \thetahat$, then the run-time effects of the
-corresponding big-step evaluation rules satisfy the relation
+corresponding terminal machine executions satisfy the relation
 $\phi \approxx \Theta$ for all heaps, run-time environments and allocated
 region maps. Note that the given set of rules is incomplete, in the sense that
 an infinite number of sound effect summaries can be used to describe a given
@@ -694,22 +727,56 @@ expression. Moreover, some expressions can be over-described by `$\Top$' only.
   {\phi \approxx \top}
 \end{mathpar}
 
+The derived small-step theorem for effect application uses the following
+mathematical interpretation of an observed trace as a computed summary:
+\[
+\begin{array}{rcl}
+\trsum(\Nil) &=& \emptyset,\\[0.5mm]
+\trsum(\Alloc(l\at r,v)) &=& \{\As(r)\},\\[0.5mm]
+\trsum(\Read(l\at r,v)) &=& \{\Read(l\at r)\},\\[0.5mm]
+\trsum(\Write(l\at r,v)) &=& \{\Write(l\at r)\},\\[0.5mm]
+\trsum(\phi_1;\phi_2) &=& \trsum(\phi_1)\cup\trsum(\phi_2),\\[0.5mm]
+\trsum(\phi_1\parallel\phi_2) &=&
+  \trsum(\phi_1)\cup\trsum(\phi_2).
+\end{array}
+\]
+Thus every structured trace approximates its trace-induced computed summary:
+\[
+\phi \approxx \trsum(\phi).
+\]
+For an effect application, the continuation machine evaluates the function
+position and the argument position before entering the paired summary body. If
+the observed summary trace decomposes as
+\[
+\phi_e = \phi_f;\phi_a;\phi_s
+\]
+and the summary body returns $\Theta_s$, the observed summary used by the
+derived theorem is
+\[
+\Aug(\phi_f,\phi_a,\Theta_s)
+  \triangleq \trsum(\phi_f)\cup\trsum(\phi_a)\cup\Theta_s.
+\]
+This is an interpretation layer over terminal runs: the machine still returns
+the body value $\Theta_s$, while the proof can also reason about the
+function-position and argument-position traces that were required to reach the
+body.
+
 Because `$\Top$' is a programming construct, the approximation relation
 $\phi \approxx \top$ is trivially sound for every trace. Its scheduler behavior
-is deliberately conservative: in the Coq definition, $\top$ conflicts with
-every computed effect and cannot satisfy $\Disjoint$. Hence a `$\Top$' summary
-does not justify the [E-PAR] rule. Evaluating `$\Top$' itself produces the empty
-dynamic trace and preserves the heap, but the formal development contains no
-complexity model from which a constant-overhead claim could be derived.
+is deliberately conservative: $\top$ conflicts with every computed effect and
+cannot satisfy $\Disjoint$. Hence a `$\Top$' summary does not justify the
+checked-interleaving path. Evaluating `$\Top$' itself
+produces the empty dynamic trace and preserves the heap, but the formal
+development contains no complexity model from which a constant-overhead claim
+could be derived.
 
 \paragraph{Correctness inference rules
 ($\Gamma; \Delta; P \vdash e \desc \thetahat$).}
 
-The judgment is indexed by the run-time region map $P$, as in the mechanized
-relation \texttt{BackTriangle}.  For a static effect $\epsilon$, write
-$\epsilon[P]$ for the effect obtained by substituting the region values in $P$.
-The following rules are the paper presentation of the corresponding Coq
-constructors; in particular, pure constants, booleans, variables, abstractions,
+The judgment is indexed by the run-time region map $P$. For a static effect
+$\epsilon$, write $\epsilon[P]$ for the effect obtained by substituting the
+region values in $P$. The following rules give the inductive presentation used
+in the paper; in particular, pure constants, booleans, variables, abstractions,
 and region abstractions are described by $\Pure$, rather than by an arbitrary
 summary.
 
@@ -818,10 +885,9 @@ summary.
   {\Gamma;\Delta;P \vdash e \desc \Top}
 \end{mathpar}
 
-Here $\odot \in \{+,-,\times,=\}$ abbreviates the four corresponding
-mechanized constructors.  The concrete read and write rules above use a
-concrete region value $r$, matching the Coq constructors
-\texttt{BT\_Ref\_Read\_Conc} and \texttt{BT\_Ref\_Write\_Conc}.
+Here $\odot \in \{+,-,\times,=\}$ abbreviates the four corresponding arithmetic
+and equality cases. The concrete read and write rules above use a concrete
+region value $r$.
 
 \begin{theorem}[Correctness of surface effects]
 Assume well-formed region, typing, heap-typing, and environment-typing
@@ -829,9 +895,10 @@ judgments for $H$, $E$, $P$, and $e_b$. If the computation and summary are
 related by
 $\Gamma;\Delta;P \vdash e_b \desc e_e$, and
 \[
-E;P \vdash H;e_b \eval v_b;H_b;\phi_b
+\mathsf{init}(H,E,P,e_b)\xrightarrow{\phi_b}\mathsf{done}(H_b,v_b)
 \qquad\text{and}\qquad
-E;P \vdash H;e_e \eval \Theta_e;H_e;\phi_e,
+\mathsf{init}(H,E,P,e_e)\xrightarrow{\phi_e}
+  \mathsf{done}(H_e,\mathsf{eff}(\Theta_e)),
 \]
 with $\ReadOnly(\phi_e)$, then
 \[
@@ -839,13 +906,11 @@ with $\ReadOnly(\phi_e)$, then
 \]
 \end{theorem}
 
-The statement above is the direct paper-level consequence of the strengthened
-Coq theorem \texttt{Correctness\_soundness\_ext}; the mechanized theorem is
-phrased with an additional evaluation from an equivalent initial heap because
-that stronger induction hypothesis is needed by the determinism development.
 The conclusion of the correctness theorem is approximation only. In
 particular, it does \emph{not} conclude that the computation trace $\phi_b$ is
-read-only.
+read-only. The small-step results in Section~\ref{sec:smallstep} reuse this
+approximation story while stating finite-prefix and checked/fallback safety
+directly over the continuation machine.
 
 \begin{corollary}[Read-only, heap-preserving summary evaluation]
 For a well-typed computation/effect application pair, static effect soundness
@@ -854,12 +919,49 @@ $\ReadOnly(\phi_e)$. Therefore summary evaluation preserves the initial heap:
 $H \equiv H_e$.
 \end{corollary}
 
-This corollary corresponds to the proof structure packaged by
-\texttt{PairParAux}: the computation trace is shown to satisfy
+The proof separates two facts: the computation trace is shown to satisfy
 $\phi_b \approxx \Theta_e$, while the trace produced by evaluating the effect
 application is separately shown to be read-only. Thus a computed action such as
 $\As(r)$ may \emph{describe} a future allocation without the evaluation of the
 summary itself allocating memory.
+
+\begin{theorem}[Augmented effect-application summary]
+Consider a terminal evaluation of an effect application:
+\[
+\mathsf{init}(H,E,P,\eapp e_f\,e_a)
+  \xrightarrow{\phi_e}
+  \mathsf{done}(H_e,\mathsf{eff}(\Theta_s)).
+\]
+Suppose the run decomposes through the ordinary effect-application frames as
+\[
+\begin{array}{c}
+\mathsf{init}(H,E,P,e_f)
+  \xrightarrow{\phi_f}
+  \mathsf{done}(H_f,
+    \langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle),
+\\[1mm]
+\mathsf{init}(H_f,E,P,e_a)
+  \xrightarrow{\phi_a}
+  \mathsf{done}(H_a,v_a),
+\\[1mm]
+\mathsf{init}(H_a,E'[f\mapsto v_f][x\mapsto v_a],P',e_s)
+  \xrightarrow{\phi_s}
+  \mathsf{done}(H_e,\mathsf{eff}(\Theta_s)).
+\end{array}
+\]
+If the body-summary trace is covered by the body summary,
+$\phi_s \approxx \Theta_s$, then the whole observed effect-application trace
+is covered by the augmented observed summary:
+\[
+\phi_e \approxx \Aug(\phi_f,\phi_a,\Theta_s).
+\]
+\end{theorem}
+
+The theorem does not change the operational semantics: the terminal value of
+the effect application is still $\mathsf{eff}(\Theta_s)$. It records an
+additional interpretation of the observed run that charges the traces needed
+to evaluate $e_f$ and $e_a$ to $\trsum(\phi_f)$ and $\trsum(\phi_a)$ rather
+than requiring the body summary $\Theta_s$ alone to cover them.
 
 \begin{theorem}[Scheduler soundness]
 Let $\phi_1 \approxx \Theta_1$ and $\phi_2 \approxx \Theta_2$. If
@@ -874,15 +976,14 @@ and $\DetTrace(\phi_1)$ and $\DetTrace(\phi_2)$, then
 \]
 \end{theorem}
 
-The mechanized lemma \texttt{Det\_trace\_from\_theta} is the explicit bridge
-required by the run-time scheduler. Its proof first shows that a dynamic
-read--write or write--write conflict would induce a corresponding computed
-conflict, contradicting the summary-level premise. It separately transports
-computed-action disjointness to every cross-trace pair of dynamic actions. The
-result is exactly the parallel constructor of the mechanized
-$\DetTrace$ predicate.
+The scheduler bridge first shows that a dynamic read--write or write--write
+conflict would induce a corresponding computed conflict, contradicting the
+summary-level premise. It separately transports computed-action disjointness to
+every cross-trace pair of dynamic actions. The result is the deterministic
+parallel trace judgment above.
 
-Combining the preceding results gives the proof dependency used by [E-PAR]:
+Combining the preceding results gives the proof dependency used by the checked
+interleaving path:
 \[
 \begin{array}{c}
 \text{verified computation/summary pair}
@@ -921,10 +1022,10 @@ computations may be related only to a coarse summary by the supplied inductive
 rules. Concrete computed actions can refine a region-level distinction and may
 therefore satisfy the scheduler premises even when a region-only comparison
 would be inconclusive. `$\Top$', by contrast, is a sound approximation of every
-trace but cannot satisfy the [E-PAR] disjointness/non-conflict premises. The
-current calculus contains no separate static-fallback rule for `$\Top$'; its
-role in the mechanized semantics is to conservatively prevent this dynamic
-parallel rule from being justified.
+trace but cannot satisfy the disjointness/non-conflict premises of the dynamic
+guard. The current calculus contains no separate static-fallback rule for
+`$\Top$'; its role in the mechanized semantics is to conservatively prevent
+the checked interleaving path from being justified.
 
 For example, the main purpose of designing a type system where the functional
 type contains a return type for a computational expression and a return type
@@ -933,10 +1034,13 @@ application ($\capp e_f\, e_a$) by its corresponding effect application
 ($\eapp e_f\, e_a$). The interesting aspect of assigning the ``extended''
 functional type to the expression $e_f$ is that it may carry a non-empty
 latent effect for the computational term which can be soundly described by the
-evaluation of the corresponding ``surface'' effect term. In this case, the
-rule [EFF-APP] shows that the sound effect summary for $\capp e_f\, e_a$ is
-built by chaining the effects obtained by evaluating the surface effects of
-$e_f$ and $e_a$.
+evaluation of the corresponding ``surface'' effect term. The returned computed
+summary of $\eapp e_f\,e_a$ is produced by the function body's summary
+expression. The observed run of the effect application may also contain
+read-only traces from evaluating $e_f$ and $e_a$ before the body is reached;
+the augmented-summary interpretation above accounts for those traces as
+$\trsum(\phi_f)\cup\trsum(\phi_a)$ without changing the value returned by the
+machine.
 
 Another example is the expression $e_b$ whose reference type is parametrized
 by a region $p$. Two different effect summaries are proven sound: the first is
@@ -952,8 +1056,8 @@ $\Readhat(e)$, which directly takes the argument as input in order to evaluate
 to a concrete memory address inside some allocated region.
 
 The precision of the surface effects can be evaluated by analyzing their
-dynamic semantics. Consider, for example, the rules [E-ABST-READ] and
-[E-CONC-WRITE] in Section~\ref{sec:opsem}. The first corresponds to the
+dynamic semantics. Consider, for example, the rules [S-Abst-Read] and
+[S-Conc-Write] in Section~\ref{sec:opsem}. The first corresponds to the
 evaluation of the ``static version'' of the surface effect for the
 $\mathsf{get}$ operation and the second corresponds to the evaluation of the
 ``concrete version'' of the surface effect for the $\mathsf{set}$ operation.
@@ -970,14 +1074,9 @@ at run-time to be more precise than the static analysis.
 \section{Small-Step Runtime Safety}
 \label{sec:smallstep}
 
-The big-step semantics above is intentionally a terminating semantics: a
-judgment directly relates an initial configuration to a final value, heap, and
-trace. To state run-time safety for executions that may not terminate, the
-mechanized development introduces a small-step continuation machine. A
-finite-prefix theorem then ranges over every finite sequence of small steps,
-not only over complete evaluations.
-
-The ordinary small-step safety invariant is indexed by a store typing
+The continuation machine supports safety statements over finite executions,
+not only over completed runs. The ordinary small-step safety invariant is
+indexed by a store typing
 $\Sigma$. Along a finite trace, allocation may extend $\Sigma$; preservation
 therefore produces a final store typing $\Sigma'$ with
 $\Sigma \subseteq \Sigma'$. We write
@@ -985,17 +1084,28 @@ $s \xrightarrow{\alpha *} s'$ for a finite small-step execution emitting the
 dynamic-action list $\alpha$, $\mathsf{init}(H,E,P,e)$ for the initial machine
 state, and $\mathsf{done}(H,v)$ for a terminal state. The judgment
 $\Sigma \vdash_{\mathsf{st}} s : \tau$ abbreviates the mechanized typed-state
-invariant, and
-$\Sigma \vdash_{\phi} \alpha$ abbreviates
-\[
-\mathsf{TcPhi}\; \Sigma\;(\texttt{trace\_as\_phi}\;\alpha).
-\]
+invariant, and $\Sigma \vdash_{\phi} \alpha$ states that the structured trace
+$\Phi(\alpha)$ is well typed with respect to $\Sigma$.
 The predicate $\mathsf{NotStuck}(s)$ means that $s$ is either terminal or has
-a next small-step transition.
+a next small-step transition, and $\mathsf{Shape}_{\Sigma}(v,\tau)$ records
+that the run-time form of $v$ matches type $\tau$ under store typing $\Sigma$.
+The dynamic tuple guard is assumed decidable:
+\[
+\forall \Theta_1,\Theta_2.\;
+\mathsf{Pass}(\Theta_1,\Theta_2)\lor
+\neg\mathsf{Pass}(\Theta_1,\Theta_2),
+\]
+where
+\[
+\mathsf{Pass}(\Theta_1,\Theta_2)
+\triangleq
+\Disjoint(\Theta_1,\Theta_2)\land
+\neg(\Theta_1\conflict\Theta_2).
+\]
 
-\begin{theorem}[Small-step finite-prefix safety]
-Assume the heap, region environment, variable environment, and expression are
-well typed:
+\begin{theorem}[Finite-prefix safety]
+Assume that the heap, region environment, variable environment, and expression
+are well typed:
 \[
 \Sigma \vdash H
 \qquad
@@ -1021,17 +1131,8 @@ then there exists an extended store typing $\Sigma'$ such that
 \]
 \end{theorem}
 
-This statement is mechanized as
-\[
-\texttt{PaperSmallStepFinitePrefixSafety}
-\]
-and internally wraps
-\[
-\texttt{initial\_state\_steps\_safety\_with\_trace}.
-\]
-
-\begin{theorem}[Small-step terminal soundness]
-Under the same typing assumptions, if
+\begin{theorem}[Terminal type and trace soundness]
+Under the same heap, environment, and expression typing assumptions, if
 \[
 \mathsf{init}(H,E,P,e) \xrightarrow{\alpha *} \mathsf{done}(H',v),
 \]
@@ -1043,86 +1144,77 @@ then there exists an extended store typing $\Sigma'$ such that
 \quad\land\quad
 \Sigma' \vdash v : \tau[P]
 \quad\land\quad
-\mathsf{RuntimeValShape}_{\Sigma'}(v,\tau[P])
+\mathsf{Shape}_{\Sigma'}(v,\tau[P])
 \quad\land\quad
 \Sigma' \vdash_{\phi} \alpha.
 \]
 \end{theorem}
 
-This statement is mechanized as
-\[
-\texttt{PaperSmallStepTerminalSoundness}
-\]
-and internally wraps
-\[
-\texttt{initial\_state\_terminal\_value\_with\_trace}.
-\]
-It is a terminal extractor, not an adequacy theorem relating the terminal
-small-step execution back to the big-step judgment.
-
 For implicit-parallel tuples, the small-step semantics exposes the dynamic
 effect check as an explicit control point. After both effect applications have
-produced computed summaries $\Theta_1$ and $\Theta_2$, the mechanized theorem
-splits on the same condition used by [E-PAR]:
-\[
-\Disjoint(\Theta_1,\Theta_2)
-\qquad\text{and}\qquad
-\neg(\Theta_1 \conflict \Theta_2).
-\]
+produced computed summaries $\Theta_1$ and $\Theta_2$, the safety theorem
+splits on $\mathsf{Pass}(\Theta_1,\Theta_2)$.
 If the check succeeds, the checked interleaving relation for the two
 computational applications is trace safe. If the check fails, the ordinary
 continuation machine takes the sequential fallback path and that path is trace
 safe.
 
-\begin{theorem}[Checked-or-fallback trace safety]
+\begin{theorem}[Checked-or-fallback finite-prefix safety]
 Assume the heap, region environment, variable environment, both computational
-applications, and the outer continuation are well typed. Let
+applications, and the outer continuation are well typed:
+\[
+\begin{array}{c}
+\Sigma\vdash H
+\qquad
+\Delta\vdash P
+\qquad
+\Sigma;P\vdash E:\Gamma
+\\[1mm]
+\Gamma;\Delta\vdash \capp e_{f1}\,e_{a1}:\tau_1\,!\,\epsilon_1
+\qquad
+\Gamma;\Delta\vdash \capp e_{f2}\,e_{a2}:\tau_2\,!\,\epsilon_2
+\\[1mm]
+\Sigma\vdash k:(\tau_1[P]\times\tau_2[P])\Rightarrow\tau_o.
+\end{array}
+\]
+Let
 $s_{\mathsf{chk}}$ be the checked-interleaving start state and
 $s_{\mathsf{seq}}$ be the sequential fallback start state for
 \[
-\texttt{Pair\_Par}\;e_{f1}\;e_{a1}\;e_{f2}\;e_{a2}.
+\ptuple{\capp e_{f1}\,e_{a1}}{\capp e_{f2}\,e_{a2}}.
 \]
-If the dynamic check is decidable, then
+Then
 \[
 \begin{array}{l}
-\bigl(\Disjoint(\Theta_1,\Theta_2)
-  \land \neg(\Theta_1\conflict\Theta_2)
-  \land \mathsf{TraceSafe}_{\Sigma,\tau_o}(s_{\mathsf{chk}})\bigr)
+\bigl(\mathsf{Pass}(\Theta_1,\Theta_2)
+  \land \mathsf{Safe}^{\parallel}_{\Sigma,\tau_o}(s_{\mathsf{chk}})\bigr)
 \\[1mm]\qquad{}\lor{}
 \\[1mm]
-\bigl(\neg(\Disjoint(\Theta_1,\Theta_2)
-  \land \neg(\Theta_1\conflict\Theta_2))
+\bigl(\neg\mathsf{Pass}(\Theta_1,\Theta_2)
   \land \exists \Sigma'.\;
     \Sigma \subseteq \Sigma'
-    \land \mathsf{TraceSafe}_{\Sigma',\tau_o}(s_{\mathsf{seq}})\bigr).
+    \land \mathsf{Safe}_{\Sigma',\tau_o}(s_{\mathsf{seq}})\bigr).
 \end{array}
 \]
 \end{theorem}
 
-Here $\mathsf{TraceSafe}_{\Sigma,\tau}(s)$ abbreviates the finite-prefix safety
-property of all traces from state $s$ at result type $\tau$. This statement is
-mechanized as
-\[
-\texttt{PaperPairParCheckedOrFallbackTraceSafety}
-\]
-and internally wraps
-\[
-\texttt{pairpar\_check\_decidable\_trace\_safe}.
-\]
+Here $\mathsf{Safe}_{\Sigma,\tau}(s)$ is ordinary finite-prefix safety for a
+state, and $\mathsf{Safe}^{\parallel}_{\Sigma,\tau}(s)$ is its
+checked-interleaving analogue for paired branch states.
 
 \begin{theorem}[Checked-or-fallback terminal soundness]
 Under the same hypotheses, either the check succeeds and
 \[
 \begin{array}{l}
 \forall \alpha,H',v.\;
-s_{\mathsf{chk}} \xrightarrow{\alpha *} \mathsf{done}(H',v)
+s_{\mathsf{chk}}\xrightarrow{\alpha}_{\parallel}\mathsf{done}(H',v)
 \\[1mm]\qquad\Longrightarrow
 \exists \Sigma'.\;
 \Sigma \subseteq \Sigma'
 \land \Sigma' \vdash H'
 \land \Sigma' \vdash v : \tau_o
 \\[1mm]\qquad\land
-\mathsf{RuntimeValShape}_{\Sigma'}(v,\tau_o)
+\mathsf{Shape}_{\Sigma'}(v,\tau_o)
 \land \Sigma' \vdash_{\phi} \alpha,
 \end{array}
 \]
@@ -1137,24 +1229,75 @@ s_{\mathsf{seq}} \xrightarrow{\alpha *} \mathsf{done}(H',v)
 \land \Sigma' \vdash H'
 \land \Sigma' \vdash v : \tau_o
 \\[1mm]\qquad\land
-\mathsf{RuntimeValShape}_{\Sigma'}(v,\tau_o)
+\mathsf{Shape}_{\Sigma'}(v,\tau_o)
 \land \Sigma' \vdash_{\phi} \alpha.
 \end{array}
 \]
 \end{theorem}
 
-This statement is mechanized as
-\[
-\texttt{PaperPairParCheckedOrFallbackTerminalSoundness}
-\]
-and internally wraps
-\[
-\texttt{pairpar\_check\_decidable\_terminal\_value}.
-\]
 The theorem is deliberately about the staged construct in the mechanized
-syntax. Since the syntax contains no distinct [E-SEQ] tuple constructor, it is
-not an observational-equivalence theorem comparing [E-PAR] with a separate
-sequential tuple rule.
+syntax. Since the syntax contains no distinct sequential tuple constructor, it
+is not an observational-equivalence theorem comparing two source-level tuple
+rules.
+
+\paragraph{Structured terminal summary correctness.}
+
+The paper-facing correctness theorem is stated directly over terminal
+continuation-machine runs.  Suppose the two effect summaries for a parallel
+pair terminate as
+\[
+\begin{array}{c}
+\mathsf{init}(H,E,P,\eapp e_{f1}\,e_{a1})
+  \xrightarrow{\phi_{e1}}
+  \mathsf{done}(H_{e1},\mathsf{eff}(\Theta_1)),
+\\[1mm]
+\mathsf{init}(H,E,P,\eapp e_{f2}\,e_{a2})
+  \xrightarrow{\phi_{e2}}
+  \mathsf{done}(H_{e2},\mathsf{eff}(\Theta_2)),
+\end{array}
+\]
+and the dynamic check on $\Theta_1$ and $\Theta_2$ succeeds.  Suppose also that
+the checked branch machine terminates with branch traces $\phi_{b1}$ and
+$\phi_{b2}$ and residual scheduler trace $\phi_p$, so that the whole structured
+trace is
+\[
+\phi =
+  (\phi_{e1}\parallel\phi_{e2});
+  ((\phi_{b1}\parallel\phi_{b2});\phi_p).
+\]
+Then each computational branch admits a decomposition
+\[
+\phi_{bi}=\phi_{fi};\phi_{ai};\phi_{si}
+\qquad (i\in\{1,2\}),
+\]
+where $\phi_{fi}$ is the function-position trace, $\phi_{ai}$ is the
+argument-position trace, and $\phi_{si}$ is the body trace.  Under the usual
+heap, region, environment, and expression typing assumptions, these
+decompositions satisfy $\ReadOnly(\phi_{f1})$, $\ReadOnly(\phi_{a1})$,
+$\ReadOnly(\phi_{f2})$, and $\ReadOnly(\phi_{a2})$, and the terminal
+structured trace is covered by the augmented observed summary:
+\[
+\phi \approxx
+\Aug\!\left(
+  \phi_{e1},
+  \phi_{e2},
+  \trsum(\phi_{b1})\cup\trsum(\phi_{b2})
+\right).
+\]
+Equivalently, expanding the two branch decompositions,
+\[
+\phi \approxx
+\Aug\!\left(
+  \phi_{e1},
+  \phi_{e2},
+  \Aug(\phi_{f1},\phi_{a1},\trsum(\phi_{si}))
+  \cup
+  \Aug(\phi_{f2},\phi_{a2},\trsum(\phi_{s2}))
+\right).
+\]
+This theorem has no auxiliary replay, heap-agreement, or bounded-induction
+hypothesis: the extra coverage needed by function and argument evaluation is
+charged to the observed trace summaries via $\trsum$.
 
 \section{Discussion and Related Work}
 \label{sec:related}
@@ -1195,16 +1338,15 @@ specifications).
 The design is hybrid in a precise sense. Verification of the
 computation/summary relation is static, while the scheduling guard is dynamic:
 the summary term is evaluated with run-time values and its computed effect is
-checked for disjointness and conflict absence before [E-PAR] applies. No failed
-dynamic cast changes the computational result, but summary evaluation is still
-run-time computation and may itself be input dependent. The big-step
-metatheory is partial-correctness reasoning over terminating evaluations; it
-does not prove termination of summary terms, bound their cost, or compare that
-cost with dynamic validation mechanisms. The small-step metatheory adds
-finite-prefix safety for ordinary and checked/fallback executions, but the
-current Coq development does not prove an adequacy theorem connecting every
-terminal small-step execution to the big-step judgment. For that reason, both
-operational layers remain visible in the statement of the mechanized results.
+checked for disjointness and conflict absence before the checked interleaving
+path is used. No failed dynamic cast changes the computational result, but
+summary evaluation is still run-time computation and may itself be input
+dependent. The continuation-machine metatheory proves finite-prefix safety for
+ordinary and checked/fallback executions and terminal soundness for completed
+machine runs. It does not prove termination of summary terms, bound their cost,
+or compare that cost with dynamic validation mechanisms. A future adequacy
+theorem could relate terminal machine runs to the archived terminating
+evaluator, but that bridge is not used as a paper theorem here.
 
 Recent work on hybrid type and effect systems applied to concurrent
 programming is found in \citet{long2013}. The approach defines special static
@@ -1257,17 +1399,15 @@ correctness theorem proves trace approximation, and the scheduler-soundness
 lemma makes the critical bridge explicit: disjoint and non-conflicting computed
 summaries of deterministic component traces yield a deterministic parallel
 trace. The trace semantics then establishes equivalent terminating replay
-heaps, and the final big-step theorem proves deterministic evaluation of
-well-typed expressions. The small-step theorem stack complements this
-terminating story with finite-prefix safety: well-typed prefixes preserve
-typing, heap shape, trace typing, and not-stuckness, and the staged
-\texttt{Pair\_Par} check is connected either to a checked interleaving target
-or to the sequential fallback path.
+heaps. The continuation-machine theorem stack adds finite-prefix safety:
+well-typed prefixes preserve typing, heap shape, trace typing, and
+not-stuckness, and the staged parallel-tuple check is connected either to a
+checked interleaving target or to the sequential fallback path.
 
 These results are formal, not empirical performance results. The calculus does
 not include summary inference, a termination argument for summary evaluation, a
-cost semantics, an implementation evaluation, or a full adequacy theorem
-between the terminal small-step machine and the big-step semantics.
+cost semantics, an implementation evaluation, or a separate adequacy theorem for
+terminal continuation-machine runs.
 Establishing the annotation burden and the run-time trade-off between summary
 precision, pre-checking cost, and recovered parallelism is therefore left to
 future work.
@@ -1290,7 +1430,7 @@ H_1 \equiv H_2
 \forall k.\; H_1(k)=H_2(k).
 \]
 This is equality of key--value maps, not an isomorphism modulo renaming of
-locations. The Coq development registers this relation as an equivalence.
+locations. The relation is reflexive, symmetric, and transitive.
 \end{definition}
 
 \begin{definition}[Deterministic trace]
@@ -1324,19 +1464,6 @@ inductive definition of $\ReadOnly$ on traces, which contains only the empty
 trace, read actions, and sequential/parallel compositions of read-only traces.
 \end{lemma}
 
-\begin{lemma}[Well-typed evaluation produces a deterministic trace]
-Assume the heap, region environment, variable environment, and expression are
-well typed. If
-\[
-E;P \vdash H;e \eval v;H';\phi,
-\]
-then $\DetTrace(\phi)$.
-\end{lemma}
-
-This is the theorem \texttt{Dynamic\_DetTrace} in the mechanized development.
-Its [E-PAR] case uses correctness of the two effect applications to obtain
-$\phi_i \approxx \Theta_i$ and then applies the scheduler-soundness lemma below.
-
 \begin{lemma}[Scheduler soundness]
 For $i\in\{1,2\}$, let $\phi_i \approxx \Theta_i$ and
 $\DetTrace(\phi_i)$. If
@@ -1348,11 +1475,10 @@ $\DetTrace(\phi_i)$. If
 then $\DetTrace(\phi_1\,\|\,\phi_2)$.
 \end{lemma}
 
-This statement is the Coq lemma \texttt{Det\_trace\_from\_theta}. The proof
-uses the soundness relation $\approxx$ in both directions required by the
-parallel-trace constructor: a dynamic conflict would imply a computed conflict,
-and computed-action disjointness implies disjointness of every represented pair
-of dynamic actions.
+The proof uses the soundness relation $\approxx$ in both directions required by
+the parallel-trace constructor: a dynamic conflict would imply a computed
+conflict, and computed-action disjointness implies disjointness of every
+represented pair of dynamic actions.
 
 \begin{theorem}[Confluence of deterministic trace replay]
 Let $H_a \equiv H_b$. If a deterministic trace $\phi$ is replayed from the two
@@ -1368,10 +1494,8 @@ In particular, if both replays terminate at $\Nil$, their final heaps are
 equivalent.
 \end{theorem}
 
-The first statement corresponds to \texttt{Diamond\_Walk\_new}.  Its
-terminating corollary is the separately mechanized theorem
-\texttt{Diamond\_Term\_Walk\_new}.  The result does not claim uniqueness of
-an intermediate trace independently of the stated confluence property.
+The result does not claim uniqueness of an intermediate trace independently of
+the stated confluence property.
 
 \begin{theorem}[Heap uniqueness for safe parallel summaries]
 Let $\phi_1 \approxx \Theta_1$ and $\phi_2 \approxx \Theta_2$, with deterministic
@@ -1390,35 +1514,7 @@ Let $H_a \equiv H_b$. If
 then $H_1 \equiv H_2$.
 \end{theorem}
 
-This is the content of \texttt{unique\_heap\_new}. It is obtained by applying
-scheduler soundness to establish determinism of the parallel trace and then the
-terminating replay theorem.
-
-\begin{theorem}[Determinism of well-typed big-step evaluation]
-Let $H_a \equiv H_b$, and assume the heap, region environment, variable
-environment, and expression $e$ satisfy the typing premises of the mechanized
-semantics. If
-\[
-E;P \vdash H_a;e \eval v_1;H_1;\phi_1
-\qquad\text{and}\qquad
-E;P \vdash H_b;e \eval v_2;H_2;\phi_2,
-\]
-then
-\[
-H_1 \equiv H_2
-\qquad\land\qquad
-v_1=v_2
-\qquad\land\qquad
-\phi_1=\phi_2.
-\]
-\end{theorem}
-
-The statement above mirrors \texttt{DynamicDeterminism\_ext}; the closed-term
-corollary is theorem \texttt{Determinism}. The result establishes determinism of
-repeated evaluations of the \emph{same} well-typed expression under equivalent
-initial heaps. The archived Coq semantics contains no separate [E-SEQ] rule for
-the implicit-parallel tuple, so the mechanization does not by itself prove an
-observational-equivalence theorem comparing [E-PAR] with a distinct sequential
-evaluation rule. We therefore do not claim such a theorem here.
+The proof applies scheduler soundness to establish determinism of the parallel
+trace and then uses the terminating replay theorem.
 
 \end{document}

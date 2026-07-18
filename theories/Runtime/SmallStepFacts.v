@@ -38,8 +38,15 @@ Qed.
 Definition CanStep (state : State) : Prop :=
   exists label state', Step state label state'.
 
+Inductive PairParCheckState : State -> Prop :=
+| PPCS_Check :
+    forall heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k,
+      PairParCheckState
+        (StReturn heap (Eff theta2)
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)).
+
 Definition NotStuck (state : State) : Prop :=
-  Terminal state \/ CanStep state.
+  Terminal state \/ CanStep state \/ PairParCheckState state.
 
 Lemma terminal_not_stuck :
   forall state,

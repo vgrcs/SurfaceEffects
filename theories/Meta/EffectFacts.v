@@ -34,6 +34,40 @@ Proof.
   induction phi; intros; econstructor; try assumption; apply DAT_Top.
 Qed.
 
+Definition theta_of_dynamic_action (da : DynamicAction) : Theta :=
+  match da with
+  | DA_Alloc r _ _ => Some (singleton_set (CA_AllocAbs r))
+  | DA_Read r l _ => Some (singleton_set (CA_ReadConc r l))
+  | DA_Write r l _ => Some (singleton_set (CA_WriteConc r l))
+  end.
+
+Fixpoint theta_of_phi (phi : Phi) : Theta :=
+  match phi with
+  | Phi_Nil => Theta_Empty
+  | Phi_Elem da => theta_of_dynamic_action da
+  | Phi_Par phi1 phi2 => Union_Theta (theta_of_phi phi1) (theta_of_phi phi2)
+  | Phi_Seq phi1 phi2 => Union_Theta (theta_of_phi phi1) (theta_of_phi phi2)
+  end.
+
+Definition theta_with_phi_prefixes
+    (phi1 phi2 : Phi) (theta : Theta) : Theta :=
+  Union_Theta (theta_of_phi phi1) (Union_Theta (theta_of_phi phi2) theta).
+
+Lemma theta_of_dynamic_action_sound :
+  forall da,
+    Phi_Elem da ⋞ theta_of_dynamic_action da.
+Proof.
+  intros da.
+  destruct da as [r l v | r l v | r l v]; simpl;
+    apply PTS_Elem.
+  - apply DAT_Alloc_Abs.
+    constructor.
+  - apply DAT_Read_Conc.
+    constructor.
+  - apply DAT_Write_Conc.
+    constructor.
+Qed.
+
 Lemma EmptyUnionisEmptySet :
   forall acts a,
     acts = Empty_set ComputedAction ->
@@ -255,6 +289,54 @@ Proof.
                 induction theta2; [econstructor; now apply DAT_introl | econstructor; constructor ]] ).
   - apply PTS_Par. apply IHphi1. now inversion H. apply IHphi2. now inversion H.
   - apply PTS_Seq. apply IHphi1. now inversion H. apply IHphi2. now inversion H.
+Qed.
+
+Lemma theta_of_phi_sound :
+  forall phi,
+    phi ⋞ theta_of_phi phi.
+Proof.
+  induction phi; simpl.
+  - apply PTS_Nil.
+  - apply theta_of_dynamic_action_sound.
+  - apply PTS_Par.
+    + apply Theta_introl.
+      exact IHphi1.
+    + apply Theta_intror.
+      exact IHphi2.
+  - apply EnsembleUnionComp; assumption.
+Qed.
+
+Lemma theta_with_phi_prefixes_left_sound :
+  forall phi1 phi2 theta,
+    phi1 ⋞ theta_with_phi_prefixes phi1 phi2 theta.
+Proof.
+  intros phi1 phi2 theta.
+  unfold theta_with_phi_prefixes.
+  apply Theta_introl.
+  apply theta_of_phi_sound.
+Qed.
+
+Lemma theta_with_phi_prefixes_middle_sound :
+  forall phi1 phi2 theta,
+    phi2 ⋞ theta_with_phi_prefixes phi1 phi2 theta.
+Proof.
+  intros phi1 phi2 theta.
+  unfold theta_with_phi_prefixes.
+  apply Theta_intror.
+  apply Theta_introl.
+  apply theta_of_phi_sound.
+Qed.
+
+Lemma theta_with_phi_prefixes_right_sound :
+  forall phi1 phi2 phi theta,
+    phi ⋞ theta ->
+    phi ⋞ theta_with_phi_prefixes phi1 phi2 theta.
+Proof.
+  intros phi1 phi2 phi theta HSound.
+  unfold theta_with_phi_prefixes.
+  apply Theta_intror.
+  apply Theta_intror.
+  exact HSound.
 Qed.
 
 

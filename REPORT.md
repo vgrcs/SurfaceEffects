@@ -9,12 +9,11 @@ reviewer-facing `Pair_Par` check/fallback story.
 The project now builds under Rocq 9.1.1 with no source-level `Axiom` or
 `Admitted` declarations in `theories/`.
 
-The original big-step development remains as the terminating reference
-semantics. A new small-step continuation-machine layer has been added to reason
-about finite prefixes of both terminating and diverging executions. This layer
-does not replace every older theorem; instead, it gives a new proof stack for
-runtime preservation, progress, trace safety, checked interleaving safety, and
-the staged `Pair_Par` check/fallback behavior.
+The paper-facing semantics is now the small-step continuation machine. It
+supports finite-prefix reasoning for both terminating and diverging executions,
+plus terminal theorems for completed runs. The archived big-step files remain
+in the repository for comparison and future adequacy work, but they are no
+longer presented as the paper semantics.
 
 The most important reviewer-facing addition is
 `theories/Runtime/SmallStepPaperTheorems.v`, which gives stable theorem names
@@ -35,15 +34,12 @@ The paper-facing wrappers are:
 
 - `PaperSmallStepFinitePrefixSafety`;
 - `PaperSmallStepTerminalSoundness`;
-- `PaperSmallStepTerminalDeterminism`;
-- `PaperSmallStepStructuredTerminalDeterminism`;
-- `PaperSmallStepStructuredEffectTerminalDeterminism`;
-- `SmallStepDynamicDeterminism_ext`;
-- `SmallStepStructuredDynamicDeterminism_ext`;
-- `SmallStepDeterminism`;
-- `SmallStepStructuredDeterminism`;
 - `PaperPairParCheckedOrFallbackTraceSafety`;
 - `PaperPairParCheckedOrFallbackTerminalSoundness`.
+
+These are stable theorem-map names for the mechanization notes. The revised
+paper states the corresponding results only in mathematical notation, without
+using Coq theorem names in the prose.
 
 This is intentionally not a full observational-equivalence theorem between two
 distinct syntactic tuple rules. The mechanized language still has only
@@ -109,15 +105,52 @@ The runtime proof stack is now stratified into explicit dependency layers:
   terminal small-step traces plus corresponding big-step traces to the old
   `BackTriangle` correctness theorem.
 - `Soundness/SmallStepCorrectnessDirect.v`: beginning of the direct small-step
-  port of `Correctness_soundness_ext`, currently proving the empty-trace
-  support lemma, pure terminal cases, `Top`, direct arithmetic/conditional
-  summary cases, reference/read/write cases, and the first direct application
-  summary case without appealing to big-step adequacy.
+  port of `Correctness_soundness_ext`. It now includes direct terminal cases
+  for pure expressions, conditionals, arithmetic, reference/read/write
+- summaries, application summaries, and canonical `Pair_Par` summaries. The
+  current paper-facing summary relation is `SmallStepBackTriangle`, defined in
+  `Soundness/SmallStepBackTriangle.v`; it has constructors for every expression
+  form and canonicalizes the `Pair_Par` branch summaries to the corresponding
+  `Eff_App` expressions. The bridge lemma
+  `SmallStepBackTriangle_as_BackTriangle` shows compatibility with the archived
+  relation.
+  The first native coverage lemmas over this relation are now in place for
+  `Concat`, `ReadConc`, `WriteConc`, abstract allocation/read summaries,
+  abstract assignment summaries, and concrete assignment summaries:
+  `Correctness_soundness_ext_small_step_concat_summary_coverage_runtime_canonical_nofallback_below_case`,
+  `Correctness_soundness_ext_small_step_readconc_summary_coverage_runtime_canonical_nofallback_below_case`,
+  `Correctness_soundness_ext_small_step_writeconc_summary_coverage_runtime_canonical_nofallback_below_case`,
+  `Correctness_soundness_ext_small_step_ref_abs_summary_coverage_runtime_canonical_nofallback_below_case`,
+  `Correctness_soundness_ext_small_step_deref_abs_summary_coverage_runtime_canonical_nofallback_below_case`,
+  `Correctness_soundness_ext_small_step_assign_abs_summary_coverage_runtime_canonical_nofallback_below_case`,
+  and
+  `Correctness_soundness_ext_small_step_assign_conc_summary_coverage_runtime_canonical_nofallback_below_case`.
+  The concrete-assignment proof uses the previously computed `eff1` summary to
+  cover the internal `e1` trace that is re-run by `WriteConc e1`.
+  The older premise-oriented checkpoints remain as internal implementation
+  support. The paper-facing layer now exports the closed
+  `PaperPairParCheckedStructuredTerminalCorrectness` theorem, while
+  `SmallStepBackTriangle` records the canonical all-constructor summary
+  relation used for the small-step proof story.
+  The helper
+  `NoPairParFallback_initial_child_from_step` is the first porting lemma for
+  that induction: after a parent step enters a child expression under a
+  continuation, parent-level no-fallback implies no-fallback for the child's
+  initial terminal run. The bounded companion
+  `StepsPhiN_child_from_initial_step_terminal_decompose_no_fallback` packages
+  the smaller child count together with the inherited no-fallback fact. The
+  direct Pair_Par checkpoint
+  `Correctness_soundness_ext_small_step_pair_par_canonical_eff_app_backtriangle_no_fallback_structured_below_case`
+  eliminates the failed-check branch using an actual fallback occurrence,
+  rather than assuming branch-summary replay.
+- `Soundness/SmallStepFallback.v`: connects a failed `Pair_Par` check witness
+  to an actual sequential fallback transition occurring inside the terminal
+  small-step run.
 
 The facade modules remain for stable imports, but non-facade runtime files now
 avoid importing the broad facades directly.
 
-## Big-Step Versus Small-Step
+## Current Boundary
 
 The older big-step semantics proves properties only for evaluations that
 terminate. That is expected: a big-step judgment relates an initial
@@ -242,7 +275,7 @@ Important theorems:
   proves never-stuckness for finite prefixes of checked interleavings.
 
 - `pairpar_checked_initial_steps_safety`
-  packages preservation, store extension, branch heap agreement, and
+  packages preservation, store extension, branch heap synchronization, and
   not-stuckness for any finite checked-interleaving execution.
 
 - `pairpar_checked_initial_kdone_terminal_pair`
@@ -266,7 +299,7 @@ Important theorems:
   packages checked finite-prefix trace safety.
 
 - `pairpar_checked_initial_steps_safety_with_trace`
-  combines checked preservation, store extension, heap agreement,
+  combines checked preservation, store extension, branch heap synchronization,
   not-stuckness, and trace typing.
 
 - `pairpar_checked_initial_kdone_terminal_pair_with_trace`
@@ -709,213 +742,19 @@ Important definitions and theorems:
   corresponding `_terminal_case` theorems expose the same facts for arbitrary
   terminal executions by applying
   `Correctness_soundness_ext_small_step_terminal_transfer`.
-  `theories/Soundness/SmallStepPaperSoundness.v` adds stable paper-facing
-  aliases for the direct correctness layer:
-  `PaperSmallStepRefAbsBTSummaryCorrectness`,
-  `PaperSmallStepDerefAbsBTSummaryCorrectness`,
-  `PaperSmallStepAssignAbsBTSummaryCorrectness`,
-  `PaperSmallStepAssignAbsBTSummaryHeterogeneousRecursiveCorrectness`,
-  `PaperSmallStepAssignConcBTSummaryReadonlyCorrectness`,
-  `PaperSmallStepAssignConcBTSummaryAddressAgreementCorrectness`,
-  `PaperSmallStepAssignConcBTSummaryHeterogeneousHeapCorrectness`,
-  `PaperSmallStepAssignConcBTSummaryHeapCompatibleCorrectness`,
-  `PaperSmallStepMuAppSummaryDirectCorrectness`,
-  `PaperSmallStepRgnAppEmptySummaryDirectCorrectness`,
-  `PaperSmallStepPairParBTSummaryCorrectness`, and
-  `PaperSmallStepPairParBTSummaryDirectCorrectness`. The checked-branch bridge
-  `PaperSmallStepPairParCheckPassBranchTraceDisjoint` exposes the local step
-  from a successful `PairParCheckPass` and branch soundness facts to the
-  `PairParBranchTraceDisjoint` premise used below;
-  `PaperSmallStepPairParCheckPassDependentBranchTraceDisjoint` is the sharper
-  dependent form where the right-branch soundness premise receives the left
-  branch terminal run that produced its starting heap.
-  `PaperSmallStepPairParCheckPassBranchSummaryTraceDisjoint` and
-  `PaperSmallStepPairParCheckPassBranchSummaryReplayCompatible` expose the
-  dual summary-side bridge: after a successful check, left-branch soundness
-  plus second-summary trace soundness yield the replay premise needed when the
-  second summary is run against the heap produced by the first branch.
-  `PaperSmallStepPairParCheckPassBranchSummaryReplayCompatibleFromWitness` is
-  the witness form: one sound terminal run of the second summary is enough,
-  because terminal determinism transfers soundness to any other run from the
-  same state.
-  `PaperSmallStepPairParEffAppSummaryPassCorrectness` is the corresponding
-  successful-check correctness theorem for the `BT_Pair_Par` shape where the
-  computation branches are summarized by the actual checked `Eff_App`
-  expressions. `PaperSmallStepPairParEffAppSummaryCheckedOrFallback` packages
-  the terminal checked/fallback split for the same shape: either the actual
-  checked summaries fail the check, or the successful-check branch is sound.
-  `PaperSmallStepPairParEffAppBackTriangleCheckedOrFallback` lifts that split
-  to the corresponding `BackTriangle` premise, which is the form needed by the
-  direct induction.
-  `PaperSmallStepPairParCanonicalEffAppCheckedOrFallback` starts from a
-  general `BT_Pair_Par` premise and switches the checked/fallback theorem to
-  the canonical `Eff_App` branch-summary form used by the runtime check.
-  `PaperSmallStepPairParCanonicalEffAppCorrectness` proves the corresponding
-  terminal summary soundness theorem without a fallback disjunct: the fallback
-  path is sequential but still included in the canonical summary.
-  The dispatcher-level
-  `PaperSmallStepRuntimeBackTriangleCheckedOrFallbackCorrectness` uses
-  `RuntimeBackTriangleSummary`: ordinary expressions keep their usual
-  `BackTriangle` summaries, while `Pair_Par` uses the canonical checked
-  `Eff_App` summaries, and `Top` remains available as the universal
-  conservative summary. The checked/fallback theorem returns an explicit
-  `PairParCanonicalFallback` witness when the check fails. Its stronger
-  terminal-soundness companion
-  `PaperSmallStepRuntimeBackTriangleTerminalCorrectness` returns
-  `phi ⋞ theta_summary` directly.
-  It now also exposes
-  `PaperSmallStepAssignAbsBTSummaryHeterogeneousRecursiveCorrectness` for the
-  absolute-write recursive case with a separately started read-only summary
-  run,
-  `PaperSmallStepAssignConcBTSummaryAddressAgreementCorrectness` for the
-  concrete-write case when the summary-side replay of the address expression
-  agrees with the actual concrete address,
-  `PaperSmallStepAssignConcBTSummaryHeterogeneousHeapCorrectness` for the same
-  case phrased through `HeterogeneousHeapForExpr`, whose premise includes
-  `HeterogeneousHeapForPhi` agreement over the address trace's
-  `PhiReadFootprint`,
-  `PaperSmallStepAssignConcBTSummaryHeapCompatibleCorrectness` for the sharper
-  version whose recursive premise also receives the named heap-compatibility
-  evidence for both the address and value subexpressions,
-  `PaperSmallStepAssignConcBTSummaryHeapEquivalentCorrectness` for the same
-  result using the clearer read-footprint heap-equivalence vocabulary
-  `HeapEquivalentForExpr`,
-  `PaperSmallStepPairParBackTriangleHeterogeneousRecursiveCorrectness` for the
-  concrete `BT_Pair_Par` induction branch,
-  `PaperSmallStepPairParBackTriangleHeapCompatibleCorrectness` for the sharper
-  `BT_Pair_Par` branch with an explicit `PairParBranchHeapCompatible` premise,
-  `PaperSmallStepPairParBackTriangleSummaryReplayCorrectness` for the dual
-  summary-footprint formulation, where the second branch summary `eff4` must be
-  replayable from the post-left heap through
-  `PairParBranchSummaryReplayCompatible`,
-  `PaperSmallStepPairParBackTriangleSummaryReplayBelowCorrectness` for the
-  strict-step-count version of that same branch, using
-  `SmallStepCorrectnessSummaryReplayRecursivePremiseBelow` instead of an
-  unbounded recursive correctness premise,
-  `PaperSmallStepPairParBackTriangleCheckedSummaryReplayCorrectness` for the
-  same theorem with that replay premise derived from `PairParCheckPass` plus
-  left-branch and second-summary soundness obligations,
-  `PaperSmallStepPairParBackTriangleCheckedSummaryReplayWitnessCorrectness` for
-  the same result using one already-sound second-summary witness trace,
-  `PaperSmallStepTopSummaryTerminalCorrectness` for the fully premise-free
-  universal `Top` approximation, where any terminal computation trace is sound
-  against the terminal `Top` summary,
-  `PaperSmallStepPairParBackTriangleTraceDisjointCorrectness` for the same
-  `BT_Pair_Par` branch with the weaker trace-disjoint premise,
-  and
-  `PaperSmallStepBackTriangleTerminalHeterogeneousRecursiveCorrectness` for the
-  all-head terminal dispatcher, and
-  `PaperSmallStepBackTriangleTerminalHeapCompatibleCorrectness` for the
-  corresponding dispatcher over the heap-compatible recursive premise plus the
-  named `PairParBranchHeapCompatibleRecursivePremise`, and
-  `PaperSmallStepBackTriangleTerminalHeapEquivalentCorrectness` for the same
-  dispatcher stated with `PairParBranchHeapEquivalentRecursivePremise` and
-  `SmallStepCorrectnessHeapEquivalentRecursivePremise`,
-  `PaperSmallStepBackTriangleTerminalSummaryReplayCorrectness` for the same
-  dispatcher stated with `PairParBranchSummaryReplayCompatibleRecursivePremise`
-  and `SmallStepCorrectnessSummaryReplayRecursivePremise`,
-  `PaperSmallStepBackTriangleTerminalSummaryReplayClosedCorrectness` for the
-  same summary-replay dispatcher after closing the recursive correctness
-  premise by induction on the counted terminal small-step derivation,
-  `PaperSmallStepBackTriangleSequentialHeadLookupEquivalentCorrectness` for
-  the ordinary non-`Pair_Par` heads under the new
-  `SmallStepCorrectnessLookupEquivalentRecursivePremise`,
-  `PaperSmallStepBackTriangleTerminalTraceDisjointCorrectness` for the same
-  dispatcher when branch compatibility is obtained from the named
-  `PairParBranchTraceDisjointRecursivePremise`. Internally,
-  `HeterogeneousHeapForExpr_from_readonly_replay` and
-  `PairParBranchTraceDisjoint_implies_heap_compatible` now isolate the
-  read-only replay argument needed for this step.
-  The existing stdpp `heap_equiv` instance for `Heap` is definitional equality;
-  the new `HeapEquivalentOn`, `HeapEquivalentOnPhi`, and
-  `HeapEquivalentForExpr` names are therefore the intended weaker,
-  read-footprint-indexed heap-equivalence vocabulary. The old list-heap
-  "permutation of key-value pairs" relation is represented in the current
-  `gmap` heap model by the explicit all-key lookup relation
-  `HeapLookupEquivalent`; `heap_lookup_equivalent_eq` and
-  `heap_lookup_equivalent_heap_equiv` show that it coincides with map equality,
-  while `HeapLookupEquivalent_implies_HeapEquivalentOnPhi` and
-  `HeapLookupEquivalent_implies_HeapEquivalentForExpr` connect it to the weaker
-  read-footprint equivalence used by the small-step correctness premises.
-  The lookup-equivalence bridge now also includes
-  `StepsPhi_readonly_replay_on_lookup_equivalent_heap` and
-  `StepsPhi_readonly_replay_terminal_on_lookup_equivalent_heap`, which replay
-  read-only summary traces across lookup-equivalent heaps, plus
-  `SmallStepCorrectnessRecursive_implies_lookup_equivalent_recursive`, which
-  lifts a same-heap recursive correctness premise to a lookup-equivalent
-  summary start by replaying the read-only summary phase back onto the actual
-  heap.
-  `SmallStepCorrectnessHeapEquivalent_implies_lookup_equivalent_recursive`
-  connects the newer lookup-equivalence premise to the existing
-  `HeapEquivalentForExpr` recursive premise vocabulary.
-  The summary-oriented invariant is
-  `SummaryReplayCompatibleForExpr`: every read-only terminal summary trace from
-  the summary heap must replay unchanged from the actual heap. It is produced
-  by `SummaryReplayCompatibleForExpr_refl`,
-  `HeapLookupEquivalent_implies_SummaryReplayCompatibleForExpr`, and
-  `SummaryReplayCompatibleForExpr_from_disjoint_writer`. For `Pair_Par`,
-  `PairParBranchSummaryReplayCompatibleRecursivePremise` is the global
-  dispatcher premise for these branch-specific replay obligations.
-  `Correctness_soundness_ext_small_step_backtriangle_terminal_summary_replay_below_case`
-  is the counted induction step, and
-  `Correctness_soundness_ext_small_step_backtriangle_terminal_summary_replay_case`
-  closes it by replaying each read-only child summary trace onto the child
-  actual heap.
-  `PairParBranchSummaryReplayCompatible_from_trace_disjoint` turns disjointness
-  between the first computational branch and the second summary trace into the
-  branch replay premise consumed by the new summary-replay theorem.
-  `PairParBranchSummaryTraceDisjoint_from_check_soundness` and
-  `PairParBranchSummaryReplayCompatible_from_check_soundness` are the checked
-  versions of that step, and
-  `PairParBranchSummaryReplayCompatible_from_check_summary_witness` is the
-  terminal-determinism witness variant.
-  `PairParBranchTraceDisjoint_from_check_heterogeneous_recursive` derives the
-  local trace-disjoint premise from a successful check plus the heterogeneous
-  recursive correctness premise for the two `Mu_App ... ◀ Eff_App ...`
-  branches. `PairParBranchHeapCompatible_from_check_heterogeneous_recursive`
-  packages the same result in the heap-compatible form consumed by the sharper
-  `Pair_Par` proof.
-  `PairParBackTriangle_canonical_eff_app_summary` constructs the canonical
-  `BT_Pair_Par` summary
-  `(eff1 ⊕ eff2) ⊕ (Eff_App ef1 ea1 ⊕ Eff_App ef2 ea2)` from a general
-  `BT_Pair_Par` premise plus the typing fact for the parallel pair.
-  `RuntimeBackTriangleSummary` and `PairParCanonicalFallback` are the small
-  paper-facing bridge that keeps this canonical runtime-summary convention and
-  the observable fallback witness out of the core `BackTriangle` definition,
-  while preserving the original `Top` approximation.
-  The next closure scaffold is now present as well: `StepsPhiN` is an
-  exact-step-count version of `StepsPhi`, with conversions to/from ordinary
-  `StepsPhi`, exact concatenation, first-step terminal inversion, and terminal
-  determinism that also proves equality of step counts.
-  `SmallStepCorrectnessHeterogeneousRecursivePremiseBelow` and
-  `RuntimeBackTriangleCorrectnessPremiseBelow` state the bounded recursive
-  premises for the well-founded induction. The first strict-decrease bridge is
-  now mechanized: `StepsPhiN_append_kont_terminal_decompose`,
-  `StepsPhiN_initial_with_kont_terminal_decompose`, and
-  `StepsPhiN_child_from_initial_step_terminal_decompose` recover exact-count
-  child executions from continuation-machine terminal runs.
-  Counted decompositions are also available for the hard recursive shapes:
-  `StepsPhiN_mu_app_terminal_decompose_counts`,
-  `StepsPhiN_eff_app_terminal_decompose_counts`,
-  `StepsPhiN_pair_par_after_check_terminal_decompose_counts`,
-  `StepsPhiN_pair_par_terminal_decompose_counts`, and
-  `StepsPhiN_pair_par_terminal_decompose_checked_counts`.
-  `Correctness_soundness_ext_small_step_backtriangle_terminal_below_case` is the
-  full `BackTriangle` dispatcher over those counted decompositions under a
-  strictly smaller recursive premise, and
-  `Correctness_soundness_ext_small_step_backtriangle_terminal_counted_recursive_case`
-  connects the ordinary recursive theorem statement to that counted dispatcher.
-  Consequently `PaperSmallStepBackTriangleTerminalHeterogeneousRecursiveCorrectness`
-  now goes through the exact-count path, although it still keeps the
-  heterogeneous recursive premise explicit.
-  `StepsPhi_pair_par_terminal_decompose_checked` records the pass/fallback
-  witness from a terminal `Pair_Par` run, and
-  `StepsPhi_pair_par_terminal_decompose_checked_heap_compatible_or_fallback`
-  combines that witness with typed read-only summary heap neutrality to return
-  either fallback or the successful-check heap-compatibility invariant. These
-  wrappers deliberately
-  keep their recursive premises explicit; they are stable names for the
-  recursive induction step, not a closed global induction theorem.
+  `theories/Soundness/SmallStepPaperSoundness.v` now exports the closed
+  paper-facing terminal theorem
+  `PaperPairParCheckedStructuredTerminalCorrectness`. The statement keeps the
+  ordinary typing and terminal-run hypotheses, but it does not expose a bounded
+  induction package or an auxiliary heap-agreement premise.
+
+  The lower-level constructor lemmas, replay facts, counted decompositions, and
+  unaugmented application-summary diagnostics remain in the proof tree as
+  implementation support for the direct induction. They are no longer presented
+  as part of the public theorem map. `SmallStepFallback.v` is kept focused on
+  fallback occurrence and no-fallback conversion lemmas; the canonical
+  dispatcher lives in `SmallStepCorrectnessDirect.v`. Terminal
+  small-step/terminating-evaluator adequacy remains postponed.
   The application-summary port now has
   `Correctness_soundness_ext_small_step_mu_app_summary_terminal_direct_case`,
   exposed under that paper-facing name. This theorem
@@ -932,16 +771,17 @@ Important definitions and theorems:
   decomposition tools: they recover both effect-summary runs, both computation
   runs, the final pair value, and the four-part trace equation from a single
   terminal `Pair_Par` execution.
-  `Correctness_soundness_ext_small_step_pair_par_bt_summary_terminal_direct_case`,
-  exposed as `PaperSmallStepPairParBTSummaryDirectCorrectness`, combines that
+  `Correctness_soundness_ext_small_step_pair_par_bt_summary_terminal_direct_case`
+  combines that
   runtime decomposition with decomposition of the nested summary expression.
   It proves the four-part `BT_Pair_Par` summary theorem directly over the
   actual terminal `Pair_Par` and nested-summary runs, and it no longer needs
   `PairParCheckDecidable`.
-  The bounded induction version of the same branch is now present as
-  `Correctness_soundness_ext_small_step_pair_par_bt_summary_terminal_heterogeneous_below_case`;
-  the canonical paper-facing summary shape is packaged by
-  `Correctness_soundness_ext_small_step_pair_par_canonical_eff_app_backtriangle_heterogeneous_below_case`.
+  The public paper-facing layer intentionally stops at the no-fallback bounded
+  principles. The direct correctness file now keeps the remaining
+  implementation support local: terminal decompositions, read-only trace
+  stability, and the constructor-specific facts needed by the no-fallback
+  induction.
 
 - `WTStateRuntimeHeapShapeAt_steps_phi_trace_typed`
   proves that explicitly typed ordinary states remain explicitly typed and
@@ -958,7 +798,7 @@ Important definitions and theorems:
 
 - `PairParPhiTraceSafeAt`
   packages branch-structured checked finite-prefix safety. It preserves the
-  strong checked-interleaving invariant, store extension, heap agreement,
+  strong checked-interleaving invariant, store extension, branch heap synchronization,
   not-stuckness, and typed `Phi` evidence for the continuation, left-branch,
   and right-branch trace components.
 

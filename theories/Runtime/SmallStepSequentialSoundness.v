@@ -61,17 +61,20 @@ Proof.
   eapply Step_PairPar_EvalMu1; eauto.
 Qed.
 
-Theorem pairpar_check_fails_to_sequential_start :
+Theorem pairpar_check_fail_no_step :
   forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k,
     PairParCheckFail theta1 theta2 ->
-    Step
-      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
-      Silent
-      (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k).
+    forall label state',
+      ~ Step
+        (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
+        label state'.
 Proof.
-  intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k HFail.
-  unfold pairpar_check_state, pairpar_sequential_start.
-  eapply Step_PairPar_FallbackMu1; eauto.
+  intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k
+    HFail label state' HStep.
+  unfold pairpar_check_state in HStep.
+  inversion HStep; subst.
+  apply HFail.
+  split; assumption.
 Qed.
 
 Theorem pairpar_checked_start_can_step_both_branches :
@@ -119,16 +122,15 @@ Proof.
     + apply pairpar_checked_start_can_step_both_branches.
 Qed.
 
-Theorem pairpar_check_fail_dispatch :
+Theorem pairpar_check_fail_boundary :
   forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k,
     PairParCheckFail theta1 theta2 ->
-    Step
-      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
-      Silent
-      (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k).
+    PairParCheckState
+      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k).
 Proof.
-  intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k HFail.
-  now apply pairpar_check_fails_to_sequential_start.
+  intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k _.
+  unfold pairpar_check_state.
+  constructor.
 Qed.
 
 Theorem pairpar_check_decidable_dispatch :
@@ -149,10 +151,12 @@ Theorem pairpar_check_decidable_dispatch :
           (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
           Silent right_state)) \/
     (PairParCheckFail theta1 theta2 /\
-      Step
-        (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
-        Silent
-        (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)).
+      PairParCheckState
+        (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k) /\
+      forall label state',
+        ~ Step
+          (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
+          label state').
 Proof.
   intros HDec heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k.
   destruct (HDec theta1 theta2) as [HPass | HFail].
@@ -166,34 +170,9 @@ Proof.
     split; [exact HAgree | exact HBranches].
   - right.
     split; [exact HFail |].
-    now apply pairpar_check_fail_dispatch.
-Qed.
-
-Theorem pairpar_check_fail_sequential_preservation :
-  forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k tout stty,
-    WTStateRuntimeHeapShapeAt
-      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
-      tout stty ->
-    PairParCheckFail theta1 theta2 ->
-    exists stty',
-      WTStateRuntimeHeapShapeAt
-        (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-        tout stty' /\
-      StoreExtends stty stty'.
-Proof.
-  intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k tout stty HWT HFail.
-  pose proof
-    (pairpar_check_fails_to_sequential_start
-      heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k HFail)
-    as HStep.
-  destruct
-    (WTStateRuntimeHeapShapeAt_step_preservation
-      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
-      tout stty Silent
-      (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-      HWT HStep)
-    as (stty' & HWT' & _ & _ & HExt).
-  exists stty'. split; [exact HWT' | exact HExt].
+    split.
+    + now apply pairpar_check_fail_boundary.
+    + now apply pairpar_check_fail_no_step.
 Qed.
 
 Theorem pairpar_check_state_typed :
@@ -226,30 +205,23 @@ Proof.
   - constructor.
 Qed.
 
-Theorem pairpar_check_fail_sequential_trace_safe_at :
+Theorem pairpar_check_fail_not_stuck_at :
   PairParCheckDecidable ->
   forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k tout stty,
     WTStateRuntimeHeapShapeAt
       (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
       tout stty ->
     PairParCheckFail theta1 theta2 ->
-    exists stty',
-      StoreExtends stty stty' /\
-      StateTraceSafeAt
-        (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-        tout stty'.
+    NotStuck
+      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k).
 Proof.
   intros HDec heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k tout stty
     HWT HFail.
-  destruct
-    (pairpar_check_fail_sequential_preservation
-      heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k tout stty HWT HFail)
-    as (stty' & HWT' & HExt).
-  exists stty'. split; [exact HExt |].
-  eapply WTStateRuntimeHeapShapeAt_trace_safe_typed; eauto.
+  right. right.
+  now apply pairpar_check_fail_boundary.
 Qed.
 
-Theorem pairpar_check_fail_sequential_trace_safe :
+Theorem pairpar_check_fail_not_stuck :
   PairParCheckDecidable ->
   forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     ty1 ty2 eff1 eff2 tout theta1 theta2,
@@ -263,17 +235,14 @@ Theorem pairpar_check_fail_sequential_trace_safe :
     TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
     WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
     PairParCheckFail theta1 theta2 ->
-    exists stty',
-      StoreExtends stty stty' /\
-      StateTraceSafeAt
-        (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-        tout stty'.
+    NotStuck
+      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k).
 Proof.
   intros HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     ty1 ty2 eff1 eff2 tout theta1 theta2
     HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
     HTcExp1 HTcExp2 HKont HFail.
-  eapply pairpar_check_fail_sequential_trace_safe_at; eauto.
+  eapply pairpar_check_fail_not_stuck_at; eauto.
   eapply pairpar_check_state_typed; eauto.
 Qed.
 
@@ -323,11 +292,8 @@ Theorem pairpar_check_decidable_trace_safe :
         (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
         tout stty) \/
     (PairParCheckFail theta1 theta2 /\
-      exists stty',
-        StoreExtends stty stty' /\
-        StateTraceSafeAt
-          (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-          tout stty').
+      NotStuck
+        (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)).
 Proof.
   intros HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     ty1 ty2 eff1 eff2 tout theta1 theta2
@@ -337,7 +303,7 @@ Proof.
   - left. split; [exact HPass |].
     eapply pairpar_check_pass_checked_trace_safe; eauto.
   - right. split; [exact HFail |].
-    eapply pairpar_check_fail_sequential_trace_safe; eauto.
+    eapply pairpar_check_fail_not_stuck; eauto.
 Qed.
 
 Theorem pairpar_check_decidable_terminal_value :
@@ -366,17 +332,8 @@ Theorem pairpar_check_decidable_terminal_value :
           RuntimeValShape stty' tout v /\
           TcPhi stty' (trace_as_phi trace)) \/
     (PairParCheckFail theta1 theta2 /\
-      forall trace heap' v,
-        Steps
-          (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-          trace (StDone heap' v) ->
-        exists stty',
-          StoreExtends stty stty' /\
-          TcHeap (heap', stty') /\
-          RuntimeHeapShape heap' stty' /\
-          TcVal (stty', v, tout) /\
-          RuntimeValShape stty' tout v /\
-          TcPhi stty' (trace_as_phi trace)).
+      NotStuck
+        (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)).
 Proof.
   intros HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     ty1 ty2 eff1 eff2 tout theta1 theta2
@@ -388,24 +345,11 @@ Proof.
       ty1 ty2 eff1 eff2 tout theta1 theta2
       HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
       HTcExp1 HTcExp2 HKont)
-    as [(HPass & HSafe) | (HFail & stty_seq & HExtSeq & HSafe)].
+    as [(HPass & HSafe) | (HFail & HSafe)].
   - left.
     split; [exact HPass |].
     intros trace heap' v HSteps.
     eapply PairParTraceSafeAt_terminal_value; eauto.
   - right.
-    split; [exact HFail |].
-    intros trace heap' v HSteps.
-    destruct
-      (StateTraceSafeAt_terminal_value
-        (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-        tout stty_seq trace heap' v HSafe HSteps)
-      as (stty' & HExtFinal & HTcHeap' & HHeapShape' & HTcVal' &
-          HValShape' & HTcTrace).
-    exists stty'. split.
-    + eapply StoreExtends_trans; eauto.
-    + split; [exact HTcHeap' |].
-      split; [exact HHeapShape' |].
-      split; [exact HTcVal' |].
-      split; [exact HValShape' | exact HTcTrace].
+    split; [exact HFail | exact HSafe].
 Qed.

@@ -4,6 +4,8 @@ From Stdlib Require Import Sets.Ensembles.
 Require Import theories.Runtime.Heap.
 Require Import theories.Runtime.HeapTyping.
 Require Import theories.Runtime.SmallStep.
+Require Import theories.Runtime.SmallStepFacts.
+Require Import theories.Runtime.SmallStepParallel.
 Require Import theories.Runtime.SmallStepProgressBase.
 Require Import theories.Runtime.SmallStepRuntimeStateShape.
 Require Import theories.Runtime.SmallStepSequentialSoundness.
@@ -12,6 +14,7 @@ Require Import theories.Runtime.SmallStepEffectSoundness.
 Require Import theories.Core.Regions.
 Require Import theories.Core.Expressions.
 Require Import theories.Core.Values.
+Require Import theories.Core.ComputedActions.
 Require Import theories.Core.DynamicActions.
 Require Import theories.Core.StaticActions.
 Require Import theories.Typing.TypeSyntax.
@@ -491,6 +494,84 @@ Proof.
     eauto.
 Qed.
 
+Theorem PairParEffectSummaryStepsPhi_readonly_from_small_step_sound :
+  forall heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
+    static_eff1 static_eff2,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Eff_App ef1 ea1, Ty_Effect, static_eff1) ->
+    TcExp (ctxt, rgns, Eff_App ef2 ea2, Ty_Effect, static_eff2) ->
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
+    ReadOnlyStatic (fold_subst_eps rho static_eff2) ->
+    ReadOnlyPhi phi_eff1 /\ ReadOnlyPhi phi_eff2.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
+    static_eff1 static_eff2
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcEff1 HTcEff2 HSummary HReadOnlyStatic1 HReadOnlyStatic2.
+  inversion HSummary as
+    [phi_eff1' phi_eff2' heap_eff1' heap_eff2' theta1' theta2'
+      HSteps1 HSteps2]; subst.
+  split.
+  - eapply
+      (StepsPhi_effect_summary_readonly_from_small_step_sound
+        heap env rho (Eff_App ef1 ea1) stty ctxt rgns static_eff1
+        phi_eff1 heap_eff1 theta1); eauto.
+  - eapply
+      (StepsPhi_effect_summary_readonly_from_small_step_sound
+        heap env rho (Eff_App ef2 ea2) stty ctxt rgns static_eff2
+        phi_eff2 heap_eff2 theta2); eauto.
+Qed.
+
+Theorem PairParEffectSummaryStepsPhi_readonly_heap_neutral_from_small_step_sound :
+  forall heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
+    static_eff1 static_eff2,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Eff_App ef1 ea1, Ty_Effect, static_eff1) ->
+    TcExp (ctxt, rgns, Eff_App ef2 ea2, Ty_Effect, static_eff2) ->
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
+    ReadOnlyStatic (fold_subst_eps rho static_eff2) ->
+    heap_eff1 = heap /\ heap_eff2 = heap.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
+    static_eff1 static_eff2
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcEff1 HTcEff2 HSummary HReadOnlyStatic1 HReadOnlyStatic2.
+  destruct
+    (PairParEffectSummaryStepsPhi_readonly_from_small_step_sound
+      heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
+      static_eff1 static_eff2
+      HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+      HTcEff1 HTcEff2 HSummary HReadOnlyStatic1 HReadOnlyStatic2)
+    as [HReadOnly1 HReadOnly2].
+  inversion HSummary as
+    [phi_eff1' phi_eff2' heap_eff1' heap_eff2' theta1' theta2'
+      HSteps1 HSteps2]; subst.
+  split.
+  - eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
+  - eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
+Qed.
+
 Theorem PairParSequentialEffectSummaryStepsPhi_source_pass_small_step_sound_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
@@ -541,16 +622,15 @@ Theorem PairParSequentialEffectSummaryStepsPhi_source_fail_small_step_sound_pref
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
     PairParCheckFail theta1 theta2 ->
-    exists phi_source,
-      PairParEffectSummaryStepsPhi
-        heap env rho ef1 ea1 ef2 ea2
-        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
-      StepsPhi
-        (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
-        phi_source
-        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
-      phi_as_list phi_source =
-        phi_as_list phi_eff1 ++ phi_as_list phi_eff2.
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+    PairParCheckState
+      (pairpar_check_state heap_eff2 env rho ef1 ea1 ef2 ea2 theta1 theta2 k) /\
+    forall label state',
+      ~ Step
+        (pairpar_check_state heap_eff2 env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
+        label state'.
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1
@@ -559,4 +639,160 @@ Proof.
   eapply PairParSequentialEffectSummaryStepsPhi_source_fail_static_sound_prefix;
     eauto.
   eapply PairParSequentialEffectSummaryStepsPhi_first_small_step_sound; eauto.
+Qed.
+
+Lemma PairParStepsPhi_state_done_trace_nil :
+  forall heap v phi_state phi_left phi_right state',
+    PairParStepsPhi
+      (PPS_State (StDone heap v))
+      phi_state phi_left phi_right state' ->
+    phi_as_list phi_state = nil.
+Proof.
+  intros heap v phi_state phi_left phi_right state' HSteps.
+  remember (PPS_State (StDone heap v)) as state eqn:HState.
+  induction HSteps; inversion HState; subst.
+  - reflexivity.
+  - exfalso.
+    eapply done_no_step; eauto.
+Qed.
+
+Lemma PairParStepsPhi_state_return_done_trace_nil :
+  forall heap v phi_state phi_left phi_right state',
+    PairParStepsPhi
+      (PPS_State (StReturn heap v KDone))
+      phi_state phi_left phi_right state' ->
+    phi_as_list phi_state = nil.
+Proof.
+  intros heap v phi_state phi_left phi_right state' HSteps.
+  inversion HSteps; subst; try discriminate.
+  - reflexivity.
+  - match goal with
+    | HStep : Step _ _ _ |- _ =>
+        inversion HStep; subst; simpl;
+        eapply PairParStepsPhi_state_done_trace_nil; eauto
+    end.
+Qed.
+
+Lemma PairParStepsPhi_run_kdone_terminal_state_trace_nil :
+  forall left_state right_state
+    phi_state phi_left phi_right heap' v,
+    PairParStepsPhi
+      (PPS_Run left_state right_state KDone)
+      phi_state phi_left phi_right
+      (PPS_State (StDone heap' v)) ->
+    phi_as_list phi_state = nil.
+Proof.
+  intros left_state right_state
+    phi_state phi_left phi_right heap' v HSteps.
+  remember (PPS_Run left_state right_state KDone) as run_state eqn:HRun.
+  revert left_state right_state HRun.
+  induction HSteps; intros left_state0 right_state0 HRun;
+    inversion HRun; subst.
+  - reflexivity.
+  - match goal with
+    | IH : forall left_state right_state,
+        PPS_Run _ _ KDone = PPS_Run left_state right_state KDone ->
+        phi_as_list _ = nil |- _ =>
+        eapply IH; reflexivity
+    end.
+  - match goal with
+    | IH : forall left_state right_state,
+        PPS_Run _ _ KDone = PPS_Run left_state right_state KDone ->
+        phi_as_list _ = nil |- _ =>
+        eapply IH; reflexivity
+    end.
+  - eapply PairParStepsPhi_state_return_done_trace_nil; eauto.
+Qed.
+
+Lemma PairParStepsPhi_top_terminal_state_trace_nil :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi_state phi_left phi_right heap' v,
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi_state phi_left phi_right
+      (PPS_State (StDone heap' v)) ->
+    phi_as_list phi_state = nil.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2
+    phi_state phi_left phi_right heap' v HSteps.
+  unfold pairpar_checked_start, pairpar_checked_initial in HSteps.
+  eapply PairParStepsPhi_run_kdone_terminal_state_trace_nil
+    with
+      (left_state :=
+      (initial_state heap env rho (Mu_App ef1 ea1))
+      )
+      (right_state :=
+      (initial_state heap env rho (Mu_App ef2 ea2))
+      );
+    eauto.
+Qed.
+
+Theorem PairParCheckedStructuredStepsPhi_top_sound_with_branch_summaries :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
+    heap_eff1 theta1 heap_eff2 theta2 heap' v,
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    PairParCheckPass theta1 theta2 ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi_mu_state
+      phi_mu1
+      phi_mu2
+      (PPS_State (StDone heap' v)) ->
+    phi_mu1 ⋞ theta1 ->
+    phi_mu2 ⋞ theta2 ->
+    pairpar_checked_structured_trace
+      phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
+      ⋞ theta_with_phi_prefixes
+        phi_eff1 phi_eff2 (Union_Theta theta1 theta2).
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2
+    phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
+    heap_eff1 theta1 heap_eff2 theta2 heap' v
+    _ _ HSteps HSoundMu1 HSoundMu2.
+  unfold pairpar_checked_structured_trace.
+  apply PTS_Seq.
+  - apply PTS_Par.
+    + apply theta_with_phi_prefixes_left_sound.
+    + apply theta_with_phi_prefixes_middle_sound.
+  - apply PTS_Seq.
+    + apply theta_with_phi_prefixes_right_sound.
+      apply PTS_Par.
+      * apply Theta_introl. exact HSoundMu1.
+      * apply Theta_intror. exact HSoundMu2.
+    + apply Phi_Theta_Soundness_of_phi_as_list_nil.
+      eapply PairParStepsPhi_top_terminal_state_trace_nil; eauto.
+Qed.
+
+Theorem PairParCheckedStructuredStepsPhi_top_sound :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
+    heap_eff1 theta1 heap_eff2 theta2 heap' v,
+    phi =
+      pairpar_checked_structured_trace
+        phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2 ->
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    PairParCheckPass theta1 theta2 ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi_mu_state
+      phi_mu1
+      phi_mu2
+      (PPS_State (StDone heap' v)) ->
+    phi_mu1 ⋞ theta1 ->
+    phi_mu2 ⋞ theta2 ->
+    phi ⋞ theta_with_phi_prefixes
+      phi_eff1 phi_eff2 (Union_Theta theta1 theta2).
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2
+    phi phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
+    heap_eff1 theta1 heap_eff2 theta2 heap' v
+    HTrace HSummary HPass HSteps HSoundMu1 HSoundMu2.
+  subst.
+  eapply PairParCheckedStructuredStepsPhi_top_sound_with_branch_summaries;
+    eauto.
 Qed.

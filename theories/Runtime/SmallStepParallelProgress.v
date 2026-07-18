@@ -33,8 +33,15 @@ Definition PairParTerminal (state : PairParState) : Prop :=
   | PPS_Run _ _ _ => False
   end.
 
+Definition PairParCheckBoundary (state : PairParState) : Prop :=
+  match state with
+  | PPS_State state => PairParCheckState state
+  | PPS_Run left_state right_state _ =>
+      PairParCheckState left_state \/ PairParCheckState right_state
+  end.
+
 Definition PairParNotStuck (state : PairParState) : Prop :=
-  PairParTerminal state \/ PairParCanStep state.
+  PairParTerminal state \/ PairParCanStep state \/ PairParCheckBoundary state.
 
 Definition PairParEvalHeadRegionsResolved (state : PairParState) : Prop :=
   match state with
@@ -115,29 +122,32 @@ Proof.
   - destruct
       (WTStateRuntimeHeapShape_not_stuck
         HDec state0 tout HState HReady)
-      as [HTerminal | HCanStep].
+      as [HTerminal | [HCanStep | HCheck]].
     + left. exact HTerminal.
-    + right.
+    + right. left.
       destruct HCanStep as (label & state' & HStep).
       exists label, (PPS_State state').
       constructor. exact HStep.
+    + right. right. exact HCheck.
   - simpl in HAgree.
     simpl in HReady.
     destruct HReady as [HLeftReady HRightReady].
     destruct
       (WTStateRuntimeHeapShape_not_stuck
         HDec left_state tleft HLeft HLeftReady)
-      as [HLeftTerminal | HLeftCanStep].
+      as [HLeftTerminal | [HLeftCanStep | HLeftCheck]].
     + inversion HLeftTerminal; subst.
       destruct
         (WTStateRuntimeHeapShape_not_stuck
           HDec right_state tright HRight HRightReady)
-        as [HRightTerminal | HRightCanStep].
+        as [HRightTerminal | [HRightCanStep | HRightCheck]].
       * inversion HRightTerminal; subst.
         simpl in HAgree. subst.
-        right. apply pairpar_done_can_step.
-      * right. apply pairpar_right_can_step. exact HRightCanStep.
-    + right. apply pairpar_left_can_step. exact HLeftCanStep.
+        right. left. apply pairpar_done_can_step.
+      * right. left. apply pairpar_right_can_step. exact HRightCanStep.
+      * right. right. right. exact HRightCheck.
+    + right. left. apply pairpar_left_can_step. exact HLeftCanStep.
+    + right. right. left. exact HLeftCheck.
 Qed.
 
 Theorem WTPairParStateRuntimeHeapShapeAtStrong_not_stuck :
@@ -239,7 +249,7 @@ Lemma pairpar_checked_initial_not_stuck :
       (pairpar_checked_initial heap env rho ef1 ea1 ef2 ea2 k).
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k.
-  right.
+  right. left.
   apply pairpar_checked_initial_left_can_step.
 Qed.
 

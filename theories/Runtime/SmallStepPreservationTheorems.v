@@ -123,13 +123,6 @@ Proof.
   eapply WTStateRuntimeHeapShape_initial; eauto.
 Qed.
 
-Inductive PairParCheckState : State -> Prop :=
-| PPCS_Check :
-    forall heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k,
-      PairParCheckState
-        (StReturn heap (Eff theta2)
-          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)).
-
 Definition PairParCheckDecidable : Prop :=
   forall theta1 theta2,
     (Disjointness theta1 theta2 /\ ~ Conflictness theta1 theta2) \/
@@ -150,31 +143,20 @@ Proof.
   econstructor; eauto.
 Qed.
 
-Lemma pairpar_check_state_fallback_ready :
-  forall heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k,
-    ~ (Disjointness theta1 theta2 /\ ~ Conflictness theta1 theta2) ->
-    CanStep
-      (StReturn heap (Eff theta2)
-        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)).
-Proof.
-  intros heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k HFail.
-  exists Silent,
-    (StEval heap env rho (Mu_App ef1 ea1)
-      (KPairParMu1 ef2 ea2 env rho k)).
-  eapply Step_PairPar_FallbackMu1; eauto.
-Qed.
-
 Lemma pairpar_check_state_decidable_ready :
   PairParCheckDecidable ->
   forall heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k,
     CanStep
       (StReturn heap (Eff theta2)
+        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)) \/
+    PairParCheckState
+      (StReturn heap (Eff theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)).
 Proof.
   intros HDec heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k.
   destruct (HDec theta1 theta2) as [[HDisj HNoConf] | HFail].
-  - eapply pairpar_check_state_ready; eauto.
-  - eapply pairpar_check_state_fallback_ready; eauto.
+  - left. eapply pairpar_check_state_ready; eauto.
+  - right. constructor.
 Qed.
 
 Lemma WTKontRuntime_return_progress_or_pairpar_check :
@@ -281,13 +263,14 @@ Lemma WTKontRuntime_return_progress :
     TcVal (stty, v, tin) ->
     WTKontRuntime stty tin tout k ->
     RuntimeValShape stty tin v ->
-    CanStep (StReturn heap v k).
+    CanStep (StReturn heap v k) \/
+    PairParCheckState (StReturn heap v k).
 Proof.
   intros HDec heap stty v tin tout k HTcHeap HTcVal HKont HShape.
   destruct (WTKontRuntime_return_progress_or_pairpar_check
     heap stty v tin tout k HTcHeap HTcVal HKont HShape)
     as [HCanStep | HCheck].
-  - exact HCanStep.
+  - left. exact HCanStep.
   - inversion HCheck; subst.
     eapply pairpar_check_state_decidable_ready; eauto.
 Qed.
@@ -302,7 +285,7 @@ Theorem WTStateRuntimeHeapShape_not_stuck_or_pairpar_check :
 Proof.
   intros state tout HState HEvalReady.
   inversion HState; subst.
-  - left. right.
+  - left. right. left.
     destruct e; simpl in *; try solve
       [ eapply typed_eval_sequential_head_progress_unindexed; eauto;
         try exact I; try (eapply HEvalReady; reflexivity) ].
@@ -312,9 +295,9 @@ Proof.
     constructor.
   - destruct (WTKontRuntime_return_progress_or_pairpar_check
       heap stty v t tout k H H1 H2 H3) as [HCanStep | HCheck].
-    + left. right. exact HCanStep.
-    + right. exact HCheck.
-	  - left. left. constructor.
+    + left. right. left. exact HCanStep.
+    + left. right. right. exact HCheck.
+  - left. left. constructor.
 Qed.
 
 Theorem WTStateRuntimeHeapShape_not_stuck :
@@ -328,7 +311,7 @@ Theorem WTStateRuntimeHeapShape_not_stuck :
 Proof.
   intros HDec state tout HState HEvalReady.
   inversion HState; subst.
-  - right.
+  - right. left.
     destruct e; simpl in *; try solve
       [ eapply typed_eval_sequential_head_progress_unindexed; eauto;
         try exact I; try (eapply HEvalReady; reflexivity) ].
@@ -336,7 +319,10 @@ Proof.
       (StEval heap env rho (Eff_App e1 e2)
         (KPairParEff1 e1 e2 e3 e4 env rho k)).
     constructor.
-  - right.
-    eapply WTKontRuntime_return_progress; eauto.
+  - destruct
+      (WTKontRuntime_return_progress HDec heap stty v t tout k H H1 H2 H3)
+      as [HCanStep | HCheck].
+    + right. left. exact HCanStep.
+    + right. right. exact HCheck.
   - left. constructor.
 Qed.

@@ -100,10 +100,10 @@ Lemma WTStateRuntimeShape_not_stuck :
 Proof.
   intros state tout HState HEvalReady.
   destruct HState.
-  - right.
+  - right. left.
     destruct (HEvalReady heap env rho e k eq_refl) as [HSeq HResolved].
     eapply typed_eval_sequential_head_progress; eauto.
-  - right.
+  - right. left.
     eapply typed_return_runtime_shape_progress; eauto.
   - left. constructor.
 Qed.

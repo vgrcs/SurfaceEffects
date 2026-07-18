@@ -26,6 +26,7 @@ Require Import theories.Core.StaticActions.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
 Require Import theories.Meta.StoreFacts.
+Require Import theories.Meta.EffectFacts.
 Require Import theories.Meta.TraceTypingFacts.
 
 Theorem PaperSmallStepFinitePrefixSafety :
@@ -69,7 +70,7 @@ Proof.
   exact initial_state_terminal_value_with_trace.
 Qed.
 
-Theorem PaperPairParCheckedOrFallbackTraceSafety :
+Theorem PaperPairParCheckedOrBlockedTraceSafety :
   PairParCheckDecidable ->
   forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     ty1 ty2 eff1 eff2 tout theta1 theta2,
@@ -87,16 +88,13 @@ Theorem PaperPairParCheckedOrFallbackTraceSafety :
         (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
         tout stty) \/
     (PairParCheckFail theta1 theta2 /\
-      exists stty',
-        StoreExtends stty stty' /\
-        StateTraceSafeAt
-          (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-          tout stty').
+      NotStuck
+        (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)).
 Proof.
   exact pairpar_check_decidable_trace_safe.
 Qed.
 
-Theorem PaperPairParCheckedOrFallbackTerminalSoundness :
+Theorem PaperPairParCheckedOrBlockedTerminalSoundness :
   PairParCheckDecidable ->
   forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     ty1 ty2 eff1 eff2 tout theta1 theta2,
@@ -122,17 +120,8 @@ Theorem PaperPairParCheckedOrFallbackTerminalSoundness :
           RuntimeValShape stty' tout v /\
           TcPhi stty' (trace_as_phi trace)) \/
     (PairParCheckFail theta1 theta2 /\
-      forall trace heap' v,
-        Steps
-          (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k)
-          trace (StDone heap' v) ->
-        exists stty',
-          StoreExtends stty stty' /\
-          TcHeap (heap', stty') /\
-          RuntimeHeapShape heap' stty' /\
-          TcVal (stty', v, tout) /\
-          RuntimeValShape stty' tout v /\
-          TcPhi stty' (trace_as_phi trace)).
+      NotStuck
+        (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)).
 Proof.
   exact pairpar_check_decidable_terminal_value.
 Qed.
@@ -181,18 +170,42 @@ Theorem PaperPairParSummaryFailSmallStepSoundPrefix :
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
     PairParCheckFail theta1 theta2 ->
-    exists phi_source,
-      PairParEffectSummaryStepsPhi
-        heap env rho ef1 ea1 ef2 ea2
-        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
-      StepsPhi
-        (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
-        phi_source
-        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
-      phi_as_list phi_source =
-        phi_as_list phi_eff1 ++ phi_as_list phi_eff2.
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+    PairParCheckState
+      (pairpar_check_state heap_eff2 env rho ef1 ea1 ef2 ea2 theta1 theta2 k) /\
+    forall label state',
+      ~ Step
+        (pairpar_check_state heap_eff2 env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
+        label state'.
 Proof.
   exact PairParSequentialEffectSummaryStepsPhi_source_fail_small_step_sound_prefix.
+Qed.
+
+Theorem PaperPairParCheckedStructuredTopSound :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
+    heap_eff1 theta1 heap_eff2 theta2 heap' v,
+    phi =
+      pairpar_checked_structured_trace
+        phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2 ->
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+    PairParCheckPass theta1 theta2 ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi_mu_state
+      phi_mu1
+      phi_mu2
+      (PPS_State (StDone heap' v)) ->
+    phi_mu1 ⋞ theta1 ->
+    phi_mu2 ⋞ theta2 ->
+    phi ⋞ theta_with_phi_prefixes
+      phi_eff1 phi_eff2 (Union_Theta theta1 theta2).
+Proof.
+  exact PairParCheckedStructuredStepsPhi_top_sound.
 Qed.
 
 Theorem PaperSmallStepTerminalDeterminism :

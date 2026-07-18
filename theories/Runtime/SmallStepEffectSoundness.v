@@ -3100,40 +3100,23 @@ Proof.
     state' HState HStep.
   inversion HState; subst.
   inversion HStep; subst.
-  - match goal with
-    | HKont : WTKontEffect _ _ _ (KPairParEff2 _ _ _ _ _ _ _ _) _ |- _ =>
-        inversion HKont; subst
-    end.
-    eapply WTStateEffectAt_silent_budget_result with
-      (stty' := stty)
-      (eps' := Union_Static_Action
-        (fold_subst_eps rho eff1)
-        (Union_Static_Action (fold_subst_eps rho eff2) eps_k0)).
-    + apply StoreExtends_refl.
-    + eapply WTSEA_Eval with
-        (ctxt := ctxt) (rgns := rgns) (t := ty1) (eff := eff1)
-        (eps_k := Union_Static_Action (fold_subst_eps rho eff2) eps_k0);
-        eauto.
-      * eapply WTKE_PairParMu1; eauto.
-      * apply Included_static_refl.
-    + eassumption.
-  - match goal with
-    | HKont : WTKontEffect _ _ _ (KPairParEff2 _ _ _ _ _ _ _ _) _ |- _ =>
-        inversion HKont; subst
-    end.
-    eapply WTStateEffectAt_silent_budget_result with
-      (stty' := stty)
-      (eps' := Union_Static_Action
-        (fold_subst_eps rho eff1)
-        (Union_Static_Action (fold_subst_eps rho eff2) eps_k0)).
-    + apply StoreExtends_refl.
-    + eapply WTSEA_Eval with
-        (ctxt := ctxt) (rgns := rgns) (t := ty1) (eff := eff1)
-        (eps_k := Union_Static_Action (fold_subst_eps rho eff2) eps_k0);
-        eauto.
-      * eapply WTKE_PairParMu1; eauto.
-      * apply Included_static_refl.
-    + eassumption.
+  match goal with
+  | HKont : WTKontEffect _ _ _ (KPairParEff2 _ _ _ _ _ _ _ _) _ |- _ =>
+      inversion HKont; subst
+  end.
+  eapply WTStateEffectAt_silent_budget_result with
+    (stty' := stty)
+    (eps' := Union_Static_Action
+      (fold_subst_eps rho eff1)
+      (Union_Static_Action (fold_subst_eps rho eff2) eps_k0)).
+  - apply StoreExtends_refl.
+  - eapply WTSEA_Eval with
+      (ctxt := ctxt) (rgns := rgns) (t := ty1) (eff := eff1)
+      (eps_k := Union_Static_Action (fold_subst_eps rho eff2) eps_k0);
+      eauto.
+    + eapply WTKE_PairParMu1; eauto.
+    + apply Included_static_refl.
+  - eassumption.
 Qed.
 
 Lemma WTStateEffectAt_pairpar_eval_mu2_step_budget :

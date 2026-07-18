@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2026.5.22)  12 JUL 2026 21:03
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2026.5.22)  18 JUL 2026 16:28
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -346,24 +346,24 @@ File: l3backend-pdftex.def 2023-01-16 L3 backend support: PDF output (pdfTeX)
 (./main_revised.aux)
 \openout1 = `main_revised.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 65.
-LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -400,29 +400,29 @@ LaTeX Font Info:    ... okay on input line 65.
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
 \c@lstlisting=\count299
-Package hyperref Info: Link coloring OFF on input line 65.
+Package hyperref Info: Link coloring OFF on input line 66.
 (./main_revised.out) (./main_revised.out)
 \@outlinefile=\write3
 \openout3 = `main_revised.out'.
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 67.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 68.
 
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 67.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 68.
 
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Trying to load font information for U+stmry on input line 6
-7.
+8.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stmaryrd/Ustmry.fd)
 LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 6
-7.
+8.
 
 (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2022/07/10 v2.5l Standard LaTeX font definitions
@@ -438,59 +438,61 @@ st/fonts/enc/dvips/cm-super/cm-super-t1.enc}{/usr/share/texlive/texmf-dist/font
 s/enc/dvips/cm-super/cm-super-ts1.enc}] [2] [3]
 LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <9> not available
 (Font)              Font shape `T1/cmtt/m/n' tried instead on input line 275.
- [4] [5] [6] [7] [8] [9]
-[10] [11] [12]
-Overfull \hbox (3.8901pt too wide) in paragraph at lines 1181--1194
+ [4] [5] [6]
+Overfull \hbox (0.97153pt too wide) in paragraph at lines 536--548
+ []$ 
+ []
+
+[7] [8] [9] [10] [11] [12] [13]
+Overfull \hbox (3.8901pt too wide) in paragraph at lines 1324--1337
 []\T1/cmr/m/n/10 Particularly in-ter-est-ing in the con-text of this pa-per are
  the well-known hy-brid plat-forms ([]Kawaguchi
  []
 
-[13] (./main_revised.bbl [14]) [15] [16] (./main_revised.aux)
+[14] (./main_revised.bbl [15]) [16] [17] (./main_revised.aux)
 Package rerunfilecheck Info: File `main_revised.out' has not changed.
 (rerunfilecheck)             Checksum: E5E56E4263AF8EF2E07382FC278DC59E;1812.
  ) 
 Here is how much of TeX's memory you used:
- 12083 strings out of 476041
- 180240 string characters out of 5793174
- 1879388 words of memory out of 6000000
- 32292 multiletter control sequences out of 15000+600000
- 539702 words of font info for 105 fonts, out of 8000000 for 9000
+ 12077 strings out of 476041
+ 180159 string characters out of 5793174
+ 1876388 words of memory out of 6000000
+ 32287 multiletter control sequences out of 15000+600000
+ 537458 words of font info for 99 fonts, out of 8000000 for 9000
  1137 hyphenation exceptions out of 8191
- 75i,16n,76p,307b,1201s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,23n,76p,307b,1201s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/share/texli
 ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texm
 f-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dist/
 fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/t
-ype1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
-lic/amsfonts/cm/cmss10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/am
-sfonts/cm/cmss8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
-cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cms
-y5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/
-share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb></usr/s
-hare/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/sh
-are/texlive/texmf-dist/fonts/type1/public/cm-super/sfbx0900.pfb></usr/share/tex
-live/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb></usr/share/texlive/te
-xmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texlive/texmf-dis
-t/fonts/type1/public/cm-super/sfcc0900.pfb></usr/share/texlive/texmf-dist/fonts
-/type1/public/cm-super/sfcc1000.pfb></usr/share/texlive/texmf-dist/fonts/type1/
-public/cm-super/sfit1000.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/
-cm-super/sfrm0600.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-supe
-r/sfrm0800.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm0
-900.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb
-></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb></usr/
-share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1728.pfb></usr/share/t
-exlive/texmf-dist/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/texlive/
-texmf-dist/fonts/type1/public/cm-super/sftt0800.pfb></usr/share/texlive/texmf-d
-ist/fonts/type1/public/cm-super/sftt0900.pfb></usr/share/texlive/texmf-dist/fon
-ts/type1/public/cm-super/sftt1000.pfb></usr/share/texlive/texmf-dist/fonts/type
-1/public/stmaryrd/stmary10.pfb>
-Output written on main_revised.pdf (16 pages, 562172 bytes).
+ype1/public/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsf
+onts/cm/cmss10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmss8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy1
+0.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb><
+/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/sh
+are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/share/te
+xlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb></usr/share/tex
+live/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texl
+ive/texmf-dist/fonts/type1/public/cm-super/sfbx0900.pfb></usr/share/texlive/tex
+mf-dist/fonts/type1/public/cm-super/sfbx1000.pfb></usr/share/texlive/texmf-dist
+/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texlive/texmf-dist/fonts/
+type1/public/cm-super/sfcc0900.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
+ublic/cm-super/sfrm0600.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/c
+m-super/sfrm0800.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super
+/sfrm0900.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm10
+00.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
+</usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1728.pfb></usr/s
+hare/texlive/texmf-dist/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/te
+xlive/texmf-dist/fonts/type1/public/cm-super/sftt0800.pfb></usr/share/texlive/t
+exmf-dist/fonts/type1/public/cm-super/sftt0900.pfb></usr/share/texlive/texmf-di
+st/fonts/type1/public/stmaryrd/stmary10.pfb>
+Output written on main_revised.pdf (17 pages, 527059 bytes).
 PDF statistics:
- 431 PDF objects out of 1000 (max. 8388607)
- 343 compressed objects within 4 object streams
- 75 named destinations out of 1000 (max. 500000)
+ 427 PDF objects out of 1000 (max. 8388607)
+ 342 compressed objects within 4 object streams
+ 77 named destinations out of 1000 (max. 500000)
  89 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -134,14 +134,6 @@ Inductive Step : State -> Label -> State -> Prop :=
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)) Silent
         (StEval heap env rho (Mu_App ef1 ea1)
           (KPairParMu1 ef2 ea2 env rho k))
-| Step_PairPar_FallbackMu1 :
-    forall heap env rho k ef1 ea1 ef2 ea2 theta1 theta2,
-      ~ (Disjointness theta1 theta2 /\ ~ Conflictness theta1 theta2) ->
-      Step
-        (StReturn heap (Eff theta2)
-          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)) Silent
-        (StEval heap env rho (Mu_App ef1 ea1)
-          (KPairParMu1 ef2 ea2 env rho k))
 | Step_PairPar_EvalMu2 :
     forall heap env rho k ef2 ea2 v1,
       Step (StReturn heap v1 (KPairParMu1 ef2 ea2 env rho k)) Silent
