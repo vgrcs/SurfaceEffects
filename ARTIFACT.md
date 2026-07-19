@@ -1,38 +1,40 @@
 # SurfaceEffects Artifact Guide
 
-This guide is for researchers who want to check the mechanized results
-corresponding to the paper.
+This file is the reviewer-facing guide for checking the mechanized results.
+It avoids the long proof narrative in `REPORT.md` and focuses on how to build
+the artifact and where the paper theorems live.
 
 ## Entry Point
 
-The public theorem map is exported by:
+Start here:
 
 ```text
 theories/PaperTheorems.v
 ```
 
-That facade re-exports the runtime safety/determinism theorems from
-`theories/Runtime/SmallStepPaperTheorems.v` and the structured
-surface-correctness theorem from
-`theories/Soundness/SmallStepPaperSoundness.v`.
+This facade exports:
+
+- runtime safety and determinism wrappers from
+  `theories/Runtime/SmallStepPaperTheorems.v`;
+- structured surface-correctness from
+  `theories/Soundness/SmallStepPaperSoundness.v`.
 
 ## Known-Good Toolchain
 
-The current local artifact was checked with:
+Checked locally with:
 
 ```text
 The Rocq Prover, version 9.1.1
 compiled with OCaml 4.14.2
 ```
 
-The current opam switch is `surfaceeffects`. The relevant installed packages
-are:
+Known-good opam switch:
 
 ```text
+switch                surfaceeffects
 ocaml-base-compiler   4.14.2
 coq                   9.1.1
 coq-core              9.1.1
-coqide-server         9.1.1
 rocq-core             9.1.1
 rocq-runtime          9.1.1
 rocq-stdlib           9.0.0
@@ -42,7 +44,7 @@ dune                  3.23.1
 zarith                1.14
 ```
 
-A fresh switch can be prepared with commands of this shape:
+Fresh-switch setup:
 
 ```sh
 opam switch create surfaceeffects ocaml-base-compiler.4.14.2
@@ -50,8 +52,7 @@ eval $(opam env --switch=surfaceeffects)
 opam install coq.9.1.1 coq-stdpp.1.12.0
 ```
 
-If opam resolves Rocq packages directly rather than through Coq compatibility
-packages, the important version check is:
+Then check:
 
 ```sh
 rocq --version
@@ -69,11 +70,16 @@ eval $(opam env --switch=surfaceeffects)
 make
 ```
 
-Expected result: the whole `_CoqProject` compiles. Rocq 9 currently emits
-compatibility warnings about old `From Coq` imports and notation prefixes; these
-warnings are expected and do not block the build.
+Expected result: `_CoqProject` compiles.
 
-The revised paper can be rebuilt separately:
+Expected warnings:
+
+- old `From Coq` imports are deprecated in Rocq 9;
+- a few notation prefixes are reported as incompatible.
+
+These warnings do not block the build.
+
+To rebuild the paper:
 
 ```sh
 cd paper
@@ -81,82 +87,96 @@ pdflatex -interaction=nonstopmode -halt-on-error main_revised.tex
 pdflatex -interaction=nonstopmode -halt-on-error main_revised.tex
 ```
 
-Generated `.vo`, `.vos`, `.vok`, `.glob`, `.aux`, `.out`, `.log`, `.toc`, and
-make dependency files are intentionally ignored by `.gitignore` when they are
-not already tracked.
+Generated Rocq, LaTeX, and make-dependency files are ignored by `.gitignore`
+when they are not already tracked.
+
+## Review Path
+
+Recommended reading order:
+
+1. `theories/PaperTheorems.v`
+2. `theories/Runtime/SmallStepPaperTheorems.v`
+3. `theories/Soundness/SmallStepPaperSoundness.v`
+4. `theories/Runtime/SmallStepStructuredTrace.v`
+5. `theories/Soundness/SmallStepCorrectnessPairPar.v`
+
+For the full proof-development story, use `REPORT.md`.
 
 ## Theorem Map
 
-The paper states the theorems in mathematical notation. The corresponding
-mechanized names are:
+The paper uses mathematical theorem statements. These are the corresponding
+mechanized names.
 
-| Paper role | Mechanized theorem | File |
-| --- | --- | --- |
-| Finite-prefix type/trace safety | `PaperSmallStepFinitePrefixSafety` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Terminal type/trace soundness for ordinary runs | `PaperSmallStepTerminalSoundness` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Checked-or-blocked `Pair_Par` finite-prefix safety | `PaperPairParCheckedOrBlockedTraceSafety` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Checked-or-blocked `Pair_Par` terminal soundness | `PaperPairParCheckedOrBlockedTerminalSoundness` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Successful checked packed `Pair_Par` terminal soundness | `PaperPairParCheckedPackedTerminalSoundness` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Scheduled terminal heap/value/full-trace soundness | `PaperScheduledSmallStepTerminalTraceSoundness` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Initial-expression scheduled terminal trace soundness | `PaperScheduledExpressionTerminalTraceSoundness` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Scheduled terminal determinism | `PaperScheduledSmallStepTerminalDeterminism` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Initial-expression scheduled terminal determinism | `PaperScheduledExpressionTerminalDeterminism` | `theories/Runtime/SmallStepPaperTheorems.v` |
-| Structured surface-effect correctness for checked `Pair_Par` | `PaperPairParCheckedStructuredTerminalCorrectness` | `theories/Soundness/SmallStepPaperSoundness.v` |
+Runtime safety:
 
-Additional value-only scheduled wrappers remain in
-`theories/Runtime/SmallStepPaperTheorems.v` as derived support lemmas, but the
-paper-facing theorem map uses the trace-strengthened scheduled statements.
+- `PaperSmallStepFinitePrefixSafety`
+- `PaperSmallStepTerminalSoundness`
+
+Checked `Pair_Par` safety:
+
+- `PaperPairParCheckedOrBlockedTraceSafety`
+- `PaperPairParCheckedOrBlockedTerminalSoundness`
+- `PaperPairParCheckedPackedTerminalSoundness`
+
+Scheduled terminal trace soundness:
+
+- `PaperScheduledSmallStepTerminalTraceSoundness`
+- `PaperScheduledExpressionTerminalTraceSoundness`
+
+Scheduler independence:
+
+- `PaperScheduledSmallStepTerminalDeterminism`
+- `PaperScheduledExpressionTerminalDeterminism`
+
+Surface-effect correctness:
+
+- `PaperPairParCheckedStructuredTerminalCorrectness`
+
+All of these are exported by `theories/PaperTheorems.v`.
+
+Value-only scheduled wrappers also exist in
+`theories/Runtime/SmallStepPaperTheorems.v`. They are support lemmas; the public
+artifact map uses the trace-strengthened scheduled statements above.
 
 ## Source Navigation
 
-- `theories/Runtime/SmallStep.v`: continuation-machine operational semantics.
-- `theories/Runtime/SmallStepPairParDispatch.v`: staged dynamic check for
-  `Pair_Par`, including checked/blocked safety facts.
-- `theories/Runtime/SmallStepStructuredTrace.v`: structured `Phi` traces and
-  scheduled executions.
-- `theories/Runtime/SmallStepPaperTheorems.v`: runtime paper-facing theorem
-  wrappers.
-- `theories/Soundness/SmallStepBackTriangle.v`: small-step summary relation
-  used by the direct correctness stack.
-- `theories/Soundness/SmallStepCorrectnessBase.v`: shared terminal-run
-  decompositions and base correctness cases.
-- `theories/Soundness/SmallStepCorrectnessApps.v`: application and
-  effect-application correctness cases.
-- `theories/Soundness/SmallStepCorrectnessPairPar.v`: checked structured
-  `Pair_Par` correctness.
-- `theories/Soundness/SmallStepPaperSoundness.v`: paper-facing structured
-  correctness wrapper.
+- `Runtime/SmallStep.v`: continuation-machine semantics.
+- `Runtime/SmallStepPairParDispatch.v`: staged dynamic check for `Pair_Par`.
+- `Runtime/SmallStepStructuredTrace.v`: structured traces and scheduled runs.
+- `Runtime/SmallStepPaperTheorems.v`: runtime paper wrappers.
+- `Soundness/SmallStepBackTriangle.v`: small-step summary relation.
+- `Soundness/SmallStepCorrectnessBase.v`: base terminal-run utilities.
+- `Soundness/SmallStepCorrectnessApps.v`: application correctness.
+- `Soundness/SmallStepCorrectnessPairPar.v`: checked `Pair_Par` correctness.
+- `Soundness/SmallStepPaperSoundness.v`: surface-correctness wrapper.
 
-## Scope And Non-Goals
+## Scope
 
-The artifact proves the small-step continuation-machine safety, correctness,
-determinism, and scheduler-independence results listed above.
+The artifact proves the small-step continuation-machine results listed above.
 
-The artifact does not currently prove:
+It does not currently prove:
 
 - terminal small-step/big-step adequacy;
-- observational equivalence with a separate sequential tuple constructor;
+- equivalence with a separate sequential tuple constructor;
 - termination or cost bounds for summary evaluation;
 - summary inference or synthesis.
 
 The old matched-trace bridge to the terminating evaluator is archived under
-`theories/Archive/` for comparison, but it is not part of `_CoqProject` or the
-paper-facing theorem spine.
+`theories/Archive/`. It is not part of `_CoqProject`.
 
-## Git Hygiene For Artifact Review
+## Git Hygiene
 
-Before packaging or sharing the artifact, the normal git status should show
-only intentional source/documentation changes:
+Normal review status:
 
 ```sh
 git status --short
 ```
 
-Ignored build products can be inspected with:
+Ignored build products:
 
 ```sh
 git status --short --ignored
 ```
 
-The repository `.gitignore` excludes Rocq, LaTeX, and local scratch outputs so
-reviewers do not see generated proof objects or cache files as source changes.
+The `.gitignore` file excludes Rocq objects, LaTeX byproducts, make dependency
+files, and local scratch exports.
