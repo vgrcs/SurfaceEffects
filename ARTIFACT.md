@@ -1,18 +1,22 @@
 # SurfaceEffects Artifact Guide
 
-This file is the reviewer-facing guide for checking the mechanized results.
-It avoids the long proof narrative in `REPORT.md` and focuses on how to build
-the artifact and where the paper theorems live.
+Purpose:
+
+- build the artifact;
+- find the public theorem statements;
+- check the paper-to-Rocq theorem map.
+
+For the long proof narrative, use `REPORT.md`.
 
 ## Entry Point
 
-Start here:
+Public facade:
 
 ```text
 theories/PaperTheorems.v
 ```
 
-This facade exports:
+Exports:
 
 - runtime safety and determinism wrappers from
   `theories/Runtime/SmallStepPaperTheorems.v`;
@@ -21,14 +25,14 @@ This facade exports:
 
 ## Known-Good Toolchain
 
-Checked locally with:
+Version checked locally:
 
 ```text
 The Rocq Prover, version 9.1.1
 compiled with OCaml 4.14.2
 ```
 
-Known-good opam switch:
+Known-good opam packages:
 
 ```text
 switch                surfaceeffects
@@ -44,7 +48,7 @@ dune                  3.23.1
 zarith                1.14
 ```
 
-Fresh-switch setup:
+Fresh switch:
 
 ```sh
 opam switch create surfaceeffects ocaml-base-compiler.4.14.2
@@ -52,34 +56,36 @@ eval $(opam env --switch=surfaceeffects)
 opam install coq.9.1.1 coq-stdpp.1.12.0
 ```
 
-Then check:
+Version check:
 
 ```sh
 rocq --version
 coqc --version
 ```
 
-Both should report Rocq 9.1.1.
+Expected result: both commands report Rocq 9.1.1.
 
 ## Build
 
-From the repository root:
+Project build:
 
 ```sh
 eval $(opam env --switch=surfaceeffects)
 make
 ```
 
-Expected result: `_CoqProject` compiles.
+Expected result:
+
+- `_CoqProject` compiles.
 
 Expected warnings:
 
 - old `From Coq` imports are deprecated in Rocq 9;
 - a few notation prefixes are reported as incompatible.
 
-These warnings do not block the build.
+These warnings are non-blocking.
 
-To rebuild the paper:
+Paper build:
 
 ```sh
 cd paper
@@ -87,12 +93,17 @@ pdflatex -interaction=nonstopmode -halt-on-error main_revised.tex
 pdflatex -interaction=nonstopmode -halt-on-error main_revised.tex
 ```
 
-Generated Rocq, LaTeX, and make-dependency files are ignored by `.gitignore`
-when they are not already tracked.
+Generated files:
+
+- Rocq objects;
+- LaTeX byproducts;
+- make dependencies.
+
+These are ignored by `.gitignore` when they are not already tracked.
 
 ## Review Path
 
-Recommended reading order:
+Read in this order:
 
 1. `theories/PaperTheorems.v`
 2. `theories/Runtime/SmallStepPaperTheorems.v`
@@ -100,12 +111,13 @@ Recommended reading order:
 4. `theories/Runtime/SmallStepStructuredTrace.v`
 5. `theories/Soundness/SmallStepCorrectnessPairPar.v`
 
-For the full proof-development story, use `REPORT.md`.
+Details: `REPORT.md`.
 
 ## Theorem Map
 
-The paper uses mathematical theorem statements. These are the corresponding
-mechanized names.
+The paper uses mathematical theorem statements.
+
+Mechanized names:
 
 Runtime safety:
 
@@ -132,11 +144,20 @@ Surface-effect correctness:
 
 - `PaperPairParCheckedStructuredTerminalCorrectness`
 
-All of these are exported by `theories/PaperTheorems.v`.
+Exported by:
 
-Value-only scheduled wrappers also exist in
-`theories/Runtime/SmallStepPaperTheorems.v`. They are support lemmas; the public
-artifact map uses the trace-strengthened scheduled statements above.
+```text
+theories/PaperTheorems.v
+```
+
+Support-only wrappers:
+
+- value-only scheduled wrappers in
+  `theories/Runtime/SmallStepPaperTheorems.v`.
+
+Public map:
+
+- the trace-strengthened scheduled statements above.
 
 ## Source Navigation
 
@@ -152,31 +173,40 @@ artifact map uses the trace-strengthened scheduled statements above.
 
 ## Scope
 
-The artifact proves the small-step continuation-machine results listed above.
+Proved:
 
-It does not currently prove:
+- the small-step continuation-machine results listed above.
+
+Not proved:
 
 - terminal small-step/big-step adequacy;
 - equivalence with a separate sequential tuple constructor;
 - termination or cost bounds for summary evaluation;
 - summary inference or synthesis.
 
-The old matched-trace bridge to the terminating evaluator is archived under
-`theories/Archive/`. It is not part of `_CoqProject`.
+Archived:
+
+- old matched-trace bridge to the terminating evaluator;
+- location: `theories/Archive/`;
+- not part of `_CoqProject`.
 
 ## Git Hygiene
 
-Normal review status:
+Review status:
 
 ```sh
 git status --short
 ```
 
-Ignored build products:
+Ignored files:
 
 ```sh
 git status --short --ignored
 ```
 
-The `.gitignore` file excludes Rocq objects, LaTeX byproducts, make dependency
-files, and local scratch exports.
+Ignored categories:
+
+- Rocq objects;
+- LaTeX byproducts;
+- make dependency files;
+- local scratch exports.
