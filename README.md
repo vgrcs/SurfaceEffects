@@ -48,6 +48,8 @@ The source tree is organized by dependency layer:
 
 ```text
 theories/
+  PaperTheorems.v
+
   Core/
     Regions.v
     Expressions.v
@@ -108,7 +110,7 @@ theories/
     SmallStepParallelCheckedTraceSafety.v
     SmallStepParallelCheckedTerminal.v
     SmallStepParallelTraceSafety.v
-    SmallStepSequentialSoundness.v
+    SmallStepPairParDispatch.v
     SmallStepStructuredTrace.v
     SmallStepEffectSoundness.v
     SmallStepCorrectness.v
@@ -139,6 +141,9 @@ theories/
     EffectSystem.v
     Correctness.v
     SmallStepBackTriangle.v
+    SmallStepCorrectnessBase.v
+    SmallStepCorrectnessApps.v
+    SmallStepCorrectnessPairPar.v
     SmallStepCorrectnessDirect.v
     SmallStepPaperSoundness.v
 
@@ -233,7 +238,7 @@ safety wrappers, while `SmallStepParallelCheckedTerminal.v` owns the
 checked-initial terminal extractors ending in `_with_trace`, including
 `pairpar_checked_initial_kdone_terminal_pair_with_trace`.
 `SmallStepParallelTraceSafety.v` is the re-export facade for those trace layers.
-`SmallStepSequentialSoundness.v` packages the reviewer-facing staged
+`SmallStepPairParDispatch.v` packages the reviewer-facing staged
 `Pair_Par` dispatch facts: a successful check exposes the checked interleaving
 start state while the ordinary continuation path begins with the first
 computational application, and a failed check is represented by an explicit
@@ -450,13 +455,16 @@ branch heap synchronization, and not-stuckness. `SmallStepParallelCheckedTermina
 owns the checked-initial terminal variants ending in `_with_trace`, recovering
 typed final values, decomposed final pairs, and trace evidence.
 `SmallStepParallelTraceSafety.v` re-exports the full checked trace layer.
-`SmallStepSequentialSoundness.v` makes the staged checked/blocked story explicit:
+`SmallStepPairParDispatch.v` makes the staged checked/blocked story explicit:
 `pairpar_check_decidable_dispatch` splits on the dynamic effect check,
 `pairpar_check_pass_checked_trace_safe` connects a successful check to the safe
 checked interleaving theorem, and
 `pairpar_check_decidable_trace_safe` packages the success/failure trace-safety
 split in one theorem. `pairpar_check_decidable_terminal_value` adds the matching
 terminal-value extractor for the checked branch and the blocked-check outcome.
+`PaperTheorems.v` is the one-stop public facade for the theorem map used by
+the paper. It exports the runtime theorems from `SmallStepPaperTheorems.v` and
+the structured surface-correctness theorem from `SmallStepPaperSoundness.v`.
 `SmallStepPaperTheorems.v` re-exposes these results through the stable names
 `PaperSmallStepFinitePrefixSafety`, `PaperSmallStepTerminalSoundness`,
 `PaperPairParCheckedOrBlockedTraceSafety`, and
@@ -549,21 +557,21 @@ The old matched-trace bridge from terminal small-step runs back to the
 terminating evaluator has been removed from the active `_CoqProject` theorem
 spine. It remains useful as archived comparison material only; adequacy is not
 part of the current paper-facing proof story.
-`Soundness/SmallStepCorrectnessDirect.v` starts the direct small-step port of
-`Correctness_soundness_ext`: it proves the reusable empty-trace soundness fact
-and the direct pure terminal cases for constants, booleans, variables, function
-values, and region lambdas over `StepsPhi`. It also proves the direct `Top`
-summary case corresponding to `BT_Top_Approx`, without appealing to big-step
-adequacy. `StepsPhi_terminal_inv_step` is the first terminal-run inversion
-helper: it peels a deterministic first step from a terminal structured run and
-recovers the tail run plus trace equation.
+`Soundness/SmallStepCorrectnessBase.v` starts the direct small-step port of
+`Correctness_soundness_ext`: it proves the reusable empty-trace soundness fact,
+the direct pure terminal cases for constants, booleans, variables, function
+values, and region lambdas over `StepsPhi`, and the direct `Top` summary case
+corresponding to `BT_Top_Approx`, without appealing to big-step adequacy.
+`StepsPhi_terminal_inv_step` is the first terminal-run inversion helper: it
+peels a deterministic first step from a terminal structured run and recovers
+the tail run plus trace equation.
 `StepsPhi_append_kont_terminal_decompose` and
 `StepsPhi_initial_with_kont_terminal_decompose` are the converse of the
 continuation replay lemmas: a terminal run under an appended continuation
 contains a terminal run of the focused `KDone` computation plus the remaining
 continuation run. These lemmas are the main bridge for eliminating the old
 second computation evaluation from the direct small-step induction. The same
-file now contains the first
+base file now contains the first
 conditional composition lemmas:
 terminal guard and selected-branch `StepsPhi` runs can be replayed as a
 terminal `Cond` run, and the empty-guard plus branch-soundness premises compose
@@ -669,6 +677,16 @@ summary-trace read-only facts from typed small-step effect soundness.
 the actual four-part `BT_Pair_Par` summary shape
 `(eff1 ⊕ eff2) ⊕ (eff3 ⊕ eff4)`, identifying the terminal theta of that nested
 summary expression before applying the checked `Pair_Par` terminal machinery.
+`theories/Soundness/SmallStepCorrectnessApps.v` contains the application and
+effect-application decomposition and correctness lemmas.  The `Mu_App` and
+`Eff_App` cases live there, including the terminal direct case that aligns the
+shared function and argument phases by small-step determinism.
+`theories/Soundness/SmallStepCorrectnessPairPar.v` contains the checked
+structured `Pair_Par` correctness layer, including summary read-only facts,
+branch decomposition, augmented-summary coverage, and the final checked
+structured terminal correctness theorem.
+`theories/Soundness/SmallStepCorrectnessDirect.v` is now a compatibility
+assembler that re-exports the three direct correctness implementation layers.
 `theories/Soundness/SmallStepBackTriangle.v` defines the small-step
 paper-facing summary relation `SmallStepBackTriangle`. It has constructors for
 all expression forms and canonicalizes the `Pair_Par` summary to use the two
@@ -683,11 +701,11 @@ exports a bounded induction package or any auxiliary heap-agreement premise.
 The lower-level files still keep diagnostic lemmas for individual constructors,
 summary replay, counted decompositions, and the old unaugmented application
 summary path. Those lemmas are implementation support for the direct induction,
-not the public story. The legacy fallback, heap-agreement, no-fallback, and
-big-step bridge experiments are no longer part of the current paper-facing
-theorem map; `SmallStepCorrectnessDirect.v` contains the canonical
-correctness dispatcher. What remains postponed is terminal
-small-step/terminating-evaluator adequacy.
+not the public story. The old matched-trace bridge to the terminating evaluator
+is archived outside the active proof spine; `SmallStepCorrectnessPairPar.v`
+contains the canonical checked pair dispatcher and
+`SmallStepCorrectnessDirect.v` re-exports the split stack. What remains
+postponed is terminal small-step/terminating-evaluator adequacy.
 The direct application-summary port now includes
 `Correctness_soundness_ext_small_step_mu_app_summary_terminal_direct_case`,
 which decomposes the

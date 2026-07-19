@@ -12,7 +12,7 @@ Require Import theories.Runtime.TraceSemantics.
 Require Import theories.Runtime.SmallStep.
 Require Import theories.Runtime.SmallStepFacts.
 Require Import theories.Runtime.SmallStepParallel.
-Require Import theories.Runtime.SmallStepSequentialSoundness.
+Require Import theories.Runtime.SmallStepPairParDispatch.
 Require Import theories.Runtime.SmallStepStructuredTrace.
 Require Import theories.Runtime.SmallStepCorrectness.
 Require Import theories.Meta.HeapFacts.

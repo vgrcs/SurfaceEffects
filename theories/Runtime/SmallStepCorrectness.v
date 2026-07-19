@@ -8,7 +8,7 @@ Require Import theories.Runtime.SmallStepFacts.
 Require Import theories.Runtime.SmallStepParallel.
 Require Import theories.Runtime.SmallStepProgressBase.
 Require Import theories.Runtime.SmallStepRuntimeStateShape.
-Require Import theories.Runtime.SmallStepSequentialSoundness.
+Require Import theories.Runtime.SmallStepPairParDispatch.
 Require Import theories.Runtime.SmallStepStructuredTrace.
 Require Import theories.Runtime.SmallStepEffectSoundness.
 Require Import theories.Core.Regions.

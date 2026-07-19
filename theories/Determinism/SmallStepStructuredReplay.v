@@ -10,7 +10,7 @@ Require Import theories.Runtime.Heap.
 Require Import theories.Runtime.HeapTyping.
 Require Import theories.Runtime.TraceSemantics.
 Require Import theories.Runtime.SmallStep.
-Require Import theories.Runtime.SmallStepSequentialSoundness.
+Require Import theories.Runtime.SmallStepPairParDispatch.
 Require Import theories.Runtime.SmallStepStructuredTrace.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Meta.EffectFacts.

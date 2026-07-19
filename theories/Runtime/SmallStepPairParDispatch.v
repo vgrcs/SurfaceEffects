@@ -1,5 +1,7 @@
 From Stdlib Require Import List.
 
+(* Staged Pair_Par dynamic-check dispatch and checked/blocked safety facts. *)
+
 Require Import theories.Runtime.Heap.
 Require Import theories.Runtime.HeapTyping.
 Require Import theories.Runtime.SmallStep.

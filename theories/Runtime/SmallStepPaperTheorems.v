@@ -16,7 +16,7 @@ Require Import theories.Runtime.SmallStepExplicitStoreBase.
 Require Import theories.Runtime.SmallStepExplicitStoreTheorems.
 Require Import theories.Runtime.SmallStepTraceSafety.
 Require Import theories.Runtime.SmallStepParallelTraceSafe.
-Require Import theories.Runtime.SmallStepSequentialSoundness.
+Require Import theories.Runtime.SmallStepPairParDispatch.
 Require Import theories.Runtime.SmallStepStructuredTrace.
 Require Import theories.Runtime.SmallStepCorrectness.
 Require Import theories.Core.Regions.

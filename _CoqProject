@@ -59,7 +59,7 @@ theories/Runtime/SmallStepParallelTraceSafe.v
 theories/Runtime/SmallStepParallelCheckedTraceSafety.v
 theories/Runtime/SmallStepParallelCheckedTerminal.v
 theories/Runtime/SmallStepParallelTraceSafety.v
-theories/Runtime/SmallStepSequentialSoundness.v
+theories/Runtime/SmallStepPairParDispatch.v
 theories/Runtime/SmallStepStructuredTrace.v
 theories/Runtime/SmallStepEffectSoundness.v
 theories/Runtime/SmallStepCorrectness.v
@@ -86,6 +86,10 @@ theories/Soundness/TypeSystem.v
 theories/Soundness/EffectSystem.v
 theories/Soundness/Correctness.v
 theories/Soundness/SmallStepBackTriangle.v
+theories/Soundness/SmallStepCorrectnessBase.v
+theories/Soundness/SmallStepCorrectnessApps.v
+theories/Soundness/SmallStepCorrectnessPairPar.v
 theories/Soundness/SmallStepCorrectnessDirect.v
 theories/Soundness/SmallStepPaperSoundness.v
+theories/PaperTheorems.v
 theories/Determinism/DeterminismExt.v

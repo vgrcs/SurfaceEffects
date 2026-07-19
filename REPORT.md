@@ -15,10 +15,12 @@ plus terminal theorems for completed runs. The archived big-step files remain
 in the repository for comparison and future adequacy work, but they are no
 longer presented as the paper semantics.
 
-The most important reviewer-facing addition is
-`theories/Runtime/SmallStepPaperTheorems.v`, which gives stable theorem names
-for the paper. The underlying staged-check development lives in
-`theories/Runtime/SmallStepSequentialSoundness.v` and exposes the dynamic
+The public theorem map is exported by `theories/PaperTheorems.v`. It combines
+the runtime theorem names from `theories/Runtime/SmallStepPaperTheorems.v` with
+the structured surface-correctness wrapper from
+`theories/Soundness/SmallStepPaperSoundness.v`. The underlying staged-check
+development lives in
+`theories/Runtime/SmallStepPairParDispatch.v` and exposes the dynamic
 effect check explicitly:
 
 - if the check succeeds, the checked interleaving semantics is available and is
@@ -40,7 +42,8 @@ The paper-facing wrappers are:
 - `PaperScheduledSmallStepTerminalTraceSoundness`;
 - `PaperScheduledExpressionTerminalTraceSoundness`;
 - `PaperScheduledSmallStepTerminalDeterminism`;
-- `PaperScheduledExpressionTerminalDeterminism`.
+- `PaperScheduledExpressionTerminalDeterminism`;
+- `PaperPairParCheckedStructuredTerminalCorrectness`.
 
 The value-only scheduled wrappers remain in the file as derived support lemmas,
 but the public theorem map now uses the trace-strengthened scheduled terminal
@@ -95,7 +98,7 @@ The runtime proof stack is now stratified into explicit dependency layers:
 - `SmallStepTraceSafety.v`: ordinary finite-prefix trace safety.
 - `SmallStepParallel*.v`: checked interleaving preservation, progress, safety,
   trace safety, and terminal extraction.
-- `SmallStepSequentialSoundness.v`: staged `Pair_Par` dispatch and
+- `SmallStepPairParDispatch.v`: staged `Pair_Par` dispatch and
   success/failure trace-safety theorem surface.
 - `SmallStepStructuredTrace.v`: adequacy-oriented `Phi` trace instrumentation,
   including branch-structured effect-summary traces.
@@ -105,15 +108,24 @@ The runtime proof stack is now stratified into explicit dependency layers:
   checked `Pair_Par` source-prefix correctness from the small-step
   effect-summary soundness theorem.
 - `SmallStepPaperTheorems.v`: stable theorem names for paper citations.
+- `PaperTheorems.v`: top-level facade exporting the public theorem map.
 - `Determinism/SmallStepStructuredReplay.v`: theta-soundness bridge from
   checked-disjoint surface summaries to branch replay/join witnesses.
 - `Determinism/SmallStepPairParScheduleDeterminism.v`: local branch
   commutation, checked schedule normalization, and terminal checked-parallel
   schedule determinism.
-- `Soundness/SmallStepCorrectnessDirect.v`: beginning of the direct small-step
-  port of `Correctness_soundness_ext`. It now includes direct terminal cases
-  for pure expressions, conditionals, arithmetic, reference/read/write
-  summaries, application summaries, and canonical `Pair_Par` summaries. The
+- `Soundness/SmallStepCorrectnessBase.v`: shared terminal-run decompositions,
+  empty/top summary facts, pure cases, and conditional/arithmetic/reference
+  summary cases for the direct small-step port of
+  `Correctness_soundness_ext`.
+- `Soundness/SmallStepCorrectnessApps.v`: application and effect-application
+  decomposition/correctness lemmas, including the `Mu_App`/`Eff_App` alignment
+  arguments.
+- `Soundness/SmallStepCorrectnessPairPar.v`: checked structured `Pair_Par`
+  correctness, including summary read-only facts, branch decomposition,
+  augmented-summary coverage, and the final checked pair theorem.
+- `Soundness/SmallStepCorrectnessDirect.v`: compatibility assembler that
+  re-exports the split direct correctness layers. The
   current paper-facing summary relation is `SmallStepBackTriangle`, defined in
   `Soundness/SmallStepBackTriangle.v`; it has constructors for every expression
   form and canonicalizes the `Pair_Par` branch summaries to the corresponding
@@ -138,11 +150,9 @@ The runtime proof stack is now stratified into explicit dependency layers:
   `PaperPairParCheckedStructuredTerminalCorrectness` theorem, while
   `SmallStepBackTriangle` records the canonical all-constructor summary
   relation used for the small-step proof story.
-The old matched-trace bridge to the terminating evaluator and the fallback,
-heap-agreement, and no-fallback experiments are no longer part of the active
-paper theorem map. The matched-trace bridge has also been removed from the
-active `_CoqProject` spine; the current paper-facing layer is the
-continuation-machine small-step stack.
+The old matched-trace bridge to the terminating evaluator has been archived and
+removed from the active `_CoqProject` spine. The current paper-facing layer is
+the continuation-machine small-step stack.
 
 The facade modules remain for stable imports, but non-facade runtime files now
 avoid importing the broad facades directly.
@@ -303,7 +313,7 @@ Important theorems:
 
 ### Staged Check And Blocked Failure
 
-File: `theories/Runtime/SmallStepSequentialSoundness.v`
+File: `theories/Runtime/SmallStepPairParDispatch.v`
 
 Definitions:
 
@@ -789,7 +799,8 @@ through an explicit bridge assumption.
   implementation support for the direct induction. They are no longer presented
   as part of the public theorem map. Legacy fallback/no-fallback diagnostics and
   the old matched-trace bridge are outside the current public theorem map; the
-  canonical dispatcher lives in `SmallStepCorrectnessDirect.v`. Terminal
+  canonical checked pair dispatcher lives in `SmallStepCorrectnessPairPar.v`.
+  Terminal
   small-step/terminating-evaluator adequacy remains postponed.
   The application-summary port now has
   `Correctness_soundness_ext_small_step_mu_app_summary_terminal_direct_case`,
@@ -816,8 +827,8 @@ through an explicit bridge assumption.
   The public paper-facing layer intentionally stops at the closed structured
   terminal correctness theorem and the scheduled terminal determinism theorem.
   The direct correctness file now keeps the remaining implementation support
-  local: terminal decompositions, read-only trace stability, and legacy
-  no-fallback diagnostics.
+  local: terminal decompositions, read-only trace stability, and constructor
+  diagnostics.
 
 - `WTStateRuntimeHeapShapeAt_steps_phi_trace_typed`
   proves that explicitly typed ordinary states remain explicitly typed and
