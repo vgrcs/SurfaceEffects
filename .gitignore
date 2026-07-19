@@ -1,0 +1,21 @@
+# Rocq build products
+**/*.glob
+**/*.vo
+**/*.vok
+**/*.vos
+.Makefile.d
+Makefile.conf
+.lia.cache
+
+# LaTeX byproducts
+**/*.aux
+**/*.out
+**/*.log
+**/*.toc
+**/*.fls
+**/*.fdb_latexmk
+**/*.synctex.gz
+
+# Local scratch exports
+script.sh
+verilog_txt/

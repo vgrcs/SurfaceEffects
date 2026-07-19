@@ -4,7 +4,8 @@ SurfaceEffects is a Rocq mechanization of a language with regions, heap
 effects, dynamic traces, parallel pairs, and effect soundness.
 
 For a paper-facing summary of the current mechanized proof state, theorem map,
-and remaining limitations, see [REPORT.md](REPORT.md).
+and remaining limitations, see [REPORT.md](REPORT.md). For reproducibility
+instructions and an artifact-review theorem map, see [ARTIFACT.md](ARTIFACT.md).
 
 ## Current Build
 
