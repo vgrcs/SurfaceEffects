@@ -1031,6 +1031,57 @@ Definition pairpar_runtime_phi
   | PPS_Run _ _ _ => Phi_Seq (Phi_Par phi_left phi_right) phi_state
   end.
 
+Inductive PairParPackedStepsPhi :
+  PairParState -> Phi -> PairParState -> Prop :=
+| PairParPackedStepsPhi_intro :
+    forall state phi_state phi_left phi_right state',
+      PairParStepsPhi state phi_state phi_left phi_right state' ->
+      PairParPackedStepsPhi
+        state
+        (pairpar_runtime_phi state phi_state phi_left phi_right)
+        state'.
+
+Inductive PairParCheckedPackedStepsPhi
+    (theta_left theta_right : Theta) :
+  PairParState -> Phi -> PairParState -> Prop :=
+| PairParCheckedPackedStepsPhi_intro :
+    forall state phi_state phi_left phi_right state',
+      PairParStepsPhi state phi_state phi_left phi_right state' ->
+      phi_left ⋞ theta_left ->
+      phi_right ⋞ theta_right ->
+      PairParCheckedPackedStepsPhi
+        theta_left theta_right
+        state
+        (pairpar_runtime_phi state phi_state phi_left phi_right)
+        state'.
+
+Lemma PairParCheckedPackedStepsPhi_unpacked :
+  forall theta_left theta_right state phi state',
+    PairParCheckedPackedStepsPhi
+      theta_left theta_right state phi state' ->
+    exists phi_state phi_left phi_right,
+      PairParStepsPhi state phi_state phi_left phi_right state' /\
+      phi = pairpar_runtime_phi state phi_state phi_left phi_right /\
+      phi_left ⋞ theta_left /\
+      phi_right ⋞ theta_right.
+Proof.
+  intros theta_left theta_right state phi state' HSteps.
+  inversion HSteps; subst.
+  exists phi_state, phi_left, phi_right.
+  repeat split; assumption.
+Qed.
+
+Lemma PairParCheckedPackedStepsPhi_forget :
+  forall theta_left theta_right state phi state',
+    PairParCheckedPackedStepsPhi
+      theta_left theta_right state phi state' ->
+    PairParPackedStepsPhi state phi state'.
+Proof.
+  intros theta_left theta_right state phi state' HSteps.
+  inversion HSteps; subst.
+  econstructor; eauto.
+Qed.
+
 Lemma PairParStepsPhi_state_branches_nil :
   forall state phi_state phi_left phi_right state',
     PairParStepsPhi
@@ -1734,6 +1785,41 @@ Inductive PairParEffectSummaryStepsPhi
         heap env rho ef1 ea1 ef2 ea2
         phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2.
 
+Lemma PairParEffectSummaryStepsPhi_theta_deterministic :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi_eff1_a phi_eff2_a heap_eff1_a theta1_a heap_eff2_a theta2_a
+    phi_eff1_b phi_eff2_b heap_eff1_b theta1_b heap_eff2_b theta2_b,
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1_a phi_eff2_a heap_eff1_a theta1_a heap_eff2_a theta2_a ->
+    PairParEffectSummaryStepsPhi
+      heap env rho ef1 ea1 ef2 ea2
+      phi_eff1_b phi_eff2_b heap_eff1_b theta1_b heap_eff2_b theta2_b ->
+    theta1_a = theta1_b /\ theta2_a = theta2_b.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2
+    phi_eff1_a phi_eff2_a heap_eff1_a theta1_a heap_eff2_a theta2_a
+    phi_eff1_b phi_eff2_b heap_eff1_b theta1_b heap_eff2_b theta2_b
+    HSummaryA HSummaryB.
+  inversion HSummaryA; subst; clear HSummaryA.
+  inversion HSummaryB; subst; clear HSummaryB.
+  destruct
+    (StepsPhi_effect_terminal_deterministic
+      (pairpar_effect_summary_state heap env rho ef1 ea1)
+      phi_eff1_a heap_eff1_a theta1_a
+      phi_eff1_b heap_eff1_b theta1_b
+      H H1)
+    as (_ & _ & HTheta1).
+  destruct
+    (StepsPhi_effect_terminal_deterministic
+      (pairpar_effect_summary_state heap env rho ef2 ea2)
+      phi_eff2_a heap_eff2_a theta2_a
+      phi_eff2_b heap_eff2_b theta2_b
+      H0 H2)
+    as (_ & _ & HTheta2).
+  split; assumption.
+Qed.
+
 Inductive PairParSequentialEffectSummaryStepsPhi
     (heap : Heap) (env : Env) (rho : Rho)
     (ef1 ea1 ef2 ea2 : Expr) :
@@ -2395,6 +2481,44 @@ Inductive PairParCheckedStructuredStepsPhi
           phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2)
         state'.
 
+Definition NotPairParEvalState (state : State) : Prop :=
+  match state with
+  | StEval _ _ _ (Pair_Par _ _ _ _) _ => False
+  | _ => True
+  end.
+
+Definition pairpar_checked_packed_structured_trace
+    (phi_eff1 phi_eff2 phi_mu : Phi) : Phi :=
+  Phi_Seq (Phi_Par phi_eff1 phi_eff2) phi_mu.
+
+Inductive ScheduledStepsPhi : State -> Phi -> State -> Prop :=
+| ScheduledStepsPhi_Refl :
+    forall state,
+      ScheduledStepsPhi state Phi_Nil state
+| ScheduledStepsPhi_Step :
+    forall state label state' phi state'',
+      NotPairParEvalState state ->
+      Step state label state' ->
+      ScheduledStepsPhi state' phi state'' ->
+      ScheduledStepsPhi state (Phi_Seq (label_phi label) phi) state''
+| ScheduledStepsPhi_CheckedPairPar :
+    forall heap env rho ef1 ea1 ef2 ea2 k
+      phi_eff1 phi_eff2 heap_eff1 heap_eff2 theta1 theta2
+      phi_mu state',
+      PairParEffectSummaryStepsPhi
+        heap env rho ef1 ea1 ef2 ea2
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
+      PairParCheckPass theta1 theta2 ->
+      PairParCheckedPackedStepsPhi theta1 theta2
+        (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+        phi_mu
+        (PPS_State state') ->
+      ScheduledStepsPhi
+        (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
+        (pairpar_checked_packed_structured_trace
+          phi_eff1 phi_eff2 phi_mu)
+        state'.
+
 Theorem pairpar_check_pass_steps_phi_to_sequential :
   forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k phi state',
     PairParCheckPass theta1 theta2 ->
@@ -2550,4 +2674,179 @@ Proof.
     split; [exact HValShape' |].
     split; [exact HTcPhiMuState |].
     split; [exact HTcPhiMu1 | exact HTcPhiMu2].
+Qed.
+
+Lemma TcPhi_pairpar_runtime_phi :
+  forall stty state phi_state phi_left phi_right,
+    TcPhi stty phi_state ->
+    TcPhi stty phi_left ->
+    TcPhi stty phi_right ->
+    TcPhi stty (pairpar_runtime_phi state phi_state phi_left phi_right).
+Proof.
+  intros stty state phi_state phi_left phi_right
+    HTcState HTcLeft HTcRight.
+  destruct state; simpl.
+  - exact HTcState.
+  - apply TcPhi_seq.
+    + now apply TcPhi_par.
+    + exact HTcState.
+Qed.
+
+Lemma TcPhi_pairpar_checked_packed_structured_trace :
+  forall stty phi_eff1 phi_eff2 phi_mu,
+    TcPhi stty phi_eff1 ->
+    TcPhi stty phi_eff2 ->
+    TcPhi stty phi_mu ->
+    TcPhi stty
+      (pairpar_checked_packed_structured_trace phi_eff1 phi_eff2 phi_mu).
+Proof.
+  intros stty phi_eff1 phi_eff2 phi_mu HTcEff1 HTcEff2 HTcMu.
+  unfold pairpar_checked_packed_structured_trace.
+  apply TcPhi_seq.
+  - now apply TcPhi_par.
+  - exact HTcMu.
+Qed.
+
+Lemma ReadOnlyPhi_TcPhi :
+  forall stty phi,
+    ReadOnlyPhi phi ->
+    TcPhi stty phi.
+Proof.
+  unfold TcPhi.
+  intros stty phi HReadOnly k val HUpdate.
+  exfalso.
+  revert k val HUpdate.
+  induction HReadOnly; intros k val HUpdate.
+  - inversion HUpdate.
+  - inversion HUpdate.
+  - inversion HUpdate; subst; eauto.
+  - inversion HUpdate; subst; eauto.
+Qed.
+
+Theorem PairParCheckedPackedStepsPhi_terminal_value_with_trace :
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout phi heap' v theta1 theta2,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
+    PairParCheckedPackedStepsPhi theta1 theta2
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi
+      (PPS_State (StDone heap' v)) ->
+    exists stty_mu,
+      StoreExtends stty stty_mu /\
+      TcHeap (heap', stty_mu) /\
+      RuntimeHeapShape heap' stty_mu /\
+      TcVal (stty_mu, v, tout) /\
+      RuntimeValShape stty_mu tout v /\
+      TcPhi stty_mu phi.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout phi heap' v theta1 theta2
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcMu1 HTcMu2 HKont HSteps.
+  inversion HSteps; subst.
+  destruct
+    (WTPairParStateRuntimeHeapShapeAtStrong_steps_phi_trace_typed
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      tout stty phi_state phi_left phi_right
+      (PPS_State (StDone heap' v)))
+    as (stty_mu & HWTMu & HExtMu & HTcPhiMuState & HTcPhiMu1 & HTcPhiMu2).
+  - unfold pairpar_checked_start.
+    eapply WTPairParStateRuntimeHeapShapeAtStrong_checked_initial; eauto.
+  - exact H.
+  - destruct
+      (WTPairParStateRuntimeHeapShapeAtStrong_done_value
+        heap' v tout stty_mu HWTMu)
+      as (HTcHeap' & HHeapShape' & HTcVal' & HValShape').
+    exists stty_mu.
+    split; [exact HExtMu |].
+    split; [exact HTcHeap' |].
+    split; [exact HHeapShape' |].
+    split; [exact HTcVal' |].
+    split; [exact HValShape' |].
+    eapply TcPhi_pairpar_runtime_phi; eauto.
+Qed.
+
+Theorem WTStateRuntimeHeapShapeAt_scheduled_terminal_value :
+  forall state tout stty phi heap' v,
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    ScheduledStepsPhi state phi (StDone heap' v) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v, tout) /\
+      RuntimeValShape stty' tout v.
+Proof.
+  intros state tout stty phi heap' v HWT HSteps.
+  revert tout stty HWT.
+  dependent induction HSteps; intros tout stty HWT.
+  - destruct (WTStateRuntimeHeapShapeAt_done_value heap' v tout stty HWT)
+      as (HTcHeap & HHeapShape & HTcVal & HValShape).
+    exists stty.
+    split; [apply StoreExtends_refl |].
+    split; [exact HTcHeap |].
+    split; [exact HHeapShape |].
+    split; [exact HTcVal | exact HValShape].
+  - destruct
+      (WTStateRuntimeHeapShapeAt_step_preservation
+        state tout stty label state' HWT H0)
+      as (stty1 & HWT1 & _ & _ & HExt1).
+    destruct (IHHSteps heap' v eq_refl tout stty1 HWT1)
+      as (stty2 & HExt2 & HTcHeap2 & HHeapShape2 & HTcVal2 & HValShape2).
+    exists stty2.
+    split; [eapply StoreExtends_trans; eauto |].
+    split; [exact HTcHeap2 |].
+    split; [exact HHeapShape2 |].
+    split; [exact HTcVal2 | exact HValShape2].
+  - inversion HWT; subst.
+    match goal with
+    | HTcExp : TcExp (_, _, Pair_Par _ _ _ _, _, _) |- _ =>
+        inversion HTcExp; subst
+    end.
+    destruct
+      (PairParCheckedPackedStepsPhi_terminal_value_with_trace
+        heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+        ty1 ty2 eff1 eff2 tout phi_mu heap' v theta1 theta2)
+      as (stty' & HExt & HTcHeap' & HHeapShape' & HTcVal' &
+          HValShape' & _);
+      eauto.
+    exists stty'.
+    split; [exact HExt |].
+    split; [exact HTcHeap' |].
+    split; [exact HHeapShape' |].
+    split; [exact HTcVal' | exact HValShape'].
+Qed.
+
+Theorem initial_state_scheduled_terminal_value :
+  forall heap env rho e stty ctxt rgns t eff phi heap' v,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    ScheduledStepsPhi
+      (initial_state heap env rho e)
+      phi
+      (StDone heap' v) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v, subst_rho rho t) /\
+      RuntimeValShape stty' (subst_rho rho t) v.
+Proof.
+  intros heap env rho e stty ctxt rgns t eff phi heap' v
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  eapply WTStateRuntimeHeapShapeAt_scheduled_terminal_value; eauto.
+  eapply WTStateRuntimeHeapShapeAt_initial; eauto.
 Qed.

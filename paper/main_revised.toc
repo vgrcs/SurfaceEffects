@@ -1,4 +1,4 @@
-\contentsline {section}{\numberline {1}Motivating Example}{3}{section.1}%
+\contentsline {section}{\numberline {1}Motivating Example}{4}{section.1}%
 \contentsline {section}{\numberline {2}Static, Dynamic and Surface Effects}{4}{section.2}%
 \contentsline {section}{\numberline {3}Syntax}{4}{section.3}%
 \contentsline {section}{\numberline {4}Operational Semantics}{5}{section.4}%
@@ -6,15 +6,15 @@
 \contentsline {paragraph}{Representative small-step rules.}{6}{section*.4}%
 \contentsline {paragraph}{Evaluation of surface effects.}{6}{section*.5}%
 \contentsline {paragraph}{Implicit-parallel tuples.}{7}{section*.6}%
-\contentsline {section}{\numberline {5}Disjointness of Evaluated Surface Effects}{7}{section.5}%
+\contentsline {section}{\numberline {5}Disjointness of Evaluated Surface Effects}{8}{section.5}%
 \contentsline {paragraph}{Deciding disjointness.}{8}{section*.7}%
 \contentsline {section}{\numberline {6}Static Semantics}{8}{section.6}%
 \contentsline {section}{\numberline {7}Correctness of Surface Effects}{9}{section.7}%
 \contentsline {paragraph}{Surface effect soundness.}{9}{section*.8}%
-\contentsline {paragraph}{Correctness inference rules ($\Gamma ; \Delta ; P \vdash e \mathrel {\blacktriangleleft }\setbox \z@ \hbox {\mathsurround \z@ $\textstyle \Theta $}\mathaccent "0362{\Theta }$).}{9}{section*.9}%
-\contentsline {paragraph}{Runtime definitions.}{12}{section*.10}%
-\contentsline {section}{\numberline {8}Small-Step Runtime Safety}{12}{section.8}%
-\contentsline {paragraph}{Structured terminal summary correctness.}{14}{section*.11}%
-\contentsline {section}{\numberline {9}Discussion and Related Work}{14}{section.9}%
-\contentsline {section}{\numberline {10}Conclusions}{15}{section.10}%
-\contentsline {section}{\numberline {A}Deterministic Parallelism}{16}{appendix.A}%
+\contentsline {paragraph}{Correctness inference rules ($\Gamma ; \Delta ; P \vdash e \mathrel {\blacktriangleleft }\setbox \z@ \hbox {\mathsurround \z@ $\textstyle \Theta $}\mathaccent "0362{\Theta }$).}{10}{section*.9}%
+\contentsline {paragraph}{Runtime definitions.}{13}{section*.10}%
+\contentsline {section}{\numberline {8}Small-Step Runtime Safety}{13}{section.8}%
+\contentsline {paragraph}{Structured terminal summary correctness.}{15}{section*.11}%
+\contentsline {section}{\numberline {9}Discussion and Related Work}{16}{section.9}%
+\contentsline {section}{\numberline {10}Conclusions}{17}{section.10}%
+\contentsline {section}{\numberline {A}Deterministic Parallelism}{18}{appendix.A}%

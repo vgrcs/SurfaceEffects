@@ -1162,6 +1162,112 @@ Proof.
         -- split; assumption.
 Qed.
 
+Lemma PairParLeftOnlyStepsPhi_terminal_decompose :
+  forall left right k phi_state phi_left heap_final v_final,
+    state_heap left = state_heap right ->
+    PairParLeftOnlyStepsPhi
+      (PPS_Run left right k)
+      phi_state
+      phi_left
+      (PPS_State (StDone heap_final v_final)) ->
+    exists v_right heap_left v_left,
+      right = StDone (state_heap left) v_right /\
+      StepsPhi left phi_left (StDone heap_left v_left) /\
+      StepsPhi
+        (StReturn heap_left (Pair (v_left, v_right)) k)
+        phi_state
+        (StDone heap_final v_final).
+Proof.
+  intros left right k phi_state phi_left heap_final v_final HAgree HSteps.
+  dependent induction HSteps generalizing left right k heap_final v_final HAgree.
+  - destruct
+      (IHHSteps left' (with_state_heap (state_heap left') right) k
+        heap_final v_final)
+      as (v_right & heap_left & v_left &
+          HRightDoneEq & HLeftSteps & HTailSteps).
+    + rewrite state_heap_with_state_heap. reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + destruct right as [heap_right env_right rho_right e_right k_right
+                       | heap_right v_right0 k_right
+                       | heap_right v_right0].
+      * simpl in HRightDoneEq. inversion HRightDoneEq.
+      * simpl in HRightDoneEq. inversion HRightDoneEq.
+      * simpl in HRightDoneEq. inversion HRightDoneEq; subst.
+        exists v_right, heap_left, v_left.
+        split.
+        -- simpl in HAgree. subst heap_right. reflexivity.
+        -- split.
+           ++ eapply StepsPhi_Step; eauto.
+           ++ exact HTailSteps.
+  - destruct
+      (PairParLeftOnlyStepsPhi_state_as_stepsphi
+        (StReturn heap (Pair (v1, v2)) k)
+        phi_state phi_left
+        (PPS_State (StDone heap_final v_final)) HSteps)
+      as (HLeftNil & state_final & HStateFinal & HStateSteps).
+    inversion HStateFinal; subst.
+    exists v2, heap, v1.
+    split.
+    + reflexivity.
+    + split.
+      * constructor.
+      * exact HStateSteps.
+Qed.
+
+Lemma PairParRightThenLeftStepsPhi_terminal_decompose :
+  forall left right k phi_state phi_left phi_right heap_final v_final,
+    state_heap left = state_heap right ->
+    PairParRightThenLeftStepsPhi
+      (PPS_Run left right k)
+      phi_state
+      phi_left
+      phi_right
+      (PPS_State (StDone heap_final v_final)) ->
+    exists heap_right v_right heap_left v_left,
+      StepsPhi right phi_right (StDone heap_right v_right) /\
+      StepsPhi (with_state_heap heap_right left) phi_left
+        (StDone heap_left v_left) /\
+      StepsPhi
+        (StReturn heap_left (Pair (v_left, v_right)) k)
+        phi_state
+        (StDone heap_final v_final).
+Proof.
+  intros left right k phi_state phi_left phi_right heap_final v_final
+    HAgree HSteps.
+  dependent induction HSteps generalizing left right k heap_final v_final HAgree.
+  - destruct
+      (PairParLeftOnlyStepsPhi_terminal_decompose
+        left right k phi_state phi_left heap_final v_final HAgree H)
+      as (v_right & heap_left & v_left &
+          HRightDone & HLeftSteps & HTailSteps).
+    exists (state_heap left), v_right, heap_left, v_left.
+    split.
+    + rewrite HRightDone. constructor.
+    + split.
+      * rewrite with_state_heap_state_heap. exact HLeftSteps.
+      * exact HTailSteps.
+  - destruct
+      (IHHSteps
+        (with_state_heap (state_heap right') left)
+        right'
+        k
+        heap_final
+        v_final)
+      as (heap_right & v_right & heap_left & v_left &
+          HRightSteps & HLeftSteps & HTailSteps).
+    + rewrite state_heap_with_state_heap. reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + exists heap_right, v_right, heap_left, v_left.
+      split.
+      * eapply StepsPhi_Step; eauto.
+      * split.
+        -- rewrite with_state_heap_overwrite in HLeftSteps.
+           exact HLeftSteps.
+        -- exact HTailSteps.
+Qed.
+
 Lemma Phi_Theta_Soundness_seq_inv_l :
   forall phi1 phi2 theta,
     Phi_Seq phi1 phi2 ⋞ theta ->
@@ -1417,6 +1523,255 @@ Proof.
   subst heap_left2 v_left2.
   subst heap1 heap2 v1 v2.
   split; reflexivity.
+Qed.
+
+Theorem PairParCheckedArbitraryScheduleContinuationTerminalDeterminism :
+  forall heap env rho ef1 ea1 ef2 ea2 k
+    phi_state1 phi_left1 phi_right1
+    phi_state2 phi_left2 phi_right2
+    heap1 heap2 v1 v2 theta_left theta_right,
+    PairParCheckPass theta_left theta_right ->
+    phi_left1 ⋞ theta_left ->
+    phi_right1 ⋞ theta_right ->
+    phi_left2 ⋞ theta_left ->
+    phi_right2 ⋞ theta_right ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi_state1
+      phi_left1
+      phi_right1
+      (PPS_State (StDone heap1 v1)) ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi_state2
+      phi_left2
+      phi_right2
+      (PPS_State (StDone heap2 v2)) ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k
+    phi_state1 phi_left1 phi_right1
+    phi_state2 phi_left2 phi_right2
+    heap1 heap2 v1 v2 theta_left theta_right
+    HPass HSoundLeft1 HSoundRight1 HSoundLeft2 HSoundRight2
+    HSteps1 HSteps2.
+  assert (HAgreeStart :
+    PairParRunHeapsAgree
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)).
+  {
+    unfold pairpar_checked_start, pairpar_checked_initial.
+    reflexivity.
+  }
+  pose proof
+    (PairParStepsPhi_normalize_right_then_left
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi_state1 phi_left1 phi_right1
+      (PPS_State (StDone heap1 v1))
+      theta_left theta_right
+      HAgreeStart HSteps1 HSoundLeft1 HSoundRight1 HPass)
+    as HRTL1.
+  pose proof
+    (PairParStepsPhi_normalize_right_then_left
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi_state2 phi_left2 phi_right2
+      (PPS_State (StDone heap2 v2))
+      theta_left theta_right
+      HAgreeStart HSteps2 HSoundLeft2 HSoundRight2 HPass)
+    as HRTL2.
+  unfold pairpar_checked_start, pairpar_checked_initial in HRTL1, HRTL2.
+  destruct
+    (PairParRightThenLeftStepsPhi_terminal_decompose
+      (initial_state heap env rho (Mu_App ef1 ea1))
+      (initial_state heap env rho (Mu_App ef2 ea2))
+      k phi_state1 phi_left1 phi_right1 heap1 v1
+      eq_refl HRTL1)
+    as (heap_right1 & v_right1 & heap_left1 & v_left1 &
+        HRightSteps1 & HLeftSteps1 & HTailSteps1).
+  destruct
+    (PairParRightThenLeftStepsPhi_terminal_decompose
+      (initial_state heap env rho (Mu_App ef1 ea1))
+      (initial_state heap env rho (Mu_App ef2 ea2))
+      k phi_state2 phi_left2 phi_right2 heap2 v2
+      eq_refl HRTL2)
+    as (heap_right2 & v_right2 & heap_left2 & v_left2 &
+        HRightSteps2 & HLeftSteps2 & HTailSteps2).
+  destruct
+    (StepsPhi_terminal_deterministic
+      (initial_state heap env rho (Mu_App ef2 ea2))
+      phi_right1 heap_right1 v_right1
+      phi_right2 heap_right2 v_right2
+      HRightSteps1 HRightSteps2)
+    as (_ & HRightHeapEq & HRightValEq).
+  subst heap_right2 v_right2.
+  destruct
+    (StepsPhi_terminal_deterministic
+      (with_state_heap heap_right1
+        (initial_state heap env rho (Mu_App ef1 ea1)))
+      phi_left1 heap_left1 v_left1
+      phi_left2 heap_left2 v_left2
+      HLeftSteps1 HLeftSteps2)
+    as (_ & HLeftHeapEq & HLeftValEq).
+  subst heap_left2 v_left2.
+  destruct
+    (StepsPhi_terminal_deterministic
+      (StReturn heap_left1 (Pair (v_left1, v_right1)) k)
+      phi_state1 heap1 v1
+      phi_state2 heap2 v2
+      HTailSteps1 HTailSteps2)
+    as (_ & HFinalHeapEq & HFinalValEq).
+  split; assumption.
+Qed.
+
+Theorem PairParCheckedPackedArbitraryScheduleTerminalDeterminism :
+  forall heap env rho ef1 ea1 ef2 ea2
+    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right,
+    PairParCheckPass theta_left theta_right ->
+    PairParCheckedPackedStepsPhi theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi1
+      (PPS_State (StDone heap1 v1)) ->
+    PairParCheckedPackedStepsPhi theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi2
+      (PPS_State (StDone heap2 v2)) ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2
+    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right
+    HPass HSteps1 HSteps2.
+  destruct
+    (PairParCheckedPackedStepsPhi_unpacked
+      theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi1
+      (PPS_State (StDone heap1 v1)) HSteps1)
+    as (phi_state1 & phi_left1 & phi_right1 &
+        HRawSteps1 & _ & HSoundLeft1 & HSoundRight1).
+  destruct
+    (PairParCheckedPackedStepsPhi_unpacked
+      theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+      phi2
+      (PPS_State (StDone heap2 v2)) HSteps2)
+    as (phi_state2 & phi_left2 & phi_right2 &
+        HRawSteps2 & _ & HSoundLeft2 & HSoundRight2).
+  eapply
+    (PairParCheckedArbitraryScheduleTerminalDeterminism
+      heap env rho ef1 ea1 ef2 ea2
+      phi_state1 phi_left1 phi_right1
+      phi_state2 phi_left2 phi_right2
+      heap1 heap2 v1 v2 theta_left theta_right);
+    eauto.
+Qed.
+
+Theorem PairParCheckedPackedArbitraryScheduleContinuationTerminalDeterminism :
+  forall heap env rho ef1 ea1 ef2 ea2 k
+    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right,
+    PairParCheckPass theta_left theta_right ->
+    PairParCheckedPackedStepsPhi theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi1
+      (PPS_State (StDone heap1 v1)) ->
+    PairParCheckedPackedStepsPhi theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi2
+      (PPS_State (StDone heap2 v2)) ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k
+    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right
+    HPass HSteps1 HSteps2.
+  destruct
+    (PairParCheckedPackedStepsPhi_unpacked
+      theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi1
+      (PPS_State (StDone heap1 v1)) HSteps1)
+    as (phi_state1 & phi_left1 & phi_right1 &
+        HRawSteps1 & _ & HSoundLeft1 & HSoundRight1).
+  destruct
+    (PairParCheckedPackedStepsPhi_unpacked
+      theta_left theta_right
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi2
+      (PPS_State (StDone heap2 v2)) HSteps2)
+    as (phi_state2 & phi_left2 & phi_right2 &
+        HRawSteps2 & _ & HSoundLeft2 & HSoundRight2).
+  eapply
+    (PairParCheckedArbitraryScheduleContinuationTerminalDeterminism
+      heap env rho ef1 ea1 ef2 ea2 k
+      phi_state1 phi_left1 phi_right1
+      phi_state2 phi_left2 phi_right2
+      heap1 heap2 v1 v2 theta_left theta_right);
+    eauto.
+Qed.
+
+Theorem ScheduledStepsPhi_terminal_deterministic :
+  forall state phi1 heap1 v1 phi2 heap2 v2,
+    ScheduledStepsPhi state phi1 (StDone heap1 v1) ->
+    ScheduledStepsPhi state phi2 (StDone heap2 v2) ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  intros state phi1 heap1 v1 phi2 heap2 v2 HSteps1.
+  remember (StDone heap1 v1) as done1 eqn:HDone1.
+  revert heap1 v1 HDone1 phi2 heap2 v2.
+  induction HSteps1 as
+    [state
+    | state label state' phi state'' HNotPair HStep _ IH
+    | heap env rho ef1 ea1 ef2 ea2 k
+        phi_eff1 phi_eff2 heap_eff1 heap_eff2 theta1 theta2
+        phi_mu state' HSummary HPass HChecked].
+  - intros heap1 v1 HDone1 phi2 heap2 v2 HSteps2.
+    subst.
+    inversion HSteps2; subst.
+    + split; reflexivity.
+    + exfalso. eapply done_no_step; eauto.
+  - intros heap1 v1 HDone1 phi2 heap2 v2 HSteps2.
+    subst.
+    inversion HSteps2; subst; simpl in *.
+    + exfalso. eapply done_no_step; eauto.
+    + match goal with
+      | HStep2 : Step _ _ _ |- _ =>
+          destruct
+            (step_deterministic _ _ _ _ _ HStep HStep2)
+            as (_ & HStateEq);
+          subst;
+          eapply IH; eauto
+      end.
+    + contradiction.
+  - intros heap1 v1 HDone1 phi2 heap2 v2 HSteps2.
+    subst.
+    dependent destruction HSteps2; simpl in *.
+    + contradiction.
+    + destruct
+        (PairParEffectSummaryStepsPhi_theta_deterministic
+          heap env rho ef1 ea1 ef2 ea2
+          phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
+          phi_eff0 phi_eff3 heap_eff0 theta0 heap_eff3 theta3
+          HSummary H)
+        as (HTheta1 & HTheta2).
+      subst.
+      eapply
+        (PairParCheckedPackedArbitraryScheduleContinuationTerminalDeterminism
+          heap env rho ef1 ea1 ef2 ea2 k
+          phi_mu phi_mu0 heap1 heap2 v1 v2 theta0 theta3);
+        eauto.
+Qed.
+
+Theorem ScheduledInitialState_terminal_deterministic :
+  forall heap env rho e phi1 heap1 v1 phi2 heap2 v2,
+    ScheduledStepsPhi
+      (initial_state heap env rho e)
+      phi1
+      (StDone heap1 v1) ->
+    ScheduledStepsPhi
+      (initial_state heap env rho e)
+      phi2
+      (StDone heap2 v2) ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  intros heap env rho e phi1 heap1 v1 phi2 heap2 v2 HSteps1 HSteps2.
+  eapply ScheduledStepsPhi_terminal_deterministic; eauto.
 Qed.
 
 Lemma PairParLeftRightStep_local_commute :

@@ -78,8 +78,10 @@ The mechanized development proves that verified summaries soundly approximate
 computation traces. Pairwise-disjoint and non-conflicting computed summaries
 imply deterministic structured traces, and the continuation-machine semantics
 proves finite-prefix type and trace safety for prefixes of potentially
-diverging executions, terminal soundness for completed runs, and the staged
-success/failure behavior of the dynamic parallel check. The calculus therefore
+diverging executions, terminal type and trace soundness for completed
+scheduled runs, and terminal scheduler independence for the scheduled semantics
+of arbitrary expressions.
+The calculus therefore
 separates static verification of executable summaries from a run-time
 scheduling decision. We do not assume a
 constant or bounded cost for summary evaluation: the precision and evaluation
@@ -233,8 +235,10 @@ The contributions of this paper are:
         replay;
   \item a mechanized continuation-machine safety layer showing that every
         finite prefix of a well-typed execution remains type safe, trace typed,
-        and not stuck, plus explicit terminal theorems for the checked and
-        fallback outcomes of the dynamic parallel check.
+        and not stuck, plus explicit terminal theorems for the checked or
+        blocked outcomes of the dynamic parallel check, full-trace terminal
+        soundness for scheduled executions, and scheduler independence for
+        terminal scheduled executions.
 \end{itemize}
 
 The rest of this paper is organized as follows. We start by presenting a
@@ -552,25 +556,38 @@ At that point the dynamic guard is
 \quad\triangleq\quad
 \Disjoint(\Theta_1,\Theta_2)\land\neg(\Theta_1\conflict\Theta_2).
 \]
-If the guard fails, the ordinary continuation machine follows the sequential
-fallback path:
+If the guard succeeds, the ordinary continuation machine can enter the
+computational prefix:
 \[
 \langle H,\Theta_2,K^{par}_2(\cdots,\Theta_1,k)\rangle
 \xrightarrow{\tau}
 \langle H,E,P,\capp e_{f1}\,e_{a1},
   K^{par}_{\mu1}(e_{f2},e_{a2},E,P,k)\rangle.
 \]
-The same concrete continuation frame also represents the sequential prefix
-used after the check succeeds. The checked-interleaving behavior for successful
-checks is stated by a separate structured transition relation
+If the guard fails, the machine remains at this explicit check state. The
+mechanized safety invariant treats such a failed check as a distinguished
+blocked state rather than as an untyped stuck state; the syntax contains no
+second sequential tuple constructor and the semantics does not silently switch
+to a separate source-level tuple rule.
+
+The checked-interleaving behavior for successful checks is stated by a
+structured transition relation
 \[
 s_{\parallel}\xrightarrow{\alpha}_{\parallel}s',
 \]
 which runs the two computational applications from the same source heap and
-records their branch traces separately. The theorem statements in
-Section~\ref{sec:smallstep} connect this checked relation and the sequential
-fallback path to one uniform safety story. There is no separate source-level
-sequential tuple constructor.
+records their branch traces separately. For theorem statements that quantify
+over arbitrary expressions, we also use a scheduled structured transition
+relation
+\[
+s \xrightarrow{\phi}_{\mathsf{sch}} s'.
+\]
+Away from a source state headed by an implicit-parallel tuple, this relation
+follows the ordinary continuation-machine step relation. At a tuple state, it
+first records the two effect-summary traces as a parallel trace node, checks
+their computed summaries, and, on success, records the checked branch execution
+as a packed structured trace. Thus the tuple-specific scheduler is internal to
+one state-level relation.
 
 Effect-summary evaluation is proved read-only from typing: if a well-typed
 summary execution emits a read-only trace, the final heap is the initial heap.
@@ -909,7 +926,7 @@ with $\ReadOnly(\phi_e)$, then
 The conclusion of the correctness theorem is approximation only. In
 particular, it does \emph{not} conclude that the computation trace $\phi_b$ is
 read-only. The small-step results in Section~\ref{sec:smallstep} reuse this
-approximation story while stating finite-prefix and checked/fallback safety
+approximation story while stating finite-prefix and checked-or-blocked safety
 directly over the continuation machine.
 
 \begin{corollary}[Read-only, heap-preserving summary evaluation]
@@ -1023,7 +1040,7 @@ rules. Concrete computed actions can refine a region-level distinction and may
 therefore satisfy the scheduler premises even when a region-only comparison
 would be inconclusive. `$\Top$', by contrast, is a sound approximation of every
 trace but cannot satisfy the disjointness/non-conflict premises of the dynamic
-guard. The current calculus contains no separate static-fallback rule for
+guard. The current calculus contains no separate static recovery rule for
 `$\Top$'; its role in the mechanized semantics is to conservatively prevent
 the checked interleaving path from being justified.
 
@@ -1086,9 +1103,12 @@ state, and $\mathsf{done}(H,v)$ for a terminal state. The judgment
 $\Sigma \vdash_{\mathsf{st}} s : \tau$ abbreviates the mechanized typed-state
 invariant, and $\Sigma \vdash_{\phi} \alpha$ states that the structured trace
 $\Phi(\alpha)$ is well typed with respect to $\Sigma$.
-The predicate $\mathsf{NotStuck}(s)$ means that $s$ is either terminal or has
-a next small-step transition, and $\mathsf{Shape}_{\Sigma}(v,\tau)$ records
-that the run-time form of $v$ matches type $\tau$ under store typing $\Sigma$.
+The predicate $\mathsf{NotStuck}(s)$ means that $s$ is terminal, has a next
+small-step transition, or is an explicit dynamic-check state. The predicate
+$\mathsf{Shape}_{\Sigma}(v,\tau)$ records that the run-time form of $v$
+matches type $\tau$ under store typing $\Sigma$.
+For scheduled executions, we use the same $\Sigma\vdash_{\phi}\phi$ notation
+for direct typing of a structured trace.
 The dynamic tuple guard is assumed decidable:
 \[
 \forall \Theta_1,\Theta_2.\;
@@ -1155,11 +1175,11 @@ effect check as an explicit control point. After both effect applications have
 produced computed summaries $\Theta_1$ and $\Theta_2$, the safety theorem
 splits on $\mathsf{Pass}(\Theta_1,\Theta_2)$.
 If the check succeeds, the checked interleaving relation for the two
-computational applications is trace safe. If the check fails, the ordinary
-continuation machine takes the sequential fallback path and that path is trace
-safe.
+computational applications is trace safe. If the check fails, the current
+state is a distinguished blocked check state and is therefore not an
+ill-typed stuck state.
 
-\begin{theorem}[Checked-or-fallback finite-prefix safety]
+\begin{theorem}[Checked-or-blocked finite-prefix safety]
 Assume the heap, region environment, variable environment, both computational
 applications, and the outer continuation are well typed:
 \[
@@ -1177,12 +1197,12 @@ applications, and the outer continuation are well typed:
 \Sigma\vdash k:(\tau_1[P]\times\tau_2[P])\Rightarrow\tau_o.
 \end{array}
 \]
-Let
-$s_{\mathsf{chk}}$ be the checked-interleaving start state and
-$s_{\mathsf{seq}}$ be the sequential fallback start state for
+Let $s_{\mathsf{chk}}$ be the checked-interleaving start state for
 \[
 \ptuple{\capp e_{f1}\,e_{a1}}{\capp e_{f2}\,e_{a2}}.
 \]
+Let $s_{\mathsf{guard}}$ be the continuation-machine state immediately after
+both summaries have returned $\Theta_1$ and $\Theta_2$.
 Then
 \[
 \begin{array}{l}
@@ -1191,18 +1211,19 @@ Then
 \\[1mm]\qquad{}\lor{}
 \\[1mm]
 \bigl(\neg\mathsf{Pass}(\Theta_1,\Theta_2)
-  \land \exists \Sigma'.\;
-    \Sigma \subseteq \Sigma'
-    \land \mathsf{Safe}_{\Sigma',\tau_o}(s_{\mathsf{seq}})\bigr).
+  \land \mathsf{BlockedCheck}(s_{\mathsf{guard}})
+  \land \mathsf{NotStuck}(s_{\mathsf{guard}})\bigr).
 \end{array}
 \]
 \end{theorem}
 
 Here $\mathsf{Safe}_{\Sigma,\tau}(s)$ is ordinary finite-prefix safety for a
 state, and $\mathsf{Safe}^{\parallel}_{\Sigma,\tau}(s)$ is its
-checked-interleaving analogue for paired branch states.
+checked-interleaving analogue for paired branch states. The predicate
+$\mathsf{BlockedCheck}$ identifies a failed dynamic check state; it is a
+controlled scheduler outcome, not a separate source-level evaluation rule.
 
-\begin{theorem}[Checked-or-fallback terminal soundness]
+\begin{theorem}[Checked-or-blocked terminal soundness]
 Under the same hypotheses, either the check succeeds and
 \[
 \begin{array}{l}
@@ -1218,20 +1239,11 @@ s_{\mathsf{chk}}\xrightarrow{\alpha}_{\parallel}\mathsf{done}(H',v)
 \land \Sigma' \vdash_{\phi} \alpha,
 \end{array}
 \]
-or the check fails and
+or the check fails and the guard state is blocked but not stuck:
 \[
-\begin{array}{l}
-\forall \alpha,H',v.\;
-s_{\mathsf{seq}} \xrightarrow{\alpha *} \mathsf{done}(H',v)
-\\[1mm]\qquad\Longrightarrow
-\exists \Sigma'.\;
-\Sigma \subseteq \Sigma'
-\land \Sigma' \vdash H'
-\land \Sigma' \vdash v : \tau_o
-\\[1mm]\qquad\land
-\mathsf{Shape}_{\Sigma'}(v,\tau_o)
-\land \Sigma' \vdash_{\phi} \alpha.
-\end{array}
+\neg\mathsf{Pass}(\Theta_1,\Theta_2)
+\land \mathsf{BlockedCheck}(s_{\mathsf{guard}})
+\land \mathsf{NotStuck}(s_{\mathsf{guard}}).
 \]
 \end{theorem}
 
@@ -1239,6 +1251,59 @@ The theorem is deliberately about the staged construct in the mechanized
 syntax. Since the syntax contains no distinct sequential tuple constructor, it
 is not an observational-equivalence theorem comparing two source-level tuple
 rules.
+
+\begin{theorem}[Scheduled terminal type and trace soundness]
+Assume the same heap, environment, and expression typing hypotheses as in
+finite-prefix safety.  If a scheduled structured execution from the initial
+state terminates,
+\[
+\mathsf{init}(H,E,P,e)
+  \xrightarrow{\phi}_{\mathsf{sch}}
+  \mathsf{done}(H',v),
+\]
+then there exists an extended store typing $\Sigma'$ such that
+\[
+\Sigma \subseteq \Sigma'
+\quad\land\quad
+\Sigma' \vdash H'
+\quad\land\quad
+\Sigma' \vdash v : \tau[P]
+\quad\land\quad
+\mathsf{Shape}_{\Sigma'}(v,\tau[P])
+\quad\land\quad
+\Sigma' \vdash_{\phi} \phi.
+\]
+\end{theorem}
+
+The theorem types the terminal heap, terminal value, and the entire scheduled
+structured trace, including the effect-summary phase and the checked
+computation phase.
+
+\begin{theorem}[Scheduler independence for scheduled terminal runs]
+For any source expression $e$, if two scheduled structured executions from the
+same initial machine state terminate,
+\[
+\mathsf{init}(H,E,P,e)
+  \xrightarrow{\phi_1}_{\mathsf{sch}}
+  \mathsf{done}(H_1,v_1)
+\qquad\text{and}\qquad
+\mathsf{init}(H,E,P,e)
+  \xrightarrow{\phi_2}_{\mathsf{sch}}
+  \mathsf{done}(H_2,v_2),
+\]
+then
+\[
+H_1 = H_2
+\qquad\text{and}\qquad
+v_1 = v_2.
+\]
+\end{theorem}
+
+The scheduled relation hides the tuple-specific proof obligations: summary
+evaluation is deterministic, a successful computed-effect check gives
+sound branch disjointness, and every checked branch schedule normalizes to the
+same terminal heap and value. The theorem is quantified over arbitrary
+expressions; it is not a theorem only about a top-level tuple.
 
 \paragraph{Structured terminal summary correctness.}
 
@@ -1342,8 +1407,9 @@ checked for disjointness and conflict absence before the checked interleaving
 path is used. No failed dynamic cast changes the computational result, but
 summary evaluation is still run-time computation and may itself be input
 dependent. The continuation-machine metatheory proves finite-prefix safety for
-ordinary and checked/fallback executions and terminal soundness for completed
-machine runs. It does not prove termination of summary terms, bound their cost,
+ordinary and checked-or-blocked executions, terminal type and trace soundness
+for completed scheduled machine runs, and scheduler independence for terminal
+scheduled runs. It does not prove termination of summary terms, bound their cost,
 or compare that cost with dynamic validation mechanisms. A future adequacy
 theorem could relate terminal machine runs to the archived terminating
 evaluator, but that bridge is not used as a paper theorem here.
@@ -1402,7 +1468,10 @@ trace. The trace semantics then establishes equivalent terminating replay
 heaps. The continuation-machine theorem stack adds finite-prefix safety:
 well-typed prefixes preserve typing, heap shape, trace typing, and
 not-stuckness, and the staged parallel-tuple check is connected either to a
-checked interleaving target or to the sequential fallback path.
+checked interleaving target or to a controlled blocked check state. Terminal
+scheduled executions type the final heap, final value, and full structured
+trace; two terminal scheduled executions from the same initial expression have
+the same final heap and value, independently of the checked branch schedule.
 
 These results are formal, not empirical performance results. The calculus does
 not include summary inference, a termination argument for summary evaluation, a

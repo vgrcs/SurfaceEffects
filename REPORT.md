@@ -2,7 +2,7 @@
 
 This report summarizes the current mechanized proof state, with emphasis on the
 recent removal of admitted/axiomatic gaps, the small-step runtime layer, and the
-reviewer-facing `Pair_Par` check/fallback story.
+reviewer-facing `Pair_Par` checked/blocked story.
 
 ## Executive Summary
 
@@ -23,12 +23,12 @@ effect check explicitly:
 
 - if the check succeeds, the checked interleaving semantics is available and is
   trace-safe;
-- if the check fails, the ordinary sequential fallback path is taken and is
-  trace-safe;
+- if the check fails, the machine is at an explicit blocked check state that is
+  treated as not stuck;
 - `pairpar_check_decidable_trace_safe` packages this success/failure split in a
   single theorem;
 - `pairpar_check_decidable_terminal_value` adds the terminal-value extractor for
-  both checked and fallback outcomes.
+  the checked branch and the blocked-check outcome.
 
 The paper-facing wrappers are:
 
@@ -36,18 +36,23 @@ The paper-facing wrappers are:
 - `PaperSmallStepTerminalSoundness`;
 - `PaperPairParCheckedOrBlockedTraceSafety`;
 - `PaperPairParCheckedOrBlockedTerminalSoundness`;
-- `PaperPairParCheckedArbitraryScheduleTerminalDeterminism`.
+- `PaperPairParCheckedPackedTerminalSoundness`;
+- `PaperScheduledSmallStepTerminalTraceSoundness`;
+- `PaperScheduledExpressionTerminalTraceSoundness`;
+- `PaperScheduledSmallStepTerminalDeterminism`;
+- `PaperScheduledExpressionTerminalDeterminism`.
 
-These are stable theorem-map names for the mechanization notes. The revised
-paper states the corresponding results only in mathematical notation, without
-using Coq theorem names in the prose.
+The value-only scheduled wrappers remain in the file as derived support lemmas,
+but the public theorem map now uses the trace-strengthened scheduled terminal
+statements. The revised paper states the corresponding results only in
+mathematical notation, without using Coq theorem names in the prose.
 
 This is intentionally not a full observational-equivalence theorem between two
 distinct syntactic tuple rules. The mechanized language still has only
 `Pair_Par`, not separate `[E-PAR]` and `[E-SEQ]` tuple constructors. The current
 result is therefore the right statement for the present calculus: one staged
-construct dispatches to a checked interleaving target or to the sequential
-fallback path.
+construct dispatches to a checked interleaving target or to a controlled
+blocked check state.
 
 ## Build And Trust Status
 
@@ -105,13 +110,10 @@ The runtime proof stack is now stratified into explicit dependency layers:
 - `Determinism/SmallStepPairParScheduleDeterminism.v`: local branch
   commutation, checked schedule normalization, and terminal checked-parallel
   schedule determinism.
-- `Soundness/SmallStepCorrectnessBridge.v`: explicit bridge from matched
-  terminal small-step traces plus corresponding big-step traces to the old
-  `BackTriangle` correctness theorem.
 - `Soundness/SmallStepCorrectnessDirect.v`: beginning of the direct small-step
   port of `Correctness_soundness_ext`. It now includes direct terminal cases
   for pure expressions, conditionals, arithmetic, reference/read/write
-- summaries, application summaries, and canonical `Pair_Par` summaries. The
+  summaries, application summaries, and canonical `Pair_Par` summaries. The
   current paper-facing summary relation is `SmallStepBackTriangle`, defined in
   `Soundness/SmallStepBackTriangle.v`; it has constructors for every expression
   form and canonicalizes the `Pair_Par` branch summaries to the corresponding
@@ -136,20 +138,11 @@ The runtime proof stack is now stratified into explicit dependency layers:
   `PaperPairParCheckedStructuredTerminalCorrectness` theorem, while
   `SmallStepBackTriangle` records the canonical all-constructor summary
   relation used for the small-step proof story.
-  The helper
-  `NoPairParFallback_initial_child_from_step` is the first porting lemma for
-  that induction: after a parent step enters a child expression under a
-  continuation, parent-level no-fallback implies no-fallback for the child's
-  initial terminal run. The bounded companion
-  `StepsPhiN_child_from_initial_step_terminal_decompose_no_fallback` packages
-  the smaller child count together with the inherited no-fallback fact. The
-  direct Pair_Par checkpoint
-  `Correctness_soundness_ext_small_step_pair_par_canonical_eff_app_backtriangle_no_fallback_structured_below_case`
-  eliminates the failed-check branch using an actual fallback occurrence,
-  rather than assuming branch-summary replay.
-- `Soundness/SmallStepFallback.v`: connects a failed `Pair_Par` check witness
-  to an actual sequential fallback transition occurring inside the terminal
-  small-step run.
+The old matched-trace bridge to the terminating evaluator and the fallback,
+heap-agreement, and no-fallback experiments are no longer part of the active
+paper theorem map. The matched-trace bridge has also been removed from the
+active `_CoqProject` spine; the current paper-facing layer is the
+continuation-machine small-step stack.
 
 The facade modules remain for stable imports, but non-facade runtime files now
 avoid importing the broad facades directly.
@@ -190,10 +183,9 @@ The small-step rule for `Pair_Par ef1 ea1 ef2 ea2` is staged.
    `pairpar_checked_initial`, which runs the two computational applications as
    independent branch states under `PairParStep`.
 
-5. If the check fails, the ordinary continuation machine steps into the same
-   first computational application, but this is interpreted as the sequential
-   fallback path. The second computational application is evaluated afterward
-   through the `KPairParMu1`/`KPairParMu2` continuation frames.
+5. If the check fails, the current paper-facing story leaves the machine at the
+   explicit check state. That state is counted as controlled/not stuck; the
+   checked branch scheduler is not entered.
 
 This matches the current calculus: there is one staged `Pair_Par` construct,
 not two separate source constructs.
@@ -309,7 +301,7 @@ Important theorems:
 - `pairpar_checked_initial_kdone_terminal_pair_with_trace`
   extracts a terminal pair value with component typing and trace evidence.
 
-### Staged Check And Sequential Fallback
+### Staged Check And Blocked Failure
 
 File: `theories/Runtime/SmallStepSequentialSoundness.v`
 
@@ -326,7 +318,7 @@ Definitions:
   has been computed.
 
 - `pairpar_sequential_start`
-  names the ordinary sequential fallback target.
+  names the ordinary computational prefix reached when the check succeeds.
 
 - `pairpar_checked_start`
   names the separate checked interleaving target.
@@ -337,8 +329,8 @@ Important theorems:
   proves that a successful check has the ordinary step into the first
   computational application and exposes the checked interleaving start.
 
-- `pairpar_check_fail_dispatch`
-  proves that a failed check steps to the sequential fallback start.
+- `pairpar_check_fail_boundary`
+  exposes the failed check as a blocked check-state outcome.
 
 - `pairpar_check_decidable_dispatch`
   splits on the check result and exposes the corresponding dispatch fact.
@@ -347,13 +339,6 @@ Important theorems:
   proves that the check state is explicitly well typed from the source typing
   assumptions.
 
-- `pairpar_check_fail_sequential_preservation`
-  proves the failed-check sequential target preserves explicit runtime typing.
-
-- `pairpar_check_fail_sequential_trace_safe`
-  proves that the failed-check sequential fallback is ordinary finite-prefix
-  trace-safe.
-
 - `pairpar_check_pass_checked_trace_safe`
   proves that the successful checked branch is checked-interleaving trace-safe.
 
@@ -361,7 +346,7 @@ Important theorems:
   packages the final reviewer-facing split:
 
   - pass case: `PairParTraceSafeAt` for the checked interleaving target;
-  - fail case: `StateTraceSafeAt` for the sequential fallback target.
+  - fail case: an explicit check state that is treated as not stuck.
 
 - `pairpar_check_decidable_terminal_value`
   strengthens the split for terminating runs:
@@ -369,9 +354,7 @@ Important theorems:
   - pass case: every terminal checked interleaving result has an extended store
     typing, typed final heap, runtime heap shape, typed final value, runtime
     value shape, and typed trace;
-  - fail case: every terminal ordinary fallback result has the same final heap,
-    value, and trace evidence, with store extension composed through the
-    failed-check step.
+  - fail case: the explicit check state is a controlled blocked state.
 
 ### Paper-Facing Small-Step Theorems
 
@@ -393,8 +376,26 @@ not depend on internal proof-stratification filenames.
 - `PaperPairParCheckedOrBlockedTerminalSoundness`
   wraps `pairpar_check_decidable_terminal_value`.
 
-- `PaperPairParCheckedArbitraryScheduleTerminalDeterminism`
-  wraps `PairParCheckedArbitraryScheduleTerminalDeterminism`.
+- `PaperPairParCheckedPackedTerminalSoundness`
+  wraps `PairParCheckedPackedStepsPhi_terminal_value_with_trace`; it is the
+  successful-check terminal value/heap/packed-trace typing theorem for the
+  checked computation phase under an arbitrary continuation.
+
+- `PaperScheduledSmallStepTerminalTraceSoundness`
+  wraps `WTStateRuntimeHeapShapeAt_scheduled_terminal_value_with_trace`.
+
+- `PaperScheduledExpressionTerminalTraceSoundness`
+  is the initial-state corollary; it also types the full scheduled `Phi` trace
+  in the final store.
+
+The value-only scheduled wrappers are still present as derived support lemmas,
+but the trace-strengthened statements above are the public theorem-map entries.
+
+- `PaperScheduledSmallStepTerminalDeterminism`
+  wraps `ScheduledStepsPhi_terminal_deterministic`.
+
+- `PaperScheduledExpressionTerminalDeterminism`
+  wraps `ScheduledInitialState_terminal_deterministic`.
 
 ## Proof Explanation: `pairpar_check_decidable_trace_safe`
 
@@ -425,12 +426,12 @@ In the fail case:
 1. The hypothesis is `PairParCheckFail theta1 theta2`.
 2. `pairpar_check_state_typed` proves the ordinary check state is explicitly
    well typed.
-3. `pairpar_check_fails_to_sequential_start` gives the concrete small-step rule
-   to the sequential fallback target.
-4. `WTStateRuntimeHeapShapeAt_step_preservation` preserves explicit typing for
-   that one failed-check step.
-5. `WTStateRuntimeHeapShapeAt_trace_safe_typed` gives ordinary finite-prefix
-   trace safety from the sequential fallback target.
+3. `pairpar_check_fail_boundary` identifies that state as the explicit
+   dynamic-check boundary.
+4. `pairpar_check_fail_no_step` records that no ordinary small-step transition
+   is available from a failed check.
+5. The progress/safety statement counts that boundary as `NotStuck`, so failure
+   is controlled rather than an untyped stuck state.
 
 Thus the result does not merely say that the staged machine is deterministic or
 that two evaluations agree. It states the actual dispatch behavior of the
@@ -439,9 +440,7 @@ current syntax.
 The companion theorem `pairpar_check_decidable_terminal_value` reuses this
 trace-safety split and applies the generic terminal extractors. In the
 successful branch it calls `PairParTraceSafeAt_terminal_value`; in the failed
-branch it calls `StateTraceSafeAt_terminal_value` and composes the store
-extension produced by the failed-check step with the store extension produced by
-the fallback run.
+branch it returns the explicit not-stuck check-state evidence.
 
 ### Structured Traces For Future Adequacy
 
@@ -512,14 +511,44 @@ Important definitions and theorems:
   `PaperSmallStepStructuredTerminalDeterminism` and
   `PaperSmallStepStructuredEffectTerminalDeterminism`.
 
-- `PairParCheckedArbitraryScheduleTerminalDeterminism`
+- `PairParCheckedPackedArbitraryScheduleContinuationTerminalDeterminism`
   lives in `theories/Determinism/SmallStepPairParScheduleDeterminism.v`. It
   states that two terminal checked `Pair_Par` runs from the same initial heap,
-  environment, region substitution, and branch programs finish with equal heaps
-  and equal values whenever each run's left and right branch traces are sound
-  under the same successful check. It does not require the two executions to
-  use the same branch projection. The paper-facing alias is
-  `PaperPairParCheckedArbitraryScheduleTerminalDeterminism`.
+  environment, region substitution, branch programs, and surrounding
+  continuation finish with equal heaps and equal values whenever each run is
+  described by a single packed `Phi` trace with branch soundness under the same
+  successful check. The computation component is packed with `Phi_Par`, so the
+  internal theorem no longer exposes separate `phi_left` and `phi_right`
+  parameters. The top-level `KDone` corollary remains
+  `PairParCheckedPackedArbitraryScheduleTerminalDeterminism`, and the
+  underlying branch-indexed core theorem remains
+  `PairParCheckedArbitraryScheduleContinuationTerminalDeterminism`.
+
+- `ScheduledStepsPhi_terminal_deterministic` also lives in
+  `theories/Determinism/SmallStepPairParScheduleDeterminism.v`. It packages
+  the same schedule-independence argument as a relation over ordinary
+  `State -> Phi -> State` runs. The only specialized case is internal to the
+  `ScheduledStepsPhi` relation: a `Pair_Par` state uses the effect-summary
+  phase plus a packed checked branch run. The corollary
+  `ScheduledInitialState_terminal_deterministic` specializes this to arbitrary
+  source expressions through `initial_state`. The public paper-facing wrappers
+  are `PaperScheduledSmallStepTerminalDeterminism` and
+  `PaperScheduledExpressionTerminalDeterminism`.
+
+- `PairParCheckedPackedStepsPhi_terminal_value_with_trace` lives in
+  `theories/Runtime/SmallStepStructuredTrace.v`. It packages the successful
+  checked computation phase after the dynamic summaries have passed: for an
+  arbitrary continuation, a terminal packed checked branch run yields a typed
+  final heap, typed final value, and typed packed `Phi` trace. Its facade name
+  is `PaperPairParCheckedPackedTerminalSoundness`.
+
+- `WTStateRuntimeHeapShapeAt_scheduled_terminal_value` and
+  `initial_state_scheduled_terminal_value` also live in
+  `theories/Runtime/SmallStepStructuredTrace.v`. They lift terminal
+  heap/value soundness to scheduled runs. These theorems intentionally do not
+  claim that the entire scheduled summary-plus-computation `Phi` trace is typed
+  by the final computation store; that stronger statement needs the
+  correctness/read-only discipline for summary evaluation.
 
 - `WTKontEffect_forget`, `WTStateEffectAt_forget`, and
   `WTStateEffectAt_initial`
@@ -534,8 +563,8 @@ Important definitions and theorems:
   budget.
 
 - `WTStateEffectAt_*_step_budget` lemmas cover all ordinary `Step`
-  constructors, including closure-entry/body cases and `Pair_Par`
-  checked/fallback frames. `WTStateEffectAt_step_budget` assembles the case
+constructors, including closure-entry/body cases and `Pair_Par`
+  checked frames. `WTStateEffectAt_step_budget` assembles the case
   library into a one-step static-effect budget theorem, and
   `WTStateEffectAt_steps_budget` lifts it to finite `Steps` prefixes:
   the static effect computed from `trace_as_phi trace` plus the residual
@@ -570,18 +599,10 @@ Important definitions and theorems:
   reuse the existing structured replay theorems without assuming a separate
   big-step soundness premise.
 
-- `Soundness/SmallStepCorrectnessBridge.v`
-  makes the remaining adequacy boundary explicit. The theorems
-  `small_step_structured_correctness_from_big_step_traces` and
-  `small_step_list_correctness_from_big_step_traces` prove that, if a terminal
-  small-step run is accompanied by the corresponding big-step evaluation with
-  the same trace, the existing `Correctness_soundness_ext` theorem yields
-  `phi ⋞ theta`.
-  `small_step_structured_correctness_from_big_step_normalized_traces` covers
-  the more realistic structured case where the supplied big-step trace is
-  `trace_as_phi (phi_as_list phi)` for the structured small-step trace `phi`.
-  These theorems do not prove that every terminal small-step run has such a
-  big-step counterpart.
+The former matched-trace bridge to the terminating evaluator is no longer in
+the active build. This keeps the theorem map honest: terminal
+small-step/terminating-evaluator adequacy is postponed rather than smuggled in
+through an explicit bridge assumption.
 
 - `Soundness/SmallStepCorrectnessDirect.v`
   starts the direct terminal small-step port of `Correctness_soundness_ext`.
@@ -641,9 +662,8 @@ Important definitions and theorems:
   read-only evidence, and recursive `BackTriangle` hypotheses.
   `StepsPhi_pair_par_from_components` replays the staged ordinary `Pair_Par`
   path through effect summary 1, effect summary 2, computation 1, computation
-  2, and the final pair return. The pass/fallback replay wrappers instantiate
-  the single generic check step with either `Step_PairPar_EvalMu1` or
-  `Step_PairPar_FallbackMu1`. The composed and terminal pair-par theorems join
+  2, and the final pair return in the successful-check case. The composed and
+  terminal pair-par theorems join
   the four component soundness premises into
   `Union_Theta (Union_Theta theta1 theta2) (Union_Theta theta_mu1 theta_mu2)`
   and then use terminal determinism to cover arbitrary terminal `Pair_Par`
@@ -675,7 +695,7 @@ Important definitions and theorems:
   `Correctness_soundness_ext_small_step_pair_par_bt_summary_terminal_case`
   cover the actual four-part `BT_Pair_Par` summary shape
   `(eff1 ⊕ eff2) ⊕ (eff3 ⊕ eff4)`: they identify the terminal theta of the
-  nested summary expression and then apply the general checked/fallback
+  nested summary expression and then apply the general checked
   `Pair_Par` terminal theorem.
   `PairParSequentialEffectSummaryStepsPhi_readonly_heap_neutral` records the
   reusable runtime version of that heap-neutrality fact for the whole
@@ -767,9 +787,9 @@ Important definitions and theorems:
   The lower-level constructor lemmas, replay facts, counted decompositions, and
   unaugmented application-summary diagnostics remain in the proof tree as
   implementation support for the direct induction. They are no longer presented
-  as part of the public theorem map. `SmallStepFallback.v` is kept focused on
-  fallback occurrence and no-fallback conversion lemmas; the canonical
-  dispatcher lives in `SmallStepCorrectnessDirect.v`. Terminal
+  as part of the public theorem map. Legacy fallback/no-fallback diagnostics and
+  the old matched-trace bridge are outside the current public theorem map; the
+  canonical dispatcher lives in `SmallStepCorrectnessDirect.v`. Terminal
   small-step/terminating-evaluator adequacy remains postponed.
   The application-summary port now has
   `Correctness_soundness_ext_small_step_mu_app_summary_terminal_direct_case`,
@@ -793,11 +813,11 @@ Important definitions and theorems:
   It proves the four-part `BT_Pair_Par` summary theorem directly over the
   actual terminal `Pair_Par` and nested-summary runs, and it no longer needs
   `PairParCheckDecidable`.
-  The public paper-facing layer intentionally stops at the no-fallback bounded
-  principles. The direct correctness file now keeps the remaining
-  implementation support local: terminal decompositions, read-only trace
-  stability, and the constructor-specific facts needed by the no-fallback
-  induction.
+  The public paper-facing layer intentionally stops at the closed structured
+  terminal correctness theorem and the scheduled terminal determinism theorem.
+  The direct correctness file now keeps the remaining implementation support
+  local: terminal decompositions, read-only trace stability, and legacy
+  no-fallback diagnostics.
 
 - `WTStateRuntimeHeapShapeAt_steps_phi_trace_typed`
   proves that explicitly typed ordinary states remain explicitly typed and
@@ -865,17 +885,10 @@ Important definitions and theorems:
   check-state step. This records that the source `Pair_Par` machine still steps
   to the ordinary sequential tuple continuation after a successful check.
 
-- `pairpar_check_fail_steps_phi_to_fallback`
-  prefixes any ordinary fallback run with the failed check-state step.
-
 - `PairParCheckedStructuredStepsPhi_source_check_dispatch`
   decomposes a successful structured checked run into its effect-summary traces,
   pass evidence, the ordinary source check-state step, and the separate checked
   interleaving run.
-
-- `PairParFallbackStructuredStepsPhi_erases_from_check_state`
-  proves that a structured fallback run erases to an ordinary `StepsPhi` prefix
-  from the source check state to the fallback result.
 
 - `StepsPhi_initial_terminal_continue`
   is the generic continuation-lifting bridge: a terminal `KDone` run can be
@@ -921,9 +934,6 @@ Important definitions and theorems:
   proves that a source-initial `Pair_Par` expression reaches the ordinary
   sequential tuple start after a successful check, with an erased dynamic trace
   equal to the two sequential summary traces.
-
-- `PairParSequentialEffectSummaryStepsPhi_source_fail_prefix`
-  proves the same source-prefix result for failed checks and fallback.
 
 - `PairParSequentialEffectSummaryStepsPhi_source_pass_independent_prefix`
   combines the source pass prefix with the independent summary witness when the
@@ -978,12 +988,11 @@ Important definitions and theorems:
 - `pairpar_check_decidable_phi_trace_safe`
   is the structured-trace counterpart of
   `pairpar_check_decidable_trace_safe`: successful checks get
-  `PairParPhiTraceSafeAt`; failed checks get `StatePhiTraceSafeAt` for the
-  sequential fallback.
+  `PairParPhiTraceSafeAt`; failed checks remain explicit blocked check states.
 
 - `pairpar_check_decidable_phi_terminal_value`
   gives the matching terminal-value extractor for structured checked traces
-  and structured fallback traces.
+  and blocked-check outcomes.
 
 - `PairParEffectSummaryStepsPhi`
   runs the two surface-effect summary applications as separate structured
@@ -1005,13 +1014,6 @@ Important definitions and theorems:
     (Phi_Seq (Phi_Par phi_mu1 phi_mu2) phi_mu_state)
   ```
 
-- `pairpar_fallback_structured_trace`
-  records the failed-check shape:
-
-  ```coq
-  Phi_Seq (Phi_Par phi_eff1 phi_eff2) phi_seq
-  ```
-
 Thus, yes: in the adequacy-oriented instrumentation, the effect-summary phase
 is itself branch-structured. That is the shape needed to line up later with the
 big-step trace
@@ -1019,7 +1021,7 @@ big-step trace
 remaining future work is to connect these instrumented structured runs to the
 ordinary `Pair_Par` machine and then to the big-step judgment.
 
-Two terminal component extractors now expose the proof obligations that a later
+The terminal component extractor now exposes the proof obligations that a later
 adequacy theorem must reconcile:
 
 - `PairParCheckedStructuredStepsPhi_terminal_components_typed`
@@ -1028,17 +1030,12 @@ adequacy theorem must reconcile:
   evidence for each component and typed final value/heap evidence for the
   checked computation.
 
-- `PairParFallbackStructuredStepsPhi_terminal_components_typed`
-  extracts `phi_eff1`, `phi_eff2`, and `phi_seq` from a terminating fallback
-  structured run, together with typed trace evidence for each component and
-  typed final value/heap evidence for the sequential fallback.
-
 The old heap/store join machinery has now been factored into
 `TcHeap_Extended_PhiPar` in `theories/Meta/TraceTypingFacts.v`. The original
 big-step theorem `TcHeap_Extended_2` is now a thin wrapper around it, using
 `BigStep_replays_trace` to discharge the branch replay premises. For the
 structured small-step path, `StepsPhi_replays_heap` already supplies replay for
-ordinary structured runs such as effect-summary branches and fallback runs, and
+ordinary structured runs such as effect-summary branches, and
 `PairParStepsPhi_checked_replays_heap` supplies replay for the whole checked
 computation trace. The new `PairParBranchReplayWitness` and
 `PairParStepsPhi_checked_branch_replay_join` bridge the replay facts to
@@ -1051,7 +1048,7 @@ trace is sound with respect to that envelope, and proves that the envelope is
 least among all sound static effects for the trace. The check-state bridge is now explicit:
 successful checks expose both the ordinary source step to the sequential tuple
 continuation and the separate structured checked interleaving relation, while
-failed structured runs erase to an ordinary fallback `StepsPhi` prefix. The
+failed checks remain blocked check states. The
 source-initial effect-summary prefix is also explicit for the sequential source
 order, and the source-sequential and independent summary relations coincide
 when the first summary is heap-neutral. Read-only traces are now proved
@@ -1077,7 +1074,8 @@ syntax:
 - `Pair_Par` has one staged small-step rule sequence.
 - After summaries are evaluated, the dynamic check is explicit.
 - If the check succeeds, the checked interleaving semantics is trace-safe.
-- If the check fails, the ordinary sequential fallback path is trace-safe.
+- If the check fails, the explicit check state is a controlled blocked state
+  and is not treated as an untyped stuck state.
 
 The mechanization still does not prove equivalence against a separate
 syntactic `[E-SEQ]` rule, because no such rule exists in the mechanized syntax.
@@ -1089,9 +1087,9 @@ The accurate paper claim is therefore:
 
 > The mechanization proves finite-prefix trace safety for the staged `Pair_Par`
 > semantics. A successful dynamic effect check is connected to a checked
-> interleaving relation, while a failed check is connected to the ordinary
-> sequential fallback path. The current calculus does not include a distinct
-> sequential tuple constructor, so the mechanized result is a dispatch/safety
+> interleaving relation, while a failed check is represented by an explicit
+> blocked check state. The current calculus does not include a distinct
+> sequential tuple constructor, so the mechanized result is a checked/blocked
 > theorem for the existing staged construct, not an equivalence theorem between
 > two source constructs.
 
@@ -1142,7 +1140,7 @@ The mechanization is now substantially cleaner, but some limits remain:
   continuation frames sequentially.
 - `SmallStepStructuredTrace.v` records the adequacy-oriented trace shape and
   now replays ordinary `StepsPhi` plus successful checked computation traces.
-  It also connects checked/fallback structured runs to the ordinary source
+  It also connects successful checked structured runs to the ordinary source
   check-state prefix and connects source-initial `Pair_Par` executions through
   the sequential effect-summary phase. It bridges sequential and independent
   summaries for first-summary traces that are read-only or are statically
@@ -1162,7 +1160,5 @@ Useful next theorem targets:
    The `WTStateEffectAt_steps_budget` theorem now provides the finite-prefix
    budget skeleton for ordinary small-step traces; the next internal step is
    connecting it to the paper-facing terminal/static-summary statements.
-2. A terminal small-step/big-step adequacy theorem using the structured trace
-   shape.
-3. A separate sequential tuple relation, if the paper wants a direct
+2. A separate sequential tuple relation, if the paper wants a direct
    `[E-PAR]` versus `[E-SEQ]` theorem.

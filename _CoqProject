@@ -85,7 +85,6 @@ theories/Determinism/SmallStepDeterminismExt.v
 theories/Soundness/TypeSystem.v
 theories/Soundness/EffectSystem.v
 theories/Soundness/Correctness.v
-theories/Soundness/SmallStepCorrectnessBridge.v
 theories/Soundness/SmallStepBackTriangle.v
 theories/Soundness/SmallStepCorrectnessDirect.v
 theories/Soundness/SmallStepPaperSoundness.v
