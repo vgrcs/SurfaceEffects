@@ -214,10 +214,14 @@ Lemma WTStateRuntimeHeapShapeAt_pack_same_store_step :
       StoreExtends stty stty'.
 Proof.
   intros state tout stty HState.
+  assert (HHeap :
+    TcHeap (state_heap state, stty) /\
+    RuntimeHeapShape (state_heap state) stty).
+  {
+    induction HState; simpl; eauto.
+  }
   exists stty. split.
   - exact HState.
-  - inversion HState; subst; simpl;
-      [ split; [ assumption | split; [ assumption | apply StoreExtends_refl ] ]
-      | split; [ assumption | split; [ assumption | apply StoreExtends_refl ] ]
-      | split; [ assumption | split; [ assumption | apply StoreExtends_refl ] ] ].
+  - destruct HHeap as [HTcHeap HHeapShape].
+    split; [ exact HTcHeap | split; [ exact HHeapShape | apply StoreExtends_refl ] ].
 Qed.

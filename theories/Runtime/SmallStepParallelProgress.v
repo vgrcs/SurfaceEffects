@@ -35,9 +35,10 @@ Definition PairParTerminal (state : PairParState) : Prop :=
 
 Definition PairParCheckBoundary (state : PairParState) : Prop :=
   match state with
-  | PPS_State state => PairParCheckState state
+  | PPS_State state => StatePairParCheckBoundary state
   | PPS_Run left_state right_state _ =>
-      PairParCheckState left_state \/ PairParCheckState right_state
+      StatePairParCheckBoundary left_state \/
+      StatePairParCheckBoundary right_state
   end.
 
 Definition PairParNotStuck (state : PairParState) : Prop :=
@@ -106,6 +107,55 @@ Proof.
   eapply WTPairParStateRuntimeHeapShapeAtStrong_forget; eauto.
 Qed.
 
+Theorem WTStateRuntimeHeapShape_not_stuck_with_run_agreement :
+  PairParCheckDecidable ->
+  forall state tout,
+    WTStateRuntimeHeapShape state tout ->
+    StateRunHeapsAgree state ->
+    StateEvalHeadRegionsResolved state ->
+    NotStuck state.
+Proof.
+  intros HDec state tout HWT.
+  induction HWT; intros HAgree HReady; simpl in *.
+  - apply
+      (WTStateRuntimeHeapShape_not_stuck
+        HDec (StEval heap env rho e k) tout).
+    + econstructor; eauto.
+    + exact I.
+    + intros heap0 env0 rho0 e0 k0 HState.
+      inversion HState; subst. exact HReady.
+  - apply
+      (WTStateRuntimeHeapShape_not_stuck
+        HDec (StReturn heap v k) tout).
+    + econstructor; eauto.
+    + exact I.
+    + intros heap0 env0 rho0 e0 k0 HState.
+      discriminate HState.
+  - left. constructor.
+  - destruct HAgree as [HHeap [HLeftAgree HRightAgree]].
+    destruct HReady as [HLeftReady HRightReady].
+    destruct (IHHWT1 HLeftAgree HLeftReady)
+      as [HLeftTerminal | [HLeftCanStep | HLeftCheck]].
+    + inversion HLeftTerminal; subst.
+      destruct (IHHWT2 HRightAgree HRightReady)
+        as [HRightTerminal | [HRightCanStep | HRightCheck]].
+      * inversion HRightTerminal; subst.
+        simpl in HHeap. subst.
+        right. left.
+        eexists Silent. eexists.
+        apply Step_PairParRun_Done.
+      * right. left.
+        destruct HRightCanStep as [label [right' HRightStep]].
+        eexists label. eexists.
+        eapply Step_PairParRun_Right; eauto.
+      * right. right. right. exact HRightCheck.
+    + right. left.
+      destruct HLeftCanStep as [label [left' HLeftStep]].
+      eexists label. eexists.
+      eapply Step_PairParRun_Left; eauto.
+    + right. right. left. exact HLeftCheck.
+Qed.
+
 Theorem WTPairParStateRuntimeHeapShape_not_stuck :
   PairParCheckDecidable ->
   forall state tout,
@@ -114,36 +164,37 @@ Theorem WTPairParStateRuntimeHeapShape_not_stuck :
     PairParEvalHeadRegionsResolved state ->
     PairParNotStuck state.
 Proof.
-  intros HDec state tout HWT HAgree HReady.
-  inversion HWT as
-    [state0 tout0 HState
-    | left_state right_state k tleft tright tout0 HLeft HRight HDone];
-    subst.
-  - destruct
-      (WTStateRuntimeHeapShape_not_stuck
-        HDec state0 tout HState HReady)
-      as [HTerminal | [HCanStep | HCheck]].
-    + left. exact HTerminal.
-    + right. left.
-      destruct HCanStep as (label & state' & HStep).
-      exists label, (PPS_State state').
-      constructor. exact HStep.
-    + right. right. exact HCheck.
-  - simpl in HAgree.
-    simpl in HReady.
-    destruct HReady as [HLeftReady HRightReady].
-    destruct
-      (WTStateRuntimeHeapShape_not_stuck
-        HDec left_state tleft HLeft HLeftReady)
-      as [HLeftTerminal | [HLeftCanStep | HLeftCheck]].
-    + inversion HLeftTerminal; subst.
-      destruct
-        (WTStateRuntimeHeapShape_not_stuck
-          HDec right_state tright HRight HRightReady)
-        as [HRightTerminal | [HRightCanStep | HRightCheck]].
-      * inversion HRightTerminal; subst.
-        simpl in HAgree. subst.
-        right. left. apply pairpar_done_can_step.
+	  intros HDec state tout HWT HAgree HReady.
+	  inversion HWT as
+	    [state0 tout0 HNonRun HState
+	    | left_state right_state k tleft tright tout0 HLeft HRight HDone];
+	    subst.
+	  - destruct
+	      (WTStateRuntimeHeapShape_not_stuck_with_run_agreement
+	        HDec state0 tout HState HAgree HReady)
+	      as [HTerminal | [HCanStep | HCheck]].
+	    + left. exact HTerminal.
+	    + right. left.
+	      destruct HCanStep as (label & state' & HStep).
+	      exists label, (pairpar_state_of_state state').
+	      apply PPStep_State; eauto.
+	    + right. right. exact HCheck.
+	  - simpl in HAgree.
+	    simpl in HReady.
+	    destruct HAgree as [HHeap [HLeftAgree HRightAgree]].
+	    destruct HReady as [HLeftReady HRightReady].
+	    destruct
+	      (WTStateRuntimeHeapShape_not_stuck_with_run_agreement
+	        HDec left_state tleft HLeft HLeftAgree HLeftReady)
+	      as [HLeftTerminal | [HLeftCanStep | HLeftCheck]].
+	    + inversion HLeftTerminal; subst.
+	      destruct
+	        (WTStateRuntimeHeapShape_not_stuck_with_run_agreement
+	          HDec right_state tright HRight HRightAgree HRightReady)
+	        as [HRightTerminal | [HRightCanStep | HRightCheck]].
+	      * inversion HRightTerminal; subst.
+	        simpl in HHeap. subst.
+	        right. left. apply pairpar_done_can_step.
       * right. left. apply pairpar_right_can_step. exact HRightCanStep.
       * right. right. right. exact HRightCheck.
     + right. left. apply pairpar_left_can_step. exact HLeftCanStep.
@@ -239,8 +290,7 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k.
   unfold pairpar_checked_initial, initial_state.
   simpl.
-  split; intros heap0 env0 rho0 e0 k0 HEq;
-    inversion HEq; subst; simpl; exact I.
+  split; exact I.
 Qed.
 
 Lemma pairpar_checked_initial_not_stuck :

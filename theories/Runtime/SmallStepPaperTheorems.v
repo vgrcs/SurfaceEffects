@@ -15,6 +15,9 @@ Require Import theories.Runtime.SmallStepPreservationTheorems.
 Require Import theories.Runtime.SmallStepExplicitStoreBase.
 Require Import theories.Runtime.SmallStepExplicitStoreTheorems.
 Require Import theories.Runtime.SmallStepTraceSafety.
+Require Import theories.Runtime.SmallStepParallelTyping.
+Require Import theories.Runtime.SmallStepParallelProgress.
+Require Import theories.Runtime.SmallStepParallelTraceSafety.
 Require Import theories.Runtime.SmallStepParallelTraceSafe.
 Require Import theories.Runtime.SmallStepPairParDispatch.
 Require Import theories.Runtime.SmallStepStructuredTrace.
@@ -42,6 +45,7 @@ Theorem PaperSmallStepFinitePrefixSafety :
     TcEnv (stty, rho, env, ctxt) ->
     RuntimeEnvShape stty rho env ctxt ->
     TcExp (ctxt, rgns, e, t, eff) ->
+    StepsStayNonPairParRun (initial_state heap env rho e) ->
     Steps (initial_state heap env rho e) trace state' ->
     exists stty',
       WTStateRuntimeHeapShapeAt state' (subst_rho rho t) stty' /\
@@ -129,6 +133,129 @@ Proof.
   exact pairpar_check_decidable_terminal_value.
 Qed.
 
+Theorem PaperUnifiedPairParCheckedFinitePrefixSafety :
+  PairParCheckDecidable ->
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout trace state',
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
+    Steps
+      (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+      trace state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state state') tout stty' /\
+      StoreExtends stty stty' /\
+      PairParRunHeapsAgree (pairpar_state_of_state state') /\
+      PairParNotStuck (pairpar_state_of_state state') /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  exact pairpar_unified_checked_initial_steps_safety_with_trace.
+Qed.
+
+Theorem PaperUnifiedPairParCheckedBranchProgress :
+  forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k,
+    PairParCheckPass theta1 theta2 ->
+    PairParRunHeapsAgree
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k) /\
+    exists left_state right_state,
+      Step
+        (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+        Silent left_state /\
+      Step
+        (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+        Silent right_state.
+Proof.
+  exact pairpar_check_pass_unified_dispatch.
+Qed.
+
+Theorem PaperUnifiedPairParTraceSafety :
+  PairParCheckDecidable ->
+  forall state tout stty,
+    WTPairParStateRuntimeHeapShapeAtStrong
+      (pairpar_state_of_state state) tout stty ->
+    PairParRunHeapsAgree (pairpar_state_of_state state) ->
+    UnifiedPairParTraceSafeAt state tout stty.
+Proof.
+  exact WTPairParStateRuntimeHeapShapeAtStrong_unified_trace_safe_typed.
+Qed.
+
+Theorem PaperUnifiedPairParTerminalSoundnessFromSafety :
+  forall state tout stty trace heap' v,
+    UnifiedPairParTraceSafeAt state tout stty ->
+    Steps state trace (StDone heap' v) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v, tout) /\
+      RuntimeValShape stty' tout v /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  exact UnifiedPairParTraceSafeAt_terminal_value.
+Qed.
+
+Theorem PaperUnifiedPairParCheckedTerminalSoundness :
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout trace heap' v,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
+    Steps
+      (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+      trace (StDone heap' v) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v, tout) /\
+      RuntimeValShape stty' tout v /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  exact pairpar_unified_checked_initial_terminal_value_with_trace.
+Qed.
+
+Theorem PaperUnifiedPairParCheckedTerminalPairSoundness :
+  forall heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    ty1 ty2 eff1 eff2 trace heap' v,
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    Steps
+      (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 KDone)
+      trace (StDone heap' v) ->
+    exists stty' v1 v2,
+      v = Pair (v1, v2) /\
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v1, subst_rho rho ty1) /\
+      RuntimeValShape stty' (subst_rho rho ty1) v1 /\
+      TcVal (stty', v2, subst_rho rho ty2) /\
+      RuntimeValShape stty' (subst_rho rho ty2) v2 /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  exact pairpar_unified_checked_initial_kdone_terminal_pair_with_trace.
+Qed.
+
 Theorem PaperPairParSummaryPassSmallStepSoundPrefix :
   forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
@@ -151,7 +278,7 @@ Theorem PaperPairParSummaryPassSmallStepSoundPrefix :
       StepsPhi
         (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
         phi_source
-        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
+        (pairpar_checked_run_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
       phi_as_list phi_source =
         phi_as_list phi_eff1 ++ phi_as_list phi_eff2.
 Proof.
@@ -455,6 +582,7 @@ Qed.
 
 Theorem PaperSmallStepTerminalDeterminism :
   forall state trace1 heap1 v1 trace2 heap2 v2,
+    StepsStayNonPairParRun state ->
     Steps state trace1 (StDone heap1 v1) ->
     Steps state trace2 (StDone heap2 v2) ->
     trace1 = trace2 /\ heap1 = heap2 /\ v1 = v2.
@@ -464,6 +592,7 @@ Qed.
 
 Theorem PaperSmallStepStructuredTerminalDeterminism :
   forall state phi1 heap1 v1 phi2 heap2 v2,
+    StepsStayNonPairParRun state ->
     StepsPhi state phi1 (StDone heap1 v1) ->
     StepsPhi state phi2 (StDone heap2 v2) ->
     phi_as_list phi1 = phi_as_list phi2 /\
@@ -499,6 +628,7 @@ Qed.
 
 Theorem PaperSmallStepStructuredEffectTerminalDeterminism :
   forall state phi1 heap1 theta1 phi2 heap2 theta2,
+    StepsStayNonPairParRun state ->
     StepsPhi state phi1 (StDone heap1 (Eff theta1)) ->
     StepsPhi state phi2 (StDone heap2 (Eff theta2)) ->
     phi_as_list phi1 = phi_as_list phi2 /\

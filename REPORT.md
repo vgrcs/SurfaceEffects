@@ -17,14 +17,14 @@ longer presented as the paper semantics.
 
 The public theorem map is exported by `theories/PaperTheorems.v`. It combines
 the runtime theorem names from `theories/Runtime/SmallStepPaperTheorems.v` with
-the structured surface-correctness wrapper from
+the scheduled source-level surface-correctness wrapper from
 `theories/Soundness/SmallStepPaperSoundness.v`. The underlying staged-check
 development lives in
 `theories/Runtime/SmallStepPairParDispatch.v` and exposes the dynamic
 effect check explicitly:
 
-- if the check succeeds, the checked interleaving semantics is available and is
-  trace-safe;
+- if the check succeeds, the ordinary machine enters `StPairParRun`; the
+  branch-scheduled proof view is available and is trace-safe;
 - if the check fails, the machine is at an explicit blocked check state that is
   treated as not stuck;
 - `pairpar_check_decidable_trace_safe` packages this success/failure split in a
@@ -36,6 +36,12 @@ The paper-facing wrappers are:
 
 - `PaperSmallStepFinitePrefixSafety`;
 - `PaperSmallStepTerminalSoundness`;
+- `PaperUnifiedPairParCheckedFinitePrefixSafety`;
+- `PaperUnifiedPairParCheckedBranchProgress`;
+- `PaperUnifiedPairParTraceSafety`;
+- `PaperUnifiedPairParTerminalSoundnessFromSafety`;
+- `PaperUnifiedPairParCheckedTerminalSoundness`;
+- `PaperUnifiedPairParCheckedTerminalPairSoundness`;
 - `PaperPairParCheckedOrBlockedTraceSafety`;
 - `PaperPairParCheckedOrBlockedTerminalSoundness`;
 - `PaperPairParCheckedPackedTerminalSoundness`;
@@ -43,7 +49,7 @@ The paper-facing wrappers are:
 - `PaperScheduledExpressionTerminalTraceSoundness`;
 - `PaperScheduledSmallStepTerminalDeterminism`;
 - `PaperScheduledExpressionTerminalDeterminism`;
-- `PaperPairParCheckedStructuredTerminalCorrectness`.
+- `PaperScheduledPairParCheckedTerminalCorrectness`.
 
 The value-only scheduled wrappers remain in the file as derived support lemmas,
 but the public theorem map now uses the trace-strengthened scheduled terminal
@@ -51,11 +57,11 @@ statements. The revised paper states the corresponding results only in
 mathematical notation, without using Coq theorem names in the prose.
 
 This is intentionally not a full observational-equivalence theorem between two
-distinct syntactic tuple rules. The mechanized language still has only
-`Pair_Par`, not separate `[E-PAR]` and `[E-SEQ]` tuple constructors. The current
+distinct syntactic pair rules. The mechanized language still has only
+`Pair_Par`, not separate `[E-PAR]` and `[E-SEQ]` pair constructors. The current
 result is therefore the right statement for the present calculus: one staged
-construct dispatches to a checked interleaving target or to a controlled
-blocked check state.
+construct dispatches either into the ordinary `StPairParRun` state or to a
+controlled blocked check state.
 
 ## Build And Trust Status
 
@@ -83,9 +89,10 @@ Current trust status:
 
 The runtime proof stack is now stratified into explicit dependency layers:
 
-- `SmallStep.v`: sequential continuation machine with labels.
+- `SmallStep.v`: continuation machine with labels, including `StPairParRun`.
 - `SmallStepFacts.v`: generic state/step facts.
-- `SmallStepParallel.v`: checked interleaving target relation.
+- `SmallStepParallel.v`: branch-scheduled proof view for `StPairParRun`,
+  with bridge lemmas back to the ordinary `Step` relation.
 - `SmallStepProgressBase.v`, `SmallStepReturnProgress.v`,
   `SmallStepEvalProgress.v`, `SmallStepRuntimeProgress.v`: progress and
   runtime-shape foundations.
@@ -96,7 +103,7 @@ The runtime proof stack is now stratified into explicit dependency layers:
 - `SmallStepExplicitStore*.v`: explicit-store preservation indexed by final
   store typings.
 - `SmallStepTraceSafety.v`: ordinary finite-prefix trace safety.
-- `SmallStepParallel*.v`: checked interleaving preservation, progress, safety,
+- `SmallStepParallel*.v`: checked branch-schedule preservation, progress, safety,
   trace safety, and terminal extraction.
 - `SmallStepPairParDispatch.v`: staged `Pair_Par` dispatch and
   success/failure trace-safety theorem surface.
@@ -131,9 +138,9 @@ The runtime proof stack is now stratified into explicit dependency layers:
   branch summaries to the corresponding `Eff_App` expressions.
   `SmallStepBackTriangle_as_BackTriangle` keeps compatibility with the archived
   relation.
-- `Soundness/SmallStepPaperSoundness.v`: closed paper-facing structured
-  correctness wrapper. It exports
-  `PaperPairParCheckedStructuredTerminalCorrectness`.
+- `Soundness/SmallStepPaperSoundness.v`: closed paper-facing scheduled
+  source-level correctness wrapper. It exports
+  `PaperScheduledPairParCheckedTerminalCorrectness`.
 The old matched-trace bridge to the terminating evaluator has been archived and
 removed from the active `_CoqProject` spine. The current paper-facing layer is
 the continuation-machine small-step stack.
@@ -173,9 +180,9 @@ The small-step rule for `Pair_Par ef1 ea1 ef2 ea2` is staged.
    Mu_App ef1 ea1
    ```
 
-   The separate checked interleaving target is represented by
-   `pairpar_checked_initial`, which runs the two computational applications as
-   independent branch states under `PairParStep`.
+   The ordinary target is `StPairParRun`, named by
+   `pairpar_checked_run_start`.  The proof view `pairpar_checked_start` exposes
+   the same checked run as two branch states under `PairParStep`.
 
 5. If the check fails, the current paper-facing story leaves the machine at the
    explicit check state. That state is counted as controlled/not stuck; the
@@ -240,19 +247,19 @@ Files:
 Key predicates and theorems:
 
 - `WTPairParStateRuntimeHeapShapeAtStrong`
-  is the strong typed invariant for checked interleaving states.
+  is the strong typed invariant for the branch-scheduled proof view.
 
 - `WTPairParStateRuntimeHeapShapeAtStrong_step_preservation`
-  proves one checked-interleaving step preserves the strong invariant.
+  proves one branch-scheduled step preserves the strong invariant.
 
 - `WTPairParStateRuntimeHeapShapeAtStrong_steps_preservation`
-  lifts that result to finite checked-interleaving traces.
+  lifts that result to finite branch-scheduled traces.
 
-The checked interleaving semantics synchronizes branch heaps after each branch
-step using `with_state_heap`, and the preservation proof retypes the idle
-branch under the active branch's new heap/store.
+The branch scheduler synchronizes branch heaps after each branch step using
+`with_state_heap`, and the preservation proof retypes the idle branch under the
+active branch's new heap/store.
 
-### Checked Interleaving Progress And Safety
+### Branch-Scheduled Progress And Safety
 
 Files:
 
@@ -262,16 +269,16 @@ Files:
 Important theorems:
 
 - `WTPairParStateRuntimeHeapShapeAtStrong_never_stuck_typed`
-  proves never-stuckness for finite prefixes of checked interleavings.
+  proves never-stuckness for finite prefixes of checked branch schedules.
 
 - `pairpar_checked_initial_steps_safety`
   packages preservation, store extension, branch heap synchronization, and
-  not-stuckness for any finite checked-interleaving execution.
+  not-stuckness for any finite checked branch schedule.
 
 - `pairpar_checked_initial_kdone_terminal_pair`
   extracts the final pair value and component typing for `KDone`.
 
-### Checked Interleaving Trace Safety
+### Branch-Scheduled Trace Safety
 
 Files:
 
@@ -283,7 +290,8 @@ Files:
 Important theorems:
 
 - `WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed`
-  proves checked-interleaving finite traces satisfy `TcPhi` at the final store.
+  proves checked branch-schedule finite traces satisfy `TcPhi` at the final
+  store.
 
 - `PairParTraceSafeAt`
   packages checked finite-prefix trace safety.
@@ -311,17 +319,17 @@ Definitions:
   names the ordinary machine state immediately after the second effect summary
   has been computed.
 
-- `pairpar_sequential_start`
+- `pairpar_checked_run_start`
   names the ordinary computational prefix reached when the check succeeds.
 
 - `pairpar_checked_start`
-  names the separate checked interleaving target.
+  names the branch-scheduled proof view of the ordinary checked run.
 
 Important theorems:
 
 - `pairpar_check_pass_dispatch`
   proves that a successful check has the ordinary step into the first
-  computational application and exposes the checked interleaving start.
+  computational application and exposes the checked branch-schedule view.
 
 - `pairpar_check_fail_boundary`
   exposes the failed check as a blocked check-state outcome.
@@ -334,18 +342,18 @@ Important theorems:
   assumptions.
 
 - `pairpar_check_pass_checked_trace_safe`
-  proves that the successful checked branch is checked-interleaving trace-safe.
+  proves that the successful checked branch schedule is trace-safe.
 
 - `pairpar_check_decidable_trace_safe`
   packages the final reviewer-facing split:
 
-  - pass case: `PairParTraceSafeAt` for the checked interleaving target;
+  - pass case: `PairParTraceSafeAt` for the branch-scheduled proof view;
   - fail case: an explicit check state that is treated as not stuck.
 
 - `pairpar_check_decidable_terminal_value`
   strengthens the split for terminating runs:
 
-  - pass case: every terminal checked interleaving result has an extended store
+  - pass case: every terminal checked branch-schedule result has an extended store
     typing, typed final heap, runtime heap shape, typed final value, runtime
     value shape, and typed trace;
   - fail case: the explicit check state is a controlled blocked state.
@@ -369,6 +377,22 @@ not depend on internal proof-stratification filenames.
 
 - `PaperPairParCheckedOrBlockedTerminalSoundness`
   wraps `pairpar_check_decidable_terminal_value`.
+
+- `PaperUnifiedPairParCheckedFinitePrefixSafety`
+  wraps the finite-prefix safety theorem for successful checked runs expressed
+  directly as ordinary `Steps` from `StPairParRun`.
+
+- `PaperUnifiedPairParCheckedBranchProgress`
+  exposes the two ordinary `Step` successors available from a successful
+  checked run.
+
+- `PaperUnifiedPairParTraceSafety`
+  wraps the generic ordinary-`Step` trace-safety view for `StPairParRun`.
+
+- `PaperUnifiedPairParTerminalSoundnessFromSafety`,
+  `PaperUnifiedPairParCheckedTerminalSoundness`, and
+  `PaperUnifiedPairParCheckedTerminalPairSoundness`
+  are terminal corollaries over ordinary `Steps` from checked `Pair_Par` runs.
 
 - `PaperPairParCheckedPackedTerminalSoundness`
   wraps `PairParCheckedPackedStepsPhi_terminal_value_with_trace`; it is the
@@ -409,7 +433,7 @@ In the pass case:
 
 1. The hypothesis is `PairParCheckPass theta1 theta2`.
 2. The theorem calls `pairpar_check_pass_checked_trace_safe`.
-3. That theorem builds the strong checked interleaving invariant with
+3. That theorem builds the strong branch-scheduled invariant with
    `WTPairParStateRuntimeHeapShapeAtStrong_checked_initial`.
 4. Heap agreement follows from `pairpar_checked_initial_heaps_agree`.
 5. Checked finite-prefix trace safety follows from
@@ -661,11 +685,11 @@ through an explicit bridge assumption.
 
 - `Soundness/SmallStepPaperSoundness.v`
   exports the closed paper-facing theorem
-  `PaperPairParCheckedStructuredTerminalCorrectness`.
+  `PaperScheduledPairParCheckedTerminalCorrectness`.
 
-  This statement keeps the ordinary typing and terminal-run hypotheses. It does
-  not expose a bounded induction package or any auxiliary heap-agreement
-  premise.
+  This statement is directly over terminal scheduled runs from the source
+  `Pair_Par` expression. It does not expose branch-state replay machinery, a
+  bounded induction package, or any auxiliary heap-agreement premise.
 
   Lower-level constructor lemmas, replay facts, counted decompositions, and
   unaugmented application-summary diagnostics remain implementation support.
@@ -676,25 +700,24 @@ through an explicit bridge assumption.
   emit a well-typed structured trace.
 
 - `PairParStepsPhi`
-  records checked interleaving prefixes with three structured components:
+  records checked branch-schedule prefixes with three structured components:
   continuation/state trace, left computation branch trace, and right
   computation branch trace.
 
 - `WTPairParStateRuntimeHeapShapeAtStrong_steps_phi_trace_typed`
   proves explicit typing and `TcPhi` evidence for all three checked
-  interleaving trace components.
+  branch-schedule trace components.
 
 - `PairParPhiTraceSafeAt`
   packages branch-structured checked finite-prefix safety. It preserves the
-  strong checked-interleaving invariant, store extension, branch heap synchronization,
+  strong branch-scheduled invariant, store extension, branch heap synchronization,
   not-stuckness, and typed `Phi` evidence for the continuation, left-branch,
   and right-branch trace components.
 
 - `PairParStepsPhi_as_pairpar_steps_exists`
   proves that every branch-structured checked run has some erased ordinary
-  checked-interleaving run. The theorem is intentionally existential: the
-  branch-structured trace records branch membership, not a unique linear
-  interleaving order.
+  checked run. The theorem is intentionally existential: the branch-structured
+  trace records branch membership, not a unique linear order.
 
 - `StepsPhi_replays_heap`
   proves that every ordinary structured small-step run replays its `Phi` trace
@@ -729,18 +752,18 @@ through an explicit bridge assumption.
   lives in `theories/Determinism/SmallStepStructuredReplay.v`. It derives trace
   disjointness from `phi_left ⋞ theta_left`, `phi_right ⋞ theta_right`, and
   `PairParCheckPass theta_left theta_right`, then combines independent branch
-  `StepsPhi` runs with the checked interleaving run to produce the replay
+  `StepsPhi` runs with the branch-scheduled checked run to produce the replay
   witness and joined heap typing.
 
-- `pairpar_check_pass_steps_phi_to_sequential`
-  prefixes any ordinary sequential continuation run with the successful
-  check-state step. This records that the source `Pair_Par` machine still steps
-  to the ordinary sequential tuple continuation after a successful check.
+- `pairpar_check_pass_steps_phi_to_checked_run`
+  prefixes any ordinary checked-run continuation with the successful
+  check-state step. This records that the source `Pair_Par` machine steps into
+  `StPairParRun` after a successful check.
 
 - `PairParCheckedStructuredStepsPhi_source_check_dispatch`
   decomposes a successful structured checked run into its effect-summary traces,
-  pass evidence, the ordinary source check-state step, and the separate checked
-  interleaving run.
+  pass evidence, the ordinary source check-state step, and the branch-scheduled
+  checked run.
 
 - `StepsPhi_initial_terminal_continue`
   is the generic continuation-lifting bridge: a terminal `KDone` run can be
@@ -783,9 +806,9 @@ through an explicit bridge assumption.
   witnesses under the same heap-neutrality assumption.
 
 - `PairParSequentialEffectSummaryStepsPhi_source_pass_prefix`
-  proves that a source-initial `Pair_Par` expression reaches the ordinary
-  sequential tuple start after a successful check, with an erased dynamic trace
-  equal to the two sequential summary traces.
+  proves that a source-initial `Pair_Par` expression reaches `StPairParRun`
+  after a successful check, with an erased dynamic trace equal to the two
+  source-ordered summary traces.
 
 - `PairParSequentialEffectSummaryStepsPhi_source_pass_independent_prefix`
   combines the source pass prefix with the independent summary witness when the
@@ -903,7 +926,7 @@ Replay and join layer:
   proves that this envelope is least among sound static effects.
 - The check-state bridge is explicit:
   successful checks expose the ordinary source step and the structured checked
-  interleaving relation.
+  branch-schedule view.
 - Failed checks remain blocked check states.
 - The source-initial effect-summary prefix is explicit for the source order.
 - Source-sequential and independent summary relations coincide when the first
@@ -925,32 +948,33 @@ Remaining independence gap:
 
 The earlier concern was that the final theorem only proved determinism of
 repeated evaluations from equivalent heaps, rather than a direct relationship
-between a parallel tuple and a separately defined sequential tuple rule.
+between a parallel pair and a separately defined sequential pair rule.
 
 The current mechanization answers the part that is expressible in the current
 syntax:
 
 - `Pair_Par` has one staged small-step rule sequence.
 - After summaries are evaluated, the dynamic check is explicit.
-- If the check succeeds, the checked interleaving semantics is trace-safe.
+- If the check succeeds, the ordinary machine enters `StPairParRun`, whose
+  branch-scheduled proof view is trace-safe.
 - If the check fails, the explicit check state is a controlled blocked state
   and is not treated as an untyped stuck state.
 
 The mechanization still does not prove equivalence against a separate
 syntactic `[E-SEQ]` rule, because no such rule exists in the mechanized syntax.
-Adding that theorem would require first adding a distinct sequential tuple
+Adding that theorem would require first adding a distinct sequential pair
 construct or relation, then proving a simulation or observational equivalence
 between that construct and the failed-check path.
 
 The accurate paper claim is therefore:
 
 > The mechanization proves finite-prefix trace safety for the staged `Pair_Par`
-> semantics. A successful dynamic effect check is connected to a checked
-> interleaving relation, while a failed check is represented by an explicit
-> blocked check state. The current calculus does not include a distinct
-> sequential tuple constructor, so the mechanized result is a checked/blocked
-> theorem for the existing staged construct, not an equivalence theorem between
-> two source constructs.
+> semantics. A successful dynamic effect check enters the ordinary
+> `StPairParRun` state and is analyzed through a branch-scheduled trace view.
+> A failed check is represented by an explicit blocked check state. The current
+> calculus does not include a distinct sequential pair constructor, so the
+> mechanized result is a checked/blocked theorem for the existing staged
+> construct, not an equivalence theorem between two source constructs.
 
 ## Computed-Action Disjointness
 
@@ -991,12 +1015,13 @@ The explicit-store preservation theorem for assignment uses
 
 The mechanization is now substantially cleaner, but some limits remain:
 
-- The big-step theorem stack is still the reference for terminating runs.
+- The archived big-step theorem stack is not used as the paper-facing
+  semantics.
 - The small-step theorem stack proves finite-prefix safety, not full
   observational equivalence.
-- The checked interleaving target is a separate relation reached after a
-  successful check; the ordinary machine itself still steps through the
-  continuation frames sequentially.
+- `PairParStep`/`PairParStepsPhi` are still proof views over checked branch
+  schedules, so fully eliminating that facade would require replaying many
+  branch-structured lemmas directly over `Step`.
 - `SmallStepStructuredTrace.v` records the adequacy-oriented trace shape.
 - It replays ordinary `StepsPhi` plus successful checked computation traces.
 - It connects successful checked structured runs to the ordinary source
@@ -1009,7 +1034,7 @@ The mechanization is now substantially cleaner, but some limits remain:
 - It proves trace self-soundness and least-envelope facts.
 - The small-step theorem that includes this computed envelope in the declared
   static effect from typing is not yet proved.
-- A true equivalence theorem with a separately defined sequential tuple rule
+- A true equivalence theorem with a separately defined sequential pair rule
   would require adding that rule or relation first.
 
 Useful next theorem targets:
@@ -1020,5 +1045,5 @@ Useful next theorem targets:
    The `WTStateEffectAt_steps_budget` theorem now provides the finite-prefix
    budget skeleton for ordinary small-step traces; the next internal step is
    connecting it to the paper-facing terminal/static-summary statements.
-2. A separate sequential tuple relation, if the paper wants a direct
+2. A separate sequential pair relation, if the paper wants a direct
    `[E-PAR]` versus `[E-SEQ]` theorem.

@@ -5,38 +5,46 @@ Require Import theories.Core.Regions.
 Require Import theories.Core.Values.
 Require Import theories.Runtime.SmallStep.
 
-Definition state_heap (state : State) : Heap :=
-  match state with
-  | StEval heap _ _ _ _ => heap
-  | StReturn heap _ _ => heap
-  | StDone heap _ => heap
-  end.
-
-Definition with_state_heap (heap : Heap) (state : State) : State :=
-  match state with
-  | StEval _ env rho e k => StEval heap env rho e k
-  | StReturn _ v k => StReturn heap v k
-  | StDone _ v => StDone heap v
-  end.
-
 Lemma state_heap_with_state_heap :
   forall heap state,
     state_heap (with_state_heap heap state) = heap.
 Proof.
   intros heap state.
-  destruct state; reflexivity.
+  revert heap.
+  induction state; intros heap0; simpl; auto.
 Qed.
+
+Definition NonPairParRunState (state : State) : Prop :=
+  match state with
+  | StPairParRun _ _ _ => False
+  | _ => True
+  end.
 
 Lemma with_state_heap_state_heap :
   forall state,
+    NonPairParRunState state ->
     with_state_heap (state_heap state) state = state.
 Proof.
-  intros state.
-  destruct state; reflexivity.
+  intros state HNonPair.
+  destruct state; simpl in *; auto; contradiction.
 Qed.
 
 Definition CanStep (state : State) : Prop :=
   exists label state', Step state label state'.
+
+Definition StepsStayNonPairParRun (state : State) : Prop :=
+  forall trace state',
+    Steps state trace state' ->
+    NonPairParRunState state'.
+
+Lemma with_state_heap_non_pairpar :
+  forall heap state,
+    NonPairParRunState state ->
+    NonPairParRunState (with_state_heap heap state).
+Proof.
+  intros heap state HNonPair.
+  destruct state; simpl in *; auto.
+Qed.
 
 Inductive PairParCheckState : State -> Prop :=
 | PPCS_Check :
@@ -45,8 +53,16 @@ Inductive PairParCheckState : State -> Prop :=
         (StReturn heap (Eff theta2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)).
 
+Fixpoint StatePairParCheckBoundary (state : State) : Prop :=
+  match state with
+  | StPairParRun left_state right_state _ =>
+      StatePairParCheckBoundary left_state \/
+      StatePairParCheckBoundary right_state
+  | _ => PairParCheckState state
+  end.
+
 Definition NotStuck (state : State) : Prop :=
-  Terminal state \/ CanStep state \/ PairParCheckState state.
+  Terminal state \/ CanStep state \/ StatePairParCheckBoundary state.
 
 Lemma terminal_not_stuck :
   forall state,
@@ -119,14 +135,29 @@ Proof.
     econstructor; eauto.
 Qed.
 
+Lemma steps_stay_non_pairpar_run_tail :
+  forall state label state',
+    StepsStayNonPairParRun state ->
+    Step state label state' ->
+    StepsStayNonPairParRun state'.
+Proof.
+  intros state label state' HStay HStep trace state'' HSteps.
+  eapply HStay.
+  econstructor; eauto.
+Qed.
+
 Lemma step_deterministic :
   forall state label1 state1 label2 state2,
+    NonPairParRunState state ->
     Step state label1 state1 ->
     Step state label2 state2 ->
     label1 = label2 /\ state1 = state2.
 Proof.
-  intros state label1 state1 label2 state2 HStep1 HStep2.
-  inversion HStep1; subst; inversion HStep2; subst; try congruence.
+  intros state label1 state1 label2 state2 HNonPair HStep1 HStep2.
+  destruct state as
+    [heap env rho e k | heap v k | heap v | left_state right_state k];
+    simpl in HNonPair; try contradiction;
+    inversion HStep1; subst; inversion HStep2; subst; try congruence.
   all:
     repeat match goal with
     | H1 : find_E ?x ?env = Some ?v1,
@@ -145,6 +176,17 @@ Proof.
     split; reflexivity.
 Qed.
 
+Lemma step_deterministic_non_pairpar :
+  forall state label1 state1 label2 state2,
+    NonPairParRunState state ->
+    Step state label1 state1 ->
+    Step state label2 state2 ->
+    label1 = label2 /\ state1 = state2.
+Proof.
+  intros.
+  eapply step_deterministic; eauto.
+Qed.
+
 Lemma terminal_steps_refl :
   forall state trace state',
     Terminal state ->
@@ -159,6 +201,7 @@ Qed.
 
 Theorem steps_terminal_state_deterministic :
   forall state trace1 state1,
+    StepsStayNonPairParRun state ->
     Steps state trace1 state1 ->
     Terminal state1 ->
     forall trace2 state2,
@@ -166,34 +209,46 @@ Theorem steps_terminal_state_deterministic :
       Terminal state2 ->
       trace1 = trace2 /\ state1 = state2.
 Proof.
-  intros state trace1 state1 HSteps1 HTerminal1.
+  intros state trace1 state1 HStay HSteps1.
+  revert HStay.
   induction HSteps1 as
     [state | state label state' trace state'' HStep HSteps IH];
-    intros trace2 state2 HSteps2 HTerminal2.
+    intros HStayCurrent HTerminal1 trace2 state2 HSteps2 HTerminal2.
   - destruct (terminal_steps_refl state trace2 state2 HTerminal1 HSteps2)
       as [HTrace HState].
     subst. split; reflexivity.
   - inversion HSteps2 as
       [| ? label2 state2' trace2' state2'' HStep2 HSteps2']; subst.
     + exfalso. eapply terminal_no_step; eauto.
-    + destruct (step_deterministic _ _ _ _ _ HStep HStep2)
+    + assert (HNonPairCurrent : NonPairParRunState state).
+      {
+        eapply HStayCurrent.
+        constructor.
+      }
+      destruct (step_deterministic _ _ _ _ _ HNonPairCurrent HStep HStep2)
         as [HLabel HState].
+      assert (HStayNext : StepsStayNonPairParRun state').
+      {
+        eapply steps_stay_non_pairpar_run_tail; eauto.
+      }
       subst.
-      destruct (IH HTerminal1 _ _ HSteps2' HTerminal2)
+      destruct (IH HStayNext HTerminal1 _ _ HSteps2' HTerminal2)
         as [HTrace HFinal].
       subst. split; reflexivity.
 Qed.
 
 Theorem Steps_terminal_deterministic :
   forall state trace1 heap1 v1 trace2 heap2 v2,
+    StepsStayNonPairParRun state ->
     Steps state trace1 (StDone heap1 v1) ->
     Steps state trace2 (StDone heap2 v2) ->
     trace1 = trace2 /\ heap1 = heap2 /\ v1 = v2.
 Proof.
-  intros state trace1 heap1 v1 trace2 heap2 v2 HSteps1 HSteps2.
+  intros state trace1 heap1 v1 trace2 heap2 v2
+    HStay HSteps1 HSteps2.
   destruct
     (steps_terminal_state_deterministic
-      state trace1 (StDone heap1 v1) HSteps1
+      state trace1 (StDone heap1 v1) HStay HSteps1
       (Terminal_Done heap1 v1)
       trace2 (StDone heap2 v2) HSteps2
       (Terminal_Done heap2 v2))

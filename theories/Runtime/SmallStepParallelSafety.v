@@ -120,9 +120,9 @@ Proof.
   | HState : WTStateRuntimeHeapShapeAt (StDone heap v) tout stty |- _ =>
       dependent destruction HState
   end.
-  split; [exact H |].
   split; [exact H0 |].
-  split; [exact H1 | exact H2].
+  split; [exact H1 |].
+  split; [exact H2 | exact H3].
 Qed.
 
 Theorem pairpar_checked_initial_terminal_value :

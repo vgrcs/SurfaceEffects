@@ -1,11 +1,11 @@
-\contentsline {section}{\numberline {1}Motivating Example}{4}{section.1}%
-\contentsline {section}{\numberline {2}Static, Dynamic and Surface Effects}{4}{section.2}%
+\contentsline {section}{\numberline {1}Motivating Example}{3}{section.1}%
+\contentsline {section}{\numberline {2}Static Effects, Dynamic Traces, Surface Effects, and Computed Effects}{4}{section.2}%
 \contentsline {section}{\numberline {3}Syntax}{4}{section.3}%
 \contentsline {section}{\numberline {4}Operational Semantics}{5}{section.4}%
 \contentsline {paragraph}{Machine domains.}{5}{section*.3}%
 \contentsline {paragraph}{Representative small-step rules.}{6}{section*.4}%
-\contentsline {paragraph}{Evaluation of surface effects.}{6}{section*.5}%
-\contentsline {paragraph}{Implicit-parallel tuples.}{7}{section*.6}%
+\contentsline {paragraph}{Evaluation of surface-effect terms.}{6}{section*.5}%
+\contentsline {paragraph}{Checked parallel pairs.}{7}{section*.6}%
 \contentsline {section}{\numberline {5}Disjointness of Evaluated Surface Effects}{8}{section.5}%
 \contentsline {paragraph}{Deciding disjointness.}{8}{section*.7}%
 \contentsline {section}{\numberline {6}Static Semantics}{8}{section.6}%

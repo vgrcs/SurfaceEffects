@@ -27,7 +27,7 @@ Require Import theories.Meta.LocallyNameless.
 Require Export theories.Runtime.SmallStepRuntimeHeapShape.
 Require Export theories.Runtime.SmallStepRuntimeKontTyping.
 
-Inductive WTStateRuntimeKontShape : State -> Tau -> Prop :=
+	Inductive WTStateRuntimeKontShape : State -> Tau -> Prop :=
 | WTSRKS_Eval :
     forall heap env rho e k stty ctxt rgns t eff tout,
       TcHeap (heap, stty) ->
@@ -45,14 +45,24 @@ Inductive WTStateRuntimeKontShape : State -> Tau -> Prop :=
       WTKontRuntime stty t tout k ->
       RuntimeValShape stty t v ->
       WTStateRuntimeKontShape (StReturn heap v k) tout
-| WTSRKS_Done :
-    forall heap v stty t,
-      TcHeap (heap, stty) ->
-      TcVal (stty, v, t) ->
-      RuntimeValShape stty t v ->
-      WTStateRuntimeKontShape (StDone heap v) t.
+	| WTSRKS_Done :
+	    forall heap v stty t,
+	      TcHeap (heap, stty) ->
+	      TcVal (stty, v, t) ->
+	      RuntimeValShape stty t v ->
+	      WTStateRuntimeKontShape (StDone heap v) t
+	| WTSRKS_PairParRun :
+	    forall left right k tleft tright tout,
+	      WTStateRuntimeKontShape left tleft ->
+	      WTStateRuntimeKontShape right tright ->
+	      (forall heap v1 v2,
+	          left = StDone heap v1 ->
+	          right = StDone heap v2 ->
+	          WTStateRuntimeKontShape
+	            (StReturn heap (Pair (v1, v2)) k) tout) ->
+	      WTStateRuntimeKontShape (StPairParRun left right k) tout.
 
-Inductive WTStateRuntimeHeapShape : State -> Tau -> Prop :=
+	Inductive WTStateRuntimeHeapShape : State -> Tau -> Prop :=
 | WTSRHS_Eval :
     forall heap env rho e k stty ctxt rgns t eff tout,
       TcHeap (heap, stty) ->
@@ -72,22 +82,32 @@ Inductive WTStateRuntimeHeapShape : State -> Tau -> Prop :=
       WTKontRuntime stty t tout k ->
       RuntimeValShape stty t v ->
       WTStateRuntimeHeapShape (StReturn heap v k) tout
-| WTSRHS_Done :
-    forall heap v stty t,
-      TcHeap (heap, stty) ->
-      RuntimeHeapShape heap stty ->
-      TcVal (stty, v, t) ->
-      RuntimeValShape stty t v ->
-      WTStateRuntimeHeapShape (StDone heap v) t.
+	| WTSRHS_Done :
+	    forall heap v stty t,
+	      TcHeap (heap, stty) ->
+	      RuntimeHeapShape heap stty ->
+	      TcVal (stty, v, t) ->
+	      RuntimeValShape stty t v ->
+	      WTStateRuntimeHeapShape (StDone heap v) t
+	| WTSRHS_PairParRun :
+	    forall left right k tleft tright tout,
+	      WTStateRuntimeHeapShape left tleft ->
+	      WTStateRuntimeHeapShape right tright ->
+	      (forall heap v1 v2,
+	          left = StDone heap v1 ->
+	          right = StDone heap v2 ->
+	          WTStateRuntimeHeapShape
+	            (StReturn heap (Pair (v1, v2)) k) tout) ->
+	      WTStateRuntimeHeapShape (StPairParRun left right k) tout.
 
 Lemma WTStateRuntimeHeapShape_forget :
   forall state t,
     WTStateRuntimeHeapShape state t ->
     WTStateRuntimeKontShape state t.
-Proof.
-  intros state t HState.
-  inversion HState; subst; econstructor; eauto.
-Qed.
+	Proof.
+	  intros state t HState.
+	  induction HState; subst; econstructor; eauto.
+	Qed.
 
 Lemma WTStateRuntimeKontShape_initial :
   forall heap env rho e stty ctxt rgns t eff,

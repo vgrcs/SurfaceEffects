@@ -229,12 +229,14 @@ Proof.
       (StEval heap env rho (Eff_App ef2 ea2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)).
     constructor.
-  - destruct HReady as (theta2 & HValue & HDisj & HNoConf).
-    subst.
-    exists Silent,
-      (StEval heap env rho (Mu_App ef1 ea1)
-        (KPairParMu1 ef2 ea2 env rho k)).
-    econstructor; eauto.
+	  - destruct HReady as (theta2 & HValue & HDisj & HNoConf).
+	    subst.
+	    exists Silent,
+	      (StPairParRun
+	        (initial_state heap env rho (Mu_App ef1 ea1))
+	        (initial_state heap env rho (Mu_App ef2 ea2))
+	        k).
+	    econstructor; eauto.
   - exists Silent,
       (StEval heap env rho (Mu_App ef2 ea2) (KPairParMu2 v k)).
     constructor.

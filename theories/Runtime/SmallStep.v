@@ -49,10 +49,31 @@ Inductive Kont : Type :=
 Inductive State : Type :=
 | StEval : Heap -> Env -> Rho -> Expr -> Kont -> State
 | StReturn : Heap -> Val -> Kont -> State
-| StDone : Heap -> Val -> State.
+| StDone : Heap -> Val -> State
+| StPairParRun : State -> State -> Kont -> State.
 
 Definition initial_state (heap : Heap) (env : Env) (rho : Rho) (e : Expr) : State :=
   StEval heap env rho e KDone.
+
+Fixpoint state_heap (state : State) : Heap :=
+  match state with
+  | StEval heap _ _ _ _ => heap
+  | StReturn heap _ _ => heap
+  | StDone heap _ => heap
+  | StPairParRun left_state _ _ => state_heap left_state
+  end.
+
+Fixpoint with_state_heap (heap : Heap) (state : State) : State :=
+  match state with
+  | StEval _ env rho e k => StEval heap env rho e k
+	  | StReturn _ v k => StReturn heap v k
+	  | StDone _ v => StDone heap v
+	  | StPairParRun left_state right_state k =>
+	      StPairParRun
+	        (with_state_heap heap left_state)
+	        (with_state_heap heap right_state)
+	        k
+	  end.
 
 Inductive Terminal : State -> Prop :=
 | Terminal_Done : forall heap v, Terminal (StDone heap v).
@@ -132,8 +153,10 @@ Inductive Step : State -> Label -> State -> Prop :=
       Step
         (StReturn heap (Eff theta2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)) Silent
-        (StEval heap env rho (Mu_App ef1 ea1)
-          (KPairParMu1 ef2 ea2 env rho k))
+        (StPairParRun
+          (initial_state heap env rho (Mu_App ef1 ea1))
+          (initial_state heap env rho (Mu_App ef2 ea2))
+          k)
 | Step_PairPar_EvalMu2 :
     forall heap env rho k ef2 ea2 v1,
       Step (StReturn heap v1 (KPairParMu1 ef2 ea2 env rho k)) Silent
@@ -141,6 +164,27 @@ Inductive Step : State -> Label -> State -> Prop :=
 | Step_PairPar_Done :
     forall heap k v1 v2,
       Step (StReturn heap v2 (KPairParMu2 v1 k)) Silent
+        (StReturn heap (Pair (v1, v2)) k)
+| Step_PairParRun_Left :
+    forall left_state right_state k label left_state',
+      state_heap left_state = state_heap right_state ->
+      Step left_state label left_state' ->
+      Step (StPairParRun left_state right_state k) label
+        (StPairParRun left_state'
+          (with_state_heap (state_heap left_state') right_state)
+          k)
+| Step_PairParRun_Right :
+    forall left_state right_state k label right_state',
+      state_heap left_state = state_heap right_state ->
+      Step right_state label right_state' ->
+      Step (StPairParRun left_state right_state k) label
+        (StPairParRun
+          (with_state_heap (state_heap right_state') left_state)
+          right_state'
+          k)
+| Step_PairParRun_Done :
+    forall heap v1 v2 k,
+      Step (StPairParRun (StDone heap v1) (StDone heap v2) k) Silent
         (StReturn heap (Pair (v1, v2)) k)
 | Step_Cond_EvalGuard :
     forall heap env rho k e et ef,

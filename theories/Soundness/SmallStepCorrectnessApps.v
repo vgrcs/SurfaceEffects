@@ -75,8 +75,8 @@ Proof.
       (StEval heap env rho ef (KMuAppFun ea env rho KDone))
       phi heap_final v_final)
     as HFirst.
-  specialize
-    (HFirst (Step_MuApp_EvalFun heap env rho KDone ef ea) HSteps).
+	  specialize
+	    (HFirst I (Step_MuApp_EvalFun heap env rho KDone ef ea) HSteps).
   destruct HFirst as (phi_after_fun & HAfterFun & HTraceStart).
   destruct
     (StepsPhi_initial_with_kont_terminal_decompose
@@ -161,8 +161,8 @@ Proof.
       (StEval heap env rho ef (KEffAppFun ea env rho KDone))
       phi heap_final v_final)
     as HFirst.
-  specialize
-    (HFirst (Step_EffApp_EvalFun heap env rho KDone ef ea) HSteps).
+	  specialize
+	    (HFirst I (Step_EffApp_EvalFun heap env rho KDone ef ea) HSteps).
   destruct HFirst as (phi_after_fun & HAfterFun & HTraceStart).
   destruct
     (StepsPhi_initial_with_kont_terminal_decompose
@@ -244,10 +244,10 @@ Proof.
   destruct
     (StepsPhiN_terminal_inv_step
       n
-      (initial_state heap env rho (Mu_App ef ea))
-      Silent
-      (StEval heap env rho ef (KMuAppFun ea env rho KDone))
-      phi heap_final v_final HFirst HApp)
+	      (initial_state heap env rho (Mu_App ef ea))
+	      Silent
+	      (StEval heap env rho ef (KMuAppFun ea env rho KDone))
+	      phi heap_final v_final I HFirst HApp)
     as (n_after_fun & phi_after_fun & HNAfterFun &
         HAfterFun & HTraceStart).
   destruct
@@ -325,10 +325,10 @@ Proof.
   destruct
     (StepsPhiN_terminal_inv_step
       n
-      (initial_state heap env rho (Eff_App ef ea))
-      Silent
-      (StEval heap env rho ef (KEffAppFun ea env rho KDone))
-      phi heap_final v_final HFirst HApp)
+	      (initial_state heap env rho (Eff_App ef ea))
+	      Silent
+	      (StEval heap env rho ef (KEffAppFun ea env rho KDone))
+	      phi heap_final v_final I HFirst HApp)
     as (n_after_fun & phi_after_fun & HNAfterFun &
         HAfterFun & HTraceStart).
   destruct
@@ -401,6 +401,9 @@ Theorem MuEffAppTerminalAlignedBodyDecompose :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     exists phi_fun_mu phi_arg_mu phi_body_mu
       phi_fun_eff phi_arg_eff phi_body_eff
       heap_fun heap_arg env_closure rho_closure f x ec ee v_arg,
@@ -450,7 +453,8 @@ Theorem MuEffAppTerminalAlignedBodyDecompose :
       phi_as_list phi_arg_mu = phi_as_list phi_arg_eff.
 Proof.
   intros heap env rho ef ea
-    phi_mu heap_mu v_mu phi_eff heap_eff theta HMu HEff.
+    phi_mu heap_mu v_mu phi_eff heap_eff theta
+    HMu HEff HStayFun HStayArg.
   destruct
     (MuAppTerminalDecompose
       heap env rho ef ea phi_mu heap_mu v_mu HMu)
@@ -470,19 +474,21 @@ Proof.
       (initial_state heap env rho ef)
       phi_fun_mu heap_fun_mu
       (Cls (env_mu, rho_mu, Mu f_mu x_mu ec_mu ee_mu))
-      phi_fun_eff heap_fun_eff
-      (Cls (env_eff, rho_eff, Mu f_eff x_eff ec_eff ee_eff))
-      HFunMu HFunEff)
+		      phi_fun_eff heap_fun_eff
+		      (Cls (env_eff, rho_eff, Mu f_eff x_eff ec_eff ee_eff))
+		      HStayFun
+		      HFunMu HFunEff)
     as (HFunTrace & HHeapFun & HClosureEq).
   subst heap_fun_eff.
   symmetry in HClosureEq.
   inversion HClosureEq; subst.
   destruct
     (StepsPhi_terminal_deterministic
-      (initial_state heap_fun_mu env rho ea)
-      phi_arg_mu heap_arg_mu v_arg_mu
-      phi_arg_eff heap_arg_eff v_arg_eff
-      HArgMu HArgEff)
+		      (initial_state heap_fun_mu env rho ea)
+		      phi_arg_mu heap_arg_mu v_arg_mu
+		      phi_arg_eff heap_arg_eff v_arg_eff
+		      (HStayArg heap_fun_mu)
+		      HArgMu HArgEff)
     as (HArgTrace & HHeapArg & HArgVal).
   subst heap_arg_eff.
   subst v_arg_eff.
@@ -835,6 +841,9 @@ Theorem MuEffAppAlignedPrefixes_readonly_heap_neutral :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     exists phi_fun_mu phi_arg_mu phi_body_mu
       phi_fun_eff phi_arg_eff phi_body_eff
       env_closure rho_closure f x ec ee v_arg,
@@ -888,7 +897,8 @@ Proof.
   intros heap env rho ef ea
     phi_mu heap_mu v_mu phi_eff heap_eff theta
     stty ctxt rgns
-    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff.
+    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HMu HEff HStayFun HStayArg.
   destruct
     (BackTriangle_mu_app_eff_app_inv ctxt rgns rho ef ea HBack)
     as (ty_mu & ty_eff & ty_ef & ty_ea &
@@ -899,7 +909,8 @@ Proof.
   destruct
     (MuEffAppTerminalAlignedBodyDecompose
       heap env rho ef ea
-      phi_mu heap_mu v_mu phi_eff heap_eff theta HMu HEff)
+      phi_mu heap_mu v_mu phi_eff heap_eff theta
+      HMu HEff HStayFun HStayArg)
     as (phi_fun_mu & phi_arg_mu & phi_body_mu &
         phi_fun_eff & phi_arg_eff & phi_body_eff &
         heap_fun & heap_arg & env_closure & rho_closure &
@@ -991,6 +1002,9 @@ Theorem MuAppEffAppTerminalSound_with_readonly_prefixes_from_body_soundness :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     exists phi_fun_mu phi_arg_mu phi_body_mu
       phi_fun_eff phi_arg_eff phi_body_eff
       env_closure rho_closure f x ec ee v_arg,
@@ -1038,13 +1052,15 @@ Proof.
   intros heap env rho ef ea
     phi_mu heap_mu v_mu phi_eff heap_eff theta
     stty ctxt rgns
-    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff.
+    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HMu HEff HStayFun HStayArg.
   destruct
     (MuEffAppAlignedPrefixes_readonly_heap_neutral
       heap env rho ef ea
       phi_mu heap_mu v_mu phi_eff heap_eff theta
       stty ctxt rgns
-      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff)
+      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+      HMu HEff HStayFun HStayArg)
     as (phi_fun_mu & phi_arg_mu & phi_body_mu &
         phi_fun_eff & phi_arg_eff & phi_body_eff &
         env_closure & rho_closure & f & x & ec & ee & v_arg &
@@ -1087,6 +1103,9 @@ Theorem MuEffAppAlignedPrefixes_readonly_heap_neutral_counted :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     exists phi_fun_mu phi_arg_mu phi_body_mu
       phi_fun_eff phi_arg_eff phi_body_eff
       env_closure rho_closure f x ec ee v_arg n_body,
@@ -1141,7 +1160,8 @@ Proof.
   intros n heap env rho ef ea
     phi_mu heap_mu v_mu phi_eff heap_eff theta
     stty ctxt rgns
-    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff.
+    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HMu HEff HStayFun HStayArg.
   destruct
     (BackTriangle_mu_app_eff_app_inv ctxt rgns rho ef ea HBack)
     as (ty_mu & ty_eff & ty_ef & ty_ea &
@@ -1173,19 +1193,21 @@ Proof.
       (initial_state heap env rho ef)
       phi_fun_mu heap_fun_mu
       (Cls (env_mu, rho_mu, Mu f_mu x_mu ec_mu ee_mu))
-      phi_fun_eff heap_fun_eff
-      (Cls (env_eff, rho_eff, Mu f_eff x_eff ec_eff ee_eff))
-      HFunMu HFunEff)
+		      phi_fun_eff heap_fun_eff
+		      (Cls (env_eff, rho_eff, Mu f_eff x_eff ec_eff ee_eff))
+		      HStayFun
+		      HFunMu HFunEff)
     as (HFunTrace & HHeapFunEq & HClosureEq).
   subst heap_fun_eff.
   symmetry in HClosureEq.
   inversion HClosureEq; subst.
   destruct
     (StepsPhi_terminal_deterministic
-      (initial_state heap_fun_mu env rho ea)
-      phi_arg_mu heap_arg_mu v_arg_mu
-      phi_arg_eff heap_arg_eff v_arg_eff
-      HArgMu HArgEff)
+		      (initial_state heap_fun_mu env rho ea)
+		      phi_arg_mu heap_arg_mu v_arg_mu
+		      phi_arg_eff heap_arg_eff v_arg_eff
+		      (HStayArg heap_fun_mu)
+		      HArgMu HArgEff)
     as (HArgTrace & HHeapArgEq & HArgValEq).
   subst heap_arg_eff.
   subst v_arg_eff.
@@ -1274,6 +1296,9 @@ Theorem MuAppEffAppTerminalSound_with_readonly_prefixes_from_below :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     SmallStepCorrectnessBelow n ->
     exists phi_fun_mu phi_arg_mu phi_body_mu
       phi_fun_eff phi_arg_eff phi_body_eff
@@ -1320,13 +1345,14 @@ Proof.
     phi_mu heap_mu v_mu phi_eff heap_eff theta
     stty ctxt rgns
     HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-    HMu HEff HBelow.
+    HMu HEff HStayFun HStayArg HBelow.
   destruct
     (MuEffAppAlignedPrefixes_readonly_heap_neutral_counted
       n heap env rho ef ea
       phi_mu heap_mu v_mu phi_eff heap_eff theta
       stty ctxt rgns
-      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff)
+      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+      HMu HEff HStayFun HStayArg)
     as (phi_fun_mu & phi_arg_mu & phi_body_mu &
         phi_fun_eff & phi_arg_eff & phi_body_eff &
         env_closure & rho_closure & f & x & ec & ee & v_arg &
@@ -1398,6 +1424,9 @@ Theorem MuAppEffAppTerminalSound_raw_from_below :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     SmallStepCorrectnessBelow n ->
     phi_mu ⋞ theta.
 Proof.
@@ -1405,7 +1434,7 @@ Proof.
     phi_mu heap_mu v_mu phi_eff heap_eff theta
     stty ctxt rgns
     HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-    HMu HEff HBelow.
+    HMu HEff HStayFun HStayArg HBelow.
   destruct
     (BackTriangle_mu_app_eff_app_inv ctxt rgns rho ef ea HBack)
     as (_ty_mu & _ty_eff & ty_ef & ty_ea &
@@ -1436,9 +1465,10 @@ Proof.
       (initial_state heap env rho ef)
       phi_fun_mu heap_fun_mu
       (Cls (env_mu, rho_mu, Mu f_mu x_mu ec_mu ee_mu))
-      phi_fun_eff heap_fun_eff
-      (Cls (env_eff, rho_eff, Mu f_eff x_eff ec_eff ee_eff))
-      HFunMu HFunEff)
+		      phi_fun_eff heap_fun_eff
+		      (Cls (env_eff, rho_eff, Mu f_eff x_eff ec_eff ee_eff))
+		      HStayFun
+		      HFunMu HFunEff)
     as (_HFunTrace & HHeapFunEq & HClosureEq).
   subst heap_fun_eff.
   symmetry in HClosureEq.
@@ -1476,10 +1506,11 @@ Proof.
   subst heap_fun_mu.
   destruct
     (StepsPhi_terminal_deterministic
-      (initial_state heap env rho ea)
-      phi_arg_mu heap_arg_mu v_arg_mu
-      phi_arg_eff heap_arg_eff v_arg_eff
-      HArgMu HArgEff)
+		      (initial_state heap env rho ea)
+		      phi_arg_mu heap_arg_mu v_arg_mu
+		      phi_arg_eff heap_arg_eff v_arg_eff
+		      (HStayArg heap)
+		      HArgMu HArgEff)
     as (_HArgTrace & HHeapArgEq & HArgValEq).
   subst heap_arg_eff.
   subst v_arg_eff.
@@ -1584,6 +1615,9 @@ Theorem MuAppEffAppTerminalSound_with_readonly_prefixes_with_body_reasoning :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     (forall stty_body ctxt_body rgns_body tyx effc tyc effe
        env_closure rho_closure f x ec ee v_arg
        phi_body_mu phi_body_eff,
@@ -1672,13 +1706,14 @@ Proof.
     phi_mu heap_mu v_mu phi_eff heap_eff theta
     stty ctxt rgns
     HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-    HMu HEff HBodyReasoning.
+    HMu HEff HStayFun HStayArg HBodyReasoning.
   destruct
     (MuAppEffAppTerminalSound_with_readonly_prefixes_from_body_soundness
       heap env rho ef ea
       phi_mu heap_mu v_mu phi_eff heap_eff theta
       stty ctxt rgns
-      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff)
+      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+      HMu HEff HStayFun HStayArg)
     as (phi_fun_mu & phi_arg_mu & phi_body_mu &
         phi_fun_eff & phi_arg_eff & phi_body_eff &
         env_closure & rho_closure & f & x & ec & ee & v_arg &
@@ -1731,6 +1766,9 @@ Theorem MuAppEffAppTerminalSound_with_readonly_prefixes_actual_body :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     exists phi_fun_mu phi_arg_mu phi_body_mu
       phi_fun_eff phi_arg_eff phi_body_eff
       env_closure rho_closure f x ec ee v_arg,
@@ -1777,13 +1815,15 @@ Proof.
   intros heap env rho ef ea
     phi_mu heap_mu v_mu phi_eff heap_eff theta
     stty ctxt rgns
-    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff.
+    HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HMu HEff HStayFun HStayArg.
   destruct
     (MuEffAppAlignedPrefixes_readonly_heap_neutral
       heap env rho ef ea
       phi_mu heap_mu v_mu phi_eff heap_eff theta
       stty ctxt rgns
-      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HMu HEff)
+      HBack HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+      HMu HEff HStayFun HStayArg)
     as (phi_fun_mu & phi_arg_mu & phi_body_mu &
         phi_fun_eff & phi_arg_eff & phi_body_eff &
         env_closure & rho_closure & f & x & ec & ee & v_arg &
@@ -1817,6 +1857,9 @@ Theorem MuAppEffAppTerminalSound_reduces_to_component_soundness :
       (initial_state heap env rho (Eff_App ef ea))
       phi_eff
       (StDone heap_eff (Eff theta)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea)) ->
     exists phi_fun_mu phi_arg_mu phi_body_mu
       phi_fun_eff phi_arg_eff phi_body_eff
       heap_fun heap_arg env_closure rho_closure f x ec ee v_arg,
@@ -1862,11 +1905,13 @@ Theorem MuAppEffAppTerminalSound_reduces_to_component_soundness :
        phi_mu ⋞ theta).
 Proof.
   intros heap env rho ef ea
-    phi_mu heap_mu v_mu phi_eff heap_eff theta HMu HEff.
+    phi_mu heap_mu v_mu phi_eff heap_eff theta
+    HMu HEff HStayFun HStayArg.
   destruct
     (MuEffAppTerminalAlignedBodyDecompose
       heap env rho ef ea
-      phi_mu heap_mu v_mu phi_eff heap_eff theta HMu HEff)
+      phi_mu heap_mu v_mu phi_eff heap_eff theta
+      HMu HEff HStayFun HStayArg)
     as (phi_fun_mu & phi_arg_mu & phi_body_mu &
         phi_fun_eff & phi_arg_eff & phi_body_eff &
         heap_fun & heap_arg & env_closure & rho_closure &

@@ -41,6 +41,18 @@ Definition PairParTraceSafeAt
       PairParNotStuck state' /\
       TcPhi stty' (trace_as_phi trace).
 
+Definition UnifiedPairParTraceSafeAt
+    (state : State) (tout : Tau) (stty : Sigma) : Prop :=
+  forall trace state',
+    Steps state trace state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state state') tout stty' /\
+      StoreExtends stty stty' /\
+      PairParRunHeapsAgree (pairpar_state_of_state state') /\
+      PairParNotStuck (pairpar_state_of_state state') /\
+      TcPhi stty' (trace_as_phi trace).
+
 Theorem WTPairParStateRuntimeHeapShapeAtStrong_trace_safe_typed :
   PairParCheckDecidable ->
   forall state tout stty,
@@ -65,6 +77,60 @@ Proof.
   split; [exact HExt |].
   split; [exact HAgree' |].
   split; [exact (HNeverStuck trace state' HSteps) | exact HTcTrace].
+Qed.
+
+Theorem WTPairParStateRuntimeHeapShapeAtStrong_unified_trace_safe_typed :
+  PairParCheckDecidable ->
+  forall state tout stty,
+    WTPairParStateRuntimeHeapShapeAtStrong
+      (pairpar_state_of_state state) tout stty ->
+    PairParRunHeapsAgree (pairpar_state_of_state state) ->
+    UnifiedPairParTraceSafeAt state tout stty.
+Proof.
+  intros HDec state tout stty HWT HAgree trace state' HSteps.
+  destruct
+    (WTPairParStateRuntimeHeapShapeAtStrong_unified_steps_trace_typed
+      state tout stty trace state' HWT HSteps)
+    as (stty' & HWT' & HExt & HTcTrace).
+  assert (HAgree' : PairParRunHeapsAgree (pairpar_state_of_state state')).
+  {
+    eapply unified_steps_preserve_pairpar_heap_agreement; eauto.
+  }
+  pose proof (pairpar_steps_of_steps state trace state' HSteps) as HPairSteps.
+  pose proof
+    (WTPairParStateRuntimeHeapShapeAtStrong_never_stuck_typed
+      HDec (pairpar_state_of_state state) tout stty HWT HAgree)
+    as HNeverStuck.
+  exists stty'. split; [exact HWT' |].
+  split; [exact HExt |].
+  split; [exact HAgree' |].
+  split; [exact (HNeverStuck trace _ HPairSteps) | exact HTcTrace].
+Qed.
+
+Theorem UnifiedPairParTraceSafeAt_terminal_value :
+  forall state tout stty trace heap' v,
+    UnifiedPairParTraceSafeAt state tout stty ->
+    Steps state trace (StDone heap' v) ->
+    exists stty',
+      StoreExtends stty stty' /\
+      TcHeap (heap', stty') /\
+      RuntimeHeapShape heap' stty' /\
+      TcVal (stty', v, tout) /\
+      RuntimeValShape stty' tout v /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros state tout stty trace heap' v HSafe HSteps.
+  destruct (HSafe trace (StDone heap' v) HSteps)
+    as (stty' & HWT' & HExt & _ & _ & HTcTrace).
+  destruct
+    (WTPairParStateRuntimeHeapShapeAtStrong_done_value
+      heap' v tout stty' HWT')
+    as (HTcHeap' & HHeapShape' & HTcVal' & HValShape').
+  exists stty'. split; [exact HExt |].
+  split; [exact HTcHeap' |].
+  split; [exact HHeapShape' |].
+  split; [exact HTcVal' |].
+  split; [exact HValShape' | exact HTcTrace].
 Qed.
 
 Theorem PairParTraceSafeAt_terminal_value :
@@ -136,4 +202,3 @@ Proof.
   split; [exact HTcVal2 |].
   split; [exact HValShape2 | exact HTcTrace].
 Qed.
-

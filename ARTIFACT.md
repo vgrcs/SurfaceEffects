@@ -20,7 +20,7 @@ Exports:
 
 - runtime safety and determinism wrappers from
   `theories/Runtime/SmallStepPaperTheorems.v`;
-- structured surface-correctness from
+- scheduled source-level surface-correctness from
   `theories/Soundness/SmallStepPaperSoundness.v`.
 
 ## Known-Good Toolchain
@@ -101,6 +101,11 @@ Generated files:
 
 These are ignored by `.gitignore` when they are not already tracked.
 
+Paper source split:
+
+- `main_revised.tex`: main narrative and theorem statements;
+- `operational_semantics.tex`: paper-facing continuation-machine rules.
+
 ## Review Path
 
 Read in this order:
@@ -124,6 +129,15 @@ Runtime safety:
 - `PaperSmallStepFinitePrefixSafety`
 - `PaperSmallStepTerminalSoundness`
 
+Unified checked `Pair_Par` over ordinary `Step`:
+
+- `PaperUnifiedPairParCheckedFinitePrefixSafety`
+- `PaperUnifiedPairParCheckedBranchProgress`
+- `PaperUnifiedPairParTraceSafety`
+- `PaperUnifiedPairParTerminalSoundnessFromSafety`
+- `PaperUnifiedPairParCheckedTerminalSoundness`
+- `PaperUnifiedPairParCheckedTerminalPairSoundness`
+
 Checked `Pair_Par` safety:
 
 - `PaperPairParCheckedOrBlockedTraceSafety`
@@ -142,7 +156,7 @@ Scheduler independence:
 
 Surface-effect correctness:
 
-- `PaperPairParCheckedStructuredTerminalCorrectness`
+- `PaperScheduledPairParCheckedTerminalCorrectness`
 
 Exported by:
 
@@ -163,13 +177,16 @@ Public map:
 
 - `Runtime/SmallStep.v`: continuation-machine semantics.
 - `Runtime/SmallStepPairParDispatch.v`: staged dynamic check for `Pair_Par`.
+- `Runtime/SmallStepParallel.v`: branch-scheduled proof view for
+  `StPairParRun`, with bridge lemmas back to the ordinary `Step` relation.
 - `Runtime/SmallStepStructuredTrace.v`: structured traces and scheduled runs.
 - `Runtime/SmallStepPaperTheorems.v`: runtime paper wrappers.
 - `Soundness/SmallStepBackTriangle.v`: small-step summary relation.
 - `Soundness/SmallStepCorrectnessBase.v`: base terminal-run utilities.
 - `Soundness/SmallStepCorrectnessApps.v`: application correctness.
 - `Soundness/SmallStepCorrectnessPairPar.v`: checked `Pair_Par` correctness.
-- `Soundness/SmallStepPaperSoundness.v`: surface-correctness wrapper.
+- `Soundness/SmallStepPaperSoundness.v`: scheduled source-level
+  surface-correctness wrapper.
 
 ## Scope
 
@@ -180,7 +197,7 @@ Proved:
 Not proved:
 
 - terminal small-step/big-step adequacy;
-- equivalence with a separate sequential tuple constructor;
+- equivalence with a separate sequential pair constructor;
 - termination or cost bounds for summary evaluation;
 - summary inference or synthesis.
 

@@ -95,73 +95,6 @@ Proof.
   end.
 Qed.
 
-Theorem PairParSourceTerminalSound_reduces_to_branch_soundness :
-  forall ctxt rgns rho heap env ef1 ea1 ef2 ea2 ty static
-    phi heap_final v_final,
-    TcExp (ctxt, rgns, Pair_Par ef1 ea1 ef2 ea2, ty, static) ->
-    StepsPhi
-      (initial_state heap env rho (Pair_Par ef1 ea1 ef2 ea2))
-      phi
-      (StDone heap_final v_final) ->
-    exists phi_eff1 phi_eff2 phi_mu1 phi_mu2
-      heap_eff1 theta1 heap_eff2 theta2
-      heap_mu1 heap_mu2 v_mu1 v_mu2,
-      PairParSequentialEffectSummaryStepsPhi
-        heap env rho ef1 ea1 ef2 ea2
-        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
-      PairParCheckPass theta1 theta2 /\
-      StepsPhi
-        (initial_state heap_eff2 env rho (Mu_App ef1 ea1))
-        phi_mu1
-        (StDone heap_mu1 v_mu1) /\
-      StepsPhi
-        (initial_state heap_mu1 env rho (Mu_App ef2 ea2))
-        phi_mu2
-        (StDone heap_mu2 v_mu2) /\
-      heap_final = heap_mu2 /\
-      v_final = Pair (v_mu1, v_mu2) /\
-      (phi_mu1 ⋞ theta1 ->
-       phi_mu2 ⋞ theta2 ->
-       phi ⋞ theta_with_phi_prefixes
-         phi_eff1 phi_eff2 (Union_Theta theta1 theta2)).
-Proof.
-  intros ctxt rgns rho heap env ef1 ea1 ef2 ea2 ty static
-    phi heap_final v_final _ HSteps.
-  destruct
-    (PairParSourceTerminalFullSequentialDecompose
-      heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps)
-    as (phi_eff1 & phi_eff2 & phi_mu1 & phi_mu2 &
-        heap_eff1 & theta1 & heap_eff2 & theta2 &
-        heap_mu1 & heap_mu2 & v_mu1 & v_mu2 &
-        HSummary & HPass & HMu1 & HMu2 & HHeapFinal &
-        HValFinal & HTrace).
-  exists phi_eff1, phi_eff2, phi_mu1, phi_mu2,
-    heap_eff1, theta1, heap_eff2, theta2,
-    heap_mu1, heap_mu2, v_mu1, v_mu2.
-  split; [exact HSummary |].
-  split; [exact HPass |].
-  split; [exact HMu1 |].
-  split; [exact HMu2 |].
-  split; [exact HHeapFinal |].
-  split; [exact HValFinal |].
-  intros HSoundMu1 HSoundMu2.
-  eapply Phi_Theta_Soundness_of_phi_as_list_eq
-    with
-      (phi2 :=
-        Phi_Seq phi_eff1
-          (Phi_Seq phi_eff2 (Phi_Seq phi_mu1 phi_mu2))).
-  - simpl. exact HTrace.
-  - apply PTS_Seq.
-    + apply theta_with_phi_prefixes_left_sound.
-    + apply PTS_Seq.
-      * apply theta_with_phi_prefixes_middle_sound.
-      * apply PTS_Seq.
-        -- apply theta_with_phi_prefixes_right_sound.
-           apply Theta_introl. exact HSoundMu1.
-        -- apply theta_with_phi_prefixes_right_sound.
-           apply Theta_intror. exact HSoundMu2.
-Qed.
-
 Theorem PairParCheckedParallelTopSound_reduces_to_same_heap_branch_soundness :
   forall heap env rho ef1 ea1 ef2 ea2
     phi phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
@@ -322,98 +255,6 @@ Proof.
   repeat split; try assumption.
   eapply PairParCheckedParallelTopSound_reduces_to_same_heap_branch_soundness;
     eauto.
-Qed.
-
-Theorem PairParSourceTerminalSound_from_branch_runs :
-  forall ctxt rgns rho heap env ef1 ea1 ef2 ea2 ty static
-    phi heap_final v_final,
-    TcExp (ctxt, rgns, Pair_Par ef1 ea1 ef2 ea2, ty, static) ->
-    StepsPhi
-      (initial_state heap env rho (Pair_Par ef1 ea1 ef2 ea2))
-      phi
-      (StDone heap_final v_final) ->
-    (forall heap_start phi_mu1 heap_mu1 v_mu1 theta1,
-      BackTriangle
-        (ctxt, rgns, rho, Mu_App ef1 ea1, Eff_App ef1 ea1) ->
-      StepsPhi
-        (initial_state heap_start env rho (Mu_App ef1 ea1))
-        phi_mu1
-        (StDone heap_mu1 v_mu1) ->
-      phi_mu1 ⋞ theta1) ->
-    (forall heap_start phi_mu2 heap_mu2 v_mu2 theta2,
-      BackTriangle
-        (ctxt, rgns, rho, Mu_App ef2 ea2, Eff_App ef2 ea2) ->
-      StepsPhi
-        (initial_state heap_start env rho (Mu_App ef2 ea2))
-        phi_mu2
-        (StDone heap_mu2 v_mu2) ->
-      phi_mu2 ⋞ theta2) ->
-    exists phi_eff1 phi_eff2 phi_mu1 phi_mu2
-      heap_eff1 theta1 heap_eff2 theta2
-      heap_mu1 heap_mu2 v_mu1 v_mu2,
-      PairParSequentialEffectSummaryStepsPhi
-        heap env rho ef1 ea1 ef2 ea2
-        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
-      PairParCheckPass theta1 theta2 /\
-      StepsPhi
-        (initial_state heap_eff2 env rho (Mu_App ef1 ea1))
-        phi_mu1
-        (StDone heap_mu1 v_mu1) /\
-      StepsPhi
-        (initial_state heap_mu1 env rho (Mu_App ef2 ea2))
-        phi_mu2
-        (StDone heap_mu2 v_mu2) /\
-      heap_final = heap_mu2 /\
-      v_final = Pair (v_mu1, v_mu2) /\
-      phi ⋞ theta_with_phi_prefixes
-        phi_eff1 phi_eff2 (Union_Theta theta1 theta2).
-Proof.
-  intros ctxt rgns rho heap env ef1 ea1 ef2 ea2 ty static
-    phi heap_final v_final HTc HSteps HSoundLeft HSoundRight.
-  destruct
-    (PairParSourceTerminalFullSequentialDecompose
-      heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps)
-    as (phi_eff1 & phi_eff2 & phi_mu1 & phi_mu2 &
-        heap_eff1 & theta1 & heap_eff2 & theta2 &
-        heap_mu1 & heap_mu2 & v_mu1 & v_mu2 &
-        HSummary & HPass & HMu1 & HMu2 & HHeapFinal &
-        HValFinal & HTrace).
-  destruct
-    (TcExp_pair_par_branch_backtriangles
-      ctxt rgns rho ef1 ea1 ef2 ea2 ty static HTc)
-    as (HBackLeft & HBackRight).
-  pose proof
-    (HSoundLeft heap_eff2 phi_mu1 heap_mu1 v_mu1 theta1
-      HBackLeft HMu1)
-    as HSoundMu1.
-  pose proof
-    (HSoundRight heap_mu1 phi_mu2 heap_mu2 v_mu2 theta2
-      HBackRight HMu2)
-    as HSoundMu2.
-  exists phi_eff1, phi_eff2, phi_mu1, phi_mu2,
-    heap_eff1, theta1, heap_eff2, theta2,
-    heap_mu1, heap_mu2, v_mu1, v_mu2.
-  split; [exact HSummary |].
-  split; [exact HPass |].
-  split; [exact HMu1 |].
-  split; [exact HMu2 |].
-  split; [exact HHeapFinal |].
-  split; [exact HValFinal |].
-  eapply Phi_Theta_Soundness_of_phi_as_list_eq
-    with
-      (phi2 :=
-        Phi_Seq phi_eff1
-          (Phi_Seq phi_eff2 (Phi_Seq phi_mu1 phi_mu2))).
-  - simpl. exact HTrace.
-  - apply PTS_Seq.
-    + apply theta_with_phi_prefixes_left_sound.
-    + apply PTS_Seq.
-      * apply theta_with_phi_prefixes_middle_sound.
-      * apply PTS_Seq.
-        -- apply theta_with_phi_prefixes_right_sound.
-           apply Theta_introl. exact HSoundMu1.
-        -- apply theta_with_phi_prefixes_right_sound.
-           apply Theta_intror. exact HSoundMu2.
 Qed.
 
 Theorem PairParCheckedStructuredTopSound_from_typed_branch_soundness :
@@ -628,6 +469,12 @@ Theorem PairParCheckedStructuredTopSound_from_typed_app_body_runs :
       (initial_state heap env rho (Mu_App ef2 ea2))
       phi_mu2
       (StDone heap_mu2 v_mu2) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef1) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea1)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef2) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea2)) ->
     exists phi_fun_mu1 phi_arg_mu1 phi_body_mu1
       phi_fun_mu2 phi_arg_mu2 phi_body_mu2,
       ReadOnlyPhi phi_fun_mu1 /\
@@ -648,7 +495,8 @@ Proof.
     heap_eff1 theta1 heap_eff2 theta2
     heap_mu1 heap_mu2 heap' v_mu1 v_mu2 v
     HTc HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-    HTrace HSummary HPass HSteps HMu1 HMu2.
+    HTrace HSummary HPass HSteps HMu1 HMu2
+    HStayFun1 HStayArg1 HStayFun2 HStayArg2.
   inversion HSummary as
     [phi_eff1' phi_eff2' heap_eff1' heap_eff2' theta1' theta2'
       HEff1 HEff2]; subst.
@@ -662,7 +510,7 @@ Proof.
       phi_mu1 heap_mu1 v_mu1 phi_eff1 heap_eff1 theta1
       stty ctxt rgns
       HBackLeft HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu1 HEff1)
+      HMu1 HEff1 HStayFun1 HStayArg1)
     as (phi_fun_mu1 & phi_arg_mu1 & phi_body_mu1 &
         phi_fun_eff1 & phi_arg_eff1 & phi_body_eff1 &
         env_closure1 & rho_closure1 & f1 & x1 & ec1 & ee1 & v_arg1 &
@@ -675,7 +523,7 @@ Proof.
       phi_mu2 heap_mu2 v_mu2 phi_eff2 heap_eff2 theta2
       stty ctxt rgns
       HBackRight HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu2 HEff2)
+      HMu2 HEff2 HStayFun2 HStayArg2)
     as (phi_fun_mu2 & phi_arg_mu2 & phi_body_mu2 &
         phi_fun_eff2 & phi_arg_eff2 & phi_body_eff2 &
         env_closure2 & rho_closure2 & f2 & x2 & ec2 & ee2 & v_arg2 &
@@ -735,6 +583,12 @@ Theorem PairParCheckedStructuredTopSound_from_typed_app_body_runs_with_body_reas
       (initial_state heap env rho (Mu_App ef2 ea2))
       phi_mu2
       (StDone heap_mu2 v_mu2) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef1) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea1)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef2) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea2)) ->
     (forall stty_body ctxt_body rgns_body tyx effc tyc effe
        env_closure rho_closure f x ec ee v_arg
        phi_body_mu phi_body_eff,
@@ -839,6 +693,7 @@ Proof.
     heap_mu1 heap_mu2 heap' v_mu1 v_mu2 v
     HTc HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
     HTrace HSummary HPass HSteps HMu1 HMu2
+    HStayFun1 HStayArg1 HStayFun2 HStayArg2
     HBodyReasoningLeft HBodyReasoningRight.
   inversion HSummary as
     [phi_eff1' phi_eff2' heap_eff1' heap_eff2' theta1' theta2'
@@ -853,7 +708,7 @@ Proof.
       phi_mu1 heap_mu1 v_mu1 phi_eff1 heap_eff1 theta1
       stty ctxt rgns
       HBackLeft HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu1 HEff1 HBodyReasoningLeft)
+      HMu1 HEff1 HStayFun1 HStayArg1 HBodyReasoningLeft)
     as (phi_fun_mu1 & phi_arg_mu1 & phi_body_mu1 &
         phi_fun_eff1 & phi_arg_eff1 & phi_body_eff1 &
         env_closure1 & rho_closure1 & f1 & x1 & ec1 & ee1 & v_arg1 &
@@ -865,7 +720,7 @@ Proof.
       phi_mu2 heap_mu2 v_mu2 phi_eff2 heap_eff2 theta2
       stty ctxt rgns
       HBackRight HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu2 HEff2 HBodyReasoningRight)
+      HMu2 HEff2 HStayFun2 HStayArg2 HBodyReasoningRight)
     as (phi_fun_mu2 & phi_arg_mu2 & phi_body_mu2 &
         phi_fun_eff2 & phi_arg_eff2 & phi_body_eff2 &
         env_closure2 & rho_closure2 & f2 & x2 & ec2 & ee2 & v_arg2 &
@@ -920,6 +775,12 @@ Theorem PairParCheckedStructuredTopSound_from_typed_app_runs_from_below :
       (initial_state heap env rho (Mu_App ef2 ea2))
       phi_mu2
       (StDone heap_mu2 v_mu2) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef1) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea1)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef2) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea2)) ->
     (forall n, SmallStepCorrectnessBelow n) ->
     exists phi_fun_mu1 phi_arg_mu1 phi_fun_mu2 phi_arg_mu2,
       ReadOnlyPhi phi_fun_mu1 /\
@@ -938,7 +799,8 @@ Proof.
     heap_eff1 theta1 heap_eff2 theta2
     heap_mu1 heap_mu2 heap' v_mu1 v_mu2 v
     HTc HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-    HTrace HSummary HPass HSteps HMu1 HMu2 HBelowAll.
+    HTrace HSummary HPass HSteps HMu1 HMu2
+    HStayFun1 HStayArg1 HStayFun2 HStayArg2 HBelowAll.
   inversion HSummary as
     [phi_eff1' phi_eff2' heap_eff1' heap_eff2' theta1' theta2'
       HEff1 HEff2]; subst.
@@ -954,7 +816,7 @@ Proof.
       phi_mu1 heap_mu1 v_mu1 phi_eff1 heap_eff1 theta1
       stty ctxt rgns
       HBackLeft HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu1N HEff1 (HBelowAll n1))
+      HMu1N HEff1 HStayFun1 HStayArg1 (HBelowAll n1))
     as (phi_fun_mu1 & phi_arg_mu1 & phi_body_mu1 &
         phi_fun_eff1 & phi_arg_eff1 & phi_body_eff1 &
         env_closure1 & rho_closure1 & f1 & x1 & ec1 & ee1 & v_arg1 &
@@ -966,7 +828,7 @@ Proof.
       phi_mu2 heap_mu2 v_mu2 phi_eff2 heap_eff2 theta2
       stty ctxt rgns
       HBackRight HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu2N HEff2 (HBelowAll n2))
+      HMu2N HEff2 HStayFun2 HStayArg2 (HBelowAll n2))
     as (phi_fun_mu2 & phi_arg_mu2 & phi_body_mu2 &
         phi_fun_eff2 & phi_arg_eff2 & phi_body_eff2 &
         env_closure2 & rho_closure2 & f2 & x2 & ec2 & ee2 & v_arg2 &
@@ -1021,6 +883,12 @@ Theorem PairParCheckedStructuredTopSound_same_abstraction_from_below :
       (initial_state heap env rho (Mu_App ef2 ea2))
       phi_mu2
       (StDone heap_mu2 v_mu2) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef1) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea1)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef2) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea2)) ->
     (forall n, SmallStepCorrectnessBelow n) ->
     phi ⋞ theta_with_phi_prefixes
       phi_eff1 phi_eff2 (Union_Theta theta1 theta2).
@@ -1031,7 +899,8 @@ Proof.
     heap_eff1 theta1 heap_eff2 theta2
     heap_mu1 heap_mu2 heap' v_mu1 v_mu2 v
     HTc HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-    HTrace HSummary HPass HSteps HMu1 HMu2 HBelowAll.
+    HTrace HSummary HPass HSteps HMu1 HMu2
+    HStayFun1 HStayArg1 HStayFun2 HStayArg2 HBelowAll.
   inversion HSummary as
     [phi_eff1' phi_eff2' heap_eff1' heap_eff2' theta1' theta2'
       HEff1 HEff2]; subst.
@@ -1047,7 +916,7 @@ Proof.
       phi_mu1 heap_mu1 v_mu1 phi_eff1 heap_eff1 theta1
       stty ctxt rgns
       HBackLeft HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu1N HEff1 (HBelowAll n1))
+      HMu1N HEff1 HStayFun1 HStayArg1 (HBelowAll n1))
     as HSoundLeft.
   pose proof
     (MuAppEffAppTerminalSound_raw_from_below
@@ -1055,7 +924,7 @@ Proof.
       phi_mu2 heap_mu2 v_mu2 phi_eff2 heap_eff2 theta2
       stty ctxt rgns
       HBackRight HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu2N HEff2 (HBelowAll n2))
+      HMu2N HEff2 HStayFun2 HStayArg2 (HBelowAll n2))
     as HSoundRight.
   eapply PairParCheckedParallelTopSound_reduces_to_same_heap_branch_soundness;
     eauto.
@@ -1095,6 +964,12 @@ Theorem PairParCheckedStructuredTopSound_from_typed_app_actual_body_runs :
       (initial_state heap env rho (Mu_App ef2 ea2))
       phi_mu2
       (StDone heap_mu2 v_mu2) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef1) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea1)) ->
+    StepsStayNonPairParRun (initial_state heap env rho ef2) ->
+    (forall heap_fun,
+      StepsStayNonPairParRun (initial_state heap_fun env rho ea2)) ->
     exists phi_fun_mu1 phi_arg_mu1 phi_body_mu1
       phi_fun_mu2 phi_arg_mu2 phi_body_mu2,
       ReadOnlyPhi phi_fun_mu1 /\
@@ -1115,7 +990,8 @@ Proof.
     heap_eff1 theta1 heap_eff2 theta2
     heap_mu1 heap_mu2 heap' v_mu1 v_mu2 v
     HTc HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-    HTrace HSummary HPass HSteps HMu1 HMu2.
+    HTrace HSummary HPass HSteps HMu1 HMu2
+    HStayFun1 HStayArg1 HStayFun2 HStayArg2.
   inversion HSummary as
     [phi_eff1' phi_eff2' heap_eff1' heap_eff2' theta1' theta2'
       HEff1 HEff2]; subst.
@@ -1129,7 +1005,7 @@ Proof.
       phi_mu1 heap_mu1 v_mu1 phi_eff1 heap_eff1 theta1
       stty ctxt rgns
       HBackLeft HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu1 HEff1)
+      HMu1 HEff1 HStayFun1 HStayArg1)
     as (phi_fun_mu1 & phi_arg_mu1 & phi_body_mu1 &
         phi_fun_eff1 & phi_arg_eff1 & phi_body_eff1 &
         env_closure1 & rho_closure1 & f1 & x1 & ec1 & ee1 & v_arg1 &
@@ -1141,7 +1017,7 @@ Proof.
       phi_mu2 heap_mu2 v_mu2 phi_eff2 heap_eff2 theta2
       stty ctxt rgns
       HBackRight HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-      HMu2 HEff2)
+      HMu2 HEff2 HStayFun2 HStayArg2)
     as (phi_fun_mu2 & phi_arg_mu2 & phi_body_mu2 &
         phi_fun_eff2 & phi_arg_eff2 & phi_body_eff2 &
         env_closure2 & rho_closure2 & f2 & x2 & ec2 & ee2 & v_arg2 &

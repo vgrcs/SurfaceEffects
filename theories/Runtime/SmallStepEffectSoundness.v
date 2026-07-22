@@ -139,6 +139,54 @@ Proof.
   - eapply HInc2; eauto.
 Qed.
 
+Lemma Included_static_pairpar_run_left_step :
+  forall label_eff eps_left' eps_left eps_right eps_k eps,
+    Included StaticAction
+      (Union_Static_Action label_eff eps_left') eps_left ->
+    Included StaticAction
+      (Union_Static_Action eps_left
+        (Union_Static_Action eps_right eps_k)) eps ->
+    Included StaticAction
+      (Union_Static_Action label_eff
+        (Union_Static_Action eps_left'
+          (Union_Static_Action eps_right eps_k))) eps.
+Proof.
+  intros label_eff eps_left' eps_left eps_right eps_k eps
+    HLeft HRun sa HIn.
+  destruct HIn as [sa HLabel | sa HRest].
+  - eapply HRun. apply Union_introl.
+    eapply HLeft. apply Union_introl. exact HLabel.
+  - destruct HRest as [sa HLeft' | sa HRest].
+    + eapply HRun. apply Union_introl.
+      eapply HLeft. apply Union_intror. exact HLeft'.
+    + eapply HRun. apply Union_intror. exact HRest.
+Qed.
+
+Lemma Included_static_pairpar_run_right_step :
+  forall label_eff eps_left eps_right' eps_right eps_k eps,
+    Included StaticAction
+      (Union_Static_Action label_eff eps_right') eps_right ->
+    Included StaticAction
+      (Union_Static_Action eps_left
+        (Union_Static_Action eps_right eps_k)) eps ->
+    Included StaticAction
+      (Union_Static_Action label_eff
+        (Union_Static_Action eps_left
+          (Union_Static_Action eps_right' eps_k))) eps.
+Proof.
+  intros label_eff eps_left eps_right' eps_right eps_k eps
+    HRight HRun sa HIn.
+  destruct HIn as [sa HLabel | sa HRest].
+  - eapply HRun. apply Union_intror. apply Union_introl.
+    eapply HRight. apply Union_introl. exact HLabel.
+  - destruct HRest as [sa HLeft | sa HRest].
+    + eapply HRun. apply Union_introl. exact HLeft.
+    + destruct HRest as [sa HRight' | sa HEpsK].
+      * eapply HRun. apply Union_intror. apply Union_introl.
+        eapply HRight. apply Union_intror. exact HRight'.
+      * eapply HRun. apply Union_intror. apply Union_intror. exact HEpsK.
+Qed.
+
 Lemma Included_static_union_assoc_lr :
   forall eps1 eps2 eps3,
     Included StaticAction
@@ -630,14 +678,25 @@ Inductive WTStateEffectAt : State -> Tau -> Sigma -> Epsilon -> Prop :=
       RuntimeValShape stty t v ->
       Included StaticAction eps_k eps ->
       WTStateEffectAt (StReturn heap v k) tout stty eps
-| WTSEA_Done :
-    forall heap v stty t eps,
-      TcHeap (heap, stty) ->
-      RuntimeHeapShape heap stty ->
-      TcVal (stty, v, t) ->
-      RuntimeValShape stty t v ->
-      Included StaticAction Empty_Static_Action eps ->
-      WTStateEffectAt (StDone heap v) t stty eps.
+	| WTSEA_Done :
+	    forall heap v stty t eps,
+	      TcHeap (heap, stty) ->
+	      RuntimeHeapShape heap stty ->
+	      TcVal (stty, v, t) ->
+	      RuntimeValShape stty t v ->
+	      Included StaticAction Empty_Static_Action eps ->
+	      WTStateEffectAt (StDone heap v) t stty eps
+	| WTSEA_PairParRun :
+	    forall left right k tleft tright tout stty
+	      eps_left eps_right eps_k eps,
+	      WTStateEffectAt left tleft stty eps_left ->
+	      WTStateEffectAt right tright stty eps_right ->
+	      WTKontEffect stty (Ty_Pair tleft tright) tout k eps_k ->
+	      Included StaticAction
+	        (Union_Static_Action eps_left
+	          (Union_Static_Action eps_right eps_k))
+	        eps ->
+	      WTStateEffectAt (StPairParRun left right k) tout stty eps.
 
 Lemma WTKontEffect_forget :
   forall stty tin tout k eps,
@@ -660,10 +719,11 @@ Lemma WTStateEffectAt_forget :
     WTStateRuntimeHeapShapeAt state tout stty.
 Proof.
   intros state tout stty eps HState.
-  inversion HState; subst.
+  induction HState; subst.
   - econstructor; eauto using WTKontEffect_forget.
   - econstructor; eauto using WTKontEffect_forget.
   - econstructor; eauto.
+  - eapply WTSRHSA_PairParRun; eauto using WTKontEffect_forget.
 Qed.
 
 Lemma WTStateEffectAt_initial :
@@ -731,8 +791,12 @@ Proof.
     eapply Included_static_trans; eauto.
   - eapply WTSEA_Return; eauto.
     eapply Included_static_trans; eauto.
-  - eapply WTSEA_Done; eauto.
-    eapply Included_static_trans; eauto.
+	  - eapply WTSEA_Done; eauto.
+	    eapply Included_static_trans; eauto.
+	  - eapply WTSEA_PairParRun with
+	      (eps_left := eps_left) (eps_right := eps_right) (eps_k := eps_k);
+	      eauto.
+	    eapply Included_static_trans; eauto.
 Qed.
 
 Lemma WTStateEffectAt_reheap_store_ext :
@@ -744,7 +808,7 @@ Lemma WTStateEffectAt_reheap_store_ext :
     WTStateEffectAt (with_state_heap heap' state) tout stty' eps.
 Proof.
   intros state tout stty eps heap' stty' HState HTcHeap' HHeapShape' HExt.
-  inversion HState; subst; simpl.
+  induction HState; subst; simpl.
   - eapply WTSEA_Eval with
       (ctxt := ctxt) (rgns := rgns) (t := t) (eff := eff)
       (eps_k := eps_k); eauto.
@@ -758,7 +822,22 @@ Proof.
   - eapply WTSEA_Done; eauto.
     + eapply ext_stores__val; eauto.
     + eapply RuntimeValShape_store_ext; eauto.
+  - eapply WTSEA_PairParRun with
+      (eps_left := eps_left) (eps_right := eps_right) (eps_k := eps_k);
+      eauto.
+    eapply WTKontEffect_store_ext; eauto.
 Qed.
+
+Lemma WTStateEffectAt_state_heap_shape :
+  forall state tout stty eps,
+    WTStateEffectAt state tout stty eps ->
+    TcHeap (state_heap state, stty) /\
+    RuntimeHeapShape (state_heap state) stty.
+Proof.
+  intros state tout stty eps HState.
+  induction HState; simpl in *; eauto.
+Qed.
+
 Lemma WTKontEffect_ref_done_label_included :
   forall stty w rho k t tout eps r l v,
     WTKontEffect stty (subst_rho rho t) tout (KRef w rho k) eps ->
@@ -3109,14 +3188,18 @@ Proof.
     (eps' := Union_Static_Action
       (fold_subst_eps rho eff1)
       (Union_Static_Action (fold_subst_eps rho eff2) eps_k0)).
-  - apply StoreExtends_refl.
-  - eapply WTSEA_Eval with
-      (ctxt := ctxt) (rgns := rgns) (t := ty1) (eff := eff1)
-      (eps_k := Union_Static_Action (fold_subst_eps rho eff2) eps_k0);
-      eauto.
-    + eapply WTKE_PairParMu1; eauto.
-    + apply Included_static_refl.
-  - eassumption.
+	  - apply StoreExtends_refl.
+	  - eapply WTSEA_PairParRun with
+	      (tleft := subst_rho rho ty1)
+	      (tright := subst_rho rho ty2)
+	      (eps_left := fold_subst_eps rho eff1)
+	      (eps_right := fold_subst_eps rho eff2)
+	      (eps_k := eps_k0).
+		    + eapply WTStateEffectAt_initial; eauto.
+		    + eapply WTStateEffectAt_initial; eauto.
+		    + rewrite subst_rho_pair in H25. exact H25.
+		    + apply Included_static_refl.
+	  - eassumption.
 Qed.
 
 Lemma WTStateEffectAt_pairpar_eval_mu2_step_budget :
@@ -3253,8 +3336,90 @@ Theorem WTStateEffectAt_step_budget :
         (Union_Static_Action (label_static_effect lbl) eps')
         eps.
 Proof.
-  intros state tout stty eps lbl state' HState HStep.
-  inversion HStep; subst; eauto with effect_budget.
+  intros state tout stty eps lbl state' HState.
+  revert lbl state'.
+  induction HState; intros lbl state' HStep.
+  - assert (HSource : WTStateEffectAt (StEval heap env rho e k) tout stty eps).
+    {
+      eapply WTSEA_Eval with
+        (ctxt := ctxt) (rgns := rgns) (t := t) (eff := eff)
+        (eps_k := eps_k); eauto.
+    }
+    inversion HStep; subst; eauto with effect_budget.
+  - assert (HSource : WTStateEffectAt (StReturn heap v k) tout stty eps).
+    {
+      eapply WTSEA_Return with (t := t) (eps_k := eps_k); eauto.
+    }
+    inversion HStep; subst; eauto with effect_budget.
+  - assert (HSource : WTStateEffectAt (StDone heap v) t stty eps).
+    {
+      eapply WTSEA_Done; eauto.
+    }
+    inversion HStep; subst; eauto with effect_budget.
+  - inversion HStep; subst.
+    + match goal with
+      | HBranchStep : Step left _ ?left' |- _ =>
+          destruct (IHHState1 _ _ HBranchStep)
+            as (stty1 & eps_left' & HExt1 & HLeft' & HIncLeft);
+          destruct
+            (WTStateEffectAt_state_heap_shape
+              left' tleft stty1 eps_left' HLeft')
+            as (HTcHeapLeft' & HHeapShapeLeft');
+          exists stty1,
+            (Union_Static_Action eps_left'
+              (Union_Static_Action eps_right eps_k));
+          split; [exact HExt1 |];
+          split
+      end.
+      * eapply WTSEA_PairParRun with
+          (tleft := tleft) (tright := tright)
+          (eps_left := eps_left') (eps_right := eps_right)
+          (eps_k := eps_k).
+        -- exact HLeft'.
+        -- eapply WTStateEffectAt_reheap_store_ext; eauto.
+        -- eapply WTKontEffect_store_ext; eauto.
+        -- apply Included_static_refl.
+      * eapply Included_static_pairpar_run_left_step; eauto.
+    + match goal with
+      | HBranchStep : Step right _ ?right' |- _ =>
+          destruct (IHHState2 _ _ HBranchStep)
+            as (stty1 & eps_right' & HExt1 & HRight' & HIncRight);
+          destruct
+            (WTStateEffectAt_state_heap_shape
+              right' tright stty1 eps_right' HRight')
+            as (HTcHeapRight' & HHeapShapeRight');
+          exists stty1,
+            (Union_Static_Action eps_left
+              (Union_Static_Action eps_right' eps_k));
+          split; [exact HExt1 |];
+          split
+      end.
+      * eapply WTSEA_PairParRun with
+          (tleft := tleft) (tright := tright)
+          (eps_left := eps_left) (eps_right := eps_right')
+          (eps_k := eps_k).
+        -- eapply WTStateEffectAt_reheap_store_ext; eauto.
+        -- exact HRight'.
+        -- eapply WTKontEffect_store_ext; eauto.
+        -- apply Included_static_refl.
+      * eapply Included_static_pairpar_run_right_step; eauto.
+    + inversion HState1; subst.
+      inversion HState2; subst.
+      exists stty, eps_k.
+      split; [apply StoreExtends_refl |].
+      split.
+      * eapply WTSEA_Return with (t := Ty_Pair tleft tright); eauto.
+        -- constructor; eauto.
+        -- constructor; eauto.
+        -- apply Included_static_refl.
+      * simpl.
+        eapply Included_static_trans.
+        -- apply Included_static_union_empty_l.
+        -- eapply Included_static_trans.
+           ++ apply Included_static_union_r.
+           ++ eapply Included_static_trans.
+              ** apply Included_static_union_r.
+              ** eassumption.
 Qed.
 
 Theorem WTStateEffectAt_steps_budget :

@@ -28,6 +28,17 @@ Require Import theories.Meta.TraceTypingFacts.
 Require Import theories.Meta.TypeFacts.
 Require Import theories.Meta.TypingWeakeningFacts.
 
+Lemma WTPairParStateRuntimeHeapShapeAtStrong_as_state :
+  forall state tout stty,
+    WTPairParStateRuntimeHeapShapeAtStrong state tout stty ->
+    WTStateRuntimeHeapShapeAt
+      (pairpar_state_as_state state) tout stty.
+Proof.
+  intros state tout stty HWT.
+  destruct HWT; simpl; eauto.
+  eapply WTSRHSA_PairParRun; eauto.
+Qed.
+
 Lemma WTPairParStateRuntimeHeapShapeAtStrong_step_label_typed :
   forall state tout stty label state' stty',
     WTPairParStateRuntimeHeapShapeAtStrong state tout stty ->
@@ -37,14 +48,16 @@ Lemma WTPairParStateRuntimeHeapShapeAtStrong_step_label_typed :
 Proof.
   intros state tout stty label state' stty' HWT HStep HWT'.
   dependent destruction HStep.
-  - dependent destruction HWT.
-    dependent destruction HWT'.
+  - pose proof
+      (WTPairParStateRuntimeHeapShapeAtStrong_as_state _ _ _ HWT')
+      as HWTState'.
+    rewrite pairpar_state_as_state_of_state in HWTState'.
+    dependent destruction HWT.
     match goal with
-    | HState : WTStateRuntimeHeapShapeAt ?inner ?tout stty,
-      HInnerStep : Step _ _ _,
-      HStateOut : WTStateRuntimeHeapShapeAt _ _ _ |- _ =>
+    | HState : WTStateRuntimeHeapShapeAt _ _ stty,
+      HInnerStep : Step _ _ _ |- _ =>
         eapply WTStateRuntimeHeapShapeAt_step_label_typed;
-          [exact HState | exact HInnerStep | exact HStateOut]
+          [exact HState | exact HInnerStep | exact HWTState']
     end.
   - dependent destruction HWT.
     dependent destruction HWT'.
@@ -107,3 +120,19 @@ Proof.
     apply TcPhi_trace_as_phi_app; assumption.
 Qed.
 
+Theorem WTPairParStateRuntimeHeapShapeAtStrong_unified_steps_trace_typed :
+  forall state tout stty trace state',
+    WTPairParStateRuntimeHeapShapeAtStrong
+      (pairpar_state_of_state state) tout stty ->
+    Steps state trace state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state state') tout stty' /\
+      StoreExtends stty stty' /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros state tout stty trace state' HWT HSteps.
+  eapply WTPairParStateRuntimeHeapShapeAtStrong_steps_trace_typed
+    with (state' := pairpar_state_of_state state'); eauto.
+  exact (pairpar_steps_of_steps state trace state' HSteps).
+Qed.

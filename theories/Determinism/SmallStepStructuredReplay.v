@@ -189,7 +189,7 @@ Theorem PairPar_source_static_summary_checked_branch_join_exists :
       StepsPhi
         (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
         phi_source
-        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
+        (pairpar_checked_run_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
       phi_as_list phi_source =
         phi_as_list phi_eff1 ++ phi_as_list phi_eff2 /\
       PairParBranchReplayWitness
@@ -267,7 +267,7 @@ Theorem PairPar_source_trace_static_summary_checked_branch_join_exists :
       StepsPhi
         (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
         phi_source
-        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
+        (pairpar_checked_run_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
       phi_as_list phi_source =
         phi_as_list phi_eff1 ++ phi_as_list phi_eff2 /\
       PairParBranchReplayWitness
@@ -348,7 +348,7 @@ Theorem PairPar_source_static_included_summary_checked_branch_join_exists :
       StepsPhi
         (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
         phi_source
-        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
+        (pairpar_checked_run_start heap_eff2 env rho ef1 ea1 ef2 ea2 k) /\
       phi_as_list phi_source =
         phi_as_list phi_eff1 ++ phi_as_list phi_eff2 /\
       PairParBranchReplayWitness

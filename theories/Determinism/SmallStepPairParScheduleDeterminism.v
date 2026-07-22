@@ -19,6 +19,13 @@ Require Import theories.Meta.HeapFacts.
 Require Import theories.Determinism.Determinism.
 Require Import theories.Determinism.SmallStepStructuredReplay.
 
+Definition PairParRunBranchesOrdinary (state : PairParState) : Prop :=
+  match state with
+  | PPS_State _ => True
+  | PPS_Run left_state right_state _ =>
+      NonPairParRunState left_state /\ NonPairParRunState right_state
+  end.
+
 Lemma Det_Trace_of_phi_as_list_nil :
   forall phi,
     phi_as_list phi = nil ->
@@ -86,13 +93,14 @@ Lemma PairParStepsPhi_branch_det_traces :
     Det_Trace phi_left /\ Det_Trace phi_right.
 Proof.
   intros state phi_state phi_left phi_right state' HSteps.
-  induction HSteps as
-    [state
-    | state label state' phi_state phi_left phi_right state'' HStep _ IH
-    | left right k label left' phi_state phi_left phi_right state''
-        HStep _ IH
-    | left right k label right' phi_state phi_left phi_right state''
-        HStep _ IH
+	  induction HSteps as
+	    [state
+	    | state label state' phi_state phi_left phi_right state''
+	        HNonRun HNonRun' HStep _ IH
+	    | left right k label left' phi_state phi_left phi_right state''
+	        HNonRunLeft HNonRunLeft' HStep _ IH
+	    | left right k label right' phi_state phi_left phi_right state''
+	        HNonRunRight HNonRunRight' HStep _ IH
     | heap v1 v2 k phi_state phi_left phi_right state'' _ IH].
   - split; constructor.
   - exact IH.
@@ -130,24 +138,62 @@ Qed.
 
 Lemma PairParSteps_state_as_steps :
   forall state trace state',
+    StepsStayNonPairParRun state ->
     PairParSteps (PPS_State state) trace state' ->
     exists state_final,
       state' = PPS_State state_final /\
       Steps state trace state_final.
 Proof.
-  intros state trace state' HSteps.
+  intros state trace state' HStay HSteps.
   remember (PPS_State state) as pstate eqn:HPState.
-  revert state HPState.
+  revert state HStay HPState.
   induction HSteps as
     [pstate
     | pstate label pstate1 trace pstate2 HStep HSteps IH];
-    intros state0 HPState; subst.
+    intros state0 HStay HPState; subst.
   - exists state0. split; [reflexivity | constructor].
   - inversion HStep; subst.
-    destruct (IH state' eq_refl)
+    assert (HOneStep : Steps state0 (label_trace label) state').
+    {
+      destruct label as [| da].
+      - apply step_silent_steps. exact H1.
+      - apply step_act_steps. exact H1.
+    }
+    assert (HNonRunTarget : NonPairParRunState state').
+    {
+      eapply HStay. exact HOneStep.
+    }
+    assert (HStayTarget : StepsStayNonPairParRun state').
+    {
+      eapply steps_stay_non_pairpar_run_tail; eauto.
+    }
+    destruct (IH state' HStayTarget
+      (pairpar_state_of_state_non_pair state' HNonRunTarget))
       as (state_final & HFinal & HStepsState).
     exists state_final. split; [exact HFinal |].
     econstructor; eauto.
+Qed.
+
+Lemma StepsStayNonPairParRun_return_kdone :
+  forall heap v,
+    StepsStayNonPairParRun (StReturn heap v KDone).
+Proof.
+  intros heap v trace state HSteps.
+  inversion HSteps; subst.
+  - simpl. exact I.
+  - match goal with
+    | HStep : Step (StReturn heap v KDone) _ _ |- _ =>
+        inversion HStep; subst
+    end.
+    match goal with
+    | HTail : Steps (StDone heap v) ?trace_tail ?state_tail |- _ =>
+        destruct
+          (terminal_steps_refl
+            (StDone heap v) trace_tail state_tail
+            (Terminal_Done heap v) HTail)
+          as [_ HState];
+        subst; simpl; exact I
+    end.
 Qed.
 
 Lemma PairParSteps_run_kdone_terminal_pair_value :
@@ -166,14 +212,17 @@ Proof.
     (PairParSteps_state_as_steps
       (StReturn heap0 (Pair (v1, v2)) KDone)
       trace
-      (PPS_State (StDone heap v)) HSteps)
+      (PPS_State (StDone heap v))
+      (StepsStayNonPairParRun_return_kdone heap0 (Pair (v1, v2)))
+      HSteps)
     as (state_final & HFinal & HStepsState).
   inversion HFinal; subst.
   destruct
     (Steps_terminal_deterministic
       (StReturn heap0 (Pair (v1, v2)) KDone)
       trace heap v
-      nil heap0 (Pair (v1, v2)))
+      nil heap0 (Pair (v1, v2))
+      (StepsStayNonPairParRun_return_kdone heap0 (Pair (v1, v2))))
     as (_ & _ & Hv).
   - exact HStepsState.
   - replace nil with (label_trace Silent ++ nil) by reflexivity.
@@ -220,11 +269,13 @@ Lemma Step_label_heap_safe :
     LabelHeapSafe label (state_heap state).
 Proof.
   intros state label state' HStep.
-  inversion HStep; subst; simpl; auto.
+  induction HStep; simpl; auto.
+  rewrite H. exact IHHStep.
 Qed.
 
 Lemma Step_rebase_with_safe_label :
   forall state label state' heap,
+    NonPairParRunState state ->
     Step state label state' ->
     LabelHeapSafe label heap ->
     Step
@@ -232,20 +283,25 @@ Lemma Step_rebase_with_safe_label :
       label
       (with_state_heap (label_result_heap label heap) state').
 Proof.
-  intros state label state' heap HStep HSafe.
-  inversion HStep; subst; simpl in *; try (constructor; eauto; fail).
+  intros state label state' heap HNonPair HStep HSafe.
+  destruct state as
+    [heap0 env rho e k | heap0 v k | heap0 v | left_state right_state k];
+    simpl in HNonPair; try contradiction;
+    inversion HStep; subst; simpl in *; try (constructor; eauto; fail).
 Qed.
 
 Lemma Step_unbase_with_safe_label :
   forall state heap label state',
+    NonPairParRunState state ->
     Step (with_state_heap heap state) label state' ->
     LabelHeapSafe label (state_heap state) ->
     Step state label
       (with_state_heap (label_result_heap label (state_heap state)) state').
 Proof.
-  intros state heap label state' HStep HSafe.
-  destruct state as [heap0 env rho e k | heap0 v k | heap0 v];
-    simpl in *;
+  intros state heap label state' HNonPair HStep HSafe.
+  destruct state as
+    [heap0 env rho e k | heap0 v k | heap0 v | left_state right_state k];
+    simpl in HNonPair; try contradiction; simpl in *;
     inversion HStep; subst; simpl in *; try (constructor; eauto; fail).
 Qed.
 
@@ -255,7 +311,9 @@ Lemma Step_silent_preserves_heap :
     state_heap state' = state_heap state.
 Proof.
   intros state state' HStep.
-  inversion HStep; subst; reflexivity.
+  dependent induction HStep; subst; simpl; try reflexivity.
+  - exact (IHHStep eq_refl).
+  - rewrite state_heap_with_state_heap. rewrite H. exact (IHHStep eq_refl).
 Qed.
 
 Lemma Disjoint_Traces_single_inv :
@@ -516,62 +574,65 @@ Proof.
   exact H1.
 Qed.
 
-Lemma LabelHeapSafe_preserved_by_disjoint_step :
-  forall label other other_label other',
-    Step other other_label other' ->
-    LabelHeapSafe label (state_heap other) ->
-    Disjoint_Traces (label_trace label) (label_trace other_label) ->
-    LabelHeapSafe label (state_heap other').
-Proof.
-  intros label other other_label other' HStep HSafe HDisjoint.
-  destruct label as [| da].
-  - exact I.
-  - destruct other_label as [| da_other].
-    + pose proof (Step_silent_preserves_heap other other' HStep) as HHeap.
-      simpl in *. now rewrite HHeap.
-    + pose proof (Disjoint_Traces_single_inv da da_other HDisjoint)
-        as HDynamic.
-      pose proof HSafe as HSafe0.
-      destruct da_other as [rO lO vO | rO lO vO | rO lO vO].
-      * inversion HStep; subst; simpl in *; try exact HSafe0.
-        destruct da as [rA lA vA | rA lA vA | rA lA vA]; simpl in *.
-        -- eapply LabelHeapSafe_alloc_preserved_by_alloc; eauto.
-        -- eapply read_safe_preserved_by_disjoint_alloc; eauto.
-        -- apply find_H_exists_update_preserved.
-           exact HSafe0.
-      * inversion HStep; subst; simpl in *; exact HSafe0.
-      * inversion HStep; subst; simpl in *; try exact HSafe0.
-        destruct da as [rA lA vA | rA lA vA | rA lA vA]; simpl in *.
-        -- rewrite allocate_H_update_existing_nonnone.
-           ++ exact HSafe0.
-           ++ assumption.
-        -- eapply read_safe_preserved_by_disjoint_write; eauto.
-        -- apply find_H_exists_update_preserved.
-           exact HSafe0.
-Qed.
-
 Lemma Step_state_heap_label_result :
   forall state label state',
     Step state label state' ->
     state_heap state' = label_result_heap label (state_heap state).
 Proof.
   intros state label state' HStep.
-  inversion HStep; subst; simpl; reflexivity.
+  induction HStep; simpl; try reflexivity.
+  - exact IHHStep.
+  - rewrite state_heap_with_state_heap. rewrite H. exact IHHStep.
+Qed.
+
+Lemma LabelHeapSafe_preserved_by_disjoint_step :
+  forall label other other_label other',
+    Step other other_label other' ->
+    NonPairParRunState other ->
+    LabelHeapSafe label (state_heap other) ->
+    Disjoint_Traces (label_trace label) (label_trace other_label) ->
+    LabelHeapSafe label (state_heap other').
+Proof.
+  intros label other other_label other' HStep _ HSafe HDisjoint.
+  rewrite (Step_state_heap_label_result _ _ _ HStep).
+  destruct label as [| da].
+  - exact I.
+  - destruct other_label as [| da_other].
+    + exact HSafe.
+    + pose proof (Disjoint_Traces_single_inv da da_other HDisjoint)
+        as HDynamic.
+      pose proof (Step_label_heap_safe _ _ _ HStep) as HOtherSafe.
+      pose proof HSafe as HSafe0.
+      destruct da_other as [rO lO vO | rO lO vO | rO lO vO].
+      * destruct da as [rA lA vA | rA lA vA | rA lA vA]; simpl in *.
+        -- eapply LabelHeapSafe_alloc_preserved_by_alloc; eauto.
+        -- eapply read_safe_preserved_by_disjoint_alloc; eauto.
+        -- apply find_H_exists_update_preserved.
+           exact HSafe0.
+      * exact HSafe0.
+      * destruct da as [rA lA vA | rA lA vA | rA lA vA]; simpl in *.
+        -- rewrite allocate_H_update_existing_nonnone.
+           ++ exact HSafe0.
+           ++ exact HOtherSafe.
+        -- eapply read_safe_preserved_by_disjoint_write; eauto.
+        -- apply find_H_exists_update_preserved.
+           exact HSafe0.
 Qed.
 
 Lemma LabelHeapSafe_reflected_by_disjoint_step :
   forall label other other_label other',
     Step other other_label other' ->
+    NonPairParRunState other ->
     LabelAllocReflectionStable label other_label ->
     LabelHeapSafe label (state_heap other') ->
     Disjoint_Traces (label_trace label) (label_trace other_label) ->
     LabelHeapSafe label (state_heap other).
 Proof.
-  intros label other other_label other' HStep HStable HSafe HDisjoint.
+  intros label other other_label other' HStep _ HStable HSafe HDisjoint.
   destruct label as [| da].
   - exact I.
   - destruct other_label as [| da_other].
-    + pose proof (Step_silent_preserves_heap other other' HStep) as HHeap.
+    + pose proof (Step_silent_preserves_heap _ _ HStep) as HHeap.
       simpl in *. now rewrite <- HHeap.
     + pose proof (Disjoint_Traces_single_inv da da_other HDisjoint)
         as HDynamic.
@@ -663,6 +724,8 @@ Qed.
 Lemma Step_rebase_after_disjoint_step :
   forall state label state' other other_label other',
     state_heap state = state_heap other ->
+    NonPairParRunState state ->
+    NonPairParRunState other ->
     Step state label state' ->
     Step other other_label other' ->
     Disjoint_Traces (label_trace label) (label_trace other_label) ->
@@ -672,8 +735,9 @@ Lemma Step_rebase_after_disjoint_step :
       (with_state_heap (label_result_heap label (state_heap other')) state').
 Proof.
   intros state label state' other other_label other'
-    HHeapAgree HStepState HStepOther HDisjoint.
+    HHeapAgree HNonPair HNonPairOther HStepState HStepOther HDisjoint.
   eapply Step_rebase_with_safe_label.
+  - exact HNonPair.
   - exact HStepState.
   - eapply LabelHeapSafe_preserved_by_disjoint_step; eauto.
     rewrite <- HHeapAgree.
@@ -683,6 +747,8 @@ Qed.
 Lemma PairParLeftRightStep_local_diamond :
   forall left right k label_left label_right left' right',
     state_heap left = state_heap right ->
+    NonPairParRunState left ->
+    NonPairParRunState right ->
     Step left label_left left' ->
     Step right label_right right' ->
     Disjoint_Traces (label_trace label_left) (label_trace label_right) ->
@@ -698,7 +764,8 @@ Lemma PairParLeftRightStep_local_diamond :
         state_after.
 Proof.
   intros left right k label_left label_right left' right'
-    HHeapAgree HStepLeft HStepRight HDisjointLR HDisjointRL.
+    HHeapAgree HNonPairLeft HNonPairRight
+    HStepLeft HStepRight HDisjointLR HDisjointRL.
   set (heap_after :=
     label_result_heap label_right
       (label_result_heap label_left (state_heap left))).
@@ -720,6 +787,8 @@ Proof.
     eapply (Step_rebase_after_disjoint_step
       right label_right right' left label_left left').
     + symmetry. exact HHeapAgree.
+    + exact HNonPairRight.
+    + exact HNonPairLeft.
     + exact HStepRight.
     + exact HStepLeft.
     + exact HDisjointRL.
@@ -737,6 +806,8 @@ Proof.
     eapply (Step_rebase_after_disjoint_step
       left label_left left' right label_right right').
     + exact HHeapAgree.
+    + exact HNonPairLeft.
+    + exact HNonPairRight.
     + exact HStepLeft.
     + exact HStepRight.
     + exact HDisjointLR.
@@ -745,6 +816,9 @@ Qed.
 Lemma PairParLeftRightActualStep_local_diamond :
   forall left right label_left label_right left' right_after,
     state_heap left = state_heap right ->
+    NonPairParRunState left ->
+    NonPairParRunState right ->
+    NonPairParRunState right_after ->
     Step left label_left left' ->
     Step (with_state_heap (state_heap left') right) label_right right_after ->
     LabelAllocReflectionStable label_right label_left ->
@@ -756,10 +830,12 @@ Lemma PairParLeftRightActualStep_local_diamond :
         (with_state_heap (state_heap right') left)
         label_left
         (with_state_heap (state_heap right_after) left') /\
-      right_after = with_state_heap (state_heap right_after) right'.
+      right_after = with_state_heap (state_heap right_after) right' /\
+      NonPairParRunState right'.
 Proof.
   intros left right label_left label_right left' right_after
-    HHeapAgree HStepLeft HStepRightAfter HStable HDisjointLR HDisjointRL.
+    HHeapAgree HNonPairLeft HNonPairRight HNonPairRightAfter
+    HStepLeft HStepRightAfter HStable HDisjointLR HDisjointRL.
   pose proof
     (Step_label_heap_safe _ _ _ HStepRightAfter)
     as HSafeAfter.
@@ -767,7 +843,7 @@ Proof.
   pose proof
     (LabelHeapSafe_reflected_by_disjoint_step
       label_right left label_left left'
-      HStepLeft HStable HSafeAfter HDisjointRL)
+      HStepLeft HNonPairLeft HStable HSafeAfter HDisjointRL)
     as HSafeBefore.
   set (right' :=
     with_state_heap
@@ -777,6 +853,7 @@ Proof.
   {
     subst right'.
     eapply Step_unbase_with_safe_label.
+    - exact HNonPairRight.
     - exact HStepRightAfter.
     - rewrite <- HHeapAgree. exact HSafeBefore.
   }
@@ -788,6 +865,8 @@ Proof.
     + eapply (Step_rebase_after_disjoint_step
         left label_left left' right label_right right').
       * exact HHeapAgree.
+      * exact HNonPairLeft.
+      * exact HNonPairRight.
       * exact HStepLeft.
       * exact HStepRight.
       * exact HDisjointLR.
@@ -799,14 +878,39 @@ Proof.
 	      symmetry.
 	      apply label_result_heap_commute_disjoint_eq.
       exact HDisjointLR.
-  - subst right'.
-    destruct right_after; reflexivity.
+		  - split.
+		    + subst right'.
+		      assert (HOverwrite :
+		        forall state heap_inner,
+		          with_state_heap (state_heap right_after)
+		            (with_state_heap heap_inner state) =
+		          with_state_heap (state_heap right_after) state).
+		      {
+		        intros state heap_inner.
+		        induction state; simpl; auto.
+		        now rewrite IHstate1, IHstate2.
+		      }
+		      rewrite HOverwrite.
+		      rewrite with_state_heap_state_heap_agree.
+		      * reflexivity.
+		      * eapply step_preserves_state_run_heaps_agree.
+		        -- apply StateRunHeapsAgree_with_state_heap.
+		           apply NonPairParRunState_run_heaps_agree.
+		           exact HNonPairRight.
+		        -- exact HStepRightAfter.
+		    + subst right'.
+		      apply with_state_heap_non_pairpar.
+		      exact HNonPairRightAfter.
 Qed.
 
 Lemma PairParStepsPhi_LeftRight_adjacent_swap :
   forall left right k label_left label_right left' right_after
     phi_state phi_left phi_right final_state,
     state_heap left = state_heap right ->
+    NonPairParRunState left ->
+    NonPairParRunState right ->
+    NonPairParRunState left' ->
+    NonPairParRunState right_after ->
     Step left label_left left' ->
     Step (with_state_heap (state_heap left') right) label_right right_after ->
     LabelAllocReflectionStable label_right label_left ->
@@ -824,17 +928,25 @@ Lemma PairParStepsPhi_LeftRight_adjacent_swap :
 Proof.
   intros left right k label_left label_right left' right_after
     phi_state phi_left phi_right final_state
-    HHeapAgree HStepLeft HStepRightAfter HStable HDisjointLR HDisjointRL
+    HHeapAgree HNonPairLeft HNonPairRight
+    HNonPairLeft' HNonPairRightAfter
+    HStepLeft HStepRightAfter HStable HDisjointLR HDisjointRL
     HRest.
   destruct
     (PairParLeftRightActualStep_local_diamond
       left right label_left label_right left' right_after
-      HHeapAgree HStepLeft HStepRightAfter HStable HDisjointLR HDisjointRL)
-    as (right' & HStepRight & HStepLeftAfterRight & HRightAfterRebase).
-  eapply PairParStepsPhi_Right.
-  - exact HStepRight.
-  - eapply PairParStepsPhi_Left.
-    + exact HStepLeftAfterRight.
+      HHeapAgree HNonPairLeft HNonPairRight HNonPairRightAfter
+      HStepLeft HStepRightAfter HStable HDisjointLR HDisjointRL)
+    as (right' & HStepRight & HStepLeftAfterRight &
+        HRightAfterRebase & HNonPairRight').
+	  eapply PairParStepsPhi_Right.
+	  - exact HNonPairRight.
+	  - exact HNonPairRight'.
+	  - exact HStepRight.
+	  - eapply PairParStepsPhi_Left.
+	    + apply with_state_heap_non_pairpar. exact HNonPairLeft.
+	    + apply with_state_heap_non_pairpar. exact HNonPairLeft'.
+	    + exact HStepLeftAfterRight.
     + replace
         (PPS_Run (with_state_heap (state_heap right_after) left')
            (with_state_heap
@@ -853,6 +965,10 @@ Lemma PairParStepsPhi_LeftRight_adjacent_swap_checked :
   forall left right k label_left label_right left' right_after
     phi_state phi_left phi_right final_state theta_left theta_right,
     state_heap left = state_heap right ->
+    NonPairParRunState left ->
+    NonPairParRunState right ->
+    NonPairParRunState left' ->
+    NonPairParRunState right_after ->
     Step left label_left left' ->
     Step (with_state_heap (state_heap left') right) label_right right_after ->
     label_phi label_left ⋞ theta_left ->
@@ -870,9 +986,17 @@ Lemma PairParStepsPhi_LeftRight_adjacent_swap_checked :
 Proof.
   intros left right k label_left label_right left' right_after
     phi_state phi_left phi_right final_state theta_left theta_right
-    HHeapAgree HStepLeft HStepRightAfter
+    HHeapAgree HNonPairLeft HNonPairRight
+    HNonPairLeft' HNonPairRightAfter HStepLeft HStepRightAfter
     HSoundLeft HSoundRight HPass HRest.
-  eapply PairParStepsPhi_LeftRight_adjacent_swap; eauto.
+  eapply PairParStepsPhi_LeftRight_adjacent_swap.
+  - exact HHeapAgree.
+  - exact HNonPairLeft.
+  - exact HNonPairRight.
+  - exact HNonPairLeft'.
+  - exact HNonPairRightAfter.
+  - exact HStepLeft.
+  - exact HStepRightAfter.
   - eapply LabelAllocReflectionStable_from_theta; eauto.
     destruct HPass as [HDisjoint _]. exact HDisjoint.
   - rewrite <- (phi_as_list_label_phi label_left).
@@ -881,6 +1005,7 @@ Proof.
   - rewrite <- (phi_as_list_label_phi label_right).
     rewrite <- (phi_as_list_label_phi label_left).
     eapply PairParCheckPass_sound_disjoint_traces_sym; eauto.
+  - exact HRest.
 Qed.
 
 Inductive PairParLeftOnlyStepsPhi :
@@ -896,6 +1021,8 @@ Inductive PairParLeftOnlyStepsPhi :
         (PPS_State state) phi_state Phi_Nil final_state
 | PPLO_Left :
     forall left right k label left' phi_state phi_left final_state,
+      NonPairParRunState left ->
+      NonPairParRunState left' ->
       Step left label left' ->
       PairParLeftOnlyStepsPhi
         (PPS_Run left' (with_state_heap (state_heap left') right) k)
@@ -924,6 +1051,8 @@ Inductive PairParRightThenLeftStepsPhi :
 | PPRTL_Right :
     forall left right k label right'
       phi_state phi_left phi_right final_state,
+      NonPairParRunState right ->
+      NonPairParRunState right' ->
       Step right label right' ->
       PairParRightThenLeftStepsPhi
         (PPS_Run (with_state_heap (state_heap right') left) right' k)
@@ -995,13 +1124,87 @@ Proof.
   - constructor.
 Qed.
 
+Inductive OrdinaryStepsPhi : State -> Phi -> State -> Prop :=
+| OrdinaryStepsPhi_Refl :
+    forall state,
+      OrdinaryStepsPhi state Phi_Nil state
+| OrdinaryStepsPhi_Step :
+    forall state label state' phi state'',
+      NonPairParRunState state ->
+      NonPairParRunState state' ->
+      Step state label state' ->
+      OrdinaryStepsPhi state' phi state'' ->
+      OrdinaryStepsPhi state (Phi_Seq (label_phi label) phi) state''.
+
+Lemma OrdinaryStepsPhi_as_stepsphi :
+  forall state phi state',
+    OrdinaryStepsPhi state phi state' ->
+    StepsPhi state phi state'.
+Proof.
+  intros state phi state' HSteps.
+  induction HSteps.
+  - constructor.
+  - econstructor; eauto.
+Qed.
+
+Theorem OrdinaryStepsPhi_terminal_deterministic :
+  forall state phi1 heap1 v1 phi2 heap2 v2,
+    OrdinaryStepsPhi state phi1 (StDone heap1 v1) ->
+    OrdinaryStepsPhi state phi2 (StDone heap2 v2) ->
+    phi_as_list phi1 = phi_as_list phi2 /\
+    heap1 = heap2 /\
+    v1 = v2.
+Proof.
+  intros state phi1 heap1 v1 phi2 heap2 v2 HSteps1.
+  revert phi2 heap2 v2.
+  dependent induction HSteps1; intros phi2 heap2 v2 HSteps2.
+  - inversion HSteps2; subst.
+    + split; [reflexivity | split; reflexivity].
+    + exfalso. eapply terminal_no_step; eauto. constructor.
+  - inversion HSteps2; subst.
+    + exfalso. eapply terminal_no_step; eauto. constructor.
+    + destruct
+        (step_deterministic
+          state label state' label0 state'0 H H1 H4)
+        as [HLabel HState].
+      subst.
+      destruct (IHHSteps1 heap1 v1 eq_refl phi0 heap2 v2 H5)
+        as (HTrace & HHeap & HVal).
+      simpl. repeat rewrite phi_as_list_label_phi.
+      split; [now rewrite HTrace | split; assumption].
+Qed.
+
+Lemma PairParStepsPhi_state_as_ordinary_stepsphi :
+  forall state phi_state phi_left phi_right state',
+    PairParStepsPhi
+      (PPS_State state) phi_state phi_left phi_right state' ->
+    phi_left = Phi_Nil /\
+    phi_right = Phi_Nil /\
+    exists state_final,
+      state' = PPS_State state_final /\
+      OrdinaryStepsPhi state phi_state state_final.
+Proof.
+  intros state phi_state phi_left phi_right state' HSteps.
+  dependent induction HSteps.
+  - split; [reflexivity |].
+    split; [reflexivity |].
+    exists state. split; [reflexivity | constructor].
+  - destruct (IHHSteps state' eq_refl)
+      as (HLeftNil & HRightNil & state_final & HFinal & HStepsPhi).
+    split; [exact HLeftNil |].
+    split; [exact HRightNil |].
+    exists state_final. split; [exact HFinal |].
+    econstructor; eauto.
+Qed.
+
 Lemma with_state_heap_overwrite :
   forall heap_outer heap_inner state,
     with_state_heap heap_outer (with_state_heap heap_inner state) =
     with_state_heap heap_outer state.
 Proof.
   intros heap_outer heap_inner state.
-  destruct state; reflexivity.
+  induction state; simpl; auto.
+  now rewrite IHstate1, IHstate2.
 Qed.
 
 Lemma PairParLeftOnlyStepsPhi_terminal_decompose_kdone :
@@ -1010,11 +1213,11 @@ Lemma PairParLeftOnlyStepsPhi_terminal_decompose_kdone :
       (PPS_Run left (StDone (state_heap left) v_right) KDone)
       phi_state
       phi_left
-      (PPS_State (StDone heap_final v_final)) ->
-    exists heap_left v_left,
-      StepsPhi left phi_left (StDone heap_left v_left) /\
-      heap_final = heap_left /\
-      v_final = Pair (v_left, v_right).
+	    (PPS_State (StDone heap_final v_final)) ->
+	  exists heap_left v_left,
+	      OrdinaryStepsPhi left phi_left (StDone heap_left v_left) /\
+	      heap_final = heap_left /\
+	      v_final = Pair (v_left, v_right).
 Proof.
   intros left v_right phi_state phi_left heap_final v_final HSteps.
   dependent induction HSteps generalizing left v_right heap_final v_final.
@@ -1024,15 +1227,15 @@ Proof.
     + simpl. reflexivity.
     + reflexivity.
     + exists heap_left, v_left.
-      split.
-      * eapply StepsPhi_Step; eauto.
+	      split.
+	      * eapply OrdinaryStepsPhi_Step; eauto.
       * split; assumption.
   - destruct
-      (PairParLeftOnlyStepsPhi_state_as_stepsphi
-        (StReturn (state_heap left) (Pair (v1, v_right)) KDone)
-        phi_state phi_left
-        (PPS_State (StDone heap_final v_final)) HSteps)
-      as (HLeftNil & state_final & HStateFinal & HStateSteps).
+	      (PairParLeftOnlyStepsPhi_state_as_stepsphi
+	        (StReturn (state_heap left) (Pair (v1, v_right)) KDone)
+	        phi_state phi_left
+	        (PPS_State (StDone heap_final v_final)) HSteps)
+		      as (HLeftNil & state_final & HStateFinal & HStateSteps).
     inversion HStateFinal; subst.
     destruct
       (StepsPhi_terminal_deterministic
@@ -1040,6 +1243,8 @@ Proof.
         phi_state heap_final v_final
         (Phi_Seq (label_phi Silent) Phi_Nil)
         (state_heap left) (Pair (v1, v_right))
+        (StepsStayNonPairParRun_return_kdone
+          (state_heap left) (Pair (v1, v_right)))
         HStateSteps
         (StepsPhi_return_kdone
           (state_heap left) (Pair (v1, v_right))))
@@ -1059,11 +1264,11 @@ Lemma PairParLeftOnlyStepsPhi_terminal_decompose_kdone_agree :
       phi_state
       phi_left
       (PPS_State (StDone heap_final v_final)) ->
-    exists v_right heap_left v_left,
-      right = StDone (state_heap left) v_right /\
-      StepsPhi left phi_left (StDone heap_left v_left) /\
-      heap_final = heap_left /\
-      v_final = Pair (v_left, v_right).
+	    exists v_right heap_left v_left,
+	      right = StDone (state_heap left) v_right /\
+	      OrdinaryStepsPhi left phi_left (StDone heap_left v_left) /\
+	      heap_final = heap_left /\
+	      v_final = Pair (v_left, v_right).
 Proof.
   intros left right phi_state phi_left heap_final v_final HAgree HSteps.
   dependent induction HSteps generalizing left right heap_final v_final HAgree.
@@ -1077,22 +1282,24 @@ Proof.
     + reflexivity.
     + destruct right as [heap_right env_right rho_right e_right k_right
                        | heap_right v_right0 k_right
-                       | heap_right v_right0].
+                       | heap_right v_right0
+                       | left_state right_state k_right].
       * simpl in HRightDoneEq. inversion HRightDoneEq.
       * simpl in HRightDoneEq. inversion HRightDoneEq.
       * simpl in HRightDoneEq. inversion HRightDoneEq; subst.
         exists v_right, heap_left, v_left.
         split.
         -- simpl in HAgree. subst heap_right. reflexivity.
-        -- split.
-           ++ eapply StepsPhi_Step; eauto.
+	        -- split.
+	           ++ eapply OrdinaryStepsPhi_Step; eauto.
            ++ split; reflexivity.
+      * simpl in HRightDoneEq. inversion HRightDoneEq.
   - destruct
       (PairParLeftOnlyStepsPhi_state_as_stepsphi
         (StReturn heap (Pair (v1, v2)) KDone)
         phi_state phi_left
         (PPS_State (StDone heap_final v_final)) HSteps)
-      as (HLeftNil & state_final & HStateFinal & HStateSteps).
+		      as (HLeftNil & state_final & HStateFinal & HStateSteps).
     inversion HStateFinal; subst.
     destruct
       (StepsPhi_terminal_deterministic
@@ -1100,6 +1307,7 @@ Proof.
         phi_state heap_final v_final
         (Phi_Seq (label_phi Silent) Phi_Nil)
         heap (Pair (v1, v2))
+        (StepsStayNonPairParRun_return_kdone heap (Pair (v1, v2)))
         HStateSteps
         (StepsPhi_return_kdone
           heap (Pair (v1, v2))))
@@ -1114,6 +1322,8 @@ Qed.
 
 Lemma PairParRightThenLeftStepsPhi_terminal_decompose_kdone :
   forall left right phi_state phi_left phi_right heap_final v_final,
+    StateRunHeapsAgree left ->
+    StateRunHeapsAgree right ->
     state_heap left = state_heap right ->
     PairParRightThenLeftStepsPhi
       (PPS_Run left right KDone)
@@ -1121,16 +1331,17 @@ Lemma PairParRightThenLeftStepsPhi_terminal_decompose_kdone :
       phi_left
       phi_right
       (PPS_State (StDone heap_final v_final)) ->
-    exists heap_right v_right heap_left v_left,
-      StepsPhi right phi_right (StDone heap_right v_right) /\
-      StepsPhi (with_state_heap heap_right left) phi_left
-        (StDone heap_left v_left) /\
-      heap_final = heap_left /\
-      v_final = Pair (v_left, v_right).
+	  exists heap_right v_right heap_left v_left,
+	      OrdinaryStepsPhi right phi_right (StDone heap_right v_right) /\
+	      OrdinaryStepsPhi (with_state_heap heap_right left) phi_left
+	        (StDone heap_left v_left) /\
+	      heap_final = heap_left /\
+	      v_final = Pair (v_left, v_right).
 Proof.
   intros left right phi_state phi_left phi_right heap_final v_final
-    HAgree HSteps.
-  dependent induction HSteps generalizing left right heap_final v_final HAgree.
+    HLeftAgree HRightAgree HAgree HSteps.
+  dependent induction HSteps generalizing left right heap_final v_final
+    HLeftAgree HRightAgree HAgree.
   - destruct
       (PairParLeftOnlyStepsPhi_terminal_decompose_kdone_agree
         left right phi_state phi_left heap_final v_final HAgree H)
@@ -1140,7 +1351,9 @@ Proof.
     split.
     + rewrite HRightDone. constructor.
     + split.
-      * rewrite with_state_heap_state_heap. exact HLeftSteps.
+      * rewrite with_state_heap_state_heap_agree.
+        -- exact HLeftSteps.
+        -- exact HLeftAgree.
       * split; assumption.
   - destruct
       (IHHSteps
@@ -1150,12 +1363,14 @@ Proof.
         v_final)
       as (heap_right & v_right & heap_left & v_left &
           HRightSteps & HLeftSteps & HHeapFinal & HValFinal).
+    + apply StateRunHeapsAgree_with_state_heap. exact HLeftAgree.
+    + eapply step_preserves_state_run_heaps_agree; eauto.
     + rewrite state_heap_with_state_heap. reflexivity.
     + reflexivity.
     + reflexivity.
     + exists heap_right, v_right, heap_left, v_left.
-      split.
-      * eapply StepsPhi_Step; eauto.
+	      split.
+	      * eapply OrdinaryStepsPhi_Step; eauto.
       * split.
         -- rewrite with_state_heap_overwrite in HLeftSteps.
            exact HLeftSteps.
@@ -1170,11 +1385,11 @@ Lemma PairParLeftOnlyStepsPhi_terminal_decompose :
       phi_state
       phi_left
       (PPS_State (StDone heap_final v_final)) ->
-    exists v_right heap_left v_left,
-      right = StDone (state_heap left) v_right /\
-      StepsPhi left phi_left (StDone heap_left v_left) /\
-      StepsPhi
-        (StReturn heap_left (Pair (v_left, v_right)) k)
+	    exists v_right heap_left v_left,
+	      right = StDone (state_heap left) v_right /\
+	      OrdinaryStepsPhi left phi_left (StDone heap_left v_left) /\
+	      OrdinaryStepsPhi
+	        (StReturn heap_left (Pair (v_left, v_right)) k)
         phi_state
         (StDone heap_final v_final).
 Proof.
@@ -1190,22 +1405,28 @@ Proof.
     + reflexivity.
     + destruct right as [heap_right env_right rho_right e_right k_right
                        | heap_right v_right0 k_right
-                       | heap_right v_right0].
+                       | heap_right v_right0
+                       | left_state right_state k_right].
       * simpl in HRightDoneEq. inversion HRightDoneEq.
       * simpl in HRightDoneEq. inversion HRightDoneEq.
       * simpl in HRightDoneEq. inversion HRightDoneEq; subst.
         exists v_right, heap_left, v_left.
         split.
         -- simpl in HAgree. subst heap_right. reflexivity.
-        -- split.
-           ++ eapply StepsPhi_Step; eauto.
+	        -- split.
+	           ++ eapply OrdinaryStepsPhi_Step; eauto.
            ++ exact HTailSteps.
+      * simpl in HRightDoneEq. inversion HRightDoneEq.
   - destruct
-      (PairParLeftOnlyStepsPhi_state_as_stepsphi
-        (StReturn heap (Pair (v1, v2)) k)
-        phi_state phi_left
-        (PPS_State (StDone heap_final v_final)) HSteps)
-      as (HLeftNil & state_final & HStateFinal & HStateSteps).
+		      (PairParStepsPhi_state_as_ordinary_stepsphi
+		        (StReturn heap (Pair (v1, v2)) k)
+		        phi_state phi_left Phi_Nil
+			        (PPS_State (StDone heap_final v_final))
+		        (PairParLeftOnlyStepsPhi_as_pairpar_steps_phi
+		          (PPS_State (StReturn heap (Pair (v1, v2)) k))
+		          phi_state phi_left
+		          (PPS_State (StDone heap_final v_final)) HSteps))
+	      as (HLeftNil & HRightNil & state_final & HStateFinal & HStateSteps).
     inversion HStateFinal; subst.
     exists v2, heap, v1.
     split.
@@ -1217,6 +1438,8 @@ Qed.
 
 Lemma PairParRightThenLeftStepsPhi_terminal_decompose :
   forall left right k phi_state phi_left phi_right heap_final v_final,
+    StateRunHeapsAgree left ->
+    StateRunHeapsAgree right ->
     state_heap left = state_heap right ->
     PairParRightThenLeftStepsPhi
       (PPS_Run left right k)
@@ -1224,18 +1447,19 @@ Lemma PairParRightThenLeftStepsPhi_terminal_decompose :
       phi_left
       phi_right
       (PPS_State (StDone heap_final v_final)) ->
-    exists heap_right v_right heap_left v_left,
-      StepsPhi right phi_right (StDone heap_right v_right) /\
-      StepsPhi (with_state_heap heap_right left) phi_left
-        (StDone heap_left v_left) /\
-      StepsPhi
-        (StReturn heap_left (Pair (v_left, v_right)) k)
+	  exists heap_right v_right heap_left v_left,
+	      OrdinaryStepsPhi right phi_right (StDone heap_right v_right) /\
+	      OrdinaryStepsPhi (with_state_heap heap_right left) phi_left
+	        (StDone heap_left v_left) /\
+	      OrdinaryStepsPhi
+	        (StReturn heap_left (Pair (v_left, v_right)) k)
         phi_state
         (StDone heap_final v_final).
 Proof.
   intros left right k phi_state phi_left phi_right heap_final v_final
-    HAgree HSteps.
-  dependent induction HSteps generalizing left right k heap_final v_final HAgree.
+    HLeftAgree HRightAgree HAgree HSteps.
+  dependent induction HSteps generalizing left right k heap_final v_final
+    HLeftAgree HRightAgree HAgree.
   - destruct
       (PairParLeftOnlyStepsPhi_terminal_decompose
         left right k phi_state phi_left heap_final v_final HAgree H)
@@ -1245,7 +1469,9 @@ Proof.
     split.
     + rewrite HRightDone. constructor.
     + split.
-      * rewrite with_state_heap_state_heap. exact HLeftSteps.
+      * rewrite with_state_heap_state_heap_agree.
+        -- exact HLeftSteps.
+        -- exact HLeftAgree.
       * exact HTailSteps.
   - destruct
       (IHHSteps
@@ -1256,12 +1482,14 @@ Proof.
         v_final)
       as (heap_right & v_right & heap_left & v_left &
           HRightSteps & HLeftSteps & HTailSteps).
+    + apply StateRunHeapsAgree_with_state_heap. exact HLeftAgree.
+    + eapply step_preserves_state_run_heaps_agree; eauto.
     + rewrite state_heap_with_state_heap. reflexivity.
     + reflexivity.
     + reflexivity.
     + exists heap_right, v_right, heap_left, v_left.
-      split.
-      * eapply StepsPhi_Step; eauto.
+	      split.
+	      * eapply OrdinaryStepsPhi_Step; eauto.
       * split.
         -- rewrite with_state_heap_overwrite in HLeftSteps.
            exact HLeftSteps.
@@ -1290,6 +1518,9 @@ Lemma PairParRightThenLeftStepsPhi_prepend_left :
   forall left right k label left' phi_state phi_left phi_right final_state
     theta_left theta_right,
     state_heap left = state_heap right ->
+    NonPairParRunState left ->
+    NonPairParRunState right ->
+    NonPairParRunState left' ->
     Step left label left' ->
     label_phi label ⋞ theta_left ->
     phi_right ⋞ theta_right ->
@@ -1305,18 +1536,25 @@ Lemma PairParRightThenLeftStepsPhi_prepend_left :
       final_state.
 Proof.
   intros left right k label left' phi_state phi_left phi_right final_state
-    theta_left theta_right HHeapAgree HStepLeft HSoundLeft HSoundRight HPass HRTL.
+    theta_left theta_right HHeapAgree HNonPairLeft HNonPairRight
+    HNonPairLeft' HStepLeft HSoundLeft HSoundRight HPass HRTL.
   remember
     (PPS_Run left' (with_state_heap (state_heap left') right) k)
     as rest_start eqn:HRestStart.
-  revert left right k label left' HHeapAgree HStepLeft HSoundLeft HRestStart.
+  revert left right k label left'
+    HHeapAgree HNonPairLeft HNonPairRight
+    HNonPairLeft' HStepLeft HSoundLeft HRestStart.
   induction HRTL;
-    intros left0 right0 k0 label0 left0' HHeapAgree HStepLeft HSoundLeft HRestStart;
+    intros left0 right0 k0 label0 left0'
+      HHeapAgree HNonPairLeft HNonPairRight
+      HNonPairLeft' HStepLeft HSoundLeft HRestStart;
     inversion HRestStart; subst.
-  - apply PPRTL_LeftOnly.
-    eapply PPLO_Left.
-    + exact HStepLeft.
-    + assumption.
+	  - apply PPRTL_LeftOnly.
+	    eapply PPLO_Left.
+	    + exact HNonPairLeft.
+	    + exact HNonPairLeft'.
+	    + exact HStepLeft.
+	    + assumption.
   - pose proof
       (Phi_Theta_Soundness_seq_inv_l
         (label_phi label) phi_right theta_right HSoundRight)
@@ -1347,21 +1585,28 @@ Proof.
       eapply PairParCheckPass_sound_disjoint_traces_sym; eauto.
       split; assumption.
     }
-    destruct
-      (PairParLeftRightActualStep_local_diamond
-        left0 right0 label0 label left0' right'
-        HHeapAgree HStepLeft H HStable HDisjointLR HDisjointRL)
-      as (right0' & HStepRight0 & HStepLeftAfterRight & HRightAfterRebase).
-    apply PPRTL_Right with (right' := right0').
-    + exact HStepRight0.
-    + eapply
-        (IHHRTL HSoundRightTail
-          (with_state_heap (state_heap right0') left0)
-          right0' k0 label0
-          (with_state_heap (state_heap right') left0')).
-      * rewrite state_heap_with_state_heap. reflexivity.
-      * exact HStepLeftAfterRight.
-      * exact HSoundLeft.
+	    destruct
+		      (PairParLeftRightActualStep_local_diamond
+		        left0 right0 label0 label left0' right'
+		        HHeapAgree HNonPairLeft HNonPairRight
+		        H0 HStepLeft H1 HStable HDisjointLR HDisjointRL)
+	      as (right0' & HStepRight0 & HStepLeftAfterRight &
+	          HRightAfterRebase & HNonPairRight0').
+		    apply PPRTL_Right with (right' := right0').
+		    + exact HNonPairRight.
+		    + exact HNonPairRight0'.
+		    + exact HStepRight0.
+	    + eapply
+	        (IHHRTL HSoundRightTail
+		          (with_state_heap (state_heap right0') left0)
+		          right0' k0 label0
+		          (with_state_heap (state_heap right') left0')).
+	      * rewrite state_heap_with_state_heap. reflexivity.
+	      * apply with_state_heap_non_pairpar. exact HNonPairLeft.
+	      * exact HNonPairRight0'.
+	      * apply with_state_heap_non_pairpar. exact HNonPairLeft'.
+	      * exact HStepLeftAfterRight.
+	      * exact HSoundLeft.
       * rewrite state_heap_with_state_heap.
         rewrite <- HRightAfterRebase.
         reflexivity.
@@ -1370,6 +1615,7 @@ Qed.
 Lemma PairParStepsPhi_normalize_right_then_left :
   forall state phi_state phi_left phi_right final_state theta_left theta_right,
     PairParRunHeapsAgree state ->
+    PairParRunBranchesOrdinary state ->
     PairParStepsPhi state phi_state phi_left phi_right final_state ->
     phi_left ⋞ theta_left ->
     phi_right ⋞ theta_right ->
@@ -1378,7 +1624,7 @@ Lemma PairParStepsPhi_normalize_right_then_left :
       state phi_state phi_left phi_right final_state.
 Proof.
   intros state phi_state phi_left phi_right final_state theta_left theta_right
-    HAgree HSteps.
+    HAgree HOrdinary HSteps.
   induction HSteps;
     intros HSoundLeft HSoundRight HPass.
   - apply PPRTL_LeftOnly. constructor.
@@ -1405,22 +1651,58 @@ Proof.
       (Phi_Theta_Soundness_seq_inv_l
         (label_phi label) phi_left theta_left HSoundLeft)
       as HSoundLabel.
-    pose proof
-      (Phi_Theta_Soundness_seq_inv_r
-        (label_phi label) phi_left theta_left HSoundLeft)
-      as HSoundLeftTail.
-    eapply PairParRightThenLeftStepsPhi_prepend_left; eauto.
-    apply IHHSteps.
-    + simpl. rewrite state_heap_with_state_heap. reflexivity.
-    + exact HSoundLeftTail.
-    + exact HSoundRight.
-    + exact HPass.
-  - eapply PPRTL_Right.
-    + exact H.
-    + apply IHHSteps.
-      * simpl. rewrite state_heap_with_state_heap. reflexivity.
-      * exact HSoundLeft.
-      * eapply Phi_Theta_Soundness_seq_inv_r; eauto.
+	  pose proof
+	      (Phi_Theta_Soundness_seq_inv_r
+	        (label_phi label) phi_left theta_left HSoundLeft)
+		      as HSoundLeftTail.
+		    destruct HOrdinary as [HNonPairLeft HNonPairRight].
+		    destruct HAgree as [HHeapAgree [HLeftAgree HRightAgree]].
+		    eapply PairParRightThenLeftStepsPhi_prepend_left.
+		    + exact HHeapAgree.
+		    + exact HNonPairLeft.
+		    + exact HNonPairRight.
+		    + exact H0.
+		    + exact H1.
+		    + exact HSoundLabel.
+		    + exact HSoundRight.
+		    + exact HPass.
+		    + apply IHHSteps.
+		      * simpl.
+		        split.
+			        -- rewrite state_heap_with_state_heap. reflexivity.
+			        -- split.
+		           ++ eapply step_preserves_state_run_heaps_agree.
+			              ** exact HLeftAgree.
+			              ** exact H1.
+			           ++ apply StateRunHeapsAgree_with_state_heap.
+			              exact HRightAgree.
+		      * split.
+		        -- exact H0.
+		        -- apply with_state_heap_non_pairpar. exact HNonPairRight.
+		      * exact HSoundLeftTail.
+		      * exact HSoundRight.
+		      * exact HPass.
+	  - eapply PPRTL_Right.
+	    + exact H.
+	    + exact H0.
+	    + exact H1.
+	    + apply IHHSteps.
+	      * destruct HAgree as [HHeapAgree [HLeftAgree HRightAgree]].
+	        simpl.
+	        split.
+		        -- rewrite state_heap_with_state_heap. reflexivity.
+		        -- split.
+		           ++ apply StateRunHeapsAgree_with_state_heap.
+		              exact HLeftAgree.
+			           ++ eapply step_preserves_state_run_heaps_agree.
+			              ** exact HRightAgree.
+			              ** exact H1.
+		      * destruct HOrdinary as [HNonPairLeft HNonPairRight].
+			        split.
+			        -- apply with_state_heap_non_pairpar. exact HNonPairLeft.
+			        -- exact H0.
+	      * exact HSoundLeft.
+	      * eapply Phi_Theta_Soundness_seq_inv_r; eauto.
       * exact HPass.
   - pose proof
       (PairParStepsPhi_state_branches_nil
@@ -1435,15 +1717,17 @@ Proof.
 Qed.
 
 Theorem PairParCheckedArbitraryScheduleTerminalDeterminism :
-  forall heap env rho ef1 ea1 ef2 ea2
-    phi_state1 phi_left1 phi_right1
-    phi_state2 phi_left2 phi_right2
-    heap1 heap2 v1 v2 theta_left theta_right,
-    PairParCheckPass theta_left theta_right ->
-    phi_left1 ⋞ theta_left ->
-    phi_right1 ⋞ theta_right ->
-    phi_left2 ⋞ theta_left ->
-    phi_right2 ⋞ theta_right ->
+	  forall heap env rho ef1 ea1 ef2 ea2
+	    phi_state1 phi_left1 phi_right1
+	    phi_state2 phi_left2 phi_right2
+	    heap1 heap2 v1 v2
+	    theta_left1 theta_right1 theta_left2 theta_right2,
+	    PairParCheckPass theta_left1 theta_right1 ->
+	    PairParCheckPass theta_left2 theta_right2 ->
+	    phi_left1 ⋞ theta_left1 ->
+	    phi_right1 ⋞ theta_right1 ->
+	    phi_left2 ⋞ theta_left2 ->
+	    phi_right2 ⋞ theta_right2 ->
     PairParStepsPhi
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
       phi_state1
@@ -1458,67 +1742,75 @@ Theorem PairParCheckedArbitraryScheduleTerminalDeterminism :
       (PPS_State (StDone heap2 v2)) ->
     heap1 = heap2 /\ v1 = v2.
 Proof.
-  intros heap env rho ef1 ea1 ef2 ea2
-    phi_state1 phi_left1 phi_right1
-    phi_state2 phi_left2 phi_right2
-    heap1 heap2 v1 v2 theta_left theta_right
-    HPass HSoundLeft1 HSoundRight1 HSoundLeft2 HSoundRight2
-    HSteps1 HSteps2.
-  assert (HAgreeStart :
-    PairParRunHeapsAgree
-      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)).
-  {
-    unfold pairpar_checked_start, pairpar_checked_initial.
-    reflexivity.
-  }
-  pose proof
-    (PairParStepsPhi_normalize_right_then_left
-      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
-      phi_state1 phi_left1 phi_right1
-      (PPS_State (StDone heap1 v1))
-      theta_left theta_right
-      HAgreeStart HSteps1 HSoundLeft1 HSoundRight1 HPass)
+	  intros heap env rho ef1 ea1 ef2 ea2
+	    phi_state1 phi_left1 phi_right1
+	    phi_state2 phi_left2 phi_right2
+	    heap1 heap2 v1 v2
+	    theta_left1 theta_right1 theta_left2 theta_right2
+	    HPass1 HPass2 HSoundLeft1 HSoundRight1 HSoundLeft2 HSoundRight2
+	    HSteps1 HSteps2.
+	  assert (HAgreeStart :
+	    PairParRunHeapsAgree
+	      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)).
+		  {
+		    unfold pairpar_checked_start, pairpar_checked_initial.
+		    simpl. split; [reflexivity | split; exact I].
+		  }
+	  assert (HOrdStart :
+	    PairParRunBranchesOrdinary
+	      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)).
+	  {
+	    unfold pairpar_checked_start, pairpar_checked_initial.
+	    simpl. split; exact I.
+	  }
+	  pose proof
+	    (PairParStepsPhi_normalize_right_then_left
+	      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
+		      phi_state1 phi_left1 phi_right1
+		      (PPS_State (StDone heap1 v1))
+		      theta_left1 theta_right1
+		      HAgreeStart HOrdStart HSteps1 HSoundLeft1 HSoundRight1 HPass1)
     as HRTL1.
   pose proof
     (PairParStepsPhi_normalize_right_then_left
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
-      phi_state2 phi_left2 phi_right2
-      (PPS_State (StDone heap2 v2))
-      theta_left theta_right
-      HAgreeStart HSteps2 HSoundLeft2 HSoundRight2 HPass)
+		      phi_state2 phi_left2 phi_right2
+		      (PPS_State (StDone heap2 v2))
+		      theta_left2 theta_right2
+		      HAgreeStart HOrdStart HSteps2 HSoundLeft2 HSoundRight2 HPass2)
     as HRTL2.
   unfold pairpar_checked_start, pairpar_checked_initial in HRTL1, HRTL2.
   destruct
     (PairParRightThenLeftStepsPhi_terminal_decompose_kdone
-      (initial_state heap env rho (Mu_App ef1 ea1))
-      (initial_state heap env rho (Mu_App ef2 ea2))
-      phi_state1 phi_left1 phi_right1 heap1 v1
-      eq_refl HRTL1)
+	      (initial_state heap env rho (Mu_App ef1 ea1))
+	      (initial_state heap env rho (Mu_App ef2 ea2))
+	      phi_state1 phi_left1 phi_right1 heap1 v1
+	      I I eq_refl HRTL1)
     as (heap_right1 & v_right1 & heap_left1 & v_left1 &
         HRightSteps1 & HLeftSteps1 & HHeapFinal1 & HValFinal1).
   destruct
     (PairParRightThenLeftStepsPhi_terminal_decompose_kdone
-      (initial_state heap env rho (Mu_App ef1 ea1))
-      (initial_state heap env rho (Mu_App ef2 ea2))
-      phi_state2 phi_left2 phi_right2 heap2 v2
-      eq_refl HRTL2)
+	      (initial_state heap env rho (Mu_App ef1 ea1))
+	      (initial_state heap env rho (Mu_App ef2 ea2))
+	      phi_state2 phi_left2 phi_right2 heap2 v2
+	      I I eq_refl HRTL2)
     as (heap_right2 & v_right2 & heap_left2 & v_left2 &
         HRightSteps2 & HLeftSteps2 & HHeapFinal2 & HValFinal2).
-  destruct
-    (StepsPhi_terminal_deterministic
-      (initial_state heap env rho (Mu_App ef2 ea2))
-      phi_right1 heap_right1 v_right1
-      phi_right2 heap_right2 v_right2
-      HRightSteps1 HRightSteps2)
+	  destruct
+	    (OrdinaryStepsPhi_terminal_deterministic
+	      (initial_state heap env rho (Mu_App ef2 ea2))
+	      phi_right1 heap_right1 v_right1
+	      phi_right2 heap_right2 v_right2
+	      HRightSteps1 HRightSteps2)
     as (_ & HRightHeapEq & HRightValEq).
   subst heap_right2 v_right2.
-  destruct
-    (StepsPhi_terminal_deterministic
-      (with_state_heap heap_right1
-        (initial_state heap env rho (Mu_App ef1 ea1)))
-      phi_left1 heap_left1 v_left1
-      phi_left2 heap_left2 v_left2
-      HLeftSteps1 HLeftSteps2)
+	  destruct
+	    (OrdinaryStepsPhi_terminal_deterministic
+	      (with_state_heap heap_right1
+	        (initial_state heap env rho (Mu_App ef1 ea1)))
+	      phi_left1 heap_left1 v_left1
+	      phi_left2 heap_left2 v_left2
+	      HLeftSteps1 HLeftSteps2)
     as (_ & HLeftHeapEq & HLeftValEq).
   subst heap_left2 v_left2.
   subst heap1 heap2 v1 v2.
@@ -1526,15 +1818,17 @@ Proof.
 Qed.
 
 Theorem PairParCheckedArbitraryScheduleContinuationTerminalDeterminism :
-  forall heap env rho ef1 ea1 ef2 ea2 k
-    phi_state1 phi_left1 phi_right1
-    phi_state2 phi_left2 phi_right2
-    heap1 heap2 v1 v2 theta_left theta_right,
-    PairParCheckPass theta_left theta_right ->
-    phi_left1 ⋞ theta_left ->
-    phi_right1 ⋞ theta_right ->
-    phi_left2 ⋞ theta_left ->
-    phi_right2 ⋞ theta_right ->
+	  forall heap env rho ef1 ea1 ef2 ea2 k
+	    phi_state1 phi_left1 phi_right1
+	    phi_state2 phi_left2 phi_right2
+	    heap1 heap2 v1 v2
+	    theta_left1 theta_right1 theta_left2 theta_right2,
+	    PairParCheckPass theta_left1 theta_right1 ->
+	    PairParCheckPass theta_left2 theta_right2 ->
+	    phi_left1 ⋞ theta_left1 ->
+	    phi_right1 ⋞ theta_right1 ->
+	    phi_left2 ⋞ theta_left2 ->
+	    phi_right2 ⋞ theta_right2 ->
     PairParStepsPhi
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
       phi_state1
@@ -1549,99 +1843,110 @@ Theorem PairParCheckedArbitraryScheduleContinuationTerminalDeterminism :
       (PPS_State (StDone heap2 v2)) ->
     heap1 = heap2 /\ v1 = v2.
 Proof.
-  intros heap env rho ef1 ea1 ef2 ea2 k
-    phi_state1 phi_left1 phi_right1
-    phi_state2 phi_left2 phi_right2
-    heap1 heap2 v1 v2 theta_left theta_right
-    HPass HSoundLeft1 HSoundRight1 HSoundLeft2 HSoundRight2
-    HSteps1 HSteps2.
-  assert (HAgreeStart :
-    PairParRunHeapsAgree
-      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)).
-  {
-    unfold pairpar_checked_start, pairpar_checked_initial.
-    reflexivity.
-  }
-  pose proof
-    (PairParStepsPhi_normalize_right_then_left
-      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
-      phi_state1 phi_left1 phi_right1
-      (PPS_State (StDone heap1 v1))
-      theta_left theta_right
-      HAgreeStart HSteps1 HSoundLeft1 HSoundRight1 HPass)
+	  intros heap env rho ef1 ea1 ef2 ea2 k
+	    phi_state1 phi_left1 phi_right1
+	    phi_state2 phi_left2 phi_right2
+	    heap1 heap2 v1 v2
+	    theta_left1 theta_right1 theta_left2 theta_right2
+	    HPass1 HPass2 HSoundLeft1 HSoundRight1 HSoundLeft2 HSoundRight2
+	    HSteps1 HSteps2.
+	  assert (HAgreeStart :
+	    PairParRunHeapsAgree
+	      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)).
+		  {
+		    unfold pairpar_checked_start, pairpar_checked_initial.
+		    simpl. split; [reflexivity | split; exact I].
+		  }
+	  assert (HOrdStart :
+	    PairParRunBranchesOrdinary
+	      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)).
+	  {
+	    unfold pairpar_checked_start, pairpar_checked_initial.
+	    simpl. split; exact I.
+	  }
+	  pose proof
+	    (PairParStepsPhi_normalize_right_then_left
+	      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+		      phi_state1 phi_left1 phi_right1
+		      (PPS_State (StDone heap1 v1))
+		      theta_left1 theta_right1
+		      HAgreeStart HOrdStart HSteps1 HSoundLeft1 HSoundRight1 HPass1)
     as HRTL1.
   pose proof
     (PairParStepsPhi_normalize_right_then_left
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
-      phi_state2 phi_left2 phi_right2
-      (PPS_State (StDone heap2 v2))
-      theta_left theta_right
-      HAgreeStart HSteps2 HSoundLeft2 HSoundRight2 HPass)
+		      phi_state2 phi_left2 phi_right2
+		      (PPS_State (StDone heap2 v2))
+		      theta_left2 theta_right2
+		      HAgreeStart HOrdStart HSteps2 HSoundLeft2 HSoundRight2 HPass2)
     as HRTL2.
   unfold pairpar_checked_start, pairpar_checked_initial in HRTL1, HRTL2.
   destruct
     (PairParRightThenLeftStepsPhi_terminal_decompose
-      (initial_state heap env rho (Mu_App ef1 ea1))
-      (initial_state heap env rho (Mu_App ef2 ea2))
-      k phi_state1 phi_left1 phi_right1 heap1 v1
-      eq_refl HRTL1)
+	      (initial_state heap env rho (Mu_App ef1 ea1))
+	      (initial_state heap env rho (Mu_App ef2 ea2))
+	      k phi_state1 phi_left1 phi_right1 heap1 v1
+	      I I eq_refl HRTL1)
     as (heap_right1 & v_right1 & heap_left1 & v_left1 &
         HRightSteps1 & HLeftSteps1 & HTailSteps1).
   destruct
     (PairParRightThenLeftStepsPhi_terminal_decompose
-      (initial_state heap env rho (Mu_App ef1 ea1))
-      (initial_state heap env rho (Mu_App ef2 ea2))
-      k phi_state2 phi_left2 phi_right2 heap2 v2
-      eq_refl HRTL2)
+	      (initial_state heap env rho (Mu_App ef1 ea1))
+	      (initial_state heap env rho (Mu_App ef2 ea2))
+	      k phi_state2 phi_left2 phi_right2 heap2 v2
+	      I I eq_refl HRTL2)
     as (heap_right2 & v_right2 & heap_left2 & v_left2 &
         HRightSteps2 & HLeftSteps2 & HTailSteps2).
-  destruct
-    (StepsPhi_terminal_deterministic
-      (initial_state heap env rho (Mu_App ef2 ea2))
-      phi_right1 heap_right1 v_right1
-      phi_right2 heap_right2 v_right2
-      HRightSteps1 HRightSteps2)
+	  destruct
+	    (OrdinaryStepsPhi_terminal_deterministic
+	      (initial_state heap env rho (Mu_App ef2 ea2))
+	      phi_right1 heap_right1 v_right1
+	      phi_right2 heap_right2 v_right2
+	      HRightSteps1 HRightSteps2)
     as (_ & HRightHeapEq & HRightValEq).
   subst heap_right2 v_right2.
-  destruct
-    (StepsPhi_terminal_deterministic
-      (with_state_heap heap_right1
-        (initial_state heap env rho (Mu_App ef1 ea1)))
-      phi_left1 heap_left1 v_left1
-      phi_left2 heap_left2 v_left2
-      HLeftSteps1 HLeftSteps2)
+	  destruct
+	    (OrdinaryStepsPhi_terminal_deterministic
+	      (with_state_heap heap_right1
+	        (initial_state heap env rho (Mu_App ef1 ea1)))
+	      phi_left1 heap_left1 v_left1
+	      phi_left2 heap_left2 v_left2
+	      HLeftSteps1 HLeftSteps2)
     as (_ & HLeftHeapEq & HLeftValEq).
   subst heap_left2 v_left2.
-  destruct
-    (StepsPhi_terminal_deterministic
-      (StReturn heap_left1 (Pair (v_left1, v_right1)) k)
-      phi_state1 heap1 v1
-      phi_state2 heap2 v2
-      HTailSteps1 HTailSteps2)
+	  destruct
+	    (OrdinaryStepsPhi_terminal_deterministic
+	      (StReturn heap_left1 (Pair (v_left1, v_right1)) k)
+	      phi_state1 heap1 v1
+	      phi_state2 heap2 v2
+	      HTailSteps1 HTailSteps2)
     as (_ & HFinalHeapEq & HFinalValEq).
   split; assumption.
 Qed.
 
 Theorem PairParCheckedPackedArbitraryScheduleTerminalDeterminism :
   forall heap env rho ef1 ea1 ef2 ea2
-    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right,
-    PairParCheckPass theta_left theta_right ->
-    PairParCheckedPackedStepsPhi theta_left theta_right
+    phi1 phi2 heap1 heap2 v1 v2
+    theta_left1 theta_right1 theta_left2 theta_right2,
+    PairParCheckPass theta_left1 theta_right1 ->
+    PairParCheckPass theta_left2 theta_right2 ->
+    PairParCheckedPackedStepsPhi theta_left1 theta_right1
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
       phi1
       (PPS_State (StDone heap1 v1)) ->
-    PairParCheckedPackedStepsPhi theta_left theta_right
+    PairParCheckedPackedStepsPhi theta_left2 theta_right2
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
       phi2
       (PPS_State (StDone heap2 v2)) ->
     heap1 = heap2 /\ v1 = v2.
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2
-    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right
-    HPass HSteps1 HSteps2.
+    phi1 phi2 heap1 heap2 v1 v2
+    theta_left1 theta_right1 theta_left2 theta_right2
+    HPass1 HPass2 HSteps1 HSteps2.
   destruct
     (PairParCheckedPackedStepsPhi_unpacked
-      theta_left theta_right
+      theta_left1 theta_right1
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
       phi1
       (PPS_State (StDone heap1 v1)) HSteps1)
@@ -1649,7 +1954,7 @@ Proof.
         HRawSteps1 & _ & HSoundLeft1 & HSoundRight1).
   destruct
     (PairParCheckedPackedStepsPhi_unpacked
-      theta_left theta_right
+      theta_left2 theta_right2
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
       phi2
       (PPS_State (StDone heap2 v2)) HSteps2)
@@ -1660,30 +1965,34 @@ Proof.
       heap env rho ef1 ea1 ef2 ea2
       phi_state1 phi_left1 phi_right1
       phi_state2 phi_left2 phi_right2
-      heap1 heap2 v1 v2 theta_left theta_right);
+      heap1 heap2 v1 v2
+      theta_left1 theta_right1 theta_left2 theta_right2);
     eauto.
 Qed.
 
 Theorem PairParCheckedPackedArbitraryScheduleContinuationTerminalDeterminism :
   forall heap env rho ef1 ea1 ef2 ea2 k
-    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right,
-    PairParCheckPass theta_left theta_right ->
-    PairParCheckedPackedStepsPhi theta_left theta_right
+    phi1 phi2 heap1 heap2 v1 v2
+    theta_left1 theta_right1 theta_left2 theta_right2,
+    PairParCheckPass theta_left1 theta_right1 ->
+    PairParCheckPass theta_left2 theta_right2 ->
+    PairParCheckedPackedStepsPhi theta_left1 theta_right1
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
       phi1
       (PPS_State (StDone heap1 v1)) ->
-    PairParCheckedPackedStepsPhi theta_left theta_right
+    PairParCheckedPackedStepsPhi theta_left2 theta_right2
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
       phi2
       (PPS_State (StDone heap2 v2)) ->
     heap1 = heap2 /\ v1 = v2.
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k
-    phi1 phi2 heap1 heap2 v1 v2 theta_left theta_right
-    HPass HSteps1 HSteps2.
+    phi1 phi2 heap1 heap2 v1 v2
+    theta_left1 theta_right1 theta_left2 theta_right2
+    HPass1 HPass2 HSteps1 HSteps2.
   destruct
     (PairParCheckedPackedStepsPhi_unpacked
-      theta_left theta_right
+      theta_left1 theta_right1
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
       phi1
       (PPS_State (StDone heap1 v1)) HSteps1)
@@ -1691,7 +2000,7 @@ Proof.
         HRawSteps1 & _ & HSoundLeft1 & HSoundRight1).
   destruct
     (PairParCheckedPackedStepsPhi_unpacked
-      theta_left theta_right
+      theta_left2 theta_right2
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
       phi2
       (PPS_State (StDone heap2 v2)) HSteps2)
@@ -1702,7 +2011,8 @@ Proof.
       heap env rho ef1 ea1 ef2 ea2 k
       phi_state1 phi_left1 phi_right1
       phi_state2 phi_left2 phi_right2
-      heap1 heap2 v1 v2 theta_left theta_right);
+      heap1 heap2 v1 v2
+      theta_left1 theta_right1 theta_left2 theta_right2);
     eauto.
 Qed.
 
@@ -1731,10 +2041,12 @@ Proof.
     inversion HSteps2; subst; simpl in *.
     + exfalso. eapply done_no_step; eauto.
     + match goal with
-      | HStep2 : Step _ _ _ |- _ =>
-          destruct
-            (step_deterministic _ _ _ _ _ HStep HStep2)
-            as (_ & HStateEq);
+	      | HStep2 : Step _ _ _ |- _ =>
+	          destruct
+	            (step_deterministic _ _ _ _ _
+	              (NotPairParEvalState_non_pairpar_run _ HNotPair)
+	              HStep HStep2)
+	            as (_ & HStateEq);
           subst;
           eapply IH; eauto
       end.
@@ -1743,19 +2055,12 @@ Proof.
     subst.
     dependent destruction HSteps2; simpl in *.
     + contradiction.
-    + destruct
-        (PairParEffectSummaryStepsPhi_theta_deterministic
-          heap env rho ef1 ea1 ef2 ea2
-          phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
-          phi_eff0 phi_eff3 heap_eff0 theta0 heap_eff3 theta3
-          HSummary H)
-        as (HTheta1 & HTheta2).
-      subst.
-      eapply
+    + eapply
         (PairParCheckedPackedArbitraryScheduleContinuationTerminalDeterminism
           heap env rho ef1 ea1 ef2 ea2 k
-          phi_mu phi_mu0 heap1 heap2 v1 v2 theta0 theta3);
-        eauto.
+          phi_mu phi_mu0 heap1 heap2 v1 v2
+          theta1 theta2 theta0 theta3);
+      eauto.
 Qed.
 
 Theorem ScheduledInitialState_terminal_deterministic :
@@ -1777,6 +2082,8 @@ Qed.
 Lemma PairParLeftRightStep_local_commute :
   forall left right k label_left label_right left' right',
     state_heap left = state_heap right ->
+    NonPairParRunState left ->
+    NonPairParRunState right ->
     Step left label_left left' ->
     Step right label_right right' ->
     Disjoint_Traces (label_trace label_left) (label_trace label_right) ->
@@ -1795,7 +2102,8 @@ Lemma PairParLeftRightStep_local_commute :
       state_heap right_after ≡@{Heap} state_heap left_after.
 Proof.
   intros left right k label_left label_right left' right'
-    HHeapAgree HStepLeft HStepRight HDisjointLR HDisjointRL.
+    HHeapAgree HNonPairLeft HNonPairRight
+    HStepLeft HStepRight HDisjointLR HDisjointRL.
   pose
     (right_after :=
       with_state_heap
@@ -1813,6 +2121,8 @@ Proof.
     eapply (Step_rebase_after_disjoint_step
       right label_right right' left label_left left').
     + symmetry. exact HHeapAgree.
+    + exact HNonPairRight.
+    + exact HNonPairLeft.
     + exact HStepRight.
     + exact HStepLeft.
     + exact HDisjointRL.
@@ -1821,6 +2131,8 @@ Proof.
     eapply (Step_rebase_after_disjoint_step
       left label_left left' right label_right right').
     + exact HHeapAgree.
+    + exact HNonPairLeft.
+    + exact HNonPairRight.
     + exact HStepLeft.
     + exact HStepRight.
     + exact HDisjointLR.

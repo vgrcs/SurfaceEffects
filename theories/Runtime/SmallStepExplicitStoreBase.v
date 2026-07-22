@@ -41,22 +41,40 @@ Inductive WTStateRuntimeHeapShapeAt : State -> Tau -> Sigma -> Prop :=
       WTKontRuntime stty t tout k ->
       RuntimeValShape stty t v ->
       WTStateRuntimeHeapShapeAt (StReturn heap v k) tout stty
-| WTSRHSA_Done :
-    forall heap v stty t,
-      TcHeap (heap, stty) ->
-      RuntimeHeapShape heap stty ->
-      TcVal (stty, v, t) ->
-      RuntimeValShape stty t v ->
-      WTStateRuntimeHeapShapeAt (StDone heap v) t stty.
+	| WTSRHSA_Done :
+	    forall heap v stty t,
+	      TcHeap (heap, stty) ->
+	      RuntimeHeapShape heap stty ->
+	      TcVal (stty, v, t) ->
+	      RuntimeValShape stty t v ->
+	      WTStateRuntimeHeapShapeAt (StDone heap v) t stty
+	| WTSRHSA_PairParRun :
+	    forall left right k tleft tright tout stty,
+	      WTStateRuntimeHeapShapeAt left tleft stty ->
+	      WTStateRuntimeHeapShapeAt right tright stty ->
+	      WTKontRuntime stty (Ty_Pair tleft tright) tout k ->
+	      WTStateRuntimeHeapShapeAt (StPairParRun left right k) tout stty.
 
 Lemma WTStateRuntimeHeapShapeAt_forget :
   forall state tout stty,
     WTStateRuntimeHeapShapeAt state tout stty ->
     WTStateRuntimeHeapShape state tout.
-Proof.
-  intros state tout stty HWT.
-  inversion HWT; subst; econstructor; eauto.
-Qed.
+	Proof.
+	  intros state tout stty HWT.
+	  induction HWT; subst.
+	  - econstructor; eauto.
+	  - econstructor; eauto.
+	  - econstructor; eauto.
+	  - eapply WTSRHS_PairParRun with (tleft := tleft) (tright := tright);
+	      eauto.
+	    intros heap v1 v2 HLeft HRight.
+	    subst.
+	    inversion HWT1; subst.
+	    inversion HWT2; subst.
+	    eapply WTSRHS_Return with (t := Ty_Pair tleft tright); eauto.
+	    + constructor; eauto.
+	    + constructor; eauto.
+	Qed.
 
 
 Lemma WTStateRuntimeHeapShapeAt_reheap_store_ext :
@@ -67,8 +85,9 @@ Lemma WTStateRuntimeHeapShapeAt_reheap_store_ext :
     StoreExtends stty stty' ->
     WTStateRuntimeHeapShapeAt (with_state_heap heap' state) tout stty'.
 Proof.
-  intros state tout stty heap' stty' HWT HTcHeap' HHeapShape' HExt.
-  inversion HWT; subst; simpl.
+  intros state tout stty heap' stty' HWT.
+  revert heap' stty'.
+  induction HWT; intros heap' stty' HTcHeap' HHeapShape' HExt; simpl.
   - eapply WTSRHSA_Eval with (ctxt := ctxt) (rgns := rgns) (t := t)
       (eff := eff); eauto.
     + eapply ext_stores__env; eauto.
@@ -81,6 +100,10 @@ Proof.
   - eapply WTSRHSA_Done; eauto.
     + eapply ext_stores__val; eauto.
     + eapply RuntimeValShape_store_ext; eauto.
+  - eapply WTSRHSA_PairParRun with (tleft := tleft) (tright := tright).
+    + eapply IHHWT1; eauto.
+    + eapply IHHWT2; eauto.
+    + eapply WTKontRuntime_store_ext; eauto.
 Qed.
 
 Lemma WTStateRuntimeHeapShapeAt_reheap_same_store :

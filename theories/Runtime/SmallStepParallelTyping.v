@@ -31,10 +31,11 @@ Require Import theories.Runtime.SmallStepParallelPreservationBase.
 
 Inductive WTPairParStateRuntimeHeapShapeAt :
     PairParState -> Tau -> Sigma -> Prop :=
-| WTPPRSA_State :
-    forall state tout stty,
-      WTStateRuntimeHeapShapeAt state tout stty ->
-      WTPairParStateRuntimeHeapShapeAt (PPS_State state) tout stty
+	| WTPPRSA_State :
+	    forall state tout stty,
+	      NonPairParRunState state ->
+	      WTStateRuntimeHeapShapeAt state tout stty ->
+	      WTPairParStateRuntimeHeapShapeAt (PPS_State state) tout stty
 | WTPPRSA_Run :
     forall left right k tleft tright tout stty,
       WTStateRuntimeHeapShapeAt left tleft stty ->
@@ -93,10 +94,11 @@ Qed.
 
 Inductive WTPairParStateRuntimeHeapShapeAtStrong :
     PairParState -> Tau -> Sigma -> Prop :=
-| WTPPRSAS_State :
-    forall state tout stty,
-      WTStateRuntimeHeapShapeAt state tout stty ->
-      WTPairParStateRuntimeHeapShapeAtStrong (PPS_State state) tout stty
+	| WTPPRSAS_State :
+	    forall state tout stty,
+	      NonPairParRunState state ->
+	      WTStateRuntimeHeapShapeAt state tout stty ->
+	      WTPairParStateRuntimeHeapShapeAtStrong (PPS_State state) tout stty
 | WTPPRSAS_Run :
     forall left right k tleft tright tout stty,
       WTStateRuntimeHeapShapeAt left tleft stty ->
@@ -109,10 +111,10 @@ Lemma WTPairParStateRuntimeHeapShapeAtStrong_forget :
     WTPairParStateRuntimeHeapShapeAtStrong state tout stty ->
     WTPairParStateRuntimeHeapShapeAt state tout stty.
 Proof.
-  intros state tout stty HWT.
-  inversion HWT; subst.
-  - econstructor; eauto.
-  - eapply WTPPRSA_Run with (tleft := tleft) (tright := tright); eauto.
+	  intros state tout stty HWT.
+	  inversion HWT; subst.
+	  - econstructor; eauto.
+	  - eapply WTPPRSA_Run with (tleft := tleft) (tright := tright); eauto.
     intros heap v1 v2 HLeftDone HRightDone.
     subst.
     eapply WTStateRuntimeHeapShapeAt_done_pair_return; eauto.
@@ -152,10 +154,11 @@ Proof.
 Qed.
 
 Inductive WTPairParStateRuntimeHeapShape : PairParState -> Tau -> Prop :=
-| WTPPRS_State :
-    forall state tout,
-      WTStateRuntimeHeapShape state tout ->
-      WTPairParStateRuntimeHeapShape (PPS_State state) tout
+	| WTPPRS_State :
+	    forall state tout,
+	      NonPairParRunState state ->
+	      WTStateRuntimeHeapShape state tout ->
+	      WTPairParStateRuntimeHeapShape (PPS_State state) tout
 | WTPPRS_Run :
     forall left right k tleft tright tout,
       WTStateRuntimeHeapShape left tleft ->
@@ -171,10 +174,10 @@ Lemma WTPairParStateRuntimeHeapShapeAt_forget :
     WTPairParStateRuntimeHeapShapeAt state tout stty ->
     WTPairParStateRuntimeHeapShape state tout.
 Proof.
-  intros state tout stty HWT.
-  inversion HWT; subst.
-  - constructor.
-    eapply WTStateRuntimeHeapShapeAt_forget; eauto.
+	  intros state tout stty HWT.
+	  inversion HWT; subst.
+	  - constructor; eauto.
+	    eapply WTStateRuntimeHeapShapeAt_forget; eauto.
   - eapply WTPPRS_Run with (tleft := tleft) (tright := tright).
     + eapply WTStateRuntimeHeapShapeAt_forget; eauto.
     + eapply WTStateRuntimeHeapShapeAt_forget; eauto.
@@ -222,4 +225,3 @@ Proof.
   - intros heap0 v1 v2 HLeftDone _.
     discriminate HLeftDone.
 Qed.
-

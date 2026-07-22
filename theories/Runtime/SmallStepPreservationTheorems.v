@@ -32,10 +32,11 @@ Require Import theories.Runtime.SmallStepPreservationHeapSensitiveCases.
 Theorem WTStateRuntimeHeapShape_step_preservation :
   forall state tout lbl state',
     WTStateRuntimeHeapShape state tout ->
+    NonPairParRunState state ->
     Step state lbl state' ->
     WTStateRuntimeHeapShape state' tout.
 Proof.
-  intros state tout lbl state' HState HStep.
+  intros state tout lbl state' HState HNonRun HStep.
   inversion HStep; subst; try solve
     [ eapply WTStateRuntimeHeapShape_const_step_preservation; eauto
     | eapply WTStateRuntimeHeapShape_bool_step_preservation; eauto
@@ -89,20 +90,26 @@ Proof.
     | eapply WTStateRuntimeHeapShape_concat_done_preservation; eauto
     | eapply WTStateRuntimeHeapShape_top_step_preservation; eauto
     | eapply WTStateRuntimeHeapShape_empty_step_preservation; eauto
-    | eapply WTStateRuntimeHeapShape_done_step_preservation; eauto ].
+    | eapply WTStateRuntimeHeapShape_done_step_preservation; eauto
+    | contradiction
+    | inversion HState ].
 Qed.
 
 Theorem WTStateRuntimeHeapShape_steps_preservation :
   forall state tout trace state',
     WTStateRuntimeHeapShape state tout ->
+    StepsStayNonPairParRun state ->
     Steps state trace state' ->
     WTStateRuntimeHeapShape state' tout.
 Proof.
-  intros state tout trace state' HState HSteps.
-  induction HSteps.
-  - assumption.
-  - apply IHHSteps.
-    eapply WTStateRuntimeHeapShape_step_preservation; eauto.
+  intros state tout trace state' HState HStay HSteps.
+	  induction HSteps.
+	  - assumption.
+	  - apply IHHSteps.
+	    + eapply WTStateRuntimeHeapShape_step_preservation; eauto.
+	      eapply HStay.
+	      constructor.
+	    + eapply steps_stay_non_pairpar_run_tail; eauto.
 Qed.
 
 Corollary WTStateRuntimeHeapShape_initial_steps_preservation :
@@ -114,11 +121,12 @@ Corollary WTStateRuntimeHeapShape_initial_steps_preservation :
     TcEnv (stty, rho, env, ctxt) ->
     RuntimeEnvShape stty rho env ctxt ->
     TcExp (ctxt, rgns, e, t, eff) ->
+    StepsStayNonPairParRun (initial_state heap env rho e) ->
     Steps (initial_state heap env rho e) trace state' ->
     WTStateRuntimeHeapShape state' (subst_rho rho t).
 Proof.
   intros heap env rho e stty ctxt rgns t eff trace state'
-    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HStay HSteps.
   eapply WTStateRuntimeHeapShape_steps_preservation; eauto.
   eapply WTStateRuntimeHeapShape_initial; eauto.
 Qed.
@@ -136,11 +144,13 @@ Lemma pairpar_check_state_ready :
       (StReturn heap (Eff theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)).
 Proof.
-  intros heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k HDisj HNoConf.
-  exists Silent,
-    (StEval heap env rho (Mu_App ef1 ea1)
-      (KPairParMu1 ef2 ea2 env rho k)).
-  econstructor; eauto.
+	  intros heap ef1 ea1 ef2 ea2 env rho theta1 theta2 k HDisj HNoConf.
+	  exists Silent,
+	    (StPairParRun
+	      (initial_state heap env rho (Mu_App ef1 ea1))
+	      (initial_state heap env rho (Mu_App ef2 ea2))
+	      k).
+	  econstructor; eauto.
 Qed.
 
 Lemma pairpar_check_state_decidable_ready :
@@ -278,12 +288,13 @@ Qed.
 Theorem WTStateRuntimeHeapShape_not_stuck_or_pairpar_check :
   forall state tout,
     WTStateRuntimeHeapShape state tout ->
+    NonPairParRunState state ->
     (forall heap env rho e k,
         state = StEval heap env rho e k ->
         EvalHeadRegionsResolved rho e) ->
     NotStuck state \/ PairParCheckState state.
 Proof.
-  intros state tout HState HEvalReady.
+  intros state tout HState HNonRun HEvalReady.
   inversion HState; subst.
   - left. right. left.
     destruct e; simpl in *; try solve
@@ -298,18 +309,20 @@ Proof.
     + left. right. left. exact HCanStep.
     + left. right. right. exact HCheck.
   - left. left. constructor.
+  - contradiction.
 Qed.
 
 Theorem WTStateRuntimeHeapShape_not_stuck :
   PairParCheckDecidable ->
   forall state tout,
     WTStateRuntimeHeapShape state tout ->
+    NonPairParRunState state ->
     (forall heap env rho e k,
         state = StEval heap env rho e k ->
         EvalHeadRegionsResolved rho e) ->
     NotStuck state.
 Proof.
-  intros HDec state tout HState HEvalReady.
+  intros HDec state tout HState HNonRun HEvalReady.
   inversion HState; subst.
   - right. left.
     destruct e; simpl in *; try solve
@@ -325,4 +338,5 @@ Proof.
     + right. left. exact HCanStep.
     + right. right. exact HCheck.
   - left. constructor.
+  - contradiction.
 Qed.

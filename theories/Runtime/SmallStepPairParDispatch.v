@@ -39,27 +39,26 @@ Definition pairpar_check_state
   StReturn heap (Eff theta2)
     (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k).
 
-Definition pairpar_sequential_start
+Definition pairpar_checked_run_start
     (heap : Heap) (env : Env) (rho : Rho)
     (ef1 ea1 ef2 ea2 : Expr) (k : Kont) : State :=
-  StEval heap env rho (Mu_App ef1 ea1)
-    (KPairParMu1 ef2 ea2 env rho k).
+  pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k.
 
 Definition pairpar_checked_start
     (heap : Heap) (env : Env) (rho : Rho)
     (ef1 ea1 ef2 ea2 : Expr) (k : Kont) : PairParState :=
   pairpar_checked_initial heap env rho ef1 ea1 ef2 ea2 k.
 
-Theorem pairpar_check_passes_to_sequential_start :
+Theorem pairpar_check_passes_to_checked_run_start :
   forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k,
     PairParCheckPass theta1 theta2 ->
     Step
       (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
       Silent
-      (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k).
+      (pairpar_checked_run_start heap env rho ef1 ea1 ef2 ea2 k).
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k [HDisj HNoConf].
-  unfold pairpar_check_state, pairpar_sequential_start.
+  unfold pairpar_check_state, pairpar_checked_run_start.
   eapply Step_PairPar_EvalMu1; eauto.
 Qed.
 
@@ -99,13 +98,63 @@ Proof.
     constructor.
 Qed.
 
+Theorem pairpar_unified_checked_start_can_step_both_branches :
+  forall heap env rho ef1 ea1 ef2 ea2 k,
+    exists left_state right_state,
+      Step
+        (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+        Silent left_state /\
+      Step
+        (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+        Silent right_state.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k.
+  destruct
+    (pairpar_checked_start_can_step_both_branches
+      heap env rho ef1 ea1 ef2 ea2 k)
+    as (left_pp & right_pp & HLeft & HRight).
+  exists (pairpar_state_as_state left_pp), (pairpar_state_as_state right_pp).
+  split.
+  - change (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+      with
+        (pairpar_state_as_state
+          (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)).
+    eapply pairpar_step_as_step; eauto.
+    apply pairpar_checked_initial_heaps_agree.
+  - change (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+      with
+        (pairpar_state_as_state
+          (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)).
+    eapply pairpar_step_as_step; eauto.
+    apply pairpar_checked_initial_heaps_agree.
+Qed.
+
+Theorem pairpar_check_pass_unified_dispatch :
+  forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k,
+    PairParCheckPass theta1 theta2 ->
+    PairParRunHeapsAgree
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k) /\
+    exists left_state right_state,
+      Step
+        (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+        Silent left_state /\
+      Step
+        (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+        Silent right_state.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k _.
+  split.
+  - apply pairpar_checked_initial_heaps_agree.
+  - apply pairpar_unified_checked_start_can_step_both_branches.
+Qed.
+
 Theorem pairpar_check_pass_dispatch :
   forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k,
     PairParCheckPass theta1 theta2 ->
     Step
       (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
       Silent
-      (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k) /\
+      (pairpar_checked_run_start heap env rho ef1 ea1 ef2 ea2 k) /\
     PairParRunHeapsAgree
       (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k) /\
     exists left_state right_state,
@@ -118,7 +167,7 @@ Theorem pairpar_check_pass_dispatch :
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k HPass.
   split.
-  - now apply pairpar_check_passes_to_sequential_start.
+  - now apply pairpar_check_passes_to_checked_run_start.
   - split.
     + apply pairpar_checked_initial_heaps_agree.
     + apply pairpar_checked_start_can_step_both_branches.
@@ -142,7 +191,7 @@ Theorem pairpar_check_decidable_dispatch :
       Step
         (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
         Silent
-        (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 k) /\
+        (pairpar_checked_run_start heap env rho ef1 ea1 ef2 ea2 k) /\
       PairParRunHeapsAgree
         (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k) /\
       (exists left_state right_state,

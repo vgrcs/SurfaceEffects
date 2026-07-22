@@ -163,6 +163,43 @@ Proof.
   split; [exact (HNeverStuck trace state' HSteps) | exact HTcTrace].
 Qed.
 
+Theorem pairpar_unified_checked_initial_steps_safety_with_trace :
+  PairParCheckDecidable ->
+  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout trace state',
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
+    Steps
+      (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)
+      trace state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state state') tout stty' /\
+      StoreExtends stty stty' /\
+      PairParRunHeapsAgree (pairpar_state_of_state state') /\
+      PairParNotStuck (pairpar_state_of_state state') /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+    ty1 ty2 eff1 eff2 tout trace state'
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcExp1 HTcExp2 HKont HSteps.
+  pose proof (pairpar_steps_of_steps _ _ _ HSteps) as HPairSteps.
+  simpl in HPairSteps.
+  eapply
+    (pairpar_checked_initial_steps_safety_with_trace
+      HDec heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
+      ty1 ty2 eff1 eff2 tout trace (pairpar_state_of_state state'));
+    eauto.
+Qed.
+
 Theorem pairpar_checked_initial_kdone_steps_safety_with_trace :
   PairParCheckDecidable ->
   forall heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
@@ -198,3 +235,38 @@ Proof.
   constructor.
 Qed.
 
+Theorem pairpar_unified_checked_initial_kdone_steps_safety_with_trace :
+  PairParCheckDecidable ->
+  forall heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    ty1 ty2 eff1 eff2 trace state',
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
+    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
+    Steps
+      (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 KDone)
+      trace state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state state')
+        (subst_rho rho (Ty_Pair ty1 ty2)) stty' /\
+      StoreExtends stty stty' /\
+      PairParRunHeapsAgree (pairpar_state_of_state state') /\
+      PairParNotStuck (pairpar_state_of_state state') /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros HDec heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+    ty1 ty2 eff1 eff2 trace state'
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
+    HTcExp1 HTcExp2 HSteps.
+  eapply
+    (pairpar_unified_checked_initial_steps_safety_with_trace
+      HDec heap env rho ef1 ea1 ef2 ea2 KDone stty ctxt rgns
+      ty1 ty2 eff1 eff2 (subst_rho rho (Ty_Pair ty1 ty2))
+      trace state'); eauto.
+  constructor.
+Qed.

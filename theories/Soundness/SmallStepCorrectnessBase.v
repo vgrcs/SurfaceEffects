@@ -2,6 +2,7 @@ From Stdlib Require Import List.
 From Stdlib Require Import Lia.
 From Stdlib Require Import Sets.Ensembles.
 From Stdlib Require Import Wf_nat.
+From Stdlib Require Import Program.Equality.
 
 (* Shared terminal-run decompositions and small-step correctness utilities. *)
 
@@ -70,6 +71,7 @@ Qed.
 
 Lemma StepsPhiN_terminal_inv_step :
   forall n state label state' phi heap_done v_done,
+    NonPairParRunState state ->
     Step state label state' ->
     StepsPhiN n state phi (StDone heap_done v_done) ->
     exists n_tail phi_tail,
@@ -77,10 +79,10 @@ Lemma StepsPhiN_terminal_inv_step :
       StepsPhiN n_tail state' phi_tail (StDone heap_done v_done) /\
       phi_as_list phi = label_trace label ++ phi_as_list phi_tail.
 Proof.
-  intros n state label state' phi heap_done v_done HStep HSteps.
+  intros n state label state' phi heap_done v_done HNonPair HStep HSteps.
   inversion HSteps; subst.
   - exfalso. eapply done_no_step; eauto.
-  - destruct (step_deterministic _ _ _ _ _ HStep H)
+  - destruct (step_deterministic _ _ _ _ _ HNonPair HStep H)
       as (HLabel & HState).
     subst.
     exists n0, phi0.
@@ -220,6 +222,34 @@ Proof.
   eapply StepsPhiN_to_StepsPhi; eauto.
 Qed.
 
+Lemma StepsStayNonPairParRun_empty_summary :
+  forall heap env rho,
+    StepsStayNonPairParRun (initial_state heap env rho Empty).
+Proof.
+  unfold StepsStayNonPairParRun, initial_state.
+  intros heap env rho trace state' HSteps.
+  dependent destruction HSteps; simpl; auto.
+  dependent destruction H; simpl.
+  dependent destruction HSteps; simpl; auto.
+  dependent destruction H; simpl.
+  dependent destruction HSteps; simpl; auto.
+  dependent destruction H.
+Qed.
+
+Lemma StepsStayNonPairParRun_top_summary :
+  forall heap env rho,
+    StepsStayNonPairParRun (initial_state heap env rho Top).
+Proof.
+  unfold StepsStayNonPairParRun, initial_state.
+  intros heap env rho trace state' HSteps.
+  dependent destruction HSteps; simpl; auto.
+  dependent destruction H; simpl.
+  dependent destruction HSteps; simpl; auto.
+  dependent destruction H; simpl.
+  dependent destruction HSteps; simpl; auto.
+  dependent destruction H.
+Qed.
+
 Lemma StepsPhi_empty_summary_theta :
   forall heap env rho phi heap_summary theta,
     StepsPhi (initial_state heap env rho Empty) phi
@@ -243,10 +273,11 @@ Proof.
   }
   destruct
     (StepsPhi_effect_terminal_deterministic
-      (initial_state heap env rho Empty)
-      (Phi_Seq Phi_Nil (Phi_Seq Phi_Nil Phi_Nil))
-      heap Theta_Empty phi heap_summary theta
-      HCanonical HSteps)
+	      (initial_state heap env rho Empty)
+	      (Phi_Seq Phi_Nil (Phi_Seq Phi_Nil Phi_Nil))
+	      heap Theta_Empty phi heap_summary theta
+	      (StepsStayNonPairParRun_empty_summary heap env rho)
+	      HCanonical HSteps)
     as (_ & _ & HTheta).
   symmetry.
   exact HTheta.
@@ -275,10 +306,11 @@ Proof.
   }
   destruct
     (StepsPhi_effect_terminal_deterministic
-      (initial_state heap env rho Top)
-      (Phi_Seq Phi_Nil (Phi_Seq Phi_Nil Phi_Nil))
-      heap Theta_Top phi heap_summary theta
-      HCanonical HSteps)
+	      (initial_state heap env rho Top)
+	      (Phi_Seq Phi_Nil (Phi_Seq Phi_Nil Phi_Nil))
+	      heap Theta_Top phi heap_summary theta
+	      (StepsStayNonPairParRun_top_summary heap env rho)
+	      HCanonical HSteps)
     as (_ & _ & HTheta).
   symmetry.
   exact HTheta.
@@ -306,10 +338,12 @@ Proof.
     [app | n app label app' phi_tail app'' HStep HStepsTail IH];
     intros heap_final v_final HFinal state tail HApp HNotTerminal.
   - subst app.
-    destruct state as [heap env rho e k | heap v k | heap v].
+    destruct state as
+      [heap env rho e k | heap v k | heap v | left_state right_state k].
     + simpl in HApp. inversion HApp.
     + simpl in HApp. inversion HApp.
     + exfalso. apply HNotTerminal. constructor.
+    + simpl in HApp. inversion HApp.
   - subst app.
     destruct
       (Step_append_kont_inv state tail label app' HNotTerminal HStep)
@@ -396,9 +430,9 @@ Proof.
       (StEval heap env rho e1 (KConcatL e2 env rho KDone))
       phi heap_final (Eff theta))
     as HFirst.
-  specialize
-    (HFirst (Step_Concat_EvalLeft heap env rho KDone e1 e2)
-      HSteps).
+	  specialize
+	    (HFirst I (Step_Concat_EvalLeft heap env rho KDone e1 e2)
+	      HSteps).
   destruct HFirst as (phi_after_e1 & HAfterE1 & HTraceStart).
   destruct
     (StepsPhi_initial_with_kont_terminal_decompose
@@ -457,7 +491,7 @@ Proof.
         reflexivity.
 Qed.
 
-Theorem PairParSourceTerminalSequentialDecompose :
+Theorem PairParSourceTerminalCheckedRunDecompose :
   forall heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
     StepsPhi
       (initial_state heap env rho (Pair_Par ef1 ea1 ef2 ea2))
@@ -470,7 +504,7 @@ Theorem PairParSourceTerminalSequentialDecompose :
         phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
       PairParCheckPass theta1 theta2 /\
       StepsPhi
-        (pairpar_sequential_start heap_eff2 env rho ef1 ea1 ef2 ea2 KDone)
+        (pairpar_checked_run_start heap_eff2 env rho ef1 ea1 ef2 ea2 KDone)
         phi_seq
         (StDone heap_final v_final) /\
       phi_as_list phi =
@@ -487,9 +521,9 @@ Proof.
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
       phi heap_final v_final)
     as HFirst.
-  specialize
-    (HFirst (Step_PairPar_EvalEff1 heap env rho KDone ef1 ea1 ef2 ea2)
-      HSteps).
+	  specialize
+	    (HFirst I (Step_PairPar_EvalEff1 heap env rho KDone ef1 ea1 ef2 ea2)
+	      HSteps).
   destruct HFirst as (phi_after_eff1 & HAfterEff1 & HTraceStart).
   destruct
     (StepsPhi_initial_with_kont_terminal_decompose
@@ -540,141 +574,6 @@ Proof.
               repeat rewrite app_nil_r.
               rewrite app_assoc.
               reflexivity.
-Qed.
-
-Theorem PairParSequentialPhaseTerminalDecompose :
-  forall heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
-    StepsPhi
-      (pairpar_sequential_start heap env rho ef1 ea1 ef2 ea2 KDone)
-      phi
-      (StDone heap_final v_final) ->
-    exists phi_mu1 phi_mu2 heap_mu1 heap_mu2 v_mu1 v_mu2,
-      StepsPhi
-        (initial_state heap env rho (Mu_App ef1 ea1))
-        phi_mu1
-        (StDone heap_mu1 v_mu1) /\
-      StepsPhi
-        (initial_state heap_mu1 env rho (Mu_App ef2 ea2))
-        phi_mu2
-        (StDone heap_mu2 v_mu2) /\
-      heap_final = heap_mu2 /\
-      v_final = Pair (v_mu1, v_mu2) /\
-      phi_as_list phi =
-        phi_as_list phi_mu1 ++ phi_as_list phi_mu2.
-Proof.
-  intros heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps.
-  unfold pairpar_sequential_start in HSteps.
-  destruct
-    (StepsPhi_initial_with_kont_terminal_decompose
-      heap env rho (Mu_App ef1 ea1)
-      (KPairParMu1 ef2 ea2 env rho KDone)
-      phi heap_final v_final HSteps)
-    as (heap_mu1 & v_mu1 & phi_mu1 & phi_after_mu1 &
-        HMu1 & HAfterMu1 & HTraceMu1).
-  destruct
-    (StepsPhi_nonterminal_terminal_inv_step
-      (StReturn heap_mu1 v_mu1
-        (KPairParMu1 ef2 ea2 env rho KDone))
-      phi_after_mu1 heap_final v_final)
-    as (label_mu1 & state_mu2 & phi_after_mu2 &
-        HStepMu1 & HAfterMu2 & HTraceStepMu1).
-  - intros HTerminal. inversion HTerminal.
-  - exact HAfterMu1.
-  - inversion HStepMu1; subst.
-    destruct
-      (StepsPhi_initial_with_kont_terminal_decompose
-        heap_mu1 env rho (Mu_App ef2 ea2)
-        (KPairParMu2 v_mu1 KDone)
-        phi_after_mu2 heap_final v_final HAfterMu2)
-      as (heap_mu2 & v_mu2 & phi_mu2 & phi_after_pair &
-          HMu2 & HAfterPair & HTraceMu2).
-    destruct
-      (StepsPhi_nonterminal_terminal_inv_step
-        (StReturn heap_mu2 v_mu2 (KPairParMu2 v_mu1 KDone))
-        phi_after_pair heap_final v_final)
-      as (label_pair & state_pair & phi_after_return &
-          HStepPair & HAfterReturn & HTracePair).
-    + intros HTerminal. inversion HTerminal.
-    + exact HAfterPair.
-    + inversion HStepPair; subst.
-      destruct
-        (StepsPhi_nonterminal_terminal_inv_step
-          (StReturn heap_mu2 (Pair (v_mu1, v_mu2)) KDone)
-          phi_after_return heap_final v_final)
-        as (label_done & state_done & phi_after_done &
-            HStepDone & HAfterDone & HTraceDone).
-      * intros HTerminal. inversion HTerminal.
-      * exact HAfterReturn.
-      * inversion HStepDone; subst.
-        destruct (StepsPhi_from_done_inv _ _ _ _ HAfterDone)
-          as (HPhiDone & HFinal).
-        inversion HFinal; subst.
-        exists phi_mu1, phi_mu2, heap_mu1, heap_mu2, v_mu1, v_mu2.
-        split; [exact HMu1 |].
-        split; [exact HMu2 |].
-        split; [reflexivity |].
-        split; [reflexivity |].
-        rewrite HTraceMu1, HTraceStepMu1, HTraceMu2,
-          HTracePair, HTraceDone.
-        simpl.
-        repeat rewrite app_nil_l.
-        repeat rewrite app_nil_r.
-        reflexivity.
-Qed.
-
-Theorem PairParSourceTerminalFullSequentialDecompose :
-  forall heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
-    StepsPhi
-      (initial_state heap env rho (Pair_Par ef1 ea1 ef2 ea2))
-      phi
-      (StDone heap_final v_final) ->
-    exists phi_eff1 phi_eff2 phi_mu1 phi_mu2
-      heap_eff1 theta1 heap_eff2 theta2
-      heap_mu1 heap_mu2 v_mu1 v_mu2,
-      PairParSequentialEffectSummaryStepsPhi
-        heap env rho ef1 ea1 ef2 ea2
-        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
-      PairParCheckPass theta1 theta2 /\
-      StepsPhi
-        (initial_state heap_eff2 env rho (Mu_App ef1 ea1))
-        phi_mu1
-        (StDone heap_mu1 v_mu1) /\
-      StepsPhi
-        (initial_state heap_mu1 env rho (Mu_App ef2 ea2))
-        phi_mu2
-        (StDone heap_mu2 v_mu2) /\
-      heap_final = heap_mu2 /\
-      v_final = Pair (v_mu1, v_mu2) /\
-      phi_as_list phi =
-        phi_as_list phi_eff1 ++
-        phi_as_list phi_eff2 ++
-        phi_as_list phi_mu1 ++
-        phi_as_list phi_mu2.
-Proof.
-  intros heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps.
-  destruct
-    (PairParSourceTerminalSequentialDecompose
-      heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps)
-    as (phi_eff1 & phi_eff2 & phi_seq &
-        heap_eff1 & theta1 & heap_eff2 & theta2 &
-        HSummary & HPass & HSeq & HTraceSource).
-  destruct
-    (PairParSequentialPhaseTerminalDecompose
-      heap_eff2 env rho ef1 ea1 ef2 ea2 phi_seq heap_final v_final HSeq)
-    as (phi_mu1 & phi_mu2 & heap_mu1 & heap_mu2 & v_mu1 & v_mu2 &
-        HMu1 & HMu2 & HHeapFinal & HValFinal & HTraceSeq).
-  exists phi_eff1, phi_eff2, phi_mu1, phi_mu2,
-    heap_eff1, theta1, heap_eff2, theta2,
-    heap_mu1, heap_mu2, v_mu1, v_mu2.
-  split; [exact HSummary |].
-  split; [exact HPass |].
-  split; [exact HMu1 |].
-  split; [exact HMu2 |].
-  split; [exact HHeapFinal |].
-  split; [exact HValFinal |].
-  rewrite HTraceSource, HTraceSeq.
-  repeat rewrite app_assoc.
-  reflexivity.
 Qed.
 
 Lemma TcExp_mu_app_backtriangle :

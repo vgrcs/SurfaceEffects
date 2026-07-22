@@ -34,12 +34,21 @@ Lemma WTPairParStateRuntimeHeapShapeAt_state_step_preservation :
   forall state tout stty lbl state',
     WTPairParStateRuntimeHeapShapeAt (PPS_State state) tout stty ->
     WTStateRuntimeHeapShapeAt state' tout stty ->
-    PairParStep (PPS_State state) lbl (PPS_State state') ->
-    WTPairParStateRuntimeHeapShapeAt (PPS_State state') tout stty.
+    PairParStep (PPS_State state) lbl (pairpar_state_of_state state') ->
+    WTPairParStateRuntimeHeapShapeAt (pairpar_state_of_state state') tout stty.
 Proof.
   intros state tout stty lbl state' _ HState' HStep.
-  inversion HStep; subst.
-  constructor. exact HState'.
+  destruct state' as
+    [heap env rho e k | heap v k | heap v | left right k];
+    simpl in *.
+  - constructor; [exact I | exact HState'].
+  - constructor; [exact I | exact HState'].
+  - constructor; [exact I | exact HState'].
+  - inversion HState'; subst.
+    eapply WTPPRSA_Run with (tleft := tleft) (tright := tright); eauto.
+    intros heap v1 v2 HLeft HRight.
+    subst.
+    eapply WTStateRuntimeHeapShapeAt_done_pair_return; eauto.
 Qed.
 
 Lemma WTPairParStateRuntimeHeapShapeAt_done_step_preservation :
@@ -49,11 +58,11 @@ Lemma WTPairParStateRuntimeHeapShapeAt_done_step_preservation :
     WTPairParStateRuntimeHeapShapeAt
       (PPS_State (StReturn heap (Pair (v1, v2)) k)) tout stty.
 Proof.
-  intros heap v1 v2 k tout stty HWT.
-  inversion HWT; subst.
-  constructor.
-  match goal with
-  | H : PairParDoneContinuationReadyAt
+	  intros heap v1 v2 k tout stty HWT.
+	  inversion HWT; subst.
+	  constructor; [exact I |].
+	  match goal with
+	  | H : PairParDoneContinuationReadyAt
         (StDone heap v1) (StDone heap v2) k tout stty |- _ =>
       eapply H; reflexivity
   end.
@@ -110,10 +119,10 @@ Lemma WTPairParStateRuntimeHeapShapeAtStrong_done_step_preservation :
     WTPairParStateRuntimeHeapShapeAtStrong
       (PPS_State (StReturn heap (Pair (v1, v2)) k)) tout stty.
 Proof.
-  intros heap v1 v2 k tout stty HWT.
-  inversion HWT; subst.
-  constructor.
-  eapply WTStateRuntimeHeapShapeAt_done_pair_return; eauto.
+	  intros heap v1 v2 k tout stty HWT.
+	  inversion HWT; subst.
+	  constructor; [exact I |].
+	  eapply WTStateRuntimeHeapShapeAt_done_pair_return; eauto.
 Qed.
 
 Lemma WTPairParStateRuntimeHeapShapeAtStrong_left_step_preservation :
@@ -174,16 +183,24 @@ Theorem WTPairParStateRuntimeHeapShapeAtStrong_step_preservation_with_active :
 Proof.
   intros HActive state tout stty lbl state' HWT HStep.
   inversion HStep; subst.
-  - inversion HWT; subst.
-    match goal with
-    | HState : WTStateRuntimeHeapShapeAt ?state ?tout ?stty,
-      HStepState : Step ?state ?lbl ?state' |- _ =>
-        destruct (HActive state tout stty lbl state' HState HStepState)
-          as (stty' & HState' & _ & _ & HExt)
-    end.
-    exists stty'. split.
-    + constructor. exact HState'.
-    + exact HExt.
+	  - inversion HWT; subst.
+	    match goal with
+	    | HState : WTStateRuntimeHeapShapeAt ?state ?tout ?stty,
+	      HStepState : Step ?state ?lbl ?state' |- _ =>
+	        destruct (HActive state tout stty lbl state' HState HStepState)
+	          as (stty' & HState' & _ & _ & HExt)
+	    end.
+	    exists stty'. split.
+	    + destruct state'0 as
+	        [heap env rho e k | heap v k | heap v | left right k];
+	        simpl in *.
+	      * constructor; [exact I | exact HState'].
+	      * constructor; [exact I | exact HState'].
+	      * constructor; [exact I | exact HState'].
+	      * inversion HState'; subst.
+	        eapply WTPPRSAS_Run with (tleft := tleft) (tright := tright);
+	          eauto.
+	    + exact HExt.
   - inversion HWT; subst.
     match goal with
     | HLeft : WTStateRuntimeHeapShapeAt left tleft stty,
@@ -272,17 +289,82 @@ Proof.
   exact WTStateRuntimeHeapShapeAt_step_preservation.
 Qed.
 
+Theorem WTPairParStateRuntimeHeapShapeAtStrong_unified_step_preservation :
+  forall state tout stty lbl state',
+    WTPairParStateRuntimeHeapShapeAtStrong
+      (pairpar_state_of_state state) tout stty ->
+    Step state lbl state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state state') tout stty' /\
+      StoreExtends stty stty'.
+Proof.
+  intros state tout stty lbl state' HWT HStep.
+  eapply WTPairParStateRuntimeHeapShapeAtStrong_step_preservation
+    with (state' := pairpar_state_of_state state'); eauto.
+  exact (pairpar_step_of_step state lbl state' HStep).
+Qed.
+
+Theorem WTPairParStateRuntimeHeapShapeAtStrong_unified_steps_preservation :
+  forall state tout stty trace state',
+    WTPairParStateRuntimeHeapShapeAtStrong
+      (pairpar_state_of_state state) tout stty ->
+    Steps state trace state' ->
+    exists stty',
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state state') tout stty' /\
+      StoreExtends stty stty'.
+Proof.
+  intros state tout stty trace state' HWT HSteps.
+  eapply WTPairParStateRuntimeHeapShapeAtStrong_steps_preservation
+    with (state' := pairpar_state_of_state state'); eauto.
+  exact (pairpar_steps_of_steps state trace state' HSteps).
+Qed.
+
+Theorem unified_step_preserves_pairpar_heap_agreement :
+  forall state lbl state',
+    PairParRunHeapsAgree (pairpar_state_of_state state) ->
+    Step state lbl state' ->
+    PairParRunHeapsAgree (pairpar_state_of_state state').
+Proof.
+  intros state lbl state' HAgree HStep.
+  eapply pairpar_step_preserves_heap_agreement
+    with (state' := pairpar_state_of_state state'); eauto.
+  exact (pairpar_step_of_step state lbl state' HStep).
+Qed.
+
+Theorem unified_steps_preserve_pairpar_heap_agreement :
+  forall state trace state',
+    PairParRunHeapsAgree (pairpar_state_of_state state) ->
+    Steps state trace state' ->
+    PairParRunHeapsAgree (pairpar_state_of_state state').
+Proof.
+  intros state trace state' HAgree HSteps.
+  eapply pairpar_steps_preserve_heap_agreement
+    with (state' := pairpar_state_of_state state'); eauto.
+  exact (pairpar_steps_of_steps state trace state' HSteps).
+Qed.
+
 Lemma WTPairParStateRuntimeHeapShape_state_step_preservation :
   forall state tout lbl state',
     WTPairParStateRuntimeHeapShape (PPS_State state) tout ->
-    PairParStep (PPS_State state) lbl (PPS_State state') ->
-    WTPairParStateRuntimeHeapShape (PPS_State state') tout.
+    PairParStep (PPS_State state) lbl (pairpar_state_of_state state') ->
+    WTPairParStateRuntimeHeapShape (pairpar_state_of_state state') tout.
 Proof.
   intros state tout lbl state' HWT HStep.
   inversion HWT; subst.
   inversion HStep; subst.
-  constructor.
-  eapply WTStateRuntimeHeapShape_step_preservation; eauto.
+	  pose proof
+	    (WTStateRuntimeHeapShape_step_preservation
+	      state tout lbl state'0 H1 H3 H5) as HState'.
+  destruct state'0 as
+    [heap env rho e k | heap v k | heap v | left right k];
+    simpl in *.
+  - constructor; [exact I | exact HState'].
+  - constructor; [exact I | exact HState'].
+  - constructor; [exact I | exact HState'].
+  - inversion HState'; subst.
+    eapply WTPPRS_Run with (tleft := tleft) (tright := tright); eauto.
 Qed.
 
 Lemma WTPairParStateRuntimeHeapShape_done_step_preservation :
@@ -292,10 +374,10 @@ Lemma WTPairParStateRuntimeHeapShape_done_step_preservation :
     WTPairParStateRuntimeHeapShape
       (PPS_State (StReturn heap (Pair (v1, v2)) k)) tout.
 Proof.
-  intros heap v1 v2 k tout HWT.
-  inversion HWT; subst.
-  constructor.
-  match goal with
+	  intros heap v1 v2 k tout HWT.
+	  inversion HWT; subst.
+	  constructor; [exact I |].
+	  match goal with
   | H : forall heap0 v3 v4,
         StDone heap v1 = StDone heap0 v3 ->
         StDone heap v2 = StDone heap0 v4 ->
@@ -305,9 +387,10 @@ Proof.
 Qed.
 
 Lemma WTPairParStateRuntimeHeapShape_left_step_preservation :
-  forall left right k tout lbl left',
-    WTPairParStateRuntimeHeapShape (PPS_Run left right k) tout ->
-    Step left lbl left' ->
+	  forall left right k tout lbl left',
+	    WTPairParStateRuntimeHeapShape (PPS_Run left right k) tout ->
+	    NonPairParRunState left ->
+	    Step left lbl left' ->
     (forall tright,
         WTStateRuntimeHeapShape right tright ->
         IdleBranchRetyped (state_heap left') right tright) ->
@@ -316,7 +399,7 @@ Lemma WTPairParStateRuntimeHeapShape_left_step_preservation :
     WTPairParStateRuntimeHeapShape
       (PPS_Run left' (with_state_heap (state_heap left') right) k) tout.
 Proof.
-  intros left right k tout lbl left' HWT HStep HRetype HDone.
+  intros left right k tout lbl left' HWT HNonRun HStep HRetype HDone.
   inversion HWT; subst.
   eapply WTPPRS_Run with (tleft := tleft) (tright := tright).
   - eapply WTStateRuntimeHeapShape_step_preservation; eauto.
@@ -325,9 +408,10 @@ Proof.
 Qed.
 
 Lemma WTPairParStateRuntimeHeapShape_right_step_preservation :
-  forall left right k tout lbl right',
-    WTPairParStateRuntimeHeapShape (PPS_Run left right k) tout ->
-    Step right lbl right' ->
+	  forall left right k tout lbl right',
+	    WTPairParStateRuntimeHeapShape (PPS_Run left right k) tout ->
+	    NonPairParRunState right ->
+	    Step right lbl right' ->
     (forall tleft,
         WTStateRuntimeHeapShape left tleft ->
         IdleBranchRetyped (state_heap right') left tleft) ->
@@ -336,7 +420,7 @@ Lemma WTPairParStateRuntimeHeapShape_right_step_preservation :
     WTPairParStateRuntimeHeapShape
       (PPS_Run (with_state_heap (state_heap right') left) right' k) tout.
 Proof.
-  intros left right k tout lbl right' HWT HStep HRetype HDone.
+  intros left right k tout lbl right' HWT HNonRun HStep HRetype HDone.
   inversion HWT; subst.
   eapply WTPPRS_Run with (tleft := tleft) (tright := tright).
   - eapply HRetype; eauto.

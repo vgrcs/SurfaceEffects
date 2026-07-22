@@ -299,13 +299,21 @@ Proof.
     HState HStep.
   inversion HState; subst.
   inversion HStep; subst.
-  match goal with
-  | HKont : WTKontRuntime _ _ _ (KPairParEff2 _ _ _ _ _ _ _ _) |- _ =>
-      inversion HKont; subst
-  end.
-  eapply WTStateRuntimeHeapShapeAt_pack_same_store_step.
-  eapply WTSRHSA_Eval; eauto.
-  eapply WTKR_PairParMu1; eauto.
+	  match goal with
+	  | HKont : WTKontRuntime _ _ _ (KPairParEff2 _ _ _ _ _ _ _ _) |- _ =>
+	      inversion HKont; subst
+	  end.
+	  eapply WTStateRuntimeHeapShapeAt_pack_same_store_step.
+	  eapply WTSRHSA_PairParRun
+	    with (tleft := subst_rho rho ty1) (tright := subst_rho rho ty2).
+	  - unfold initial_state.
+	    eapply WTSRHSA_Eval with (t := ty1) (eff := eff1); eauto.
+	    constructor.
+	  - unfold initial_state.
+	    eapply WTSRHSA_Eval with (t := ty2) (eff := eff2); eauto.
+	    constructor.
+	  - rewrite subst_rho_pair in H23.
+	    exact H23.
 Qed.
 
 Lemma WTStateRuntimeHeapShapeAt_pairpar_eval_mu2_step_preservation :
