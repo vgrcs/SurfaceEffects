@@ -1,4 +1,5 @@
 From Stdlib Require Import List.
+From Stdlib Require Import Sets.Ensembles.
 
 (* Staged Pair_Par dynamic-check dispatch and checked/blocked safety facts. *)
 
@@ -20,6 +21,7 @@ Require Import theories.Core.Regions.
 Require Import theories.Core.Expressions.
 Require Import theories.Core.Values.
 Require Import theories.Core.ComputedActions.
+Require Import theories.Core.DynamicActions.
 Require Import theories.Core.StaticActions.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
@@ -31,6 +33,62 @@ Definition PairParCheckPass (theta1 theta2 : Theta) : Prop :=
 
 Definition PairParCheckFail (theta1 theta2 : Theta) : Prop :=
   ~ PairParCheckPass theta1 theta2.
+
+Definition ComputedWriteDisjointRead
+    (ca : ComputedAction) (r : RgnVal) (l : nat) : Prop :=
+  match ca with
+  | CA_WriteConc r' l' => (r', l') <> (r, l)
+  | CA_WriteAbs r' => r' <> r
+  | _ => True
+  end.
+
+Definition ThetaWritesDisjointDynamicRead
+    (theta : Theta) (r : RgnVal) (l : nat) : Prop :=
+  match theta with
+  | Some acts =>
+      forall ca,
+        set_elem acts ca ->
+        ComputedWriteDisjointRead ca r l
+  | None => False
+  end.
+
+Definition ThetaWritesDisjointPhiReads
+    (theta : Theta) (phi : Phi) : Prop :=
+  forall r l v,
+    DA_in_Phi (DA_Read r l v) phi ->
+    ThetaWritesDisjointDynamicRead theta r l.
+
+Definition ComputedWriteDisjointStaticRead
+    (ca : ComputedAction) (r : RgnVal) : Prop :=
+  match ca with
+  | CA_WriteConc r' _ => r' <> r
+  | CA_WriteAbs r' => r' <> r
+  | _ => True
+  end.
+
+Definition ThetaWritesDisjointStaticReads
+    (theta : Theta) (eps : Epsilon) : Prop :=
+  match theta with
+  | Some acts =>
+      forall ca r,
+        set_elem acts ca ->
+        Ensembles.In StaticAction eps (SA_Read (Rgn_Const true true r)) ->
+        ComputedWriteDisjointStaticRead ca r
+  | None => False
+  end.
+
+Definition PhiWritesDisjointPhiReads
+    (phi_write phi_read : Phi) : Prop :=
+  forall r_write l_write v_write r_read l_read v_read,
+    DA_in_Phi (DA_Write r_write l_write v_write) phi_write ->
+    DA_in_Phi (DA_Read r_read l_read v_read) phi_read ->
+    (r_write, l_write) <> (r_read, l_read).
+
+Definition PairParObservedCheckPass
+    (theta1 theta2 : Theta) (phi_eff1 phi_eff2 : Phi) : Prop :=
+  PairParCheckPass theta1 theta2 /\
+  ThetaWritesDisjointPhiReads theta1 phi_eff2 /\
+  ThetaWritesDisjointPhiReads theta2 phi_eff1.
 
 Definition pairpar_check_state
     (heap : Heap) (env : Env) (rho : Rho)
@@ -60,6 +118,21 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k [HDisj HNoConf].
   unfold pairpar_check_state, pairpar_checked_run_start.
   eapply Step_PairPar_EvalMu1; eauto.
+Qed.
+
+Theorem pairpar_observed_check_passes_to_checked_run_start :
+  forall heap env rho ef1 ea1 ef2 ea2 theta1 theta2
+    phi_eff1 phi_eff2 k,
+    PairParObservedCheckPass theta1 theta2 phi_eff1 phi_eff2 ->
+    Step
+      (pairpar_check_state heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
+      Silent
+      (pairpar_checked_run_start heap env rho ef1 ea1 ef2 ea2 k).
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 theta1 theta2
+    phi_eff1 phi_eff2 k HObserved.
+  destruct HObserved as [HPass _].
+  eapply pairpar_check_passes_to_checked_run_start; eauto.
 Qed.
 
 Theorem pairpar_check_fail_no_step :

@@ -1,5 +1,5 @@
 Require Import theories.Core.Regions.
-Require Import Ascii.
+From Stdlib Require Import Ascii.
 
 Definition VarId := ascii.
 

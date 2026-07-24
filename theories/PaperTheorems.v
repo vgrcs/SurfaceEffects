@@ -1,4 +1,7 @@
-(* Single public facade for the theorem map used by the paper. *)
+(* Single public facade for the ordinary theorem map used by the paper.
 
-Require Export theories.Runtime.SmallStepPaperTheorems.
-Require Export theories.Soundness.SmallStepPaperSoundness.
+   This facade intentionally exports the ordinary NewSmallStep language.
+   The public syntax is [NExpr] and the public typing judgment is [NTcExp].
+*)
+
+Require Export theories.NewSmallStep.PaperTheorems.

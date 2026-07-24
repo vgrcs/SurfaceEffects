@@ -1,11 +1,11 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Sets.Ensembles.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import Sets.Ensembles.
 Require Import theories.Core.Regions.
 Require Import theories.Core.Values.
 Require Import theories.Core.ComputedActions.
-Require Import Coq.Setoids.Setoid.
-Require Import Coq.Program.Equality.
-Require Import  Coq.Classes.RelationClasses.
+From Stdlib Require Import Setoids.Setoid.
+From Stdlib Require Import Program.Equality.
+From Stdlib Require Import Classes.RelationClasses.
 
 (* Dynamic Actions; for operational semantics *)
 Inductive DynamicAction : Type :=

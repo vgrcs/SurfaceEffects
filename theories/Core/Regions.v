@@ -1,5 +1,5 @@
 From stdpp Require Import gmap.
-Require Import Ascii.
+From Stdlib Require Import Ascii.
 
 Definition RgnVal :=  nat.
 Definition RgnName := ascii.

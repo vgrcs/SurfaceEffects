@@ -1,12 +1,12 @@
 From stdpp Require Import strings.
-Require Import Coq.Program.Equality.
-Require Import Coq.Sets.Ensembles.
-Require Import Ascii.
+From Stdlib Require Import Program.Equality.
+From Stdlib Require Import Sets.Ensembles.
+From Stdlib Require Import Ascii.
 Require Import theories.Core.StaticActions.
 Require Import theories.Core.ComputedActions.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Core.Regions.
-Require Import Coq.Arith.PeanoNat.
+From Stdlib Require Import Arith.PeanoNat.
 
 
 Definition free_in_type_closed := forall tau x, frv tau = empty_set -> x # tau.

@@ -3,8 +3,8 @@ From stdpp Require Import fin_maps.
 From stdpp Require Import list.
 From stdpp Require Import base.
 From stdpp Require Import strings.
-Require Import Coq.Program.Equality.
-Require Import Coq.Sets.Ensembles.
+From Stdlib Require Import Program.Equality.
+From Stdlib Require Import Sets.Ensembles.
 Require Import theories.Core.Regions.
 Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
@@ -12,8 +12,8 @@ Require Import theories.Core.ComputedActions.
 Require Import theories.Core.StaticActions.
 Require Import theories.Meta.MapFacts.
 Require Export theories.Meta.RegionSubstitutionFacts.
-Require Import Coq.FSets.FMapFacts.
-Require Import Ascii.
+From Stdlib Require Import FSets.FMapFacts.
+From Stdlib Require Import Ascii.
 
 Import Ensembles.
 

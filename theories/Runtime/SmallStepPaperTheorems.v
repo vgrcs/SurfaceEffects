@@ -3,6 +3,7 @@ From Stdlib Require Import Program.Equality.
 
 Require Import theories.Runtime.Heap.
 Require Import theories.Runtime.HeapTyping.
+Require Import theories.Runtime.TraceSemantics.
 Require Import theories.Runtime.SmallStep.
 Require Import theories.Runtime.SmallStepFacts.
 Require Import theories.Runtime.SmallStepParallel.
@@ -32,6 +33,7 @@ Require Import theories.Typing.TypeSyntax.
 Require Import theories.Typing.TypingJudgments.
 Require Import theories.Meta.StoreFacts.
 Require Import theories.Meta.EffectFacts.
+Require Import theories.Meta.TraceFacts.
 Require Import theories.Meta.TraceTypingFacts.
 Require Import theories.Determinism.SmallStepPairParScheduleDeterminism.
 
@@ -187,6 +189,91 @@ Proof.
   exact WTPairParStateRuntimeHeapShapeAtStrong_unified_trace_safe_typed.
 Qed.
 
+Lemma PairParNotStuck_as_NotStuck :
+  forall state,
+    PairParRunHeapsAgree (pairpar_state_of_state state) ->
+    PairParNotStuck (pairpar_state_of_state state) ->
+    NotStuck state.
+Proof.
+  intros state HAgree HNotStuck.
+  destruct HNotStuck as [HTerminal | [HCanStep | HCheck]].
+  - destruct state as
+      [heap env rho e k | heap v k | heap v | left right k];
+      inversion HTerminal; subst.
+    left. constructor.
+  - right. left.
+    destruct HCanStep as (label & state' & HStep).
+    exists label, (pairpar_state_as_state state').
+    rewrite <- (pairpar_state_as_state_of_state state).
+    eapply pairpar_step_as_step; eauto.
+  - right. right.
+    destruct state as
+      [heap env rho e k | heap v k | heap v | left right k];
+      simpl in *; exact HCheck.
+Qed.
+
+Theorem PaperUnifiedSmallStepFinitePrefixSafety :
+  PairParCheckDecidable ->
+  forall heap env rho e stty ctxt rgns t eff trace state',
+    TcHeap (heap, stty) ->
+    RuntimeHeapShape heap stty ->
+    TcRho (rho, rgns) ->
+    TcInc (ctxt, rgns) ->
+    TcEnv (stty, rho, env, ctxt) ->
+    RuntimeEnvShape stty rho env ctxt ->
+    TcExp (ctxt, rgns, e, t, eff) ->
+    Steps (initial_state heap env rho e) trace state' ->
+    exists stty',
+      WTStateRuntimeHeapShapeAt state' (subst_rho rho t) stty' /\
+      StoreExtends stty stty' /\
+      NotStuck state' /\
+      PairParRunHeapsAgree (pairpar_state_of_state state') /\
+      TcPhi stty' (trace_as_phi trace).
+Proof.
+  intros HDec heap env rho e stty ctxt rgns t eff trace state'
+    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcExp HSteps.
+  assert
+    (HWT :
+      WTStateRuntimeHeapShapeAt
+        (initial_state heap env rho e) (subst_rho rho t) stty).
+  {
+    eapply WTStateRuntimeHeapShapeAt_initial; eauto.
+  }
+  assert
+    (HWTStrong :
+      WTPairParStateRuntimeHeapShapeAtStrong
+        (pairpar_state_of_state (initial_state heap env rho e))
+        (subst_rho rho t) stty).
+  {
+    simpl. constructor; [exact I | exact HWT].
+  }
+  assert
+    (HAgree :
+      PairParRunHeapsAgree
+        (pairpar_state_of_state (initial_state heap env rho e))).
+  {
+    simpl. exact I.
+  }
+  destruct
+    (WTPairParStateRuntimeHeapShapeAtStrong_unified_trace_safe_typed
+      HDec
+      (initial_state heap env rho e) (subst_rho rho t) stty
+      HWTStrong HAgree
+      trace state' HSteps)
+    as (stty' & HWTStrong' & HExt & HAgree' & HPairNotStuck & HTcPhi).
+  exists stty'.
+  split.
+  - pose proof
+      (WTPairParStateRuntimeHeapShapeAtStrong_as_state
+        (pairpar_state_of_state state') (subst_rho rho t) stty'
+        HWTStrong') as HWTState'.
+    now rewrite pairpar_state_as_state_of_state in HWTState'.
+  - split; [exact HExt |].
+    split.
+    + eapply PairParNotStuck_as_NotStuck; eauto.
+    + split; [exact HAgree' | exact HTcPhi].
+Qed.
+
 Theorem PaperUnifiedPairParTerminalSoundnessFromSafety :
   forall state tout stty trace heap' v,
     UnifiedPairParTraceSafeAt state tout stty ->
@@ -266,7 +353,7 @@ Theorem PaperPairParSummaryPassSmallStepSoundPrefix :
     TcEnv (stty, rho, env, ctxt) ->
     RuntimeEnvShape stty rho env ctxt ->
     TcExp (ctxt, rgns, Eff_App ef1 ea1, Ty_Effect, static_eff1) ->
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
@@ -282,7 +369,7 @@ Theorem PaperPairParSummaryPassSmallStepSoundPrefix :
       phi_as_list phi_source =
         phi_as_list phi_eff1 ++ phi_as_list phi_eff2.
 Proof.
-  exact PairParSequentialEffectSummaryStepsPhi_source_pass_small_step_sound_prefix.
+  exact PairParSourceOrderedEffectSummaryStepsPhi_source_pass_small_step_sound_prefix.
 Qed.
 
 Theorem PaperPairParSummaryFailSmallStepSoundPrefix :
@@ -295,7 +382,7 @@ Theorem PaperPairParSummaryFailSmallStepSoundPrefix :
     TcEnv (stty, rho, env, ctxt) ->
     RuntimeEnvShape stty rho env ctxt ->
     TcExp (ctxt, rgns, Eff_App ef1 ea1, Ty_Effect, static_eff1) ->
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
@@ -310,59 +397,7 @@ Theorem PaperPairParSummaryFailSmallStepSoundPrefix :
         (pairpar_check_state heap_eff2 env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
         label state'.
 Proof.
-  exact PairParSequentialEffectSummaryStepsPhi_source_fail_small_step_sound_prefix.
-Qed.
-
-Theorem PaperPairParCheckedStructuredTopSound :
-  forall heap env rho ef1 ea1 ef2 ea2
-    phi phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
-    heap_eff1 theta1 heap_eff2 theta2 heap' v,
-    phi =
-      pairpar_checked_structured_trace
-        phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2 ->
-    PairParEffectSummaryStepsPhi
-      heap env rho ef1 ea1 ef2 ea2
-      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
-    PairParCheckPass theta1 theta2 ->
-    PairParStepsPhi
-      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 KDone)
-      phi_mu_state
-      phi_mu1
-      phi_mu2
-      (PPS_State (StDone heap' v)) ->
-    phi_mu1 ⋞ theta1 ->
-    phi_mu2 ⋞ theta2 ->
-    phi ⋞ theta_with_phi_prefixes
-      phi_eff1 phi_eff2 (Union_Theta theta1 theta2).
-Proof.
-  exact PairParCheckedStructuredStepsPhi_top_sound.
-Qed.
-
-Theorem PaperPairParCheckedPackedTerminalSoundness :
-  forall heap env rho ef1 ea1 ef2 ea2 k stty ctxt rgns
-    ty1 ty2 eff1 eff2 tout phi heap' v theta1 theta2,
-    TcHeap (heap, stty) ->
-    RuntimeHeapShape heap stty ->
-    TcRho (rho, rgns) ->
-    TcInc (ctxt, rgns) ->
-    TcEnv (stty, rho, env, ctxt) ->
-    RuntimeEnvShape stty rho env ctxt ->
-    TcExp (ctxt, rgns, Mu_App ef1 ea1, ty1, eff1) ->
-    TcExp (ctxt, rgns, Mu_App ef2 ea2, ty2, eff2) ->
-    WTKontRuntime stty (subst_rho rho (Ty_Pair ty1 ty2)) tout k ->
-    PairParCheckedPackedStepsPhi theta1 theta2
-      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
-      phi
-      (PPS_State (StDone heap' v)) ->
-    exists stty',
-      StoreExtends stty stty' /\
-      TcHeap (heap', stty') /\
-      RuntimeHeapShape heap' stty' /\
-      TcVal (stty', v, tout) /\
-      RuntimeValShape stty' tout v /\
-      TcPhi stty' phi.
-Proof.
-  exact PairParCheckedPackedStepsPhi_terminal_value_with_trace.
+  exact PairParSourceOrderedEffectSummaryStepsPhi_source_fail_small_step_sound_prefix.
 Qed.
 
 Theorem PaperScheduledSmallStepTerminalValueSoundness :
@@ -379,63 +414,212 @@ Proof.
   exact WTStateRuntimeHeapShapeAt_scheduled_terminal_value.
 Qed.
 
-Lemma TcExp_mu_app_summary_readonly :
-  forall ctxt rgns rho ef ea ty static,
-    TcExp (ctxt, rgns, Mu_App ef ea, ty, static) ->
-    exists static_eff,
-      TcExp (ctxt, rgns, Eff_App ef ea, Ty_Effect, static_eff) /\
-      ReadOnlyStatic (fold_subst_eps rho static_eff).
+Theorem WTStateRuntimeHeapShapeAt_scheduled_as_steps_exists :
+  forall state tout stty phi state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    ScheduledStepsPhi state phi state' ->
+    exists trace,
+      Steps state trace state'.
 Proof.
-  intros ctxt rgns rho ef ea ty static HTcMu.
-  inversion HTcMu; subst.
-  match goal with
-  | HBackAll : forall rho0,
-      BackTriangle (ctxt, rgns, rho0, Mu_App ef ea, Eff_App ef ea) |- _ =>
-      pose proof (HBackAll rho) as HBack
-  end.
-  inversion HBack; subst; try solve [discriminate].
-  exists static_ee.
-  split.
-  - inversion H11; subst. exact H11.
-  - exact H12.
+  intros state tout stty phi state' HWT HScheduled.
+  revert tout stty HWT.
+  induction HScheduled as
+    [state0
+    | state0 label state1 phi0 state2 HNotPair HStep HScheduledTail IH
+    | heap env rho ef1 ea1 ef2 ea2 k
+        phi_eff1 phi_eff2 heap_eff1 heap_eff2 theta1 theta2
+        phi_mu state1 HSummary HPass HPacked];
+    intros tout stty HWT.
+  - exists nil. constructor.
+  - destruct
+      (WTStateRuntimeHeapShapeAt_step_preservation
+        state0 tout stty label state1 HWT HStep)
+      as (stty1 & HWT1 & _ & _ & _).
+    destruct (IH tout stty1 HWT1)
+      as (trace_tail & HStepsTail).
+    exists (label_trace label ++ trace_tail).
+    econstructor; eauto.
+  - inversion HWT; subst.
+    match goal with
+    | HTcExp : TcExp (_, _, Pair_Par _ _ _ _, _, _) |- _ =>
+        pose proof HTcExp as HTcPair;
+        inversion HTcExp; subst
+    end.
+    destruct
+      (PairParEffectSummaryStepsPhi_readonly_from_pairpar_typed
+        heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+        (Ty_Pair ty1 ty2)
+        (Union_Static_Action
+          (Union_Static_Action (Union_Static_Action eff3 eff4) eff2) eff1)
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2)
+      as (HReadOnlyEff1 & HReadOnlyEff2);
+      eauto.
+    assert (HHeapEff1 : heap_eff1 = heap).
+    {
+      eapply PairParEffectSummaryStepsPhi_first_readonly_heap_neutral;
+        eauto.
+    }
+    assert (HHeapEff2 : heap_eff2 = heap).
+    {
+      inversion HSummary; subst.
+      eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
+    }
+    assert
+      (HSummarySeq :
+        PairParSourceOrderedEffectSummaryStepsPhi
+          heap env rho ef1 ea1 ef2 ea2
+          phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2).
+    {
+      eapply PairParEffectSummaryStepsPhi_source_ordered_when_first_heap_unchanged;
+        eauto.
+    }
+    destruct
+      (PairParSourceOrderedEffectSummaryStepsPhi_source_pass_prefix
+        heap env rho ef1 ea1 ef2 ea2 k
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2)
+      as (phi_source & HSourcePhi & _).
+    + exact HSummarySeq.
+    + destruct HPass as [HPassCore _].
+      exact HPassCore.
+    + pose proof (StepsPhi_as_steps _ _ _ HSourcePhi) as HSourceSteps.
+      subst heap_eff2.
+      destruct
+        (PairParPackedStepsPhi_as_steps_exists
+          (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+          phi_mu
+          (PPS_State state1))
+        as (trace_mu & HMuSteps).
+      * apply pairpar_checked_initial_heaps_agree.
+      * eapply PairParCheckedPackedStepsPhi_forget; eauto.
+      * exists (phi_as_list phi_source ++ trace_mu).
+        eapply steps_trans; eauto.
 Qed.
 
-Lemma PairParEffectSummaryStepsPhi_readonly_from_pairpar_typed :
-  forall heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns ty static
-    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    TcHeap (heap, stty) ->
-    RuntimeHeapShape heap stty ->
-    TcRho (rho, rgns) ->
-    TcInc (ctxt, rgns) ->
-    TcEnv (stty, rho, env, ctxt) ->
-    RuntimeEnvShape stty rho env ctxt ->
-    TcExp (ctxt, rgns, Pair_Par ef1 ea1 ef2 ea2, ty, static) ->
-    PairParEffectSummaryStepsPhi
-      heap env rho ef1 ea1 ef2 ea2
-      phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
-    ReadOnlyPhi phi_eff1 /\ ReadOnlyPhi phi_eff2.
+Theorem PaperScheduledSmallStepOrdinaryStepsWitness :
+  forall state tout stty phi state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    ScheduledStepsPhi state phi state' ->
+    exists trace,
+      Steps state trace state'.
 Proof.
-  intros heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns ty static
-    phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
-    HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape HTcPair HSummary.
-  inversion HTcPair; subst.
-  match goal with
-  | HMu1 : TcExp (ctxt, rgns, Mu_App ef1 ea1, _, _),
-    HMu2 : TcExp (ctxt, rgns, Mu_App ef2 ea2, _, _) |- _ =>
-      destruct (TcExp_mu_app_summary_readonly
-        ctxt rgns rho ef1 ea1 _ _ HMu1)
-        as (static_eff1 & HTcEff1 & HReadOnly1);
-      destruct (TcExp_mu_app_summary_readonly
-        ctxt rgns rho ef2 ea2 _ _ HMu2)
-        as (static_eff2 & HTcEff2 & HReadOnly2);
+  exact WTStateRuntimeHeapShapeAt_scheduled_as_steps_exists.
+Qed.
+
+Theorem WTStateRuntimeHeapShapeAt_scheduled_replays_heap :
+  forall state tout stty phi state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    ScheduledStepsPhi state phi state' ->
+    Phi_Heap_Steps
+      (phi, state_heap state)
+      (Phi_Nil, state_heap state').
+Proof.
+  intros state tout stty phi state' HWT HScheduled.
+  revert tout stty HWT.
+  induction HScheduled as
+    [state0
+    | state0 label state1 phi0 state2 HNotPair HStep HScheduledTail IH
+    | heap env rho ef1 ea1 ef2 ea2 k
+        phi_eff1 phi_eff2 heap_eff1 heap_eff2 theta1 theta2
+        phi_mu state1 HSummary HPass HChecked];
+    intros tout stty HWT.
+  - exists 0. constructor.
+  - destruct
+      (WTStateRuntimeHeapShapeAt_step_preservation
+        state0 tout stty label state1 HWT HStep)
+      as (stty1 & HWT1 & _ & _ & _).
+    eapply structured_phi_seq_steps.
+    + eapply step_label_phi_replays_heap; eauto.
+    + exact (IH tout stty1 HWT1).
+  - inversion HWT; subst.
+    match goal with
+    | HTcExp : TcExp (_, _, Pair_Par _ _ _ _, _, _) |- _ =>
+        inversion HTcExp; subst
+    end.
+    inversion HSummary as
+      [phi_eff1' phi_eff2' heap_eff1' heap_eff2'
+        theta1' theta2' HStepsEff1 HStepsEff2]; subst.
+    destruct
+      (PairParEffectSummaryStepsPhi_readonly_from_pairpar_typed
+        heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
+        (Ty_Pair ty1 ty2)
+        (Union_Static_Action
+          (Union_Static_Action (Union_Static_Action eff3 eff4) eff2) eff1)
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2)
+      as (HReadOnlyEff1 & HReadOnlyEff2);
+      eauto.
+    assert (HHeapEff1 : heap_eff1 = heap).
+    {
+      eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
+    }
+    assert (HHeapEff2 : heap_eff2 = heap).
+    {
+      eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
+    }
+    rewrite HHeapEff1 in HStepsEff1.
+    rewrite HHeapEff2 in HStepsEff2.
+    destruct
+      (PairParCheckedPackedStepsPhi_unpacked
+        theta1 theta2
+        (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+        phi_mu
+        (PPS_State state1)
+        HChecked)
+      as (phi_state & phi_left & phi_right &
+          HPairSteps & HMuTrace & _HSoundLeft & _HSoundRight).
+    subst phi_mu.
+    simpl.
+    eapply structured_phi_seq_steps.
+    + eapply structured_phi_par_steps.
+      * exact (StepsPhi_replays_heap _ _ _ HStepsEff1).
+      * exact (StepsPhi_replays_heap _ _ _ HStepsEff2).
+    + change (state_heap (StDone heap (Eff theta2))) with heap.
       exact
-        (PairParEffectSummaryStepsPhi_readonly_from_small_step_sound
-          heap env rho ef1 ea1 ef2 ea2 stty ctxt rgns
-          phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
-          static_eff1 static_eff2
-          HTcHeap HHeapShape HTcRho HTcInc HTcEnv HEnvShape
-          HTcEff1 HTcEff2 HSummary HReadOnly1 HReadOnly2)
-  end.
+        (PairParStepsPhi_checked_replays_heap
+          heap env rho ef1 ea1 ef2 ea2 k
+          phi_state phi_left phi_right (PPS_State state1)
+          HPairSteps).
+Qed.
+
+Theorem PaperScheduledSmallStepStructuredTraceReplay :
+  forall state tout stty phi state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    ScheduledStepsPhi state phi state' ->
+    Phi_Heap_Steps
+      (phi, state_heap state)
+      (Phi_Nil, state_heap state').
+Proof.
+  exact WTStateRuntimeHeapShapeAt_scheduled_replays_heap.
+Qed.
+
+Theorem WTStateRuntimeHeapShapeAt_scheduled_readonly_preserves_heap :
+  forall state tout stty phi state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    ScheduledStepsPhi state phi state' ->
+    ReadOnlyPhi phi ->
+    state_heap state = state_heap state'.
+Proof.
+  intros state tout stty phi state' HWT HSteps HReadOnly.
+  pose proof
+    (WTStateRuntimeHeapShapeAt_scheduled_replays_heap
+      state tout stty phi state' HWT HSteps)
+    as HReplay.
+  pose proof
+    (ReadOnlyPhi_Heap_Steps_preserves_heap
+      phi (state_heap state) Phi_Nil (state_heap state')
+      HReplay HReadOnly)
+    as HHeap.
+  unfold equiv, heap_equiv in HHeap.
+  exact HHeap.
+Qed.
+
+Theorem PaperScheduledSmallStepReadOnlyHeapNeutrality :
+  forall state tout stty phi state',
+    WTStateRuntimeHeapShapeAt state tout stty ->
+    ScheduledStepsPhi state phi state' ->
+    ReadOnlyPhi phi ->
+    state_heap state = state_heap state'.
+Proof.
+  exact WTStateRuntimeHeapShapeAt_scheduled_readonly_preserves_heap.
 Qed.
 
 Theorem WTStateRuntimeHeapShapeAt_scheduled_terminal_value_with_trace :
@@ -624,6 +808,70 @@ Theorem PaperScheduledExpressionTerminalDeterminism :
     heap1 = heap2 /\ v1 = v2.
 Proof.
   exact ScheduledInitialState_terminal_deterministic.
+Qed.
+
+Theorem PaperScheduledCheckedTerminalDeterminism :
+  forall state phi1 heap1 v1 phi2 heap2 v2,
+    ScheduledCheckedTerminal state phi1 heap1 v1 ->
+    ScheduledCheckedTerminal state phi2 heap2 v2 ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  exact ScheduledCheckedTerminal_deterministic.
+Qed.
+
+Theorem PaperScheduledCheckedTerminalReplay :
+  forall state phi heap v,
+    ScheduledCheckedTerminal state phi heap v ->
+    Steps state (phi_as_list phi) (StDone heap v).
+Proof.
+  exact ScheduledCheckedTerminal_as_steps.
+Qed.
+
+Theorem PaperScheduledCheckedExpressionTerminalDeterminism :
+  forall heap env rho e phi1 heap1 v1 phi2 heap2 v2,
+    ScheduledCheckedTerminal
+      (initial_state heap env rho e)
+      phi1
+      heap1
+      v1 ->
+    ScheduledCheckedTerminal
+      (initial_state heap env rho e)
+      phi2
+      heap2
+      v2 ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  intros heap env rho e phi1 heap1 v1 phi2 heap2 v2 HRun1 HRun2.
+  eapply PaperScheduledCheckedTerminalDeterminism; eauto.
+Qed.
+
+Theorem PaperPairParCheckedArbitraryScheduleTerminalDeterminism :
+  forall heap env rho ef1 ea1 ef2 ea2 k
+    phi_state1 phi_left1 phi_right1
+    phi_state2 phi_left2 phi_right2
+    heap1 heap2 v1 v2
+    theta_left1 theta_right1 theta_left2 theta_right2,
+    PairParCheckPass theta_left1 theta_right1 ->
+    PairParCheckPass theta_left2 theta_right2 ->
+    phi_left1 ⋞ theta_left1 ->
+    phi_right1 ⋞ theta_right1 ->
+    phi_left2 ⋞ theta_left2 ->
+    phi_right2 ⋞ theta_right2 ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi_state1
+      phi_left1
+      phi_right1
+      (PPS_State (StDone heap1 v1)) ->
+    PairParStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi_state2
+      phi_left2
+      phi_right2
+      (PPS_State (StDone heap2 v2)) ->
+    heap1 = heap2 /\ v1 = v2.
+Proof.
+  exact PairParCheckedArbitraryScheduleContinuationTerminalDeterminism.
 Qed.
 
 Theorem PaperSmallStepStructuredEffectTerminalDeterminism :

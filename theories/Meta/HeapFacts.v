@@ -1,5 +1,5 @@
 From stdpp Require Import gmap.
-Require Import Coq.Program.Equality.
+From Stdlib Require Import Program.Equality.
 Require Import theories.Runtime.Heap.
 Require Import theories.Runtime.HeapTyping.
 Require Import theories.Typing.TypeSyntax.

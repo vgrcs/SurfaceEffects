@@ -1,7 +1,7 @@
 From stdpp Require Import gmap.
 From stdpp Require Import fin_maps.
 From Stdlib Require Import List.
-Require Import Coq.Program.Equality.
+From Stdlib Require Import Program.Equality.
 
 Require Import theories.Core.DynamicActions.
 Require Import theories.Core.Values.
@@ -118,6 +118,55 @@ Lemma phi_as_list_trace_as_phi :
 Proof.
   induction trace as [| da trace IH]; simpl; auto.
   now rewrite IH.
+Qed.
+
+Lemma Phi_Updates_trace_as_phi_app_l :
+  forall trace1 trace2 k v,
+    Phi_Updates k v (trace_as_phi trace1) ->
+    Phi_Updates k v (trace_as_phi (trace1 ++ trace2)).
+Proof.
+  induction trace1 as [| da trace1 IH]; intros trace2 k v HUpdate.
+  - inversion HUpdate.
+  - simpl in *.
+    inversion HUpdate; subst.
+    + apply PU_Seq_L. assumption.
+    + apply PU_Seq_R. eapply IH; eauto.
+Qed.
+
+Lemma Phi_Updates_trace_as_phi_app_r :
+  forall trace1 trace2 k v,
+    Phi_Updates k v (trace_as_phi trace2) ->
+    Phi_Updates k v (trace_as_phi (trace1 ++ trace2)).
+Proof.
+  induction trace1 as [| da trace1 IH]; intros trace2 k v HUpdate.
+  - simpl. assumption.
+  - simpl. apply PU_Seq_R. eapply IH; eauto.
+Qed.
+
+Lemma Phi_Updates_trace_as_phi_phi_as_list :
+  forall phi k v,
+    Phi_Updates k v phi ->
+    Phi_Updates k v (trace_as_phi (phi_as_list phi)).
+Proof.
+  intros phi k v HUpdate.
+  induction HUpdate; simpl.
+  - apply PU_Seq_L. constructor.
+  - apply PU_Seq_L. constructor.
+  - eapply Phi_Updates_trace_as_phi_app_l. exact IHHUpdate.
+  - eapply Phi_Updates_trace_as_phi_app_r. exact IHHUpdate.
+  - eapply Phi_Updates_trace_as_phi_app_l. exact IHHUpdate.
+  - eapply Phi_Updates_trace_as_phi_app_r. exact IHHUpdate.
+Qed.
+
+Lemma TcPhi_of_trace_as_phi_phi_as_list :
+  forall stty phi,
+    TcPhi stty (trace_as_phi (phi_as_list phi)) ->
+    TcPhi stty phi.
+Proof.
+  unfold TcPhi.
+  intros stty phi HTcTrace k v HUpdate.
+  apply HTcTrace.
+  now apply Phi_Updates_trace_as_phi_phi_as_list.
 Qed.
 
 Lemma TcPhi_seq_inv_l :

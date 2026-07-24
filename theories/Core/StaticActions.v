@@ -1,4 +1,4 @@
-Require Import Coq.Sets.Ensembles.
+From Stdlib Require Import Sets.Ensembles.
 Require Import theories.Core.Regions.
 
 (* Static Actions; for type-and-effect system *)

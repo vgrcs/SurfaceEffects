@@ -1,7 +1,7 @@
 From stdpp Require Import gmap.
 From stdpp Require Import strings.
-Require Import Coq.Sets.Ensembles.
-Require Import Ascii.
+From Stdlib Require Import Sets.Ensembles.
+From Stdlib Require Import Ascii.
 Require Import theories.Core.Regions.
 Require Import theories.Core.ComputedActions.
 Require Import theories.Core.StaticActions.

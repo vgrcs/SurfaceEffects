@@ -4,10 +4,10 @@ From stdpp Require Import list.
 From stdpp Require Import base.
 From stdpp Require Import strings.
 
-Require Import Coq.Program.Equality.
-Require Import Coq.Sets.Ensembles.
-Require Import String.
-Require Import Ascii.
+From Stdlib Require Import Program.Equality.
+From Stdlib Require Import Sets.Ensembles.
+From Stdlib Require Import String.
+From Stdlib Require Import Ascii.
 
 Require Import theories.Core.StaticActions.
 Require Import theories.Core.ComputedActions.

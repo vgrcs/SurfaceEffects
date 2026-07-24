@@ -91,6 +91,27 @@ Proof.
     econstructor; eauto.
 Qed.
 
+Lemma Steps_as_StepsPhi_exists :
+  forall state trace state',
+    Steps state trace state' ->
+    exists phi,
+      StepsPhi state phi state' /\
+      phi_as_list phi = trace.
+Proof.
+  intros state trace state' HSteps.
+  induction HSteps as
+    [state
+    | state label state1 trace state2 HStep _ IH].
+  - exists Phi_Nil.
+    split; [constructor | reflexivity].
+  - destruct IH as (phi_tail & HStepsPhi & HTrace).
+    exists (Phi_Seq (label_phi label) phi_tail).
+    split.
+    + econstructor; eauto.
+    + simpl. rewrite phi_as_list_label_phi.
+      now rewrite HTrace.
+Qed.
+
 Lemma StepsPhi_terminal_inv_step :
   forall state label state' phi heap_done v_done,
     NonPairParRunState state ->
@@ -1127,6 +1148,373 @@ Proof.
   econstructor; eauto.
 Qed.
 
+Lemma PairParPackedStepsPhi_check :
+  forall theta_left theta_right state phi state',
+    PairParPackedStepsPhi state phi state' ->
+    (forall phi_state phi_left phi_right,
+      phi = pairpar_runtime_phi state phi_state phi_left phi_right ->
+      PairParStepsPhi state phi_state phi_left phi_right state' ->
+      phi_left ⋞ theta_left /\ phi_right ⋞ theta_right) ->
+    PairParCheckedPackedStepsPhi theta_left theta_right state phi state'.
+Proof.
+  intros theta_left theta_right state phi state' HSteps HSound.
+  inversion HSteps; subst.
+  destruct (HSound phi_state phi_left phi_right eq_refl H)
+    as (HSoundLeft & HSoundRight).
+  econstructor; eauto.
+Qed.
+
+Lemma PairParPackedStepsPhi_unpacked :
+  forall state phi state',
+    PairParPackedStepsPhi state phi state' ->
+    exists phi_state phi_left phi_right,
+      PairParStepsPhi state phi_state phi_left phi_right state' /\
+      phi = pairpar_runtime_phi state phi_state phi_left phi_right.
+Proof.
+  intros state phi state' HSteps.
+  inversion HSteps; subst.
+  exists phi_state, phi_left, phi_right.
+  split; [assumption | reflexivity].
+Qed.
+
+(* A flat proof view for checked Pair_Par runs.  Unlike [PairParStepsPhi],
+   this relation follows [PairParStep] directly and therefore does not impose
+   [NonPairParRunState] side conditions on branch states.  It is useful when a
+   branch itself contains a checked [Pair_Par]. *)
+Inductive PairParFlatStepsPhi : PairParState -> Phi -> PairParState -> Prop :=
+| PairParFlatStepsPhi_Refl :
+    forall state,
+      PairParFlatStepsPhi state Phi_Nil state
+| PairParFlatStepsPhi_Step :
+    forall state label state' phi state'',
+      PairParStep state label state' ->
+      PairParFlatStepsPhi state' phi state'' ->
+      PairParFlatStepsPhi state
+        (Phi_Seq (label_phi label) phi)
+        state''.
+
+(* A projection view for flat checked Pair_Par runs.  The second [Phi] is the
+   actual scheduler trace.  The last three [Phi] components collect ordinary
+   state, left-branch, and right-branch actions respectively.  Unlike
+   [PairParStepsPhi], branch steps are plain [Step]s, so nested checked pairs
+   inside a branch stay inside that branch projection. *)
+Inductive PairParLoosePackedStepsPhi :
+  PairParState -> Phi -> Phi -> Phi -> Phi -> PairParState -> Prop :=
+| PairParLoosePackedStepsPhi_Refl :
+    forall state,
+      PairParLoosePackedStepsPhi
+        state Phi_Nil Phi_Nil Phi_Nil Phi_Nil state
+| PairParLoosePackedStepsPhi_State :
+    forall state label state' phi_sched phi_state phi_left phi_right state'',
+      Step state label state' ->
+      PairParLoosePackedStepsPhi
+        (pairpar_state_of_state state')
+        phi_sched
+        phi_state
+        phi_left
+        phi_right
+        state'' ->
+      PairParLoosePackedStepsPhi
+        (PPS_State state)
+        (Phi_Seq (label_phi label) phi_sched)
+        (Phi_Seq (label_phi label) phi_state)
+        phi_left
+        phi_right
+        state''
+| PairParLoosePackedStepsPhi_Left :
+    forall left right k label left'
+      phi_sched phi_state phi_left phi_right state'',
+      Step left label left' ->
+      PairParLoosePackedStepsPhi
+        (PPS_Run left' (with_state_heap (state_heap left') right) k)
+        phi_sched
+        phi_state
+        phi_left
+        phi_right
+        state'' ->
+      PairParLoosePackedStepsPhi
+        (PPS_Run left right k)
+        (Phi_Seq (label_phi label) phi_sched)
+        phi_state
+        (Phi_Seq (label_phi label) phi_left)
+        phi_right
+        state''
+| PairParLoosePackedStepsPhi_Right :
+    forall left right k label right'
+      phi_sched phi_state phi_left phi_right state'',
+      Step right label right' ->
+      PairParLoosePackedStepsPhi
+        (PPS_Run (with_state_heap (state_heap right') left) right' k)
+        phi_sched
+        phi_state
+        phi_left
+        phi_right
+        state'' ->
+      PairParLoosePackedStepsPhi
+        (PPS_Run left right k)
+        (Phi_Seq (label_phi label) phi_sched)
+        phi_state
+        phi_left
+        (Phi_Seq (label_phi label) phi_right)
+        state''
+| PairParLoosePackedStepsPhi_Done :
+    forall heap v1 v2 k phi_sched phi_state phi_left phi_right state'',
+      PairParLoosePackedStepsPhi
+        (PPS_State (StReturn heap (Pair (v1, v2)) k))
+        phi_sched
+        phi_state
+        phi_left
+        phi_right
+        state'' ->
+      PairParLoosePackedStepsPhi
+        (PPS_Run (StDone heap v1) (StDone heap v2) k)
+        (Phi_Seq (label_phi Silent) phi_sched)
+        phi_state
+        phi_left
+        phi_right
+        state''.
+
+Lemma PairParFlatStepsPhi_to_loose_packed :
+  forall state phi state',
+    PairParFlatStepsPhi state phi state' ->
+    exists phi_state phi_left phi_right,
+      PairParLoosePackedStepsPhi
+        state phi phi_state phi_left phi_right state'.
+Proof.
+  intros state phi state' HSteps.
+  induction HSteps as
+    [state
+    | state label state' phi state'' HStep _ IH].
+  - exists Phi_Nil, Phi_Nil, Phi_Nil.
+    constructor.
+  - destruct IH as (phi_state & phi_left & phi_right & HLoose).
+    inversion HStep; subst.
+    + exists (Phi_Seq (label_phi label) phi_state), phi_left, phi_right.
+      eapply PairParLoosePackedStepsPhi_State; eauto.
+    + exists phi_state, (Phi_Seq (label_phi label) phi_left), phi_right.
+      eapply PairParLoosePackedStepsPhi_Left; eauto.
+    + exists phi_state, phi_left, (Phi_Seq (label_phi label) phi_right).
+      eapply PairParLoosePackedStepsPhi_Right; eauto.
+    + exists phi_state, phi_left, phi_right.
+      eapply PairParLoosePackedStepsPhi_Done; eauto.
+Qed.
+
+Lemma PairParStepsPhi_to_loose_packed_exists :
+  forall state phi_state phi_left phi_right state',
+    PairParStepsPhi state phi_state phi_left phi_right state' ->
+    exists phi_sched,
+      PairParLoosePackedStepsPhi
+        state phi_sched phi_state phi_left phi_right state'.
+Proof.
+  intros state phi_state phi_left phi_right state' HSteps.
+  induction HSteps as
+    [state
+    | state label state' phi_state phi_left phi_right state''
+        _ HNonPairState' HStep _ IH
+    | left right k label left' phi_state phi_left phi_right state''
+        _ _ HStep _ IH
+    | left right k label right' phi_state phi_left phi_right state''
+        _ _ HStep _ IH
+    | heap v1 v2 k phi_state phi_left phi_right state'' _ IH].
+  - exists Phi_Nil. constructor.
+  - destruct IH as (phi_sched & HLoose).
+    exists (Phi_Seq (label_phi label) phi_sched).
+    eapply PairParLoosePackedStepsPhi_State.
+    + exact HStep.
+    + rewrite pairpar_state_of_state_non_pair; eauto.
+  - destruct IH as (phi_sched & HLoose).
+    exists (Phi_Seq (label_phi label) phi_sched).
+    eapply PairParLoosePackedStepsPhi_Left; eauto.
+  - destruct IH as (phi_sched & HLoose).
+    exists (Phi_Seq (label_phi label) phi_sched).
+    eapply PairParLoosePackedStepsPhi_Right; eauto.
+  - destruct IH as (phi_sched & HLoose).
+    exists (Phi_Seq (label_phi Silent) phi_sched).
+    eapply PairParLoosePackedStepsPhi_Done; eauto.
+Qed.
+
+Lemma PairParLoosePackedStepsPhi_as_stepsphi :
+  forall state phi_sched phi_state phi_left phi_right state',
+    PairParRunHeapsAgree state ->
+    PairParLoosePackedStepsPhi
+      state phi_sched phi_state phi_left phi_right state' ->
+    StepsPhi
+      (pairpar_state_as_state state)
+      phi_sched
+      (pairpar_state_as_state state').
+Proof.
+  intros state phi_sched phi_state phi_left phi_right state'
+    HAgree HSteps.
+  induction HSteps as
+    [state
+    | state label state' phi_sched phi_state phi_left phi_right state''
+        HStep _ IH
+    | left right k label left' phi_sched phi_state phi_left phi_right state''
+        HStep _ IH
+    | left right k label right' phi_sched phi_state phi_left phi_right state''
+        HStep _ IH
+    | heap v1 v2 k phi_sched phi_state phi_left phi_right state'' _ IH].
+  - constructor.
+  - destruct state as
+      [heap0 env0 rho0 e0 k0
+      | heap0 v0 k0
+      | heap0 v0
+      | left0 right0 k0];
+      simpl in *; try solve [inversion HStep].
+    + assert
+        (HAgree' :
+          PairParRunHeapsAgree (pairpar_state_of_state state')).
+      {
+        eapply
+          (pairpar_step_preserves_heap_agreement
+            (PPS_State (StEval heap0 env0 rho0 e0 k0))).
+        - simpl. exact HAgree.
+        - change (PPS_State (StEval heap0 env0 rho0 e0 k0))
+            with (pairpar_state_of_state (StEval heap0 env0 rho0 e0 k0)).
+          apply pairpar_step_of_step. exact HStep.
+      }
+      simpl.
+      rewrite pairpar_state_as_state_of_state in IH.
+      eapply StepsPhi_Step; eauto.
+    + assert
+        (HAgree' :
+          PairParRunHeapsAgree (pairpar_state_of_state state')).
+      {
+        eapply
+          (pairpar_step_preserves_heap_agreement
+            (PPS_State (StReturn heap0 v0 k0))).
+        - simpl. exact HAgree.
+        - change (PPS_State (StReturn heap0 v0 k0))
+            with (pairpar_state_of_state (StReturn heap0 v0 k0)).
+          apply pairpar_step_of_step. exact HStep.
+      }
+      simpl.
+      rewrite pairpar_state_as_state_of_state in IH.
+      eapply StepsPhi_Step; eauto.
+    + assert
+        (HAgree' :
+          PairParRunHeapsAgree (pairpar_state_of_state state')).
+      {
+        eapply
+          (pairpar_step_preserves_heap_agreement
+            (PPS_Run left0 right0 k0)).
+        - simpl. exact HAgree.
+        - change (PPS_Run left0 right0 k0)
+            with (pairpar_state_of_state
+              (StPairParRun left0 right0 k0)).
+          apply pairpar_step_of_step. exact HStep.
+      }
+      simpl.
+      rewrite pairpar_state_as_state_of_state in IH.
+      eapply StepsPhi_Step; eauto.
+  - simpl in HAgree.
+    destruct HAgree as [HHeapAgree [HLeftAgree HRightAgree]].
+    assert
+      (HAgree' :
+        PairParRunHeapsAgree
+          (PPS_Run left' (with_state_heap (state_heap left') right) k)).
+    {
+      eapply (pairpar_step_preserves_heap_agreement (PPS_Run left right k)).
+      - simpl. split; [exact HHeapAgree | split; assumption].
+      - apply PPStep_Left. exact HStep.
+    }
+    simpl.
+    eapply StepsPhi_Step.
+    + apply Step_PairParRun_Left; eauto.
+    + exact (IH HAgree').
+  - simpl in HAgree.
+    destruct HAgree as [HHeapAgree [HLeftAgree HRightAgree]].
+    assert
+      (HAgree' :
+        PairParRunHeapsAgree
+          (PPS_Run
+            (with_state_heap (state_heap right') left) right' k)).
+    {
+      eapply (pairpar_step_preserves_heap_agreement (PPS_Run left right k)).
+      - simpl. split; [exact HHeapAgree | split; assumption].
+      - apply PPStep_Right. exact HStep.
+    }
+    simpl.
+    eapply StepsPhi_Step.
+    + apply Step_PairParRun_Right; eauto.
+    + exact (IH HAgree').
+  - simpl in HAgree.
+    assert
+      (HAgree' :
+        PairParRunHeapsAgree
+          (PPS_State (StReturn heap (Pair (v1, v2)) k))).
+    {
+      simpl. exact I.
+    }
+    simpl.
+    eapply StepsPhi_Step with (label := Silent).
+    + apply Step_PairParRun_Done.
+    + exact (IH HAgree').
+Qed.
+
+Lemma PairParFlatStepsPhi_as_pairpar_steps :
+  forall state phi state',
+    PairParFlatStepsPhi state phi state' ->
+    PairParSteps state (phi_as_list phi) state'.
+Proof.
+  intros state phi state' HSteps.
+  induction HSteps.
+  - constructor.
+  - simpl. rewrite phi_as_list_label_phi.
+    econstructor; eauto.
+Qed.
+
+Lemma PairParFlatStepsPhi_as_steps :
+  forall state phi state',
+    PairParRunHeapsAgree state ->
+    PairParFlatStepsPhi state phi state' ->
+    Steps
+      (pairpar_state_as_state state)
+      (phi_as_list phi)
+      (pairpar_state_as_state state').
+Proof.
+  intros state phi state' HAgree HSteps.
+  apply PairParFlatStepsPhi_as_pairpar_steps in HSteps.
+  eapply pairpar_steps_as_steps; eauto.
+Qed.
+
+Lemma PairParFlatStepsPhi_of_StepsPhi :
+  forall state phi state',
+    StepsPhi state phi state' ->
+    PairParFlatStepsPhi
+      (pairpar_state_of_state state)
+      phi
+      (pairpar_state_of_state state').
+Proof.
+  intros state phi state' HSteps.
+  induction HSteps.
+  - constructor.
+  - eapply PairParFlatStepsPhi_Step.
+    + apply pairpar_step_of_step. exact H.
+    + exact IHHSteps.
+Qed.
+
+Lemma PairParFlatStepsPhi_checked_run_of_StepsPhi :
+  forall heap env rho ef1 ea1 ef2 ea2 k phi state',
+    StepsPhi
+      (pairpar_checked_run_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi
+      state' ->
+    PairParFlatStepsPhi
+      (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+      phi
+      (pairpar_state_of_state state').
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k phi state' HSteps.
+  unfold pairpar_checked_run_start in HSteps.
+  change (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+    with
+      (pairpar_state_of_state
+        (pairpar_unified_checked_initial heap env rho ef1 ea1 ef2 ea2 k)).
+  eapply PairParFlatStepsPhi_of_StepsPhi.
+  exact HSteps.
+Qed.
+
 Lemma PairParStepsPhi_state_branches_nil :
   forall state phi_state phi_left phi_right state',
     PairParStepsPhi
@@ -1576,6 +1964,25 @@ Proof.
     econstructor; [apply PPStep_Done | exact HPairSteps].
 Qed.
 
+Lemma PairParPackedStepsPhi_as_steps_exists :
+  forall state phi state',
+    PairParRunHeapsAgree state ->
+    PairParPackedStepsPhi state phi state' ->
+    exists trace,
+      Steps
+        (pairpar_state_as_state state)
+        trace
+        (pairpar_state_as_state state').
+Proof.
+  intros state phi state' HAgree HPacked.
+  destruct (PairParPackedStepsPhi_unpacked state phi state' HPacked)
+    as (phi_state & phi_left & phi_right & HSteps & _).
+  destruct (PairParStepsPhi_as_pairpar_steps_exists _ _ _ _ _ HSteps)
+    as (trace & HPairSteps).
+  exists trace.
+  eapply pairpar_steps_as_steps; eauto.
+Qed.
+
 Lemma pairpar_steps_phi_preserve_heap_agreement :
   forall state phi_state phi_left phi_right state',
     PairParRunHeapsAgree state ->
@@ -1886,11 +2293,11 @@ Proof.
   split; assumption.
 Qed.
 
-Inductive PairParSequentialEffectSummaryStepsPhi
+Inductive PairParSourceOrderedEffectSummaryStepsPhi
     (heap : Heap) (env : Env) (rho : Rho)
     (ef1 ea1 ef2 ea2 : Expr) :
     Phi -> Phi -> Heap -> Theta -> Heap -> Theta -> Prop :=
-| PairParSequentialEffectSummaryStepsPhi_intro :
+| PairParSourceOrderedEffectSummaryStepsPhi_intro :
     forall phi_eff1 phi_eff2 heap_eff1 heap_eff2 theta1 theta2,
       StepsPhi
         (pairpar_effect_summary_state heap env rho ef1 ea1)
@@ -1900,18 +2307,18 @@ Inductive PairParSequentialEffectSummaryStepsPhi
         (pairpar_effect_summary_state heap_eff1 env rho ef2 ea2)
         phi_eff2
         (StDone heap_eff2 (Eff theta2)) ->
-      PairParSequentialEffectSummaryStepsPhi
+      PairParSourceOrderedEffectSummaryStepsPhi
         heap env rho ef1 ea1 ef2 ea2
         phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2.
 
-Theorem PairParEffectSummaryStepsPhi_sequential_when_first_heap_unchanged :
+Theorem PairParEffectSummaryStepsPhi_source_ordered_when_first_heap_unchanged :
   forall heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
     PairParEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     heap_eff1 = heap ->
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2.
 Proof.
@@ -1923,10 +2330,10 @@ Proof.
   constructor; assumption.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_independent_when_first_heap_unchanged :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_independent_when_first_heap_unchanged :
   forall heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     heap_eff1 = heap ->
@@ -2004,10 +2411,10 @@ Proof.
   eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_first_readonly_heap_neutral :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_first_readonly_heap_neutral :
   forall heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyPhi phi_eff1 ->
@@ -2020,10 +2427,10 @@ Proof.
   eapply pairpar_effect_summary_steps_phi_heap_neutral; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_readonly_heap_neutral :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_readonly_heap_neutral :
   forall heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyPhi phi_eff1 ->
@@ -2047,29 +2454,29 @@ Proof.
   - transitivity heap_eff1; assumption.
 Qed.
 
-Theorem PairParEffectSummaryStepsPhi_sequential_when_first_readonly :
+Theorem PairParEffectSummaryStepsPhi_source_ordered_when_first_readonly :
   forall heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
     PairParEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyPhi phi_eff1 ->
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2.
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
     HSummary HReadOnly.
-  eapply PairParEffectSummaryStepsPhi_sequential_when_first_heap_unchanged.
+  eapply PairParEffectSummaryStepsPhi_source_ordered_when_first_heap_unchanged.
   - exact HSummary.
   - eapply PairParEffectSummaryStepsPhi_first_readonly_heap_neutral; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_independent_when_first_readonly :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_independent_when_first_readonly :
   forall heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyPhi phi_eff1 ->
@@ -2080,9 +2487,9 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
     HSummary HReadOnly.
-  eapply PairParSequentialEffectSummaryStepsPhi_independent_when_first_heap_unchanged.
+  eapply PairParSourceOrderedEffectSummaryStepsPhi_independent_when_first_heap_unchanged.
   - exact HSummary.
-  - eapply PairParSequentialEffectSummaryStepsPhi_first_readonly_heap_neutral;
+  - eapply PairParSourceOrderedEffectSummaryStepsPhi_first_readonly_heap_neutral;
       eauto.
 Qed.
 
@@ -2104,10 +2511,10 @@ Proof.
   eapply StepsPhi_initial_terminal_continue; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_pass_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_pass_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     PairParCheckPass theta1 theta2 ->
@@ -2179,10 +2586,182 @@ Proof.
     exact HTraceEff.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_fail_prefix :
+Theorem PairParTerminalCheckedRunDecompose :
+  forall heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final,
+    StepsPhi
+      (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
+      phi
+      (StDone heap_final v_final) ->
+    exists phi_eff1 phi_eff2 phi_seq
+      heap_eff1 theta1 heap_eff2 theta2,
+      PairParSourceOrderedEffectSummaryStepsPhi
+        heap env rho ef1 ea1 ef2 ea2
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+      PairParCheckPass theta1 theta2 /\
+      StepsPhi
+        (pairpar_checked_run_start heap_eff2 env rho ef1 ea1 ef2 ea2 k)
+        phi_seq
+        (StDone heap_final v_final) /\
+      phi_as_list phi =
+        phi_as_list phi_eff1 ++
+        phi_as_list phi_eff2 ++
+        phi_as_list phi_seq.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final HSteps.
+  pose proof
+    (StepsPhi_terminal_inv_step
+      (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
+      Silent
+      (StEval heap env rho (Eff_App ef1 ea1)
+        (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
+      phi heap_final v_final)
+    as HFirst.
+  specialize
+    (HFirst I (Step_PairPar_EvalEff1 heap env rho k ef1 ea1 ef2 ea2)
+      HSteps).
+  destruct HFirst as (phi_after_eff1 & HAfterEff1 & HTraceStart).
+  destruct
+    (StepsPhi_initial_with_kont_terminal_decompose
+      heap env rho (Eff_App ef1 ea1)
+      (KPairParEff1 ef1 ea1 ef2 ea2 env rho k)
+      phi_after_eff1 heap_final v_final HAfterEff1)
+    as (heap_eff1 & v_eff1 & phi_eff1 & phi_after_k1 &
+        HEff1 & HAfterK1 & HTraceEff1).
+  destruct
+    (StepsPhi_nonterminal_terminal_inv_step
+      (StReturn heap_eff1 v_eff1
+        (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
+      phi_after_k1 heap_final v_final)
+    as (label_k1 & state_k1 & phi_after_eff2 &
+        HStepK1 & HAfterEff2 & HTraceK1).
+  - intros HTerminal. inversion HTerminal.
+  - exact HAfterK1.
+  - inversion HStepK1; subst.
+    destruct
+      (StepsPhi_initial_with_kont_terminal_decompose
+        heap_eff1 env rho (Eff_App ef2 ea2)
+        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
+        phi_after_eff2 heap_final v_final HAfterEff2)
+      as (heap_eff2 & v_eff2 & phi_eff2 & phi_after_check &
+          HEff2 & HAfterCheck & HTraceEff2).
+    destruct
+      (StepsPhi_nonterminal_terminal_inv_step
+        (StReturn heap_eff2 v_eff2
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
+        phi_after_check heap_final v_final)
+      as (label_check & state_check & phi_seq &
+          HStepCheck & HSeq & HTraceCheck).
+    + intros HTerminal. inversion HTerminal.
+    + exact HAfterCheck.
+    + inversion HStepCheck; subst.
+      exists phi_eff1, phi_eff2, phi_seq,
+        heap_eff1, theta1, heap_eff2, theta2.
+      split.
+      * constructor; eauto.
+      * split.
+        -- split; assumption.
+        -- split.
+           ++ exact HSeq.
+           ++ rewrite HTraceStart, HTraceEff1, HTraceK1,
+                HTraceEff2, HTraceCheck.
+              simpl.
+              repeat rewrite app_nil_l.
+              repeat rewrite app_nil_r.
+              rewrite app_assoc.
+              reflexivity.
+Qed.
+
+Theorem PairParTerminalCheckedFlatRunDecompose :
+  forall heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final,
+    StepsPhi
+      (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
+      phi
+      (StDone heap_final v_final) ->
+    exists phi_eff1 phi_eff2 phi_seq
+      heap_eff1 theta1 heap_eff2 theta2,
+      PairParSourceOrderedEffectSummaryStepsPhi
+        heap env rho ef1 ea1 ef2 ea2
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+      PairParCheckPass theta1 theta2 /\
+      PairParFlatStepsPhi
+        (pairpar_checked_start heap_eff2 env rho ef1 ea1 ef2 ea2 k)
+        phi_seq
+        (PPS_State (StDone heap_final v_final)) /\
+      phi_as_list phi =
+        phi_as_list phi_eff1 ++
+        phi_as_list phi_eff2 ++
+        phi_as_list phi_seq.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final HSteps.
+  destruct
+    (PairParTerminalCheckedRunDecompose
+      heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final HSteps)
+    as (phi_eff1 & phi_eff2 & phi_seq &
+        heap_eff1 & theta1 & heap_eff2 & theta2 &
+        HSummary & HPass & HCheckedRun & HTrace).
+  exists phi_eff1, phi_eff2, phi_seq.
+  exists heap_eff1, theta1, heap_eff2, theta2.
+  split; [exact HSummary |].
+  split; [exact HPass |].
+  split.
+  - change (PPS_State (StDone heap_final v_final)) with
+      (pairpar_state_of_state (StDone heap_final v_final)).
+    eapply PairParFlatStepsPhi_checked_run_of_StepsPhi.
+    exact HCheckedRun.
+  - exact HTrace.
+Qed.
+
+Theorem PairParTerminalCheckedLooseRunDecompose :
+  forall heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final,
+    StepsPhi
+      (StEval heap env rho (Pair_Par ef1 ea1 ef2 ea2) k)
+      phi
+      (StDone heap_final v_final) ->
+    exists phi_eff1 phi_eff2 phi_seq phi_mu_state phi_mu1 phi_mu2
+      heap_eff1 theta1 heap_eff2 theta2,
+      PairParSourceOrderedEffectSummaryStepsPhi
+        heap env rho ef1 ea1 ef2 ea2
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+      PairParCheckPass theta1 theta2 /\
+      PairParLoosePackedStepsPhi
+        (pairpar_checked_start heap_eff2 env rho ef1 ea1 ef2 ea2 k)
+        phi_seq
+        phi_mu_state
+        phi_mu1
+        phi_mu2
+        (PPS_State (StDone heap_final v_final)) /\
+      phi_as_list phi =
+        phi_as_list phi_eff1 ++
+        phi_as_list phi_eff2 ++
+        phi_as_list phi_seq.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final HSteps.
+  destruct
+    (PairParTerminalCheckedFlatRunDecompose
+      heap env rho ef1 ea1 ef2 ea2 k phi heap_final v_final HSteps)
+    as (phi_eff1 & phi_eff2 & phi_seq &
+        heap_eff1 & theta1 & heap_eff2 & theta2 &
+        HSummary & HPass & HFlat & HTrace).
+  destruct
+    (PairParFlatStepsPhi_to_loose_packed
+      (pairpar_checked_start heap_eff2 env rho ef1 ea1 ef2 ea2 k)
+      phi_seq
+      (PPS_State (StDone heap_final v_final))
+      HFlat)
+    as (phi_mu_state & phi_mu1 & phi_mu2 & HLoose).
+  exists phi_eff1, phi_eff2, phi_seq.
+  exists phi_mu_state, phi_mu1, phi_mu2.
+  exists heap_eff1, theta1, heap_eff2, theta2.
+  split; [exact HSummary |].
+  split; [exact HPass |].
+  split; [exact HLoose |].
+  exact HTrace.
+Qed.
+
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_fail_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     PairParCheckFail theta1 theta2 ->
@@ -2201,10 +2780,10 @@ Proof.
   - eapply pairpar_check_fail_no_step; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_pass_independent_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_pass_independent_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyPhi phi_eff1 ->
@@ -2224,22 +2803,22 @@ Proof.
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
     HSummary HReadOnly HPass.
   destruct
-    (PairParSequentialEffectSummaryStepsPhi_source_pass_prefix
+    (PairParSourceOrderedEffectSummaryStepsPhi_source_pass_prefix
       heap env rho ef1 ea1 ef2 ea2 k
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
       HSummary HPass)
     as (phi_source & HPrefix & HTrace).
   exists phi_source.
   split.
-  - eapply PairParSequentialEffectSummaryStepsPhi_independent_when_first_readonly;
+  - eapply PairParSourceOrderedEffectSummaryStepsPhi_independent_when_first_readonly;
       eauto.
   - split; assumption.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_fail_independent_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_fail_independent_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyPhi phi_eff1 ->
@@ -2258,21 +2837,21 @@ Proof.
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
     HSummary HReadOnly HFail.
   destruct
-    (PairParSequentialEffectSummaryStepsPhi_source_fail_prefix
+    (PairParSourceOrderedEffectSummaryStepsPhi_source_fail_prefix
       heap env rho ef1 ea1 ef2 ea2 k
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
       HSummary HFail)
     as (HBoundary & HNoStep).
   split.
-  - eapply PairParSequentialEffectSummaryStepsPhi_independent_when_first_readonly;
+  - eapply PairParSourceOrderedEffectSummaryStepsPhi_independent_when_first_readonly;
       eauto.
   - split; assumption.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_pass_static_sound_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_pass_static_sound_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
@@ -2293,15 +2872,15 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1
     HSummary HReadOnlyStatic HSound HPass.
-  eapply PairParSequentialEffectSummaryStepsPhi_source_pass_independent_prefix;
+  eapply PairParSourceOrderedEffectSummaryStepsPhi_source_pass_independent_prefix;
     eauto.
   eapply effect_summary_trace_readonly_from_static_soundness; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_fail_static_sound_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_fail_static_sound_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
@@ -2321,15 +2900,15 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1
     HSummary HReadOnlyStatic HSound HFail.
-  eapply PairParSequentialEffectSummaryStepsPhi_source_fail_independent_prefix;
+  eapply PairParSourceOrderedEffectSummaryStepsPhi_source_fail_independent_prefix;
     eauto.
   eapply effect_summary_trace_readonly_from_static_soundness; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_pass_static_included_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_pass_static_included_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
@@ -2351,15 +2930,15 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1
     HSummary HReadOnlyStatic HIncluded HPass.
-  eapply PairParSequentialEffectSummaryStepsPhi_source_pass_static_sound_prefix;
+  eapply PairParSourceOrderedEffectSummaryStepsPhi_source_pass_static_sound_prefix;
     eauto.
   eapply Epsilon_Phi_Soundness_of_phi_static_included; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_fail_static_included_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_fail_static_included_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (fold_subst_eps rho static_eff1) ->
@@ -2380,15 +2959,15 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 static_eff1
     HSummary HReadOnlyStatic HIncluded HFail.
-  eapply PairParSequentialEffectSummaryStepsPhi_source_fail_static_sound_prefix;
+  eapply PairParSourceOrderedEffectSummaryStepsPhi_source_fail_static_sound_prefix;
     eauto.
   eapply Epsilon_Phi_Soundness_of_phi_static_included; eauto.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_pass_trace_static_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_pass_trace_static_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (Phi_Static_Effect phi_eff1) ->
@@ -2407,17 +2986,17 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
     HSummary HReadOnlyStatic HPass.
-  eapply PairParSequentialEffectSummaryStepsPhi_source_pass_independent_prefix;
+  eapply PairParSourceOrderedEffectSummaryStepsPhi_source_pass_independent_prefix;
     eauto.
   eapply ReadOnlyStaticImpliesReadOnlyPhi.
   - exact HReadOnlyStatic.
   - apply Phi_Static_Effect_sound.
 Qed.
 
-Theorem PairParSequentialEffectSummaryStepsPhi_source_fail_trace_static_prefix :
+Theorem PairParSourceOrderedEffectSummaryStepsPhi_source_fail_trace_static_prefix :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2,
-    PairParSequentialEffectSummaryStepsPhi
+    PairParSourceOrderedEffectSummaryStepsPhi
       heap env rho ef1 ea1 ef2 ea2
       phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
     ReadOnlyStatic (Phi_Static_Effect phi_eff1) ->
@@ -2435,7 +3014,7 @@ Proof.
   intros heap env rho ef1 ea1 ef2 ea2 k
     phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2
     HSummary HReadOnlyStatic HFail.
-  eapply PairParSequentialEffectSummaryStepsPhi_source_fail_independent_prefix;
+  eapply PairParSourceOrderedEffectSummaryStepsPhi_source_fail_independent_prefix;
     eauto.
   eapply ReadOnlyStaticImpliesReadOnlyPhi.
   - exact HReadOnlyStatic.
@@ -2540,7 +3119,7 @@ Inductive PairParCheckedStructuredStepsPhi
       PairParEffectSummaryStepsPhi
         heap env rho ef1 ea1 ef2 ea2
         phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
-      PairParCheckPass theta1 theta2 ->
+      PairParObservedCheckPass theta1 theta2 phi_eff1 phi_eff2 ->
       PairParStepsPhi
         (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
         phi_mu_state
@@ -2592,7 +3171,7 @@ Inductive ScheduledStepsPhi : State -> Phi -> State -> Prop :=
       PairParEffectSummaryStepsPhi
         heap env rho ef1 ea1 ef2 ea2
         phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 ->
-      PairParCheckPass theta1 theta2 ->
+      PairParObservedCheckPass theta1 theta2 phi_eff1 phi_eff2 ->
       PairParCheckedPackedStepsPhi theta1 theta2
         (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
         phi_mu
@@ -2657,9 +3236,49 @@ Proof.
   exists heap_eff1, heap_eff2, theta1, theta2.
   split; [reflexivity |].
   split; [exact H |].
-  split; [exact H0 |].
+  destruct H0 as [HPass _].
+  split; [exact HPass |].
   split.
   - now apply pairpar_check_passes_to_checked_run_start.
+  - exact H1.
+Qed.
+
+Theorem PairParCheckedStructuredStepsPhi_source_observed_check_dispatch :
+  forall heap env rho ef1 ea1 ef2 ea2 k phi state',
+    PairParCheckedStructuredStepsPhi
+      heap env rho ef1 ea1 ef2 ea2 k
+      phi
+      state' ->
+    exists phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2
+      heap_eff1 heap_eff2 theta1 theta2,
+      phi =
+        pairpar_checked_structured_trace
+          phi_eff1 phi_eff2 phi_mu_state phi_mu1 phi_mu2 /\
+      PairParEffectSummaryStepsPhi
+        heap env rho ef1 ea1 ef2 ea2
+        phi_eff1 phi_eff2 heap_eff1 theta1 heap_eff2 theta2 /\
+      PairParObservedCheckPass theta1 theta2 phi_eff1 phi_eff2 /\
+      Step
+        (pairpar_check_state
+          heap env rho ef1 ea1 ef2 ea2 theta1 theta2 k)
+        Silent
+        (pairpar_checked_run_start heap env rho ef1 ea1 ef2 ea2 k) /\
+      PairParStepsPhi
+        (pairpar_checked_start heap env rho ef1 ea1 ef2 ea2 k)
+        phi_mu_state
+        phi_mu1
+        phi_mu2
+        state'.
+Proof.
+  intros heap env rho ef1 ea1 ef2 ea2 k phi state' HStructured.
+  inversion HStructured; subst.
+  exists phi_eff1, phi_eff2, phi_mu_state, phi_mu1, phi_mu2.
+  exists heap_eff1, heap_eff2, theta1, theta2.
+  split; [reflexivity |].
+  split; [exact H |].
+  split; [exact H0 |].
+  split.
+  - eapply pairpar_observed_check_passes_to_checked_run_start; eauto.
   - exact H1.
 Qed.
 

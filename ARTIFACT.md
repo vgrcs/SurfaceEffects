@@ -18,10 +18,10 @@ theories/PaperTheorems.v
 
 Exports:
 
-- runtime safety and determinism wrappers from
-  `theories/Runtime/SmallStepPaperTheorems.v`;
-- scheduled source-level surface-correctness from
-  `theories/Soundness/SmallStepPaperSoundness.v`.
+- the checked-pair-free ordinary syntax `NExpr`;
+- the checked-pair-free ordinary typing judgment `NTcExp`;
+- progress, preservation, terminal determinism, and terminal correctness
+  wrappers from `theories/NewSmallStep/PaperTheorems.v`.
 
 ## Known-Good Toolchain
 
@@ -80,8 +80,8 @@ Expected result:
 
 Expected warnings:
 
-- old `From Coq` imports are deprecated in Rocq 9;
-- a few notation prefixes are reported as incompatible.
+- a few notation prefixes are reported as incompatible;
+- one fixpoint is reported as not truly recursive.
 
 These warnings are non-blocking.
 
@@ -111,10 +111,11 @@ Paper source split:
 Read in this order:
 
 1. `theories/PaperTheorems.v`
-2. `theories/Runtime/SmallStepPaperTheorems.v`
-3. `theories/Soundness/SmallStepPaperSoundness.v`
-4. `theories/Runtime/SmallStepStructuredTrace.v`
-5. `theories/Soundness/SmallStepCorrectnessPairPar.v`
+2. `theories/NewSmallStep/PaperTheorems.v`
+3. `theories/NewSmallStep/Core/Syntax.v`
+4. `theories/NewSmallStep/Typing/Judgments.v`
+5. `theories/NewSmallStep/Runtime/Machine.v`
+6. `theories/NewSmallStep/Soundness/Correctness.v`
 
 Details: `REPORT.md`.
 
@@ -122,41 +123,27 @@ Details: `REPORT.md`.
 
 The paper uses mathematical theorem statements.
 
-Mechanized names:
+Main mechanized names:
 
-Runtime safety:
+Ordinary small-step safety:
 
-- `PaperSmallStepFinitePrefixSafety`
-- `PaperSmallStepTerminalSoundness`
+- `PaperOrdinarySmallStepProgress`
+- `PaperOrdinarySmallStepEvalPreservation`
+- `PaperOrdinarySmallStepReturnPreservation`
 
-Unified checked `Pair_Par` over ordinary `Step`:
+Terminal determinism:
 
-- `PaperUnifiedPairParCheckedFinitePrefixSafety`
-- `PaperUnifiedPairParCheckedBranchProgress`
-- `PaperUnifiedPairParTraceSafety`
-- `PaperUnifiedPairParTerminalSoundnessFromSafety`
-- `PaperUnifiedPairParCheckedTerminalSoundness`
-- `PaperUnifiedPairParCheckedTerminalPairSoundness`
-
-Checked `Pair_Par` safety:
-
-- `PaperPairParCheckedOrBlockedTraceSafety`
-- `PaperPairParCheckedOrBlockedTerminalSoundness`
-- `PaperPairParCheckedPackedTerminalSoundness`
-
-Scheduled terminal trace soundness:
-
-- `PaperScheduledSmallStepTerminalTraceSoundness`
-- `PaperScheduledExpressionTerminalTraceSoundness`
-
-Scheduler independence:
-
-- `PaperScheduledSmallStepTerminalDeterminism`
-- `PaperScheduledExpressionTerminalDeterminism`
+- `PaperOrdinarySmallStepTerminalTraceDeterminism`
+- `PaperOrdinarySmallStepTerminalDeterminism`
 
 Surface-effect correctness:
 
-- `PaperScheduledPairParCheckedTerminalCorrectness`
+- `PaperOrdinarySurfaceEffectCorrectnessFromBelow`
+- `PaperOrdinaryStructuredSurfaceEffectCorrectnessFromBelow`
+
+All of these quantify over the ordinary `NExpr` language. Since `NExpr` has no
+checked-pair constructor, the public theorem map excludes checked pairs by
+construction.
 
 Exported by:
 
@@ -164,37 +151,26 @@ Exported by:
 theories/PaperTheorems.v
 ```
 
-Support-only wrappers:
-
-- value-only scheduled wrappers in
-  `theories/Runtime/SmallStepPaperTheorems.v`.
-
-Public map:
-
-- the trace-strengthened scheduled statements above.
+The older checked-pair wrappers are not exported by the public facade.
 
 ## Source Navigation
 
-- `Runtime/SmallStep.v`: continuation-machine semantics.
-- `Runtime/SmallStepPairParDispatch.v`: staged dynamic check for `Pair_Par`.
-- `Runtime/SmallStepParallel.v`: branch-scheduled proof view for
-  `StPairParRun`, with bridge lemmas back to the ordinary `Step` relation.
-- `Runtime/SmallStepStructuredTrace.v`: structured traces and scheduled runs.
-- `Runtime/SmallStepPaperTheorems.v`: runtime paper wrappers.
-- `Soundness/SmallStepBackTriangle.v`: small-step summary relation.
-- `Soundness/SmallStepCorrectnessBase.v`: base terminal-run utilities.
-- `Soundness/SmallStepCorrectnessApps.v`: application correctness.
-- `Soundness/SmallStepCorrectnessPairPar.v`: checked `Pair_Par` correctness.
-- `Soundness/SmallStepPaperSoundness.v`: scheduled source-level
-  surface-correctness wrapper.
+Use `README.md` for the compact source-layout overview.
+Use `REPORT.md` for the detailed proof narrative.
+
+For artifact checking, the shortest path is still the review path above:
+
+1. public facade;
+2. checked-pair-free syntax and typing;
+3. ordinary machine;
+4. terminal correctness and determinism wrappers.
 
 ## Scope
 
-Proved:
+This artifact proves the small-step continuation-machine results listed in the
+theorem map.
 
-- the small-step continuation-machine results listed above.
-
-Not proved:
+It does not prove:
 
 - terminal small-step/big-step adequacy;
 - equivalence with a separate sequential pair constructor;

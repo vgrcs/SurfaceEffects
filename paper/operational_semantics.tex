@@ -1,0 +1,264 @@
+\section{Operational Semantics}
+\label{sec:opsem}
+
+The operational semantics has one primitive execution relation: the
+continuation-machine step $s\longrightarrow s'\,;\,\eta$.  The other judgments
+below are derived or proof-facing relations built around that step.  They are
+kept distinct because they play different roles in the metatheory.
+
+\begin{center}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{.18\linewidth}
+                  >{\raggedright\arraybackslash}p{.33\linewidth}
+                  >{\raggedright\arraybackslash}p{.39\linewidth}@{}}
+\toprule
+\textbf{Layer} & \textbf{Judgment} & \textbf{Role}\\
+\midrule
+machine step
+  & $s\longrightarrow s'\,;\,\eta$
+  & one continuation-machine step emitting one trace fragment\\
+finite execution
+  & $s\longrightarrow^{*}s'\,;\,\phi$
+  & accumulated machine trace\\
+trace replay
+  & $(\phi,H)\Rightarrow^{*}(\Nil,H')$
+  & replay of a produced trace over a heap\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The notation is intentionally separated.  Machine execution \emph{produces}
+trace fragments; the finite-run relation concatenates them into a structured
+trace; replay later \emph{consumes} an already produced trace.  A one-step
+transition emits only a fragment $\eta$: administrative steps emit $\Nil$, while
+heap operations emit singleton fragments such as $\Alloc(l\at r,v)$,
+$\Read(l\at r,v)$, and $\Write(l\at r,v)$.  The trace of a longer execution is
+not stored in the state or continuation.
+
+\begin{formalbox}{Operational Domains}
+\small
+\begin{tabular}{@{}>{$}l<{$} @{\quad} l@{}}
+E\in\mathit{Env}\triangleq \mathit{Variables}\rightharpoonup\mathit{Values} & (variable assignment)\\
+P\in\mathit{Rgn}\triangleq \mathit{RgnVars}\rightharpoonup\mathit{RgnConst} & (regions in scope)\\
+H\in\mathit{Heap}\triangleq \mathit{Addr}\rightharpoonup\mathit{Values} & (heap assignment)\\
+\langle E,P,e\rangle\in\mathit{Closures}\triangleq
+  \mathit{Env}\times\mathit{Rgn}\times\mathit{Expressions} & (function closures)\\
+v\in\mathit{Values}\triangleq
+  \mathbb{N}+\mathbb{B}+\mathit{Addr}+\mathit{Closures}+\Theta+()+ (v,v) & (dynamic values)\\[.6ex]
+s ::= \langle H,E,P,e,k\rangle\mid\langle H,v,k\rangle\mid\mathsf{done}(H,v) & (machine states)\\
+a ::= \Alloc(l\at r,v)\mid\Read(l\at r,v)\mid\Write(l\at r,v) & (dynamic actions)\\
+\eta ::= \Nil\mid a & (one-step trace fragments)\\
+\phi ::= \Nil\mid a\mid \phi\tracecat\phi\mid \phi\parallel\phi & (structured traces)
+\end{tabular}
+\end{formalbox}
+
+\begin{formalbox}{Finite Machine Executions}
+\footnotesize
+\noindent\textbf{Finite execution}\hfill $\boxed{s\longrightarrow^{*}s'\,;\,\phi}$
+
+Each finite execution accumulates one-step fragments by induction.
+\begin{mathpar}
+\inferrule*[lab=TR-Refl]{ }
+  {s\longrightarrow^{*}s\,;\,\Nil}
+
+\inferrule*[lab=TR-Step]
+  {s\longrightarrow s_1\,;\,\eta \\
+   s_1\longrightarrow^{*}s_2\,;\,\phi}
+  {s\longrightarrow^{*}s_2\,;\,\eta\tracecat\phi}
+\end{mathpar}
+Here $\tracecat$ is structured trace sequencing and $\Nil$ is its identity.
+Ordinary expression evaluation is the special case
+\[
+\mathsf{init}(H,E,P,e)
+  \longrightarrow^{*}
+\mathsf{done}(H',v)\,;\,\phi.
+\]
+A surface-effect term is just an ordinary expression of type $\mathsf{eff}$;
+there is no separate summary evaluator.
+\end{formalbox}
+
+\begin{formalbox}{Trace Replay}
+\footnotesize
+\noindent\textbf{Replay}\hfill $\boxed{(\phi,H)\Rightarrow^{*}(\Nil,H')}$
+
+Replay interprets an already produced structured trace as a heap transformer.
+The following selected rules fix the intended direction: execution produces
+traces, while replay consumes them.
+\begin{mathpar}
+\inferrule*[lab=R-Nil]{ }
+  {(\Nil,H)\Rightarrow^{*}(\Nil,H)}
+
+\inferrule*[lab=R-Alloc]{ }
+  {(\Alloc(l\at r,v),H)\Rightarrow^{*}(\Nil,H[(r,l)\mapsto v])}
+
+\inferrule*[lab=R-Read]{H(r,l)=v}
+  {(\Read(l\at r,v),H)\Rightarrow^{*}(\Nil,H)}
+
+\inferrule*[lab=R-Write]{H(r,l)\neq\bot}
+  {(\Write(l\at r,v),H)\Rightarrow^{*}(\Nil,H[(r,l)\mapsto v])}
+
+\inferrule*[lab=R-Seq]
+  {(\phi_1,H)\Rightarrow^{*}(\Nil,H_1) \\
+   (\phi_2,H_1)\Rightarrow^{*}(\Nil,H_2)}
+  {(\phi_1\tracecat\phi_2,H)\Rightarrow^{*}(\Nil,H_2)}
+\end{mathpar}
+The replay relation for parallel traces allows the two subtraces to be consumed
+by an interleaving of their replay steps; the determinism theorem later shows
+that, under the computed-effect guard, terminating replays agree on the final
+heap.
+\end{formalbox}
+
+
+The initial state for expression $e$ is
+$\mathsf{init}(H,E,P,e)=\langle H,E,P,e,\mathsf{doneK}\rangle$; terminal
+states $\mathsf{done}(H,v)$ have no outgoing machine step.  Continuations are
+bookkeeping devices for the call-by-value evaluation order.
+A frame records the expression still to be evaluated, the environment and region
+map needed to resume evaluation, and the continuation to resume afterward.
+Application frames first remember the unevaluated argument while the function
+position is evaluated, then remember the closure while the argument is
+evaluated, and finally enter either the computational body or the summary body
+with the recursive name and argument bound.  Heap-operation frames remember the
+pending operation and the region environment while a location or value
+subexpression is evaluated.  The trace emitted while evaluating functions,
+arguments, or summaries is the machine trace of that evaluation.  A computed
+effect is the value returned by evaluating the corresponding summary expression.
+
+\begin{formalbox}{Small-Step Operational Semantics}
+\footnotesize
+\noindent\textbf{One machine step}\hfill $\boxed{s\longrightarrow s'\,;\,\eta}$
+\begin{mathpar}
+\inferrule*[lab=S-Const]{ }
+  {\langle H,E,P,\mathsf{const}\;n,k\rangle
+   \longrightarrow
+   \langle H,n,k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Var]{E(x)=v}
+  {\langle H,E,P,x,k\rangle
+   \longrightarrow
+   \langle H,v,k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Done]{ }
+  {\langle H,v,\mathsf{doneK}\rangle
+   \longrightarrow
+   \mathsf{done}(H,v)\,;\,\Nil}
+
+\inferrule*[lab=S-Clos]
+  {\varphi=\mu f.\lambda x.\{e_b\mid e_s\}\;\vee\;\varphi=\Lambda\rho.e}
+  {\langle H,E,P,\varphi,k\rangle
+   \longrightarrow
+   \langle H,\langle E,P,\varphi\rangle,k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Capp-Fun]{ }
+  {\langle H,E,P,\capp e_f\,e_a,k\rangle
+   \longrightarrow
+   \langle H,E,P,e_f,K^\mu_f(e_a,E,P,k)\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Capp-Arg]
+  {v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_f,K^\mu_f(e_a,E,P,k)\rangle
+   \longrightarrow
+   \langle H,E,P,e_a,K^\mu_a(E',P',f,x,e_b,e_s,k)\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Capp-Body]
+  {E''=E'[f\mapsto v_f][x\mapsto v_a] \\
+   v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_a,K^\mu_a(E',P',f,x,e_b,e_s,k)\rangle
+   \longrightarrow
+   \langle H,E'',P',e_b,k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Eapp-Fun]{ }
+  {\langle H,E,P,\eapp e_f\,e_a,k\rangle
+   \longrightarrow
+   \langle H,E,P,e_f,K^e_f(e_a,E,P,k)\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Eapp-Arg]
+  {v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_f,K^e_f(e_a,E,P,k)\rangle
+   \longrightarrow
+   \langle H,E,P,e_a,K^e_a(E',P',f,x,e_b,e_s,k)\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Eapp-Body]
+  {E''=E'[f\mapsto v_f][x\mapsto v_a] \\
+   v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
+  {\langle H,v_a,K^e_a(E',P',f,x,e_b,e_s,k)\rangle
+   \longrightarrow
+   \langle H,E'',P',e_s,k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Alloc]
+  {P(p)=r \qquad \mathsf{fresh}(H,r)=l}
+  {\langle H,v,K^{ref}(p,P,k)\rangle
+   \longrightarrow
+   \langle H[(r,l)\mapsto v],l\at r,k\rangle\,;\,\Alloc(l\at r,v)}
+
+\inferrule*[lab=S-Get]
+  {P(p)=r \qquad H(r,l)=v}
+  {\langle H,l\at r,K^{get}(p,P,k)\rangle
+   \longrightarrow
+   \langle H,v,k\rangle\,;\,\Read(l\at r,v)}
+
+\inferrule*[lab=S-Set]
+  {P(p)=r \qquad H(r,l)\neq\bot}
+  {\langle H,v,K^{set}(p,l,P,k)\rangle
+   \longrightarrow
+   \langle H[(r,l)\mapsto v],(),k\rangle\,;\,\Write(l\at r,v)}
+\end{mathpar}
+\end{formalbox}
+
+\paragraph{Effect-valued expression steps.}
+Surface-effect terms are ordinary expressions whose values are computed effects.
+Abstract summaries return region-level actions without touching the heap;
+concrete summaries first evaluate their argument and then return a concrete
+computed action. These rules are ordinary machine steps and therefore emit
+$\Nil$.
+
+\begin{formalbox}{Effect-Valued Expression Steps}
+\footnotesize
+\noindent\textbf{One machine step}\hfill $\boxed{s\longrightarrow s'\,;\,\eta}$
+\begin{mathpar}
+\inferrule*[lab=S-Abst-Read]{P(p)=r}
+  {\langle H,E,P,\Rhat(p),k\rangle
+   \longrightarrow
+   \langle H,\Rs(r),k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Abst-Write]{P(p)=r}
+  {\langle H,E,P,\What(p),k\rangle
+   \longrightarrow
+   \langle H,\Ws(r),k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Abst-Alloc]{P(p)=r}
+  {\langle H,E,P,\Ahat(p),k\rangle
+   \longrightarrow
+   \langle H,\As(r),k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Conc-Read]{ }
+  {\langle H,l\at r,K^{read}(k)\rangle
+   \longrightarrow
+   \langle H,\Read(l\at r),k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Conc-Write]{ }
+  {\langle H,l\at r,K^{write}(k)\rangle
+   \longrightarrow
+   \langle H,\Write(l\at r),k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Concat]{ }
+  {\langle H,\Theta_2,K^{concat}(\Theta_1,k)\rangle
+   \longrightarrow
+   \langle H,\Theta_1\cup\Theta_2,k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Top]{ }
+  {\langle H,E,P,\Top,k\rangle
+   \longrightarrow
+   \langle H,\top,k\rangle\,;\,\Nil}
+
+\inferrule*[lab=S-Empty]{ }
+  {\langle H,E,P,\Pure,k\rangle
+   \longrightarrow
+   \langle H,\emptyset,k\rangle\,;\,\Nil}
+\end{mathpar}
+\end{formalbox}
+
+Effect-summary evaluation is proved read-only from typing: if a well-typed
+summary execution emits a read-only trace, the final heap is the initial heap.
+A summary may \emph{denote} an allocation through an abstract allocation action
+without performing an allocation while the summary itself is evaluated.

@@ -1,4 +1,4 @@
-Require Import Coq.Sets.Ensembles.
+From Stdlib Require Import Sets.Ensembles.
 Require Import theories.Core.Regions.
 
 Definition empty_set `{T: Type} := Empty_set T.

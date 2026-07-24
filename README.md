@@ -1,8 +1,7 @@
 # SurfaceEffects
 
 SurfaceEffects is a Rocq mechanization of a language with regions, mutable
-references, dynamic traces, executable effect summaries, and checked implicit
-parallel pairs.
+references, dynamic traces, and executable effect summaries.
 
 The current paper-facing semantics is a small-step continuation machine. The
 public theorem facade is:
@@ -39,9 +38,8 @@ rocq --version
 make
 ```
 
-Expected result: `_CoqProject` compiles. Rocq 9 may emit compatibility warnings
-about old `From Coq` imports and notation prefixes; these warnings do not block
-the build.
+Expected result: `_CoqProject` compiles. Rocq 9 may emit non-blocking warnings
+about notation prefixes and one non-recursive fixpoint.
 
 ## Active Source Layout
 
@@ -57,37 +55,39 @@ theories/
   Archive/       inactive proof experiments
 ```
 
-The main small-step files are:
+The paper-facing ordinary calculus is the checked-pair-free `NewSmallStep`
+development:
 
-- `Runtime/SmallStep.v`: continuation-machine semantics.
-- `Runtime/SmallStepPairParDispatch.v`: checked/blocked `Pair_Par` dispatch.
-- `Runtime/SmallStepParallel.v`: branch-scheduled proof view for
-  `StPairParRun`, bridged back to the ordinary `Step` relation.
-- `Runtime/SmallStepStructuredTrace.v`: structured traces and scheduled runs.
-- `Runtime/SmallStepPaperTheorems.v`: runtime theorem wrappers.
-- `Soundness/SmallStepBackTriangle.v`: small-step summary relation.
-- `Soundness/SmallStepCorrectnessBase.v`: base correctness utilities.
-- `Soundness/SmallStepCorrectnessApps.v`: application correctness.
-- `Soundness/SmallStepCorrectnessPairPar.v`: checked `Pair_Par` correctness.
-- `Soundness/SmallStepPaperSoundness.v`: scheduled source-level
-  surface-correctness wrapper.
+- `NewSmallStep/Core/Syntax.v`: `NExpr`, with no checked-pair constructor.
+- `NewSmallStep/Typing/Judgments.v`: `NTcExp`, with no checked-pair rule.
+- `NewSmallStep/Runtime/Machine.v`: continuation-machine semantics.
+- `NewSmallStep/Runtime/Trace.v`: finite executions and traces.
+- `NewSmallStep/Runtime/Progress.v`: progress for well-typed states.
+- `NewSmallStep/Runtime/Preservation.v`: preservation lemmas.
+- `NewSmallStep/Soundness/BackTriangle.v`: ordinary summary relation.
+- `NewSmallStep/Soundness/Correctness.v`: terminal correctness shape.
+- `NewSmallStep/Determinism/Terminal.v`: terminal determinism.
+- `NewSmallStep/PaperTheorems.v`: paper-facing theorem wrappers.
+
+Older checked-pair files remain in the repository for comparison and future
+experiments, but they are not exported by the public theorem facade.
 
 ## Current Status
 
 The active theorem stack proves:
 
-- finite-prefix type and trace safety;
-- terminal type and trace soundness;
-- checked-or-blocked safety for `Pair_Par`;
-- scheduled source-level surface-effect correctness for checked `Pair_Par`;
-- terminal scheduler independence for scheduled small-step runs.
+- progress for the checked-pair-free ordinary small-step machine;
+- preservation for evaluation and return steps;
+- terminal trace determinism;
+- terminal value/heap determinism;
+- terminal surface-effect correctness from the counted-run induction package;
+- structured terminal correctness as a corollary of raw trace correctness.
 
 There are no source-level `Axiom` or `Admitted` declarations in `theories/`.
 
 Current non-goals:
 
 - terminal small-step/big-step adequacy;
-- equivalence with a separate sequential pair constructor;
 - termination or cost bounds for summary evaluation;
 - summary inference or synthesis.
 

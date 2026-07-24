@@ -1,5 +1,5 @@
 From stdpp Require Import gmap.
-Require Import Ascii String.
+From Stdlib Require Import Ascii String.
 Require Import theories.Core.Regions.
 Require Import theories.Core.Expressions.
 Require Import theories.Core.ComputedActions.

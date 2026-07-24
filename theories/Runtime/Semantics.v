@@ -7,8 +7,8 @@ Require Import theories.Core.Expressions.
 Require Import theories.Core.DynamicActions.
 Require Import theories.Core.ComputedActions.
 Require Import theories.Meta.Tactics.
-Require Import Coq.Strings.String.
-Require Import Coq.Program.Equality.
+From Stdlib Require Import Strings.String.
+From Stdlib Require Import Program.Equality.
 
 
 Reserved Notation "e '⇓' n" (at level 50, left associativity).
