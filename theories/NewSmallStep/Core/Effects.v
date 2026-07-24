@@ -40,31 +40,6 @@ Inductive StaticAction :=
 
 Definition StaticEffect := list StaticAction.
 
-Definition subst_region_type
-    (x : VarId) (replacement : RegionExpr) (rgn : RegionType) : RegionType :=
-  match rgn with
-  | Rgn_Const _ _ r => Rgn_Const true true r
-  | Rgn_FVar _ _ y =>
-      if ascii_dec x y
-      then region_expr_to_type replacement
-      else Rgn_FVar true true y
-  | Rgn_BVar _ _ n => Rgn_BVar true true n
-  end.
-
-Definition subst_static_action
-    (x : VarId) (replacement : RegionExpr)
-    (action : StaticAction) : StaticAction :=
-  match action with
-  | SAlloc rgn => SAlloc (subst_region_type x replacement rgn)
-  | SRead rgn => SRead (subst_region_type x replacement rgn)
-  | SWrite rgn => SWrite (subst_region_type x replacement rgn)
-  end.
-
-Definition subst_static_effect
-    (x : VarId) (replacement : RegionExpr)
-    (eff : StaticEffect) : StaticEffect :=
-  List.map (subst_static_action x replacement) eff.
-
 Definition open_region_type_at
     (k : nat) (u : RegionType) (rgn : RegionType) : RegionType :=
   match rgn with

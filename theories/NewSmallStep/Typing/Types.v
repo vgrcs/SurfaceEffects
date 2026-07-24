@@ -1,5 +1,3 @@
-From Stdlib Require Import Ascii.
-
 Require Import theories.NewSmallStep.Core.Effects.
 Require Import theories.NewSmallStep.Core.Syntax.
 
@@ -60,24 +58,3 @@ Fixpoint close_ty_at (k : nat) (x : VarId) (ty : NTy) : NTy :=
 
 Definition close_ty (x : VarId) (ty : NTy) : NTy :=
   close_ty_at 0 x ty.
-
-Fixpoint subst_ty (x : VarId) (replacement : RegionExpr) (ty : NTy) : NTy :=
-  match ty with
-  | TyNat => TyNat
-  | TyBool => TyBool
-  | TyUnit => TyUnit
-  | TyEffect => TyEffect
-  | TyRef rgn ty_inner =>
-      TyRef (subst_region_type x replacement rgn)
-        (subst_ty x replacement ty_inner)
-  | TyArrow ty_arg eff_body ty_body eff_summary =>
-      TyArrow
-        (subst_ty x replacement ty_arg)
-        (subst_static_effect x replacement eff_body)
-        (subst_ty x replacement ty_body)
-        (subst_static_effect x replacement eff_summary)
-  | TyForallRgn eff ty_body =>
-      TyForallRgn
-        (subst_static_effect x replacement eff)
-        (subst_ty x replacement ty_body)
-  end.
