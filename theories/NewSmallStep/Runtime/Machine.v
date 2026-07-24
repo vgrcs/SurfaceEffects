@@ -1,6 +1,6 @@
 From Stdlib Require Import List.
 From Stdlib Require Import Bool.Bool.
-From Stdlib Require Import String.
+From Stdlib Require Import Ascii.
 
 Require Import theories.NewSmallStep.Core.Effects.
 Require Import theories.NewSmallStep.Core.Syntax.
@@ -12,7 +12,7 @@ Fixpoint env_lookup (x : VarId) (env : NEnv) : option NVal :=
   match env with
   | EnvNil => None
   | EnvCons y v env' =>
-      if String.eqb x y then Some v else env_lookup x env'
+      if ascii_dec x y then Some v else env_lookup x env'
   end.
 
 Definition env_extend (x : VarId) (v : NVal) (env : NEnv) : NEnv :=

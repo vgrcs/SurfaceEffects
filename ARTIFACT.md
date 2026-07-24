@@ -21,7 +21,7 @@ Exports:
 - the checked-pair-free ordinary syntax `NExpr`;
 - the checked-pair-free ordinary typing judgment `NTcExp`;
 - progress, preservation, terminal determinism, and terminal correctness
-  wrappers from `theories/NewSmallStep/PaperTheorems.v`.
+  wrappers from `theories/PaperTheorems.v`.
 
 ## Known-Good Toolchain
 
@@ -111,11 +111,10 @@ Paper source split:
 Read in this order:
 
 1. `theories/PaperTheorems.v`
-2. `theories/NewSmallStep/PaperTheorems.v`
-3. `theories/NewSmallStep/Core/Syntax.v`
-4. `theories/NewSmallStep/Typing/Judgments.v`
-5. `theories/NewSmallStep/Runtime/Machine.v`
-6. `theories/NewSmallStep/Soundness/Correctness.v`
+2. `theories/NewSmallStep/Core/Syntax.v`
+3. `theories/NewSmallStep/Typing/Judgments.v`
+4. `theories/NewSmallStep/Runtime/Machine.v`
+5. `theories/NewSmallStep/Soundness/Correctness.v`
 
 Details: `REPORT.md`.
 

@@ -1,5 +1,5 @@
 From Stdlib Require Import List.
-From Stdlib Require Import String.
+From Stdlib Require Import Ascii.
 
 Require Import theories.NewSmallStep.Core.Effects.
 Require Import theories.NewSmallStep.Core.Syntax.
@@ -29,15 +29,17 @@ Inductive NResolvedValShape : Heap -> NVal -> NTy -> Prop :=
     forall heap r l cell ty,
       heap_lookup r l heap = Some cell ->
       NResolvedValShape heap cell ty ->
-      NResolvedValShape heap (VLoc r l) (TyRef (RConst r) ty)
+      NResolvedValShape heap (VLoc r l) (TyRef (region_const_type r) ty)
 | NRVS_Closure :
     forall heap closure_env closure_rho f x ec ee
       gamma omega ty_arg ty_arg_res ty_body ty_body_res
-      eff_body eff_summary,
+      eff_body eff_body_res eff_summary eff_summary_res,
       NResolvedEnvShape closure_rho heap closure_env gamma ->
       NRhoModels omega closure_rho ->
       NResolveTy closure_rho ty_arg ty_arg_res ->
+      NResolveStaticEffect closure_rho eff_body eff_body_res ->
       NResolveTy closure_rho ty_body ty_body_res ->
+      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
       NTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
@@ -48,15 +50,17 @@ Inductive NResolvedValShape : Heap -> NVal -> NTy -> Prop :=
         omega ee TyEffect eff_summary ->
       NResolvedValShape heap
         (VClosure closure_env closure_rho f x ec ee)
-        (TyArrow ty_arg_res eff_body ty_body_res eff_summary)
+        (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
 | NRVS_RegionClosure :
-    forall heap closure_env closure_rho x e gamma omega ty eff,
+    forall heap closure_env closure_rho x e gamma omega ty ty_res eff eff_res,
       NResolvedEnvShape closure_rho heap closure_env gamma ->
       NRhoModels omega closure_rho ->
+      NResolveStaticEffect closure_rho (close_static_effect x eff) eff_res ->
+      NResolveTy closure_rho (close_ty x ty) ty_res ->
       NTcExp gamma (x :: omega) e ty eff ->
       NResolvedValShape heap
         (VRegionClosure closure_env closure_rho x e)
-        (TyForallRgn x ty)
+        (TyForallRgn eff_res ty_res)
 with NResolvedEnvShape : Rho -> Heap -> NEnv -> NCtx -> Prop :=
 | NRES_EnvNil :
     forall rho heap,
@@ -95,7 +99,7 @@ Proof.
   - unfold ctx_binds in HBind.
     simpl in HBind.
     simpl.
-    destruct (String.eqb x y) eqn:HEq.
+    destruct (ascii_dec x y) as [HEq | HNe].
     + inversion HBind; subst.
       match goal with
       | HStored : NResolveTy rho ?ty ?ty_stored,
@@ -123,24 +127,30 @@ Inductive NResolvedKontShape : Heap -> NKont -> NTy -> NTy -> Prop :=
       NResolvedKontShape heap KDone ty ty
 | NRKS_MuAppFun :
     forall heap ea env rho k gamma omega
-      ty_arg ty_arg_res ty_body ty_body_res eff_body eff_summary eff_arg ty_out,
+      ty_arg ty_arg_res ty_body ty_body_res
+      eff_body eff_body_res eff_summary eff_summary_res eff_arg ty_out,
       NResolvedEnvShape rho heap env gamma ->
       NRhoModels omega rho ->
       NResolveTy rho ty_arg ty_arg_res ->
+      NResolveStaticEffect rho eff_body eff_body_res ->
       NResolveTy rho ty_body ty_body_res ->
+      NResolveStaticEffect rho eff_summary eff_summary_res ->
       NTcExp gamma omega ea ty_arg eff_arg ->
       NResolvedKontShape heap k ty_body_res ty_out ->
       NResolvedKontShape heap
         (KMuAppFun ea env rho k)
-        (TyArrow ty_arg_res eff_body ty_body_res eff_summary)
+        (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
 | NRKS_MuAppArg :
     forall heap closure_env closure_rho f x ec ee k gamma omega
-      ty_arg ty_arg_res ty_body ty_body_res eff_body eff_summary ty_out,
+      ty_arg ty_arg_res ty_body ty_body_res
+      eff_body eff_body_res eff_summary eff_summary_res ty_out,
       NResolvedEnvShape closure_rho heap closure_env gamma ->
       NRhoModels omega closure_rho ->
       NResolveTy closure_rho ty_arg ty_arg_res ->
+      NResolveStaticEffect closure_rho eff_body eff_body_res ->
       NResolveTy closure_rho ty_body ty_body_res ->
+      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
       NTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
@@ -156,24 +166,30 @@ Inductive NResolvedKontShape : Heap -> NKont -> NTy -> NTy -> Prop :=
         ty_out
 | NRKS_EffAppFun :
     forall heap ea env rho k gamma omega
-      ty_arg ty_arg_res ty_body ty_body_res eff_body eff_summary eff_arg ty_out,
+      ty_arg ty_arg_res ty_body ty_body_res
+      eff_body eff_body_res eff_summary eff_summary_res eff_arg ty_out,
       NResolvedEnvShape rho heap env gamma ->
       NRhoModels omega rho ->
       NResolveTy rho ty_arg ty_arg_res ->
+      NResolveStaticEffect rho eff_body eff_body_res ->
       NResolveTy rho ty_body ty_body_res ->
+      NResolveStaticEffect rho eff_summary eff_summary_res ->
       NTcExp gamma omega ea ty_arg eff_arg ->
       NResolvedKontShape heap k TyEffect ty_out ->
       NResolvedKontShape heap
         (KEffAppFun ea env rho k)
-        (TyArrow ty_arg_res eff_body ty_body_res eff_summary)
+        (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
 | NRKS_EffAppArg :
     forall heap closure_env closure_rho f x ec ee k gamma omega
-      ty_arg ty_arg_res ty_body ty_body_res eff_body eff_summary ty_out,
+      ty_arg ty_arg_res ty_body ty_body_res
+      eff_body eff_body_res eff_summary eff_summary_res ty_out,
       NResolvedEnvShape closure_rho heap closure_env gamma ->
       NRhoModels omega closure_rho ->
       NResolveTy closure_rho ty_arg ty_arg_res ->
+      NResolveStaticEffect closure_rho eff_body eff_body_res ->
       NResolveTy closure_rho ty_body ty_body_res ->
+      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
       NTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
@@ -201,13 +217,13 @@ Inductive NResolvedKontShape : Heap -> NKont -> NTy -> NTy -> Prop :=
         ty_out
 | NRKS_Ref :
     forall heap r ty k ty_out,
-      NResolvedKontShape heap k (TyRef (RConst r) ty) ty_out ->
+      NResolvedKontShape heap k (TyRef (region_const_type r) ty) ty_out ->
       NResolvedKontShape heap (KRef r k) ty ty_out
 | NRKS_Deref :
     forall heap rgn r ty k ty_out,
       NResolvedKontShape heap k ty ty_out ->
       NResolvedKontShape heap (KDeref rgn k)
-        (TyRef (RConst r) ty) ty_out
+        (TyRef (region_const_type r) ty) ty_out
 | NRKS_AssignLoc :
     forall heap rgn ev env rho k gamma omega r ty ty_res eff_v ty_out,
       NResolvedEnvShape rho heap env gamma ->
@@ -218,11 +234,11 @@ Inductive NResolvedKontShape : Heap -> NKont -> NTy -> NTy -> Prop :=
       NResolvedKontShape heap k TyUnit ty_out ->
       NResolvedKontShape heap
         (KAssignLoc rgn ev env rho k)
-        (TyRef (RConst r) ty_res)
+        (TyRef (region_const_type r) ty_res)
         ty_out
 | NRKS_AssignVal :
     forall heap rgn r ty loc k ty_out,
-      NResolvedValShape heap loc (TyRef (RConst r) ty) ->
+      NResolvedValShape heap loc (TyRef (region_const_type r) ty) ->
       NResolvedKontShape heap k TyUnit ty_out ->
       NResolvedKontShape heap
         (KAssignVal rgn loc k)
@@ -289,14 +305,14 @@ Inductive NResolvedKontShape : Heap -> NKont -> NTy -> NTy -> Prop :=
       NResolvedKontShape heap k TyEffect ty_out ->
       NResolvedKontShape heap
         (KReadConc k)
-        (TyRef (RConst r) ty)
+        (TyRef (region_const_type r) ty)
         ty_out
 | NRKS_WriteConc :
     forall heap k r ty ty_out,
       NResolvedKontShape heap k TyEffect ty_out ->
       NResolvedKontShape heap
         (KWriteConc k)
-        (TyRef (RConst r) ty)
+        (TyRef (region_const_type r) ty)
         ty_out
 | NRKS_ConcatL :
     forall heap e2 env rho k gamma omega eff ty_out,

@@ -1,12 +1,12 @@
+From stdpp Require Import gmap.
 From Stdlib Require Import List.
-From Stdlib Require Import String.
+From Stdlib Require Import Ascii.
+From Stdlib Require Import Program.Equality.
 
 Require Import theories.NewSmallStep.Core.Effects.
 Require Import theories.NewSmallStep.Core.Syntax.
 
 Import ListNotations.
-
-Definition Rho := list (VarId * RegionId).
 
 Inductive NVal :=
 | VNat : nat -> NVal
@@ -27,21 +27,45 @@ Combined Scheme NVal_NEnv_ind from NVal_ind', NEnv_ind'.
 
 Definition Heap := list (RegionId * Location * NVal).
 
-Fixpoint rho_lookup (x : VarId) (rho : Rho) : option RegionId :=
-  match rho with
-  | [] => None
-  | (y, r) :: rho' =>
-      if String.eqb x y then Some r else rho_lookup x rho'
-  end.
+Definition rho_lookup (x : VarId) (rho : Rho) : option RegionId :=
+  find_R (region_var_expr x) rho.
 
 Definition rho_extend (x : VarId) (r : RegionId) (rho : Rho) : Rho :=
-  (x, r) :: rho.
+  update_R (x, r) rho.
 
-Definition eval_region (rho : Rho) (rgn : RegionExpr) : option RegionId :=
+Definition eval_region_any {idx : bool * bool * bool}
+    (rho : Rho) (rgn : Region idx) : option RegionId :=
   match rgn with
-  | RConst r => Some r
-  | RVar x => rho_lookup x rho
+  | Rgn_Const _ _ r => Some r
+  | Rgn_FVar _ _ x => rho_lookup x rho
+  | Rgn_BVar _ _ _ => None
   end.
 
+Definition eval_region (rho : Rho) (rgn : RegionExpr) : option RegionId :=
+  eval_region_any rho rgn.
+
+Definition eval_region_type (rho : Rho) (rgn : RegionType)
+    : option RegionId :=
+  eval_region_any rho rgn.
+
+Lemma eval_region_any_region_to_type :
+  forall idx rho (rgn : Region idx),
+    eval_region_type rho (region_to_type rgn) =
+    eval_region_any rho rgn.
+Proof.
+  intros idx rho rgn.
+  destruct rgn; reflexivity.
+Qed.
+
+Lemma eval_region_type_region_expr_to_type :
+  forall rho rgn,
+    eval_region_type rho (region_expr_to_type rgn) =
+    eval_region rho rgn.
+Proof.
+  intros rho rgn.
+  apply eval_region_any_region_to_type.
+Qed.
+
 Definition empty_env : NEnv := EnvNil.
-Definition empty_rho : Rho := [].
+Definition empty_rho : Rho :=
+  list_to_map ([] : list (RgnName * RgnVal)).

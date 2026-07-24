@@ -44,7 +44,7 @@ H\in\mathit{Heap}\triangleq \mathit{Addr}\rightharpoonup\mathit{Values} & (heap 
 \langle E,P,e\rangle\in\mathit{Closures}\triangleq
   \mathit{Env}\times\mathit{Rgn}\times\mathit{Expressions} & (function closures)\\
 v\in\mathit{Values}\triangleq
-  \mathbb{N}+\mathbb{B}+\mathit{Addr}+\mathit{Closures}+\Theta+()+ (v,v) & (dynamic values)\\[.6ex]
+  \mathbb{N}+\mathbb{B}+\mathit{Addr}+\mathit{Closures}+\Theta+() & (dynamic values)\\[.6ex]
 s ::= \langle H,E,P,e,k\rangle\mid\langle H,v,k\rangle\mid\mathsf{done}(H,v) & (machine states)\\
 a ::= \Alloc(l\at r,v)\mid\Read(l\at r,v)\mid\Write(l\at r,v) & (dynamic actions)\\
 \eta ::= \Nil\mid a & (one-step trace fragments)\\

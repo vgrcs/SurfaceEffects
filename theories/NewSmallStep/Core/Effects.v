@@ -1,17 +1,123 @@
 From Stdlib Require Import List.
 From Stdlib Require Import Bool.Bool.
+From Stdlib Require Import Ascii.
+From Stdlib Require Import PeanoNat.
+From Stdlib Require Import Program.Equality.
+Require Export theories.Core.Regions.
 
 Import ListNotations.
 
-Definition RegionId := nat.
+Definition VarId := RgnName.
+Definition RegionId := RgnVal.
 Definition Location := nat.
+Definition RegionExpr := Region_in_Expr.
+Definition RegionType := Region_in_Type.
+
+Definition region_to_type {idx : bool * bool * bool}
+    (rgn : Region idx) : RegionType :=
+  match rgn with
+  | Rgn_Const _ _ r => Rgn_Const true true r
+  | Rgn_FVar _ _ x => Rgn_FVar true true x
+  | Rgn_BVar _ _ n => Rgn_BVar true true n
+  end.
+
+Definition region_expr_to_type (rgn : RegionExpr) : RegionType :=
+  region_to_type rgn.
+
+Definition region_const_expr (r : RegionId) : RegionExpr :=
+  Rgn_Const true false r.
+
+Definition region_const_type (r : RegionId) : RegionType :=
+  Rgn_Const true true r.
+
+Definition region_var_expr (x : VarId) : RegionExpr :=
+  Rgn_FVar true false x.
 
 Inductive StaticAction :=
-| SAlloc : RegionId -> StaticAction
-| SRead : RegionId -> StaticAction
-| SWrite : RegionId -> StaticAction.
+| SAlloc : RegionType -> StaticAction
+| SRead : RegionType -> StaticAction
+| SWrite : RegionType -> StaticAction.
 
 Definition StaticEffect := list StaticAction.
+
+Definition subst_region_type
+    (x : VarId) (replacement : RegionExpr) (rgn : RegionType) : RegionType :=
+  match rgn with
+  | Rgn_Const _ _ r => Rgn_Const true true r
+  | Rgn_FVar _ _ y =>
+      if ascii_dec x y
+      then region_expr_to_type replacement
+      else Rgn_FVar true true y
+  | Rgn_BVar _ _ n => Rgn_BVar true true n
+  end.
+
+Definition subst_static_action
+    (x : VarId) (replacement : RegionExpr)
+    (action : StaticAction) : StaticAction :=
+  match action with
+  | SAlloc rgn => SAlloc (subst_region_type x replacement rgn)
+  | SRead rgn => SRead (subst_region_type x replacement rgn)
+  | SWrite rgn => SWrite (subst_region_type x replacement rgn)
+  end.
+
+Definition subst_static_effect
+    (x : VarId) (replacement : RegionExpr)
+    (eff : StaticEffect) : StaticEffect :=
+  List.map (subst_static_action x replacement) eff.
+
+Definition open_region_type_at
+    (k : nat) (u : RegionType) (rgn : RegionType) : RegionType :=
+  match rgn with
+  | Rgn_Const _ _ r => Rgn_Const true true r
+  | Rgn_FVar _ _ x => Rgn_FVar true true x
+  | Rgn_BVar _ _ n =>
+      if Nat.eqb n k then u else Rgn_BVar true true n
+  end.
+
+Definition open_static_action_at
+    (k : nat) (u : RegionType) (action : StaticAction) : StaticAction :=
+  match action with
+  | SAlloc rgn => SAlloc (open_region_type_at k u rgn)
+  | SRead rgn => SRead (open_region_type_at k u rgn)
+  | SWrite rgn => SWrite (open_region_type_at k u rgn)
+  end.
+
+Definition open_static_effect_at
+    (k : nat) (u : RegionType) (eff : StaticEffect) : StaticEffect :=
+  List.map (open_static_action_at k u) eff.
+
+Definition open_static_effect_type
+    (u : RegionType) (eff : StaticEffect) : StaticEffect :=
+  open_static_effect_at 0 u eff.
+
+Definition open_static_effect
+    (rgn : RegionExpr) (eff : StaticEffect) : StaticEffect :=
+  open_static_effect_type (region_expr_to_type rgn) eff.
+
+Definition close_region_type_at
+    (k : nat) (x : VarId) (rgn : RegionType) : RegionType :=
+  match rgn with
+  | Rgn_Const _ _ r => Rgn_Const true true r
+  | Rgn_FVar _ _ y =>
+      if ascii_dec y x then Rgn_BVar true true k else Rgn_FVar true true y
+  | Rgn_BVar _ _ n => Rgn_BVar true true n
+  end.
+
+Definition close_static_action_at
+    (k : nat) (x : VarId) (action : StaticAction) : StaticAction :=
+  match action with
+  | SAlloc rgn => SAlloc (close_region_type_at k x rgn)
+  | SRead rgn => SRead (close_region_type_at k x rgn)
+  | SWrite rgn => SWrite (close_region_type_at k x rgn)
+  end.
+
+Definition close_static_effect_at
+    (k : nat) (x : VarId) (eff : StaticEffect) : StaticEffect :=
+  List.map (close_static_action_at k x) eff.
+
+Definition close_static_effect
+    (x : VarId) (eff : StaticEffect) : StaticEffect :=
+  close_static_effect_at 0 x eff.
 
 Inductive DynamicAction :=
 | DAlloc : RegionId -> Location -> DynamicAction

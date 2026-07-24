@@ -1,5 +1,6 @@
+From stdpp Require Import gmap.
 From Stdlib Require Import List.
-From Stdlib Require Import String.
+From Stdlib Require Import Ascii.
 
 Require Import theories.NewSmallStep.Core.Effects.
 Require Import theories.NewSmallStep.Core.Syntax.
@@ -27,9 +28,10 @@ Lemma NRhoModels_eval_region :
     exists r,
       eval_region rho rgn = Some r.
 Proof.
-  intros omega rho [x | r] HRho HWF.
-  - apply HRho. assumption.
+  intros omega rho rgn HRho HWF.
+  inversion HWF; subst.
   - exists r. reflexivity.
+  - apply HRho. assumption.
 Qed.
 
 Inductive NValHasType : Rho -> Heap -> NVal -> NTy -> Prop :=
@@ -47,7 +49,7 @@ Inductive NValHasType : Rho -> Heap -> NVal -> NTy -> Prop :=
       NValHasType rho heap (VSummary theta) TyEffect
 | NVT_Loc :
     forall rho heap rgn ty r l cell,
-      eval_region rho rgn = Some r ->
+      eval_region_type rho rgn = Some r ->
       heap_lookup r l heap = Some cell ->
       NValHasType rho heap cell ty ->
       NValHasType rho heap (VLoc r l) (TyRef rgn ty)
@@ -74,7 +76,7 @@ Inductive NValHasType : Rho -> Heap -> NVal -> NTy -> Prop :=
       NTcExp gamma (x :: omega) e ty eff ->
       NValHasType rho heap
         (VRegionClosure closure_env closure_rho x e)
-        (TyForallRgn x ty)
+        (TyForallRgn (close_static_effect x eff) (close_ty x ty))
 with NEnvHasType : Rho -> Heap -> NEnv -> NCtx -> Prop :=
 | NET_EnvNil :
     forall rho heap,
@@ -104,7 +106,7 @@ Definition NRuntimeEnvShape
 Lemma NValHasType_ref_region :
   forall rho heap r l rgn ty,
     NValHasType rho heap (VLoc r l) (TyRef rgn ty) ->
-    eval_region rho rgn = Some r.
+    eval_region_type rho rgn = Some r.
 Proof.
   intros rho heap r l rgn ty HTy.
   inversion HTy; subst.
@@ -141,7 +143,7 @@ Proof.
   - unfold ctx_binds in HBind.
     simpl in HBind.
     simpl.
-    destruct (String.eqb x y) eqn:HEq.
+    destruct (ascii_dec x y) as [HEq | HNe].
     + inversion HBind; subst.
       exists v. split; [reflexivity | assumption].
     + apply IH. exact HBind.
@@ -164,26 +166,37 @@ Lemma NRhoModels_extend :
 Proof.
   intros omega rho x r HRho y HIn.
   simpl in HIn.
-  unfold rho_extend.
-  simpl.
   destruct HIn as [HHead | HTail].
   - subst y.
-    rewrite String.eqb_refl.
-    exists r. reflexivity.
-  - destruct (String.eqb y x).
-    + exists r. reflexivity.
-    + apply HRho. assumption.
+    unfold rho_extend, rho_lookup, region_var_expr, update_R, find_R.
+    simpl.
+    exists r.
+    apply lookup_insert_Some.
+    left. split; reflexivity.
+  - unfold rho_extend, rho_lookup, region_var_expr, update_R, find_R.
+    simpl.
+    destruct (ascii_dec y x) as [HEq | HNe].
+    + subst y.
+      exists r.
+      apply lookup_insert_Some.
+      left. split; reflexivity.
+    + destruct (HRho y HTail) as (r0 & HRhoLookup).
+      exists r0.
+      apply lookup_insert_Some.
+      right. split.
+      * intro H. apply HNe. symmetry. assumption.
+      * assumption.
 Qed.
 
 Lemma eval_region_rho_extend_head :
   forall rho x r,
-    eval_region (rho_extend x r rho) (RVar x) = Some r.
+    eval_region (rho_extend x r rho) (region_var_expr x) = Some r.
 Proof.
   intros rho x r.
-  unfold eval_region, rho_extend.
+  unfold eval_region, rho_extend, region_var_expr, rho_lookup, update_R, find_R.
   simpl.
-  rewrite String.eqb_refl.
-  reflexivity.
+  apply lookup_insert_Some.
+  left. split; reflexivity.
 Qed.
 
 Inductive NKontHasType :
@@ -250,12 +263,12 @@ Inductive NKontHasType :
         (KEffAppArg closure_env closure_rho f x ec ee k)
         ty_arg
 | NKT_RgnApp :
-    forall gamma omega rho heap r k x ty,
+    forall gamma omega rho heap r k eff ty,
       region_expr_wf omega r ->
-      NKontHasType gamma omega rho heap k ty ->
+      NKontHasType gamma omega rho heap k (open_ty r ty) ->
       NKontHasType gamma omega rho heap
         (KRgnApp r rho k)
-        (TyForallRgn x ty)
+        (TyForallRgn eff ty)
 | NKT_Cond :
     forall gamma omega rho heap et ef env k ty eff_t eff_f,
       NRuntimeEnvShape rho heap env gamma ->
@@ -270,7 +283,7 @@ Inductive NKontHasType :
     forall gamma omega rho heap rgn r_val k ty,
       eval_region rho rgn = Some r_val ->
       NKontHasType gamma omega rho heap k
-        (TyRef rgn ty) ->
+        (TyRef (region_expr_to_type rgn) ty) ->
       NKontHasType gamma omega rho heap
         (KRef r_val k)
         ty
@@ -279,7 +292,7 @@ Inductive NKontHasType :
       NKontHasType gamma omega rho heap k ty ->
       NKontHasType gamma omega rho heap
         (KDeref rgn k)
-        (TyRef rgn ty)
+        (TyRef (region_expr_to_type rgn) ty)
 | NKT_AssignLoc :
     forall gamma omega rho heap rgn ev env k ty eff_v,
       NRuntimeEnvShape rho heap env gamma ->
@@ -288,10 +301,10 @@ Inductive NKontHasType :
       NKontHasType gamma omega rho heap k TyUnit ->
       NKontHasType gamma omega rho heap
         (KAssignLoc rgn ev env rho k)
-        (TyRef rgn ty)
+        (TyRef (region_expr_to_type rgn) ty)
 | NKT_AssignVal :
     forall gamma omega rho heap rgn loc k ty,
-      NValHasType rho heap loc (TyRef rgn ty) ->
+      NValHasType rho heap loc (TyRef (region_expr_to_type rgn) ty) ->
       NKontHasType gamma omega rho heap k TyUnit ->
       NKontHasType gamma omega rho heap
         (KAssignVal rgn loc k)

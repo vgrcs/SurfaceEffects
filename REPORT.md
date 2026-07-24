@@ -8,9 +8,9 @@ The paper-facing theorem facade is checked-pair-free:
 theories/PaperTheorems.v
 ```
 
-It exports `theories/NewSmallStep/PaperTheorems.v`, whose ordinary syntax is
-`NExpr` and whose ordinary typing judgment is `NTcExp`. Neither inductive
-definition contains a checked-pair constructor/rule.
+It exports the ordinary `NewSmallStep` syntax and theorem wrappers directly.
+The ordinary syntax is `NExpr`, and the ordinary typing judgment is `NTcExp`.
+Neither inductive definition contains a checked-pair constructor/rule.
 
 ## Build And Trust Status
 
@@ -40,12 +40,11 @@ Current trust status:
 Read these files first:
 
 1. `theories/PaperTheorems.v`
-2. `theories/NewSmallStep/PaperTheorems.v`
-3. `theories/NewSmallStep/Core/Syntax.v`
-4. `theories/NewSmallStep/Typing/Judgments.v`
-5. `theories/NewSmallStep/Runtime/Machine.v`
-6. `theories/NewSmallStep/Soundness/Correctness.v`
-7. `theories/NewSmallStep/Determinism/Terminal.v`
+2. `theories/NewSmallStep/Core/Syntax.v`
+3. `theories/NewSmallStep/Typing/Judgments.v`
+4. `theories/NewSmallStep/Runtime/Machine.v`
+5. `theories/NewSmallStep/Soundness/Correctness.v`
+6. `theories/NewSmallStep/Determinism/Terminal.v`
 
 The older experimental checked-pair files remain in the repository for
 comparison, but they are not exported by the public theorem facade.

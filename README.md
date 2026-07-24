@@ -51,7 +51,7 @@ theories/
   Typing/        types and typing judgments
   Meta/          reusable proof facts
   Soundness/     type/effect/correctness proofs
-  Determinism/   determinism and scheduler-independence proofs
+  Determinism/   terminal determinism proofs
   Archive/       inactive proof experiments
 ```
 
@@ -67,7 +67,7 @@ development:
 - `NewSmallStep/Soundness/BackTriangle.v`: ordinary summary relation.
 - `NewSmallStep/Soundness/Correctness.v`: terminal correctness shape.
 - `NewSmallStep/Determinism/Terminal.v`: terminal determinism.
-- `NewSmallStep/PaperTheorems.v`: paper-facing theorem wrappers.
+- `PaperTheorems.v`: paper-facing theorem wrappers.
 
 Older checked-pair files remain in the repository for comparison and future
 experiments, but they are not exported by the public theorem facade.

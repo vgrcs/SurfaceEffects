@@ -6,7 +6,31 @@ Require Import theories.NewSmallStep.Core.Values.
 Require Import theories.NewSmallStep.Runtime.Machine.
 Require Import theories.NewSmallStep.Runtime.Trace.
 Require Import theories.NewSmallStep.Runtime.TraceView.
+Require Import theories.NewSmallStep.Runtime.Typing.
 Require Import theories.NewSmallStep.Soundness.BackTriangle.
+Require Import theories.NewSmallStep.Typing.Judgments.
+
+Definition InitialRuntimeTyping
+    (gamma : NCtx) (omega : NRgnCtx)
+    (heap : Heap) (env : NEnv) (rho : Rho)
+    (expr : NExpr) : Prop :=
+  exists ty eff,
+    NRuntimeHeapShape rho heap /\
+    NRuntimeEnvShape rho heap env gamma /\
+    NRhoModels omega rho /\
+    NTcExp gamma omega expr ty eff.
+
+Lemma InitialRuntimeTyping_to_NWTState :
+  forall gamma omega heap env rho expr,
+    InitialRuntimeTyping gamma omega heap env rho expr ->
+    NWTState gamma omega (NInitialState heap env rho expr).
+Proof.
+  intros gamma omega heap env rho expr HRuntime.
+  destruct HRuntime as (ty & eff & HHeap & HEnv & HRho & HTyped).
+  unfold NInitialState.
+  eapply NWT_Eval; eauto.
+  constructor.
+Qed.
 
 Definition SummaryEvaluation (heap : Heap) (env : NEnv) (rho : Rho)
     (summary_expr : NExpr) (phi_summary : Trace)
@@ -53,6 +77,8 @@ Definition TerminalCorrectnessGoal : Prop :=
   forall gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
     NBackTriangle gamma omega expr summary_expr ->
+    InitialRuntimeTyping gamma omega heap env rho expr ->
+    InitialRuntimeTyping gamma omega heap env rho summary_expr ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     SummaryEvaluation heap env rho summary_expr
       phi_summary heap_summary theta ->
@@ -62,6 +88,8 @@ Definition StructuredTerminalCorrectnessGoal : Prop :=
   forall gamma omega heap env rho expr summary_expr view heap' v
     view_summary heap_summary theta,
     NBackTriangle gamma omega expr summary_expr ->
+    InitialRuntimeTyping gamma omega heap env rho expr ->
+    InitialRuntimeTyping gamma omega heap env rho summary_expr ->
     StructuredComputationEvaluation heap env rho expr view heap' v ->
     StructuredSummaryEvaluation heap env rho summary_expr
       view_summary heap_summary theta ->
@@ -72,6 +100,8 @@ Definition SmallStepCorrectnessBelow (n : nat) : Prop :=
     phi_summary heap_summary theta,
     n_child < n ->
     NBackTriangle gamma omega expr summary_expr ->
+    InitialRuntimeTyping gamma omega heap env rho expr ->
+    InitialRuntimeTyping gamma omega heap env rho summary_expr ->
     CountedComputationEvaluation n_child heap env rho expr phi heap' v ->
     SummaryEvaluation heap env rho summary_expr
       phi_summary heap_summary theta ->
@@ -83,7 +113,8 @@ Theorem terminal_correctness_from_below :
 Proof.
   unfold TerminalCorrectnessGoal.
   intros HBelow gamma omega heap env rho expr summary_expr phi heap' v
-    phi_summary heap_summary theta HBack HComp HSummary.
+    phi_summary heap_summary theta HBack HRuntimeExpr HRuntimeSummary
+    HComp HSummary.
   destruct
     (NSteps_to_NStepsN
       (NInitialState heap env rho expr)
@@ -111,7 +142,8 @@ Theorem structured_terminal_correctness_from_raw :
 Proof.
   unfold TerminalCorrectnessGoal, StructuredTerminalCorrectnessGoal.
   intros HRaw gamma omega heap env rho expr summary_expr view heap' v
-    view_summary heap_summary theta HBack HComp HSummary.
+    view_summary heap_summary theta HBack HRuntimeExpr HRuntimeSummary
+    HComp HSummary.
   unfold StructuredComputationEvaluation in HComp.
   unfold StructuredSummaryEvaluation in HSummary.
   unfold TraceViewCoveredBySummary.

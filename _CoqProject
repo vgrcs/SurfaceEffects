@@ -142,6 +142,7 @@ theories/NewSmallStep/Runtime/Progress.v
 theories/NewSmallStep/Runtime/All.v
 theories/NewSmallStep/Soundness/BackTriangle.v
 theories/NewSmallStep/Soundness/Correctness.v
+theories/NewSmallStep/Soundness/Counterexamples.v
 theories/NewSmallStep/Soundness/App.v
 theories/NewSmallStep/Soundness/Summary.v
 theories/NewSmallStep/Soundness/Control.v
@@ -151,5 +152,4 @@ theories/NewSmallStep/Soundness/All.v
 theories/NewSmallStep/Determinism/Terminal.v
 theories/NewSmallStep/Determinism/All.v
 theories/NewSmallStep/All.v
-theories/NewSmallStep/PaperTheorems.v
 theories/PaperTheorems.v

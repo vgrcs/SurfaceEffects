@@ -1,12 +1,6 @@
 From Stdlib Require Import String.
 
-Require Import theories.NewSmallStep.Core.Effects.
-
-Definition VarId := string.
-
-Inductive RegionExpr :=
-| RVar : VarId -> RegionExpr
-| RConst : RegionId -> RegionExpr.
+Require Export theories.NewSmallStep.Core.Effects.
 
 Inductive NExpr :=
 | EConst : nat -> NExpr

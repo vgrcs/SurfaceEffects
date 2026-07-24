@@ -420,7 +420,19 @@ Proof.
     subst; clear HState.
   inversion HTc; subst.
   inversion HResolve; subst.
-  rewrite HRgn in H2. inversion H2; subst.
+  match goal with
+  | HRgnResolved :
+      NResolveRegionType rho (region_expr_to_type r) ?rgn_res |- _ =>
+      pose proof
+        (NResolveRegionType_region_expr_to_type rho r r_val HRgn)
+        as HRgnExpected;
+      pose proof
+        (NResolveRegionType_deterministic
+          rho (region_expr_to_type r) rgn_res
+          (region_const_type r_val)
+          HRgnResolved HRgnExpected);
+      subst rgn_res
+  end.
   eapply NRSS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := ty0) (ty_res := ty') (eff := eff0);
@@ -450,9 +462,12 @@ Proof.
   end.
   eapply NRSS_Eval with
     (gamma := gamma) (omega := omega)
-    (ty := TyRef r ty) (ty_res := TyRef (RConst r_val) ty_res)
+    (ty := TyRef (region_expr_to_type r) ty)
+    (ty_res := TyRef (region_const_type r_val) ty_res)
     (eff := eff0); eauto.
   - eapply NResolve_Ref; eauto.
+    eapply NResolveRegionType_region_expr_to_type.
+    exact HRgn.
   - eapply NRKS_Deref; eauto.
 Qed.
 
@@ -656,7 +671,7 @@ Proof.
   eapply NRKS_MuAppArg with
     (gamma := gamma0) (omega := omega0)
     (ty_arg := ty_arg0) (ty_body := ty_body0)
-    (eff_body := eff_body) (eff_summary := eff_summary);
+    (eff_body := eff_body0) (eff_summary := eff_summary0);
     eauto.
 Qed.
 
@@ -685,7 +700,7 @@ Proof.
   eapply NRSS_Eval; eauto.
   econstructor; eauto.
   eapply NRES_EnvCons with
-    (ty_res := TyArrow ty eff_body ty_body_res eff_summary).
+    (ty_res := TyArrow ty eff_body_res ty_body_res eff_summary_res).
   - eapply NResolve_Arrow; eauto.
   - eapply NRVS_Closure with
       (gamma := gamma) (omega := omega)
@@ -718,7 +733,7 @@ Proof.
   eapply NRKS_EffAppArg with
     (gamma := gamma0) (omega := omega0)
     (ty_arg := ty_arg0) (ty_body := ty_body0)
-    (eff_body := eff_body) (eff_summary := eff_summary);
+    (eff_body := eff_body0) (eff_summary := eff_summary0);
     eauto.
 Qed.
 
@@ -753,7 +768,7 @@ Proof.
     eauto using NResolve_Effect.
   econstructor; eauto.
   eapply NRES_EnvCons with
-    (ty_res := TyArrow ty eff_body ty_body_res eff_summary).
+    (ty_res := TyArrow ty eff_body_res ty_body_res eff_summary_res).
   - eapply NResolve_Arrow; eauto.
   - eapply NRVS_Closure with
       (gamma := gamma) (omega := omega)
