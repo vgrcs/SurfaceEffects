@@ -2,15 +2,16 @@
 
 This report records the current public proof surface.
 
-The paper-facing theorem facade is checked-pair-free:
+The paper-facing theorem facade re-exports the active `NewSmallStep`
+development:
 
 ```text
 theories/PaperTheorems.v
 ```
 
-It exports the ordinary `NewSmallStep` syntax and theorem wrappers directly.
-The ordinary syntax is `NExpr`, and the ordinary typing judgment is `NTcExp`.
-Neither inductive definition contains a checked-pair constructor/rule.
+It exports the `NewSmallStep` syntax and theorem stack directly. The syntax is
+`NExpr`, which now includes `EPairPar`; the checked typing and correctness
+surface uses `NCheckedTcExp` and `NCheckedBackTriangle`.
 
 ## Build And Trust Status
 
@@ -46,30 +47,36 @@ Read these files first:
 5. `theories/NewSmallStep/Soundness/Correctness.v`
 6. `theories/NewSmallStep/Determinism/Terminal.v`
 
-The older experimental checked-pair files remain in the repository for
-comparison, but they are not exported by the public theorem facade.
+The older proof experiments remain in the repository for comparison, but the
+public theorem facade is the `NewSmallStep` stack exported through
+`PaperTheorems.v`.
 
 ## Public Theorem Map
 
-Ordinary small-step safety:
+Runtime safety:
 
-- `PaperOrdinarySmallStepProgress`
-- `PaperOrdinarySmallStepEvalPreservation`
-- `PaperOrdinarySmallStepReturnPreservation`
+- `NStep_progress`
+- `NStep_store_resolved_state_preservation`
+- `NSteps_store_resolved_state_preservation`
+- `NStepsN_store_resolved_state_preservation`
+
+Static-effect soundness:
+
+- `checked_store_computation_trace_soundness`
 
 Terminal determinism:
 
-- `PaperOrdinarySmallStepTerminalTraceDeterminism`
-- `PaperOrdinarySmallStepTerminalDeterminism`
+- `NSteps_terminal_trace_deterministic`
+- `NSteps_terminal_deterministic`
 
 Surface-effect correctness:
 
-- `PaperOrdinarySurfaceEffectCorrectnessFromBelow`
-- `PaperOrdinaryStructuredSurfaceEffectCorrectnessFromBelow`
+- `checked_context_terminal_correctness_from_store_dispatch`
+- `checked_context_structured_terminal_correctness_from_store_dispatch`
 
-All theorem statements quantify over `NExpr` states/evaluations. Since `NExpr`
-has no checked-pair constructor, these statements exclude checked pairs by
-construction.
+Pair-parallel dispatcher case:
+
+- `EPairPar_checked_store_context_case_from_below`
 
 ## Current Boundary
 
@@ -78,17 +85,19 @@ The current public calculus contains:
 - regions;
 - mutable references;
 - dynamic traces;
-- executable surface-effect summaries;
+- executable surface effects;
+- checked pair-parallel expressions;
 - a continuation-machine small-step semantics;
+- static-effect trace soundness;
 - terminal determinism;
-- terminal surface-effect correctness from the counted-run induction package.
+- closed terminal surface-effect correctness.
 
 Current non-goals:
 
 - terminal small-step/big-step adequacy;
-- termination or cost bounds for summary evaluation;
-- summary inference or synthesis;
-- any public theorem whose ordinary syntax includes checked pairs.
+- termination or cost bounds for surface-effect evaluation;
+- surface-effect inference or synthesis;
+- scheduler determinism for a nondeterministic/interleaving scheduler.
 
 ## Paper Notes
 

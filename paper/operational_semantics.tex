@@ -19,246 +19,418 @@ machine step
   & one continuation-machine step emitting one trace fragment\\
 finite execution
   & $s\longrightarrow^{*}s'\,;\,\phi$
-  & accumulated machine trace\\
-trace replay
-  & $(\phi,H)\Rightarrow^{*}(\Nil,H')$
-  & replay of a produced trace over a heap\\
+  & accumulated machine trace, represented as a list of actions\\
+trace view
+  & $\mathsf{view}(s,\Phi,s')$
+  & proof-facing structured view whose flattening is a machine trace\\
 \bottomrule
 \end{tabular}
 \end{center}
 
 The notation is intentionally separated.  Machine execution \emph{produces}
-trace fragments; the finite-run relation concatenates them into a structured
-trace; replay later \emph{consumes} an already produced trace.  A one-step
+trace fragments; the finite-run relation concatenates them into a list trace.
+The structured trace view used by the structured terminal theorem is derived
+from machine steps and flattens back to the same list trace.  A one-step
 transition emits only a fragment $\eta$: administrative steps emit $\Nil$, while
-heap operations emit singleton fragments such as $\Alloc(l\at r,v)$,
-$\Read(l\at r,v)$, and $\Write(l\at r,v)$.  The trace of a longer execution is
-not stored in the state or continuation.
+heap operations emit singleton fragments such as $\Alloc(l\at r)$,
+$\Read(l\at r)$, and $\Write(l\at r)$.  The trace of a longer execution is not
+stored in the ordinary state or continuation; the pair-parallel runtime state
+temporarily stores the two branch traces so it can perform the final checked
+trace-disjointness test.
 
 \begin{formalbox}{Operational Domains}
 \small
-\begin{tabular}{@{}>{$}l<{$} @{\quad} l@{}}
-E\in\mathit{Env}\triangleq \mathit{Variables}\rightharpoonup\mathit{Values} & (variable assignment)\\
-P\in\mathit{Rgn}\triangleq \mathit{RgnVars}\rightharpoonup\mathit{RgnConst} & (regions in scope)\\
-H\in\mathit{Heap}\triangleq \mathit{Addr}\rightharpoonup\mathit{Values} & (heap assignment)\\
-\langle E,P,e\rangle\in\mathit{Closures}\triangleq
-  \mathit{Env}\times\mathit{Rgn}\times\mathit{Expressions} & (function closures)\\
-v\in\mathit{Values}\triangleq
-  \mathbb{N}+\mathbb{B}+\mathit{Addr}+\mathit{Closures}+\Theta+() & (dynamic values)\\[.6ex]
-s ::= \langle H,E,P,e,k\rangle\mid\langle H,v,k\rangle\mid\mathsf{done}(H,v) & (machine states)\\
-a ::= \Alloc(l\at r,v)\mid\Read(l\at r,v)\mid\Write(l\at r,v) & (dynamic actions)\\
-\eta ::= \Nil\mid a & (one-step trace fragments)\\
-\phi ::= \Nil\mid a\mid \phi\tracecat\phi\mid \phi\parallel\phi & (structured traces)
-\end{tabular}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular*}{\linewidth}{@{}>{$}r<{$}@{\;}>{$}c<{$}@{\;}>{$}l<{$}@{\extracolsep{\fill}}l@{}}
+E\in\mathit{Env}
+  & \triangleq & \mathit{Variables}\rightharpoonup\mathit{Values}
+  & variable assignment\\[.25ex]
+P\in\mathit{Rgn}
+  & \triangleq & \mathit{RgnVars}\rightharpoonup\mathit{RgnConst}
+  & regions in scope\\[.25ex]
+H\in\mathit{Heap}
+  & \triangleq & \mathit{Addr}\rightharpoonup\mathit{Values}
+  & heap assignment\\[.25ex]
+\langle E,P,\varphi\rangle\in\mathit{Closures}
+  & \triangleq & \mathit{Env}\times\mathit{Rgn}\times\mathit{Expressions}
+  & function closures\\[.25ex]
+v\in\mathit{Values}
+  & \triangleq &
+\begin{aligned}[t]
+& \mathsf{eff}(\Theta)\mid (v_1,v_2)
+  \mid n\mid b\mid ()\mid l\at r\mid \langle E,P,\varphi\rangle
+\end{aligned}
+  & dynamic values\\[.8ex]
+s\in\mathit{State}
+  & \triangleq &
+\begin{aligned}[t]
+& \langle H,E,P,e,k\rangle\mid\langle H,v,k\rangle\\[.25ex]
+& \mid\mathsf{done}(H,v)
+  \mid\mathsf{pairRun}(s_1,s_2,\phi_1,\phi_2,k)
+  \mid\mathsf{error}(H)
+\end{aligned}
+  & machine states\\[.8ex]
+k\in\mathit{Kont}
+  & \triangleq &
+\begin{aligned}[t]
+& \mathsf{doneK}
+  \mid K^\mu_f(e,E,P,k)
+  \mid K^e_f(e,E,P,k)\\[.25ex]
+& \mid K^\mu_a(E,P,f,x,e,e,k)
+  \mid K^e_a(E,P,f,x,e,e,k)\\[.25ex]
+& \mid K^{ref}(p,P,k)
+  \mid K^{get}(p,P,k)
+  \mid K^{set}(p,l,P,k)\\[.25ex]
+& \mid K^{read}(k)
+  \mid K^{write}(k)
+  \mid K^{concat}(\Theta,k)\\[.25ex]
+& \mid K^{\parallel}_1(\vec e,E,P,k)
+  \mid K^{\parallel}_2(\vec e,E,P,\Theta,k).
+\end{aligned}
+  & continuations
+\end{tabular*}
+\end{formalbox}
+
+\begin{formalbox}{Machine Operations}
+\small
+\[
+\begin{array}{rcll}
+\mathsf{init}(H,E,P,e)\in\mathit{State}
+  & \triangleq & \langle H,E,P,e,\mathsf{doneK}\rangle
+  & \text{initial expression state}\\
+\mathsf{heap}(s)\in\mathit{Heap}
+  & \triangleq & \text{the }H\text{ carried by }s
+  & \text{state heap projection}\\
+s[H]\in\mathit{State}
+  & \triangleq & \text{state }s\text{ with heap }H
+  & \text{heap replacement}
+\end{array}
+\]
 \end{formalbox}
 
 \begin{formalbox}{Finite Machine Executions}
-\footnotesize
+\small
 \noindent\textbf{Finite execution}\hfill $\boxed{s\longrightarrow^{*}s'\,;\,\phi}$
 
-Each finite execution accumulates one-step fragments by induction.
-\begin{mathpar}
-\inferrule*[lab=TR-Refl]{ }
+\rulepair{
+\inferrule*[lab={[TR-Refl]}]{ }
   {s\longrightarrow^{*}s\,;\,\Nil}
-
-\inferrule*[lab=TR-Step]
+}{
+\inferrule*[lab={[TR-Step]}]
   {s\longrightarrow s_1\,;\,\eta \\
    s_1\longrightarrow^{*}s_2\,;\,\phi}
   {s\longrightarrow^{*}s_2\,;\,\eta\tracecat\phi}
-\end{mathpar}
-Here $\tracecat$ is structured trace sequencing and $\Nil$ is its identity.
+}
+\end{formalbox}
+
+Each finite execution accumulates one-step fragments by induction; $\tracecat$
+denotes list concatenation for machine traces and $\Nil$ is the empty trace.
 Ordinary expression evaluation is the special case
-\[
-\mathsf{init}(H,E,P,e)
-  \longrightarrow^{*}
-\mathsf{done}(H',v)\,;\,\phi.
-\]
+$\mathsf{init}(H,E,P,e)\longrightarrow^{*}\mathsf{done}(H',v)\,;\,\phi$.
 A surface-effect term is just an ordinary expression of type $\mathsf{eff}$;
-there is no separate summary evaluator.
+there is no separate surface-effect evaluator.
+
+The continuation machine accumulates list traces. A trace view is either a
+one-step fragment $\eta$ or a sequential/parallel composition of views. The
+structured terminal correctness theorem uses this proof-facing view together
+with a flattening map back to the underlying machine trace. The first two rules
+are the two cases of the fragment form $\eta$.
+
+\begin{formalbox}{Trace Views}
+\small
+\rulepair{
+\inferrule*[lab={[V-Nil]}]{ }
+  {\mathsf{flatten}(\Nil)=[\,]}
+}{
+\inferrule*[lab={[V-Action]}]{ }
+  {\mathsf{flatten}(\iota)=[\iota]}
+}
+
+\rulepair{
+\inferrule*[lab={[V-Seq]}]
+  {\mathsf{flatten}(\Phi_1)=\phi_1 \\
+   \mathsf{flatten}(\Phi_2)=\phi_2}
+  {\mathsf{flatten}(\Phi_1\tracecat\Phi_2)=\phi_1\tracecat\phi_2}
+}{
+\inferrule*[lab={[V-Par]}]
+  {\mathsf{flatten}(\Phi_1)=\phi_1 \\
+   \mathsf{flatten}(\Phi_2)=\phi_2}
+  {\mathsf{flatten}(\Phi_1\parallel\Phi_2)=\phi_1\tracecat\phi_2}
+}
 \end{formalbox}
 
-\begin{formalbox}{Trace Replay}
-\footnotesize
-\noindent\textbf{Replay}\hfill $\boxed{(\phi,H)\Rightarrow^{*}(\Nil,H')}$
-
-Replay interprets an already produced structured trace as a heap transformer.
-The following selected rules fix the intended direction: execution produces
-traces, while replay consumes them.
-\begin{mathpar}
-\inferrule*[lab=R-Nil]{ }
-  {(\Nil,H)\Rightarrow^{*}(\Nil,H)}
-
-\inferrule*[lab=R-Alloc]{ }
-  {(\Alloc(l\at r,v),H)\Rightarrow^{*}(\Nil,H[(r,l)\mapsto v])}
-
-\inferrule*[lab=R-Read]{H(r,l)=v}
-  {(\Read(l\at r,v),H)\Rightarrow^{*}(\Nil,H)}
-
-\inferrule*[lab=R-Write]{H(r,l)\neq\bot}
-  {(\Write(l\at r,v),H)\Rightarrow^{*}(\Nil,H[(r,l)\mapsto v])}
-
-\inferrule*[lab=R-Seq]
-  {(\phi_1,H)\Rightarrow^{*}(\Nil,H_1) \\
-   (\phi_2,H_1)\Rightarrow^{*}(\Nil,H_2)}
-  {(\phi_1\tracecat\phi_2,H)\Rightarrow^{*}(\Nil,H_2)}
-\end{mathpar}
-The replay relation for parallel traces allows the two subtraces to be consumed
-by an interleaving of their replay steps; the determinism theorem later shows
-that, under the computed-effect guard, terminating replays agree on the final
-heap.
-\end{formalbox}
+The flattening map records only the emitted list trace: both sequential and
+parallel view composition flatten by concatenating the component traces.
 
 
-The initial state for expression $e$ is
-$\mathsf{init}(H,E,P,e)=\langle H,E,P,e,\mathsf{doneK}\rangle$; terminal
-states $\mathsf{done}(H,v)$ have no outgoing machine step.  Continuations are
+The initial state for expression $e$ is $\mathsf{init}(H,E,P,e)$; terminal
+states $\mathsf{done}(H,v)$ and $\mathsf{error}(H)$ have no outgoing machine
+step.  The error state is the checked-failure terminal used when a
+pair-parallel computed-effect or trace check fails.  Continuations are
 bookkeeping devices for the call-by-value evaluation order.
 A frame records the expression still to be evaluated, the environment and region
 map needed to resume evaluation, and the continuation to resume afterward.
 Application frames first remember the unevaluated argument while the function
 position is evaluated, then remember the closure while the argument is
-evaluated, and finally enter either the computational body or the summary body
+evaluated, and finally enter either the computational body or the surface-effect body
 with the recursive name and argument bound.  Heap-operation frames remember the
 pending operation and the region environment while a location or value
 subexpression is evaluated.  The trace emitted while evaluating functions,
-arguments, or summaries is the machine trace of that evaluation.  A computed
-effect is the value returned by evaluating the corresponding summary expression.
+arguments, or surface-effect terms is the machine trace of that evaluation.  A computed
+effect is the value returned by evaluating the corresponding surface-effect expression.
 
 \begin{formalbox}{Small-Step Operational Semantics}
-\footnotesize
+\small
 \noindent\textbf{One machine step}\hfill $\boxed{s\longrightarrow s'\,;\,\eta}$
-\begin{mathpar}
-\inferrule*[lab=S-Const]{ }
+\ruletriple{
+\inferrule*[lab={[S-Const]}]{ }
   {\langle H,E,P,\mathsf{const}\;n,k\rangle
    \longrightarrow
    \langle H,n,k\rangle\,;\,\Nil}
-
-\inferrule*[lab=S-Var]{E(x)=v}
+}{
+\inferrule*[lab={[S-Var]}]{E(x)=v}
   {\langle H,E,P,x,k\rangle
    \longrightarrow
    \langle H,v,k\rangle\,;\,\Nil}
-
-\inferrule*[lab=S-Done]{ }
+}{
+\inferrule*[lab={[S-Done]}]{ }
   {\langle H,v,\mathsf{doneK}\rangle
    \longrightarrow
    \mathsf{done}(H,v)\,;\,\Nil}
+}
 
-\inferrule*[lab=S-Clos]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Clos]}]
   {\varphi=\mu f.\lambda x.\{e_b\mid e_s\}\;\vee\;\varphi=\Lambda\rho.e}
   {\langle H,E,P,\varphi,k\rangle
    \longrightarrow
    \langle H,\langle E,P,\varphi\rangle,k\rangle\,;\,\Nil}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Capp-Fun]{ }
+\begin{rulemathpar}
+\inferrule*[lab={[S-Capp-Fun]}]{ }
   {\langle H,E,P,\capp e_f\,e_a,k\rangle
    \longrightarrow
    \langle H,E,P,e_f,K^\mu_f(e_a,E,P,k)\rangle\,;\,\Nil}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Capp-Arg]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Capp-Arg]}]
   {v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
   {\langle H,v_f,K^\mu_f(e_a,E,P,k)\rangle
    \longrightarrow
    \langle H,E,P,e_a,K^\mu_a(E',P',f,x,e_b,e_s,k)\rangle\,;\,\Nil}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Capp-Body]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Capp-Body]}]
   {E''=E'[f\mapsto v_f][x\mapsto v_a] \\
    v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
   {\langle H,v_a,K^\mu_a(E',P',f,x,e_b,e_s,k)\rangle
    \longrightarrow
    \langle H,E'',P',e_b,k\rangle\,;\,\Nil}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Eapp-Fun]{ }
+\begin{rulemathpar}
+\inferrule*[lab={[S-Eapp-Fun]}]{ }
   {\langle H,E,P,\eapp e_f\,e_a,k\rangle
    \longrightarrow
    \langle H,E,P,e_f,K^e_f(e_a,E,P,k)\rangle\,;\,\Nil}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Eapp-Arg]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Eapp-Arg]}]
   {v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
   {\langle H,v_f,K^e_f(e_a,E,P,k)\rangle
    \longrightarrow
    \langle H,E,P,e_a,K^e_a(E',P',f,x,e_b,e_s,k)\rangle\,;\,\Nil}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Eapp-Body]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Eapp-Body]}]
   {E''=E'[f\mapsto v_f][x\mapsto v_a] \\
    v_f=\langle E',P',\mu f.\lambda x.\{e_b\mid e_s\}\rangle}
   {\langle H,v_a,K^e_a(E',P',f,x,e_b,e_s,k)\rangle
    \longrightarrow
    \langle H,E'',P',e_s,k\rangle\,;\,\Nil}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Alloc]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Alloc]}]
   {P(p)=r \qquad \mathsf{fresh}(H,r)=l}
   {\langle H,v,K^{ref}(p,P,k)\rangle
    \longrightarrow
-   \langle H[(r,l)\mapsto v],l\at r,k\rangle\,;\,\Alloc(l\at r,v)}
+   \langle H[(r,l)\mapsto v],l\at r,k\rangle\,;\,\Alloc(l\at r)}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Get]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Get]}]
   {P(p)=r \qquad H(r,l)=v}
   {\langle H,l\at r,K^{get}(p,P,k)\rangle
    \longrightarrow
-   \langle H,v,k\rangle\,;\,\Read(l\at r,v)}
+   \langle H,v,k\rangle\,;\,\Read(l\at r)}
+\end{rulemathpar}
 
-\inferrule*[lab=S-Set]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Set]}]
   {P(p)=r \qquad H(r,l)\neq\bot}
   {\langle H,v,K^{set}(p,l,P,k)\rangle
    \longrightarrow
-   \langle H[(r,l)\mapsto v],(),k\rangle\,;\,\Write(l\at r,v)}
-\end{mathpar}
+   \langle H[(r,l)\mapsto v],(),k\rangle\,;\,\Write(l\at r)}
+\end{rulemathpar}
 \end{formalbox}
 
 \paragraph{Effect-valued expression steps.}
 Surface-effect terms are ordinary expressions whose values are computed effects.
-Abstract summaries return region-level actions without touching the heap;
-concrete summaries first evaluate their argument and then return a concrete
+Abstract surface-effect forms return region-level actions without touching the heap;
+concrete surface-effect forms first evaluate their argument and then return a concrete
 computed action. These rules are ordinary machine steps and therefore emit
 $\Nil$.
 
 \begin{formalbox}{Effect-Valued Expression Steps}
-\footnotesize
+\small
 \noindent\textbf{One machine step}\hfill $\boxed{s\longrightarrow s'\,;\,\eta}$
-\begin{mathpar}
-\inferrule*[lab=S-Abst-Read]{P(p)=r}
+\ruletriple{
+\inferrule*[lab={[S-Abst-Read]}]{P(p)=r}
   {\langle H,E,P,\Rhat(p),k\rangle
    \longrightarrow
    \langle H,\Rs(r),k\rangle\,;\,\Nil}
-
-\inferrule*[lab=S-Abst-Write]{P(p)=r}
+}{
+\inferrule*[lab={[S-Abst-Write]}]{P(p)=r}
   {\langle H,E,P,\What(p),k\rangle
    \longrightarrow
    \langle H,\Ws(r),k\rangle\,;\,\Nil}
-
-\inferrule*[lab=S-Abst-Alloc]{P(p)=r}
+}{
+\inferrule*[lab={[S-Abst-Alloc]}]{P(p)=r}
   {\langle H,E,P,\Ahat(p),k\rangle
    \longrightarrow
    \langle H,\As(r),k\rangle\,;\,\Nil}
+}
 
-\inferrule*[lab=S-Conc-Read]{ }
+\ruletriple{
+\inferrule*[lab={[S-Conc-Read]}]{ }
   {\langle H,l\at r,K^{read}(k)\rangle
    \longrightarrow
-   \langle H,\Read(l\at r),k\rangle\,;\,\Nil}
-
-\inferrule*[lab=S-Conc-Write]{ }
+   \langle H,\Readhat(l\at r),k\rangle\,;\,\Nil}
+}{
+\inferrule*[lab={[S-Conc-Write]}]{ }
   {\langle H,l\at r,K^{write}(k)\rangle
    \longrightarrow
-   \langle H,\Write(l\at r),k\rangle\,;\,\Nil}
-
-\inferrule*[lab=S-Concat]{ }
+   \langle H,\Writehat(l\at r),k\rangle\,;\,\Nil}
+}{
+\inferrule*[lab={[S-Concat]}]{ }
   {\langle H,\Theta_2,K^{concat}(\Theta_1,k)\rangle
    \longrightarrow
    \langle H,\Theta_1\cup\Theta_2,k\rangle\,;\,\Nil}
+}
 
-\inferrule*[lab=S-Top]{ }
+\rulepair{
+\inferrule*[lab={[S-Top]}]{ }
   {\langle H,E,P,\Top,k\rangle
    \longrightarrow
    \langle H,\top,k\rangle\,;\,\Nil}
-
-\inferrule*[lab=S-Empty]{ }
+}{
+\inferrule*[lab={[S-Empty]}]{ }
   {\langle H,E,P,\Pure,k\rangle
    \longrightarrow
    \langle H,\emptyset,k\rangle\,;\,\Nil}
-\end{mathpar}
+}
 \end{formalbox}
 
-Effect-summary evaluation is proved read-only from typing: if a well-typed
-summary execution emits a read-only trace, the final heap is the initial heap.
-A summary may \emph{denote} an allocation through an abstract allocation action
-without performing an allocation while the summary itself is evaluated.
+\begin{formalbox}{Checked Pair-Parallel Steps}
+\small
+\noindent\textbf{One machine step}\hfill $\boxed{s\longrightarrow s'\,;\,\eta}$
+
+The checked pair-parallel form is operationally specialized to two computational
+applications.  The corresponding surface-effect applications are evaluated
+first.  If the computed-effect precheck fails, execution reaches the terminal
+checked-failure state $\mathsf{error}(H)$; if it succeeds, the machine runs the
+left branch to completion, then the right branch, accumulating separate branch
+traces and checking them before returning the pair.
+For compactness, write
+\[
+\begin{array}{rcl}
+\vec e & \triangleq & (e_{f1},e_{a1},e_{f2},e_{a2})\\
+e_i^\mu & \triangleq & \capp e_{fi}\,e_{ai}\\
+e_i^e & \triangleq & \eapp e_{fi}\,e_{ai}.
+\end{array}
+\]
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Start]}]{ }
+  {\langle H,E,P,\pairpar{e_1^\mu}{e_2^\mu},k\rangle
+   \longrightarrow
+   \langle H,E,P,e_1^e,K^{\parallel}_1(\vec e,E,P,k)\rangle\,;\,\Nil}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Eff1]}]{ }
+  {\langle H,\mathsf{eff}(\Theta_1),
+      K^{\parallel}_1(\vec e,E,P,k)\rangle
+   \longrightarrow
+   \langle H,E,P,e_2^e,K^{\parallel}_2(\vec e,E,P,\Theta_1,k)\rangle\,;\,\Nil}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Check-OK]}]
+  {\neg(\Theta_1 \effconflict \Theta_2)}
+  {\langle H,\mathsf{eff}(\Theta_2),
+      K^{\parallel}_2(\vec e,E,P,\Theta_1,k)\rangle
+   \longrightarrow
+   \mathsf{pairRun}(
+      \mathsf{init}(H,E,P,e_1^\mu),
+      \mathsf{init}(H,E,P,e_2^\mu),
+      [\,],[\,],k)\,;\,\Nil}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Check-Fail]}]
+  {\Theta_1 \effconflict \Theta_2}
+  {\langle H,\mathsf{eff}(\Theta_2),
+      K^{\parallel}_2(\vec e,E,P,\Theta_1,k)\rangle
+   \longrightarrow
+   \mathsf{error}(H)\,;\,\Nil}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Run-L]}]
+  {s_1\longrightarrow s'_1\,;\,\eta}
+  {\mathsf{pairRun}(s_1,s_2,\phi_1,\phi_2,k)
+   \longrightarrow
+   \mathsf{pairRun}(s'_1,
+      s_2[\mathsf{heap}(s'_1)],
+      \phi_1\tracecat\eta,\phi_2,k)\,;\,\eta}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Run-R]}]
+  {s_2\longrightarrow s'_2\,;\,\eta}
+  {\mathsf{pairRun}(\mathsf{done}(H_1,v_1),s_2,\phi_1,\phi_2,k)
+   \longrightarrow
+   \mathsf{pairRun}(\mathsf{done}(\mathsf{heap}(s'_2),v_1),
+      s'_2,\phi_1,\phi_2\tracecat\eta,k)\,;\,\eta}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Done-OK]}]
+  {\neg(\phi_1 \traceconflict \phi_2)}
+  {\mathsf{pairRun}(\mathsf{done}(H,v_1),\mathsf{done}(H,v_2),\phi_1,\phi_2,k)
+   \longrightarrow
+   \langle H,(v_1,v_2),k\rangle\,;\,\Nil}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[S-Pair-Done-Fail]}]
+  {\phi_1 \traceconflict \phi_2}
+  {\mathsf{pairRun}(\mathsf{done}(H,v_1),\mathsf{done}(H,v_2),\phi_1,\phi_2,k)
+   \longrightarrow
+   \mathsf{error}(H)\,;\,\Nil}
+\end{rulemathpar}
+If either branch reaches $\mathsf{error}(H)$, the pair-parallel state steps to
+the same checked-failure terminal state.
+\end{formalbox}
+
+Surface-effect evaluation is proved heap-neutral from typing: if a well-typed
+surface-effect execution emits a heap-neutral trace, the final heap is the
+initial heap.  A surface effect may \emph{denote} an allocation through an
+abstract allocation action without performing an allocation while the
+surface-effect term itself is evaluated.

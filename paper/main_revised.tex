@@ -21,9 +21,11 @@
 % Notation macros
 % ------------------------------------------------------------------
 \newcommand{\desc}{\mathrel{\blacktriangleleft}}      % "correctly described by" relation
-\newcommand{\conflict}{\mathrel{\otimes}}             % computed-effect conflict
-\newcommand{\s}{\mathrel{\boxtimes}}                  % element-wise conflict
+\newcommand{\conflict}{\mathrel{\otimes}}             % computed-action/effect conflict
+\newcommand{\s}{\mathrel{\otimes}}                    % computed-action conflict
 \newcommand{\elemconf}{\s}                              % element-wise conflict (aux relation)
+\newcommand{\regionconflict}{\mathrel{\#}}            % static region-effect conflict
+\newcommand{\dynconflict}{\mathrel{\boxtimes}}        % dynamic trace/action conflict
 \newcommand{\approxx}{\mathrel{\sqsubseteq}}          % trace covered by computed effect
 \newcommand{\sem}[1]{\llbracket #1 \rrbracket}
 \newcommand{\Read}{\mathsf{Read}}
@@ -48,16 +50,21 @@
 \newcommand{\getop}{\mathsf{get}\;}
 \newcommand{\setop}{\mathsf{set}\;}
 \newcommand{\at}{\mathord{@}}
+\newcommand{\pparl}{\mathopen{\llparenthesis}}
+\newcommand{\pparr}{\mathclose{\rrparenthesis}}
+\newcommand{\pairpar}[2]{\pparl\,#1,#2\,\pparr}
 \newcommand{\thetahat}{\widehat{\Theta}}
-\newcommand{\ReadOnly}{\mathsf{ReadOnly}}
+\newcommand{\HeapNeutral}{\mathsf{HeapNeutral}}
 \newcommand{\Disjoint}{\mathsf{Disjoint}}
 \newcommand{\DetTrace}{\mathsf{Det}}
 \newcommand{\MapDisjoint}{\mathsf{MapDisjoint}}
+\newcommand{\effconflict}{\mathrel{\otimes}}
+\newcommand{\traceconflict}{\mathrel{\boxtimes}}
 \newcommand{\traceset}[1]{\llbracket #1\rrbracket^{\subseteq}}% legacy alias
 \newcommand{\dynset}[1]{\lvert #1\rvert_{\mathsf{dyn}}}
 \newcommand{\staticset}[1]{\lvert #1\rvert_{\epsilon}}
 \newcommand{\cerase}[1]{\lfloor #1 \rfloor_{\epsilon}}
-\newcommand{\actleq}{\mathrel{\preccurlyeq_{\Theta}}}
+\newcommand{\actleq}{\mathrel{\preccurlyeq}}
 \newcommand{\covers}{\mathrel{\sqsupseteq}}
 \newcommand{\silent}{\mathsf{silent}}
 \newcommand{\efun}[1]{e^{\mathsf{fun}}_{#1}}
@@ -84,11 +91,49 @@
   before skip=1.1em,after skip=1.1em
 }
 
+\newtcolorbox{fixedformalbox}[1]{
+  enhanced jigsaw,
+  breakable,
+  colback=white,
+  colframe=black,
+  boxrule=.45pt,
+  arc=0pt,
+  left=5pt,right=5pt,top=8pt,bottom=5pt,
+  title={#1},
+  fonttitle=\bfseries,
+  coltitle=black,
+  attach boxed title to top center={yshift=-2mm},
+  boxed title style={colback=white,colframe=white,boxrule=0pt,arc=0pt,left=4pt,right=4pt},
+  before skip=1.1em,after skip=1.1em
+}
+
+\newenvironment{rulemathpar}
+  {\par\vspace{-.35\baselineskip}\begin{mathpar}}
+  {\end{mathpar}\vspace{-.55\baselineskip}}
+
+\long\def\rulepair#1#2{%
+  \begin{rulemathpar}
+  #1
+  \and
+  #2
+  \end{rulemathpar}
+}
+
+\long\def\ruletriple#1#2#3{%
+  \begin{rulemathpar}
+  #1
+  \and
+  #2
+  \and
+  #3
+  \end{rulemathpar}
+}
+
 
 \lstset{basicstyle=\ttfamily\small, keywordstyle=\bfseries,
         morekeywords={fun,let,in,ref,at,region,end}, columns=fullflexible, mathescape=true}
 
-\title{Executable Effect Summaries for Deterministic Parallelism}
+\title{Surface Effects for Deterministic Parallelism}
 \author{Vitor Rodrigues\thanks{VORTEX-Colab, Porto, Portugal.
   \texttt{vitor.rodrigues@vortex-colab.com}}
   \and
@@ -105,22 +150,20 @@ approximations often reject computations whose concrete run-time accesses are
 independent. Dynamic and optimistic systems recover more parallelism by
 observing concrete accesses, but typically require logging, validation,
 rollback, or replay. This paper explores a middle ground: \emph{surface-effect
-terms}, source-level executable summaries that are statically checked against
-the computations they describe and evaluated before those computations are
-run.
+terms}, source-level executable effect descriptions that are statically checked
+against the computations they describe and evaluated before those computations
+are run.
 
 We present a region-polymorphic simply typed $\lambda$-calculus with mutable
-references and executable effect summaries. The mechanized development proves
-that verified summaries approximate the dynamic traces of their paired
+references and executable surface effects. The mechanized development proves
+that verified surface effects approximate the dynamic traces of their paired
 computations, and that terminating continuation-machine executions are
 deterministic. Surface effects therefore provide a statically verified,
 source-level form of pre-execution access prediction: programmers may expose
 value-dependent access information before a computation is run, while the
-metatheory ensures that the summary covers the computation trace it claims to
-describe.
+metatheory ensures that the surface effect covers the computation trace it
+claims to describe.
 \end{abstract}
-
-\tableofcontents
 
 \section*{Introduction}
 
@@ -134,41 +177,44 @@ A central challenge is therefore to expose parallelism without asking the
 programmer to reason directly about low-level interleavings.
 
 The language studied in this paper is a region-polymorphic $\lambda$-calculus
-with mutable references and executable effect summaries. Typability is established
+with mutable references and executable surface effects. Typability is established
 using a type-and-effect discipline in the Lucassen--Gifford lineage
 \citep{lucassen1988}. Region effects and non-interference checks for
 deterministic parallelism are not, by themselves, the novelty claimed here; DPJ,
 for example, uses modular compile-time type-and-effect checking to guarantee
 deterministic semantics \citep{bocchino2009}. The question we ask is more
-specific: can the programmer provide a checked, executable summary that is more
+specific: can the programmer provide a checked, executable surface effect that is more
 precise than a coarse static region effect, but less intrusive than fully
 logging or validating every dynamic access?
 
-Throughout the paper, we call the source-level executable effect-summary terms
+Throughout the paper, we call the source-level executable effect-description terms
 \emph{surface-effect terms}; when the context is clear, we use \emph{surface
 effects} as shorthand for this term language. Evaluating a surface-effect term
-yields a \emph{computed effect}, which is the run-time summary value available
+yields a \emph{computed effect}, which is the run-time effect value available
 to later analyses or runtimes. The contribution is not merely that effects
 appear in types, but that a computation can be paired with another well-typed
-source term that computes a summary of the computation before the computation
-itself is run.
+source term that computes a surface effect for the computation before the
+computation itself is run.
 
 Two degenerate surface-effect terms are useful for intuition. `$\Pure$' denotes
-the empty summary and is appropriate for computations that perform no dynamic
-memory actions. `$\Top$' is the opposite extreme: it is a sound summary for any
+the empty surface effect and is appropriate for computations that perform no
+dynamic memory actions. `$\Top$' is the opposite extreme: it is a sound surface
+effect for any
 computation, but it gives up precision and therefore prevents a useful
 address-level comparison. Between these extremes, surface-effect terms
-can compute value-dependent summaries such as concrete reads and writes. This
+can compute value-dependent effects such as concrete reads and writes. This
 precision is useful when two computations mention the same static region but
 access different concrete locations within that region.
 
 The central intuition is that one well-typed term is described by \emph{another}
-well-typed term of the same language. A summary may inspect run-time values and,
-for example, compute a concrete region/location pair instead of retaining only a
-region-level read or write. Such a summary may distinguish accesses that a
+well-typed term of the same language. A surface effect may inspect run-time
+values and, for example, compute a concrete region/location pair instead of
+retaining only a region-level read or write. Such a surface effect may
+distinguish accesses that a
 region-only static effect merges. The formal development does not define a
 global precision lattice relating static effects, computed effects, and traces,
-nor does it prove that a more precise summary is necessarily more expensive. The
+nor does it prove that a more precise surface effect is necessarily more
+expensive. The
 soundness claim is instead expressed by explicit approximation relations:
 static effects soundly cover dynamic actions, and a verified surface-effect term
 evaluates to a computed effect that soundly covers the trace of its paired
@@ -181,33 +227,39 @@ pointer-rich data structures collapse many concrete locations into the same
 abstract region. Purely dynamic and optimistic approaches observe concrete
 accesses directly, and hence can be very precise, but they usually require
 logging, validation, rollback, or replay. Surface effects place the check in
-between: a source-level summary is supplied and verified statically, evaluated
+between: a source-level surface effect is supplied and verified statically, evaluated
 before the paired computation runs, and then used as a more precise dynamic
-summary of the computation's future accesses.
+description of the computation's future accesses.
 
 Figure~\ref{fig:middleground} previews this design point symbolically.  The
 notation is introduced fully in Sections~\ref{sec:effects}--\ref{sec:opsem}.
 Here it is only schematic: $s\longrightarrow s';\eta$ denotes one step of the
 operational machine together with the trace fragment $\eta$ emitted by that
 step, while $s\longrightarrow^{*}s';\phi$ denotes a finite execution whose
-fragments have been accumulated into the structured trace $\phi$. Static
+fragments have been accumulated into the machine trace $\phi$. Structured trace
+views are introduced later as proof-facing views over this list trace. Static
 checking compares region effects $\epsilon_i$. Surface-effect checking first
 verifies source expressions against surface-effect terms $\thetahat_i$, then
 evaluates those terms by the same operational machine to computed effects
 $\Theta_i$. Dynamic approaches compare traces $\phi_i$ obtained from the
-actual executions. The table writes $\otimes$ for the relevant comparison at
-each level; the formal development later refines the computed-effect comparison
-into computed-effect disjointness and non-conflict premises.
+actual executions. We write $e_i\longmapsto\phi_i$ as a compact trace-level
+abbreviation for the terminating execution of expression $e_i$ that emits
+$\phi_i$; this is notation for the figure, not a separate operational rule.
+The table uses level-specific conflict symbols: $\#$ for static
+region effects, $\otimes$ for computed effects $\Theta$, and $\boxtimes$ for
+dynamic traces $\phi$. In the pair-parallel machine the computed-effect
+comparison is implemented by a decidable precheck, followed by a defensive
+trace-disjointness check after the branch traces have been produced.
 
 Static effects are inexpensive and available at compile time, but their
 region-level approximation may reject independent concrete accesses. Surface
-effects pay the cost of evaluating executable summaries before running the
+effects pay the cost of evaluating executable surface effects before running the
 paired computations, but can recover value-dependent precision. Dynamic tracking
 observes the concrete accesses themselves, but usually requires logging,
 validation, rollback, or replay.
 
 
-\begin{figure}[t]
+\begin{figure}[h]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
@@ -216,30 +268,30 @@ validation, rollback, or replay.
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{.20\textwidth}
                 p{.29\textwidth}c p{.29\textwidth}@{}}
 \hline
-\multicolumn{4}{c}{$e_1 \quad e_2$}\\[-.2ex]
-\multicolumn{4}{c}{\bfseries Three places to compare effects}\\[.4ex]
+\multicolumn{4}{c}{\bfseries Three ways to compare effects}\\[.4ex]
 \hline
 \textbf{Static region effects}
   & $\Gamma \vdash e_1 : \tau_1\,!\,\epsilon_1$
-  & $\epsilon_1 \conflict \epsilon_2$
+  & $\epsilon_1 \regionconflict \epsilon_2$
   & $\Gamma \vdash e_2 : \tau_2\,!\,\epsilon_2$\\[.5ex]
 \rowcolor{gray!12}
 \textbf{Surface effects}
   & $\Gamma;\Delta;P \vdash e_1 \desc \thetahat_1$
-  & $\Theta_1 \conflict \Theta_2$
+  &
   & $\Gamma;\Delta;P \vdash e_2 \desc \thetahat_2$\\
 \rowcolor{gray!12}
+\textbf{and computed effects}
   & $\thetahat_1 \longrightarrow^{*} \Theta_1$
-  &
+  & $\Theta_1 \conflict \Theta_2$
   & $\thetahat_2 \longrightarrow^{*} \Theta_2$\\
 \rowcolor{gray!12}
   & $\phi_1 \approxx \Theta_1$
   &
   & $\phi_2 \approxx \Theta_2$\\[.5ex]
 \textbf{Dynamic traces}
-  & $e_1 \leadsto \phi_1$
-  & $\phi_1 \conflict \phi_2$
-  & $e_2 \leadsto \phi_2$\\
+  & $e_1 \longmapsto \phi_1$
+  & $\phi_1 \dynconflict \phi_2$
+  & $e_2 \longmapsto \phi_2$\\
 \hline
 \end{tabular}%
 }
@@ -251,7 +303,7 @@ validation, rollback, or replay.
 Operationally, the ordinary continuation-machine relation
 $s\longrightarrow s';\eta$ evaluates expression structure and emits the trace
 fragment $\eta$. A surface-effect term is evaluated by this same machine; there
-is no separate summary evaluator. Thus the paper's runtime theorem is an
+is no separate surface-effect evaluator. Thus the paper's runtime theorem is an
 operational theorem about finite small-step executions, not merely a statement
 about typing rules.
 
@@ -264,45 +316,47 @@ expression $e$ is correctly described by a surface-effect term $\thetahat$.
 At run time, that term is evaluated by the same small-step machine as every
 other expression. When it returns an effect value, that value is the computed
 effect $\Theta$. If a computed effect is too imprecise, for example because a
-summary evaluated to $\top$, the result remains sound but conservative.
+surface effect evaluated to $\top$, the result remains sound but conservative.
 
 Static region/effect systems such as DPJ make non-interference a modular
-compile-time obligation, but region-level summaries may merge concrete accesses
+compile-time obligation, but region-level effects may merge concrete accesses
 that are distinct at run time \citep{bocchino2009}. Runtime inspector--executor
 techniques address irregular dependences by discovering conflict-free work
 before executing it in parallel \citep{arenaz2004}. Surface effects occupy a
-related middle position: the access summary is supplied as a typed source-
+related middle position: the access description is supplied as a typed source-
 language term, checked against the computation, and evaluated before the
 described computation is run. Unlike optimistic post-validation, the calculus
 does not start the described computation and then roll it back after discovering
-a summary conflict; however, this fact alone does not establish that
+a surface-effect conflict; however, this fact alone does not establish that
 pre-checking is cheaper in total.
 
 The formal contribution is therefore a sound scheduling interface rather than
 an asymptotic performance result. At compile time, an inductive correctness
-relation validates programmer-written computation/summary pairs. At run time,
-the summary terms evaluate to computed effects that may contain concrete
+relation validates programmer-written computation/surface-effect pairs. At run time,
+the surface-effect terms evaluate to computed effects that may contain concrete
 region/location information. The mechanized development connects these stages:
-summary correctness gives trace approximation, summary-level safety gives a
-deterministic parallel trace, and deterministic trace replay gives equivalent
-final heaps. False positives remain possible because summaries are
-approximations and `$\Top$' is deliberately maximally conservative.
+branch correctness gives trace approximation, the pair-parallel checks reject
+conflicting computed effects or conflicting branch traces, and terminal
+continuation-machine theorems connect terminating traces to unique final heaps.
+False positives remain possible because surface effects are approximations and
+`$\Top$' is deliberately maximally conservative.
 
 The contributions of this paper are:
 
 \begin{itemize}
-  \item an executable effect-summary mini-language embedded in a
-        region-polymorphic calculus with mutable references;
-  \item an inductive correctness relation for statically verifying a
-        computation against a programmer-written, value-dependent summary term;
-  \item a trace-emitting small-step operational semantics in which executable
-        summaries are ordinary expressions of type $\mathsf{eff}$;
-  \item a mechanized approximation theorem showing that a verified summary
-        soundly covers the dynamic trace of its computation;
-  \item a mechanized continuation-machine safety layer showing that every
-        finite prefix of a well-typed execution remains type safe and not
-        stuck, plus explicit terminal determinism and terminal correctness
-        theorems for ordinary executions.
+  \item a region-polymorphic $\lambda$-calculus with mutable references and
+        surface-effect terms as ordinary expressions returning computed effects,
+        together with a trace-emitting continuation-machine semantics that
+        evaluates $\lambda$-terms and surface-effect terms uniformly;
+  \item an inductive correctness relation for statically verifying that a
+        programmer-written, value-dependent surface effect covers its paired
+        computation;
+  \item a checked pair-parallel interface based on a decidable computed-effect
+        precheck and a final trace-disjointness check, connecting verified
+        branch surface effects to deterministic terminal executions;
+  \item mechanized soundness theorems: progress, store-resolved preservation,
+        static-effect trace soundness, terminal determinism, and terminal
+        surface-effect correctness for checked continuation-machine executions.
 \end{itemize}
 
 The rest of this paper is organized as follows. We start by presenting a
@@ -322,12 +376,12 @@ Section~\ref{sec:conclusions} after discussion of related work.
 \label{sec:motivating}
 
 The ML-like program in Fig.~\ref{fig:example} illustrates the intuition behind
-surface-effect terms. The function \lstinline|incr| increments the integer
-stored in a mutable reference. Its argument has type
-$\mathsf{ref}\,\mathsf{int}\;\mathsf{at}\;\rho$, and the latent static effect of
-the body is $\{\Rs(\rho),\Ws(\rho)\}$: the reference is both read and written.
-A conventional region-effect check therefore treats two calls to \lstinline|incr|
-at the same region as potentially conflicting.
+surface-effect terms and checked pair parallelism. The function
+\lstinline|incr| increments the integer stored in a mutable reference. Its
+argument has type $\mathsf{ref}\,\mathsf{int}\;\mathsf{at}\;\rho$, and the
+latent static effect of the body is $\{\Rs(\rho),\Ws(\rho)\}$: the reference is
+both read and written. A conventional region-effect check therefore treats two
+calls to \lstinline|incr| at the same region as potentially conflicting.
 
 This is conservative. A list of references is usually homogeneous in its region
 parameter, so two variables \lstinline|x| and \lstinline|y| drawn from the same
@@ -339,44 +393,61 @@ computation is run.
 
 \begin{figure}[ht]
 \begin{lstlisting}
-fun incr [rho] (r : int ref at rho) : unit =
+fun incr [$\rho$] (r : int ref at $\rho$) : unit =
   r := !r + 1
 
-fun incr_eff [rho] (r : int ref at rho) : eff =
+fun incr_eff [$\rho$] (r : int ref at $\rho$) : eff =
   $\widehat{\Read(r)} \oplus \widehat{\Write(r)}$
 
-fun use (x : int ref at 7) : unit =
-  incr[7] x       (* described by incr_eff[7] x *)
+fun use_pair [$\rho$] (x : int ref at $\rho$) (y : int ref at $\rho$) =
+  $\llparenthesis$ incr[$\rho$] x with incr_eff[$\rho$] x, incr[$\rho$] y with incr_eff[$\rho$] y $\rrparenthesis$
 \end{lstlisting}
-\caption{Motivating example: a computation paired with an executable
-surface-effect summary.}
+\caption{Motivating example: checked parallel calls with executable
+surface-effect terms.}
 \label{fig:example}
 \end{figure}
 
-The role of \lstinline|incr_eff| is to compute the summary that the static
-region effect cannot express. The surface-effect term
+The final definition uses the checked pair-parallel notation
+$\pairpar{\cdots}{\cdots}$. Each branch supplies
+the computation to run and the surface-effect term to evaluate before the
+parallel computations run. In the formal syntax, the computational and
+surface-effect bodies are packaged together, and the pair-parallel machine step
+evaluates the two surface-effect applications before running the two
+computational applications.
+
+The role of \lstinline|incr_eff| is to compute the effect that the static region
+effect cannot express. The surface-effect term
 $\widehat{\Read(r)} \oplus \widehat{\Write(r)}$ is evaluated as an ordinary
-effect-valued expression. Its result is a
-computed effect that mentions the concrete region/location pair of the actual
-argument. Thus, two calls whose arguments are distinct locations in the same
-region can produce non-conflicting computed effects, while two calls on the same
-location still conflict.
+effect-valued expression. On argument \lstinline|x|, it can produce a computed
+effect such as
+\[
+  \Theta_x =
+  \{\Read(l_x\at r),\Write(l_x\at r)\},
+\]
+where $l_x\at r$ is the concrete address stored in \lstinline|x|; similarly
+\lstinline|incr_eff[rho] y| produces $\Theta_y$ for \lstinline|y|. If
+$l_x\neq l_y$, the computed effects can pass the pair-parallel precheck even
+though both computations have the same static region effect. If $l_x=l_y$, the
+computed effects conflict and the checked parallel step safely rejects the pair.
+After the branch computations run, the machine also checks the produced branch
+traces for dynamic conflicts before returning the pair value.
 
 The point of the example is not that every invocation of \lstinline|incr| is
 safe to parallelize. Statically, each call has the region effect
 $\{\Rs(\rho),\Ws(\rho)\}$, so two calls at the same region appear to conflict.
 The surface-effect term \lstinline|incr_eff| refines that coarse description by
-computing the summary $\widehat{\Read(r)} \oplus \widehat{\Write(r)}$ from the actual
-argument \lstinline|r|. The computed effect can mention concrete
-region/location pairs rather than only the region $\rho$.
+computing the effect $\widehat{\Read(r)} \oplus \widehat{\Write(r)}$ from the
+actual argument \lstinline|r|. The computed effect can mention concrete
+region/location pairs rather than only the region $\rho$, which is exactly the
+information needed by \lstinline|use_pair|.
 
 The same example also illustrates the precision spectrum. A pure computation
-may be summarized by `$\Pure$', the empty surface-effect term. The computation
+may be described by `$\Pure$', the empty surface-effect term. The computation
 \lstinline|incr| cannot soundly use `$\Pure$', because it reads and writes its
-argument. It could, however, always use `$\Top$': this summary is sound but
-maximally conservative, so any later consumer of the summary would learn no
+argument. It could, however, always use `$\Top$': this surface effect is sound but
+maximally conservative, so any later consumer of the computed effect would learn no
 useful address-level information.
-The useful summary lies between these extremes: $\widehat{\Read(r)} \oplus
+The useful surface effect lies between these extremes: $\widehat{\Read(r)} \oplus
 \widehat{\Write(r)}$ is still sound, but it exposes enough run-time address information
 to avoid some false conflicts.
 
@@ -390,16 +461,19 @@ but this is not a single global order. It abbreviates two typed bridges: a
 static effect $\epsilon$ covers the region erasure of a computed effect
 $\Theta$, and the computed effect $\Theta$ covers the dynamic trace $\phi$ by
 the relation $\phi\approxx\Theta$. In the motivating case, the
-programmer-written summary is checked once as part of the program, but its
-value-dependent result is computed at run time by the ordinary machine.
+programmer-written surface-effect term is checked once as part of the program,
+but its value-dependent result is computed at run time by the same machine and
+used by the pair-parallel check.
 
-Finally, surface-effect terms used as summaries are required to be read-only.
+Finally, surface-effect terms used in checked computation/surface-effect pairs
+are required to be heap-neutral: evaluating them may read, but it must not
+allocate or write.
 The purpose of \lstinline|incr_eff| is to inspect the reference value well enough
-to construct a summary, not to perform the update that \lstinline|incr| will
-perform. This restriction is what lets the metatheory separate summary
-evaluation from the computation it describes: evaluating the summary can affect
-the scheduling decision, but it cannot itself perform the writes whose safety is
-being checked.
+to construct a computed effect, not to perform the update that \lstinline|incr|
+will perform. This restriction is what lets the metatheory separate
+surface-effect evaluation from the computation it describes: evaluating the
+surface effect can affect the scheduling decision, but it cannot itself perform
+the heap updates whose safety is being checked.
 \section{Static Effects, Dynamic Traces, Surface Effects, and Computed Effects}
 \label{sec:effects}
 
@@ -417,74 +491,85 @@ $l$ for a heap location, and $l\at r$ for the concrete address consisting of
 location $l$ in region $r$. A static region $p$ may be either a region variable
 or a region constant. Static actions describe allocation, read, and write at the
 level of regions, whereas dynamic actions describe concrete events at allocated
-addresses. The value component of a dynamic action is important for replaying a
-trace, but is usually irrelevant for conflict checking, so examples often omit
-it.
+addresses. In the continuation-machine development, dynamic actions record the
+region and location of the event; heap values remain in the machine state rather
+than in the trace label.
 
 \begin{formalbox}{Effect Definitions}
 \small
-\[
-\begin{array}{rcll}
-\rho &\in& \mathit{RgnVar} & \text{region variables}\\
-r &\in& \mathit{RgnConst} & \text{region constants}\\
-l &\in& \mathit{Loc} & \text{heap locations}\\
-l\at r &\in& \mathit{Addr} \triangleq \mathit{Loc}\times\mathit{RgnConst}
-  & \text{concrete heap addresses}\\[.4ex]
-p &::=& \rho \mid r & \text{static regions}\\
-\alpha &::=& \As(p) \mid \Rs(p) \mid \Ws(p) & \text{static actions}\\
-\epsilon &\in& \mathcal{P}(\alpha) & \text{static effects}\\[.4ex]
-\iota &::=& \Alloc(l\at r,v) \mid \Read(l\at r,v) \mid \Write(l\at r,v)
-  & \text{dynamic actions}\\
-\phi &::=& \Nil \mid \iota \mid \phi_1\tracecat\phi_2 \mid \phi_1\parallel\phi_2
-  & \text{dynamic traces}\\[.4ex]
-\theta &::=& \Ahat(r) \mid \Rhat(r) \mid \What(r)
-       \mid \widehat{\Read(l\at r)} \mid \widehat{\Write(l\at r)}
-  & \text{computed actions}\\
-\Theta &::=& \top \mid \{\theta_1,\ldots,\theta_n\}
-  & \text{computed effects}
-\end{array}
-\]
+\renewcommand{\arraystretch}{1.22}
+\begin{tabular*}{\linewidth}{@{}>{$}r<{$}@{\;}>{$}c<{$}@{\;}>{$}l<{$}@{\extracolsep{\fill}}l@{}}
+\rho &\in& \mathit{RgnVar} & region variables\\
+r &\in& \mathit{RgnConst} & region constants\\
+l &\in& \mathit{Loc} & heap locations\\
+l\at r &\in& \mathit{Addr}\triangleq\mathit{Loc}\times\mathit{RgnConst} & concrete heap addresses\\[.7ex]
+p & \triangleq & \rho \mid r & static regions\\
+\alpha & \triangleq & \As(p) \mid \Rs(p) \mid \Ws(p) & static actions\\
+\epsilon &\in& \mathcal{P}(\alpha) & static effects\\[.7ex]
+\iota & \triangleq & \Alloc(l\at r) \mid \Read(l\at r) \mid \Write(l\at r)
+  & dynamic actions\\
+\eta & \triangleq & \Nil \mid \iota
+  & one-step trace fragments\\
+\phi & \triangleq & [\,] \mid \iota :: \phi
+  & machine traces\\
+\Phi & \triangleq & \eta \mid \Phi_1\tracecat\Phi_2 \mid \Phi_1\parallel\Phi_2
+  & structured trace views\\[.7ex]
+\theta & \triangleq &
+\begin{aligned}[t]
+& \Ahat(r) \mid \Rhat(r) \mid \What(r)
+  \mid \widehat{\Alloc(l\at r)}\\
+& \mid \widehat{\Read(l\at r)} \mid \widehat{\Write(l\at r)}
+\end{aligned}
+  & computed actions\\
+\Theta & \triangleq & \top \mid \{\theta_1,\ldots,\theta_n\}
+  & computed effects
+\end{tabular*}
 \end{formalbox}
 
 \paragraph{Static effects and dynamic traces.}
 A static effect $\epsilon$ is the effect component of a type-and-effect judgment
 $\Gamma \vdash e : \tau\,!\,\epsilon$. It abstracts over all possible executions
-of $e$ using region-level actions such as $\Rs(\rho)$ or $\Ws(\rho)$. A dynamic
-trace $\phi$ is produced by the operational semantics. It records the concrete
-allocation, read, and write events emitted by a particular execution. Structured
-traces compose sequentially and in parallel; this structure is used by the
-trace-replay and deterministic-parallelism theorems.
+of $e$ using region-level actions such as $\Rs(\rho)$ or $\Ws(\rho)$.
+A one-step trace fragment $\eta$ is either empty or contains a single dynamic
+action $\iota$. A dynamic trace $\phi$ is produced by the operational semantics
+by concatenating these fragments; it records the concrete allocation, read, and
+write events emitted by a particular execution as a list. Structured trace views
+$\Phi$ decompose into one-step fragments $\eta$, sequential composition, and
+parallel composition when a theorem needs to remember proof-facing trace
+structure.
 
 \paragraph{Surface-effect terms and computed effects.}
 A surface-effect term $\thetahat$ is an expression of the source language whose
 result type is $\mathsf{eff}$. Evaluating such a term produces a computed effect
 $\Theta$. Computed effects intentionally mix abstract region actions and
-concrete address actions: a summary may say only that a computation writes some
+concrete address actions: a computed effect may say only that a computation writes some
 location in region $r$, or it may say that the computation writes the particular
-address $l\at r$. This is the mechanism that lets a summary be more precise than
-a static region effect while still being evaluated before the paired computation
-runs.
+address $l\at r$. This is the mechanism that lets a surface effect be more
+precise than a static region effect while still being evaluated before the
+paired computation runs.
 
 Not every static or dynamic action has the same status as a computed action.
-Concrete reads and writes can appear in computed effects, because a summary term
-can evaluate an argument reference and obtain its region/location pair. Concrete
-allocation is not used as a computed action in the mechanization; allocation is
-summarized abstractly at the region level. Conversely, dynamic traces contain
-concrete allocations, reads, and writes because they describe what an execution
-actually did.
+Concrete reads and writes can appear in computed effects, because a
+surface-effect term can evaluate an argument reference and obtain its
+region/location pair. Concrete
+allocation is present in the semantic computed-action datatype and coverage
+relation, but the current surface-effect syntax constructs allocation summaries
+abstractly at the region level. Conversely, dynamic traces contain concrete
+allocations, reads, and writes because they describe what an execution actually
+did.
 
 The surface-effect term `$\Top$' evaluates to the distinguished computed effect
 $\top$. It is a sound but maximally conservative approximation: every dynamic
 trace is covered by $\top$, but $\top$ conflicts with every computed effect
-and cannot satisfy the computed-effect disjointness premise. Thus, a
+and cannot pass the pair-parallel computed-effect precheck. Thus, a
 surface-effect term may always fall back to `$\Top$' for soundness, but doing so
-loses all useful disjointness information. By contrast, `$\Pure$'
+loses all useful separation information. By contrast, `$\Pure$'
 evaluates to the empty computed-effect set and describes computations with no
 dynamic actions.
 
 The useful slogan from the earlier presentation is
 $\epsilon\covers\Theta\covers\phi$: static effects are coarser than computed
-effects, and computed effects are coarser than the traces they summarize.  In
+effects, and computed effects are coarser than the traces they cover.  In
 this paper the slogan is only a guide to the reader; formally, the objects live
 in different syntactic categories and are related by typed bridges rather than
 by a single global lattice.
@@ -502,7 +587,9 @@ approximations.  The left bridge compares a static effect with the
 \cerase{\Rhat(r)} &=& \Rs(r)\\[0.5mm]
 \cerase{\What(r)} &=& \Ws(r)
 &\qquad&
-\cerase{\widehat{\Read(l\at r)}} &=& \Rs(r)\\[0.5mm]
+\cerase{\widehat{\Alloc(l\at r)}} &=& \As(r)\\[0.5mm]
+\cerase{\widehat{\Read(l\at r)}} &=& \Rs(r)
+&\qquad&
 \cerase{\widehat{\Write(l\at r)}} &=& \Ws(r).
 \end{array}
 \]
@@ -514,30 +601,30 @@ approximations.  The left bridge compares a static effect with the
 \quad\text{iff}\quad
 \Theta\neq\top\text{ and }\cerase{\Theta}\subseteq\epsilon.
 \]
-The right bridge compares a computed effect with a structured dynamic trace.
-It first forgets only the intensional trace structure:
+The right bridge compares a computed effect with a machine trace. For structured
+trace views, it first forgets only the intensional view structure:
 \[
 \begin{array}{rclcrcl}
 \dynset{\Nil} &=& \emptyset
 &\qquad&
 \dynset{\iota} &=& \{\iota\}\\[0.5mm]
-\dynset{\phi_1\tracecat\phi_2} &=&
-  \dynset{\phi_1}\cup\dynset{\phi_2}
+\dynset{\Phi_1\tracecat\Phi_2} &=&
+  \dynset{\Phi_1}\cup\dynset{\Phi_2}
 &\qquad&
-\dynset{\phi_1\parallel\phi_2} &=&
-  \dynset{\phi_1}\cup\dynset{\phi_2}.
+\dynset{\Phi_1\parallel\Phi_2} &=&
+  \dynset{\Phi_1}\cup\dynset{\Phi_2}.
 \end{array}
 \]
-This dynamic-action view still contains concrete locations and values, so it is
+This dynamic-action view still contains concrete locations, so it is
 related to computed effects by the structural approximation judgment
 $\phi\approxx\Theta$, not by subset inclusion.  If we additionally erase
 dynamic actions to ordinary static actions,
 \[
 \begin{array}{rclcrcl}
-\cerase{\Alloc(l\at r,v)} &=& \As(r)
+\cerase{\Alloc(l\at r)} &=& \As(r)
 &\qquad&
-\cerase{\Read(l\at r,v)} &=& \Rs(r)\\[0.5mm]
-\cerase{\Write(l\at r,v)} &=& \Ws(r)
+\cerase{\Read(l\at r)} &=& \Rs(r)\\[0.5mm]
+\cerase{\Write(l\at r)} &=& \Ws(r)
 &\qquad&
 \staticset{\phi} &=& \{\cerase{\iota}\mid \iota\in\dynset{\phi}\},
 \end{array}
@@ -557,60 +644,67 @@ three-level comparison can be read as
 
 \paragraph{Computed-effect coverage.}
 The right-hand bridge, $\Theta\covers\phi$, is made precise by the
-structural trace-to-computed-effect judgment $\phi\approxx\Theta$.  This
-judgment does not evaluate a trace and does not turn an execution trace into a
-computed effect.  Instead, it checks whether a computed effect covers each
-dynamic action that can occur in the structured trace.  The action case
-delegates to an action-in-summary relation $\iota\actleq\Theta$.
+trace-to-computed-effect judgment $\phi\approxx\Theta$.  This judgment does not
+evaluate a trace and does not turn an execution trace into a computed effect.
+Instead, in the mechanization it checks whether a computed effect covers each
+dynamic action in the machine trace list.  The same notation is lifted to
+structured trace views by flattening the view to its underlying list.  The
+action case delegates to an action-in-effect relation $\iota\actleq\Theta$.
 
 \begin{formalbox}{Action Coverage}
-\footnotesize
-\noindent\textbf{Action-in-summary coverage}\hfill $\boxed{\iota\actleq\Theta}$
-\begin{mathpar}
-\inferrule*[lab=Act-Top]{ }
+\small
+\noindent\textbf{Action-in-effect coverage}\hfill $\boxed{\iota\actleq\Theta}$
+\begin{rulemathpar}
+\inferrule*[lab={[Act-Top]}]{ }
   {\iota \actleq \top}
 
-\inferrule*[lab=Act-Alloc-Abs]
+\inferrule*[lab={[Act-Alloc-Abs]}]
   {\Ahat(r) \in \vartheta}
-  {\Alloc(l\at r,v) \actleq \vartheta}
+  {\Alloc(l\at r) \actleq \vartheta}
 
-\inferrule*[lab=Act-Read-Conc]
+\inferrule*[lab={[Act-Alloc-Conc]}]
+  {\widehat{\Alloc(l\at r)} \in \vartheta}
+  {\Alloc(l\at r) \actleq \vartheta}
+
+\inferrule*[lab={[Act-Read-Conc]}]
   {\widehat{\Read(l\at r)} \in \vartheta}
-  {\Read(l\at r,v) \actleq \vartheta}
+  {\Read(l\at r) \actleq \vartheta}
 
-\inferrule*[lab=Act-Read-Abs]
+\inferrule*[lab={[Act-Read-Abs]}]
   {\Rhat(r) \in \vartheta}
-  {\Read(l\at r,v) \actleq \vartheta}
+  {\Read(l\at r) \actleq \vartheta}
 
-\inferrule*[lab=Act-Write-Conc]
+\inferrule*[lab={[Act-Write-Conc]}]
   {\widehat{\Write(l\at r)} \in \vartheta}
-  {\Write(l\at r,v) \actleq \vartheta}
+  {\Write(l\at r) \actleq \vartheta}
 
-\inferrule*[lab=Act-Write-Abs]
+\inferrule*[lab={[Act-Write-Abs]}]
   {\What(r) \in \vartheta}
-  {\Write(l\at r,v) \actleq \vartheta}
-\end{mathpar}
+  {\Write(l\at r) \actleq \vartheta}
+\end{rulemathpar}
 \end{formalbox}
 
-\begin{formalbox}{Trace Coverage}
-\footnotesize
-\noindent\textbf{Structural trace-to-computed-effect coverage}\hfill $\boxed{\phi\approxx\Theta}$
-\begin{mathpar}
-\inferrule*[lab=Trace-Nil]{ }
+\begin{formalbox}{Trace/View Coverage}
+\small
+\noindent\textbf{Trace/view-to-computed-effect coverage}\hfill $\boxed{\phi\approxx\Theta \quad \Phi\approxx\Theta}$
+\rulepair{
+\inferrule*[lab={[Trace-Nil]}]{ }
   {\Nil \approxx \Theta}
-
-\inferrule*[lab=Trace-Elem]
+}{
+\inferrule*[lab={[Trace-Elem]}]
   {\iota \actleq \Theta}
   {\iota \approxx \Theta}
+}
 
-\inferrule*[lab=Trace-Seq]
-  {\phi_1\approxx\Theta \\ \phi_2\approxx\Theta}
-  {\phi_1\tracecat\phi_2 \approxx \Theta}
-
-\inferrule*[lab=Trace-Par]
-  {\phi_1\approxx\Theta \\ \phi_2\approxx\Theta}
-  {\phi_1\parallel\phi_2 \approxx \Theta}
-\end{mathpar}
+\rulepair{
+\inferrule*[lab={[Trace-Seq]}]
+  {\Phi_1\approxx\Theta \\ \Phi_2\approxx\Theta}
+  {\Phi_1\tracecat\Phi_2 \approxx \Theta}
+}{
+\inferrule*[lab={[Trace-Par]}]
+  {\Phi_1\approxx\Theta \\ \Phi_2\approxx\Theta}
+  {\Phi_1\parallel\Phi_2 \approxx \Theta}
+}
 \end{formalbox}
 
 For finite computed effects, the structural judgment has the expected
@@ -621,7 +715,7 @@ action-set characterization:
 \forall\iota\in\dynset{\phi}.\;\iota\actleq\Theta.
 \]
 This equivalence explains the role of the two trace views above.  The dynamic
-view $\dynset{\phi}$ keeps concrete locations and values and therefore compares
+view $\dynset{\phi}$ keeps concrete locations and therefore compares
 with computed effects through $\approxx$, not through raw subset inclusion.
 Only after static erasure do ordinary subset comparisons become well typed: if
 $\phi\approxx\Theta$ and $\Theta\neq\top$, then
@@ -647,65 +741,80 @@ combine this bridge with computed-effect disjointness and non-conflict when it
 wants to reason about separation of two traces.
 
 \paragraph{Computed-effect conflict and disjointness.}\label{sec:disjoint}
-The computed-effect guard is stated entirely over computed effects. It requires the
-universal disjointness predicate $\Disjoint(\Theta_1,\Theta_2)$ and the absence
-of the existential conflict predicate $\Theta_1\conflict\Theta_2$.  We write
-$\theta_1\s\theta_2$ for element-wise conflict between computed actions, using
-the square-cross symbol $\s$, and $\Theta_1\conflict\Theta_2$ for conflict
-between computed effects.
+The pair-parallel precheck is stated entirely over computed effects. The symbol
+$\otimes$ belongs to the computed-action/effect side: we write
+$\theta_1\s\theta_2$ for conflict between computed actions and
+$\Theta_1\conflict\Theta_2$ for the corresponding existential conflict
+predicate between computed effects. We therefore write
+$\neg(\Theta_1 \effconflict \Theta_2)$ for the successful computed-effect check
+and $\Theta_1 \effconflict \Theta_2$ for its failure. The successful check is the
+decidable, finite-effect version of ``no computed conflict''. It succeeds only
+for two finite computed-effect sets and fails for `$\Top$'. On finite sets, it
+checks that no action from one side conflicts with an action from the other.
+The older trace-composition lemmas are phrased with a separate universal
+disjointness predicate $\Disjoint(\Theta_1,\Theta_2)$ and
+$\neg(\Theta_1\conflict\Theta_2)$; the runtime rule packages the finite
+computed-effect check into the single decidable precheck.
 
-\begin{formalbox}{Existence of conflicts ($\s$) in $\theta$}
-\footnotesize
-\[
-\boxed{\theta_1\s\theta_2}
-\]
-\begin{mathpar}
-\inferrule*[lab=C-READ-WRITE]
+Dynamic trace conflict uses the separate symbol $\boxtimes$. We write
+$\neg(\phi_1 \traceconflict \phi_2)$ for the successful final trace check and
+$\phi_1 \traceconflict \phi_2$ for its failure.
+
+\begin{formalbox}{Computed-action conflicts ($\otimes$) in $\theta$}
+\small
+\noindent\textbf{Computed-action conflict}\hfill $\boxed{\theta_1\s\theta_2}$
+\begin{rulemathpar}
+\inferrule*[lab={[C-READ-WRITE]}]
   {\theta = \Readhat(l\at r) \,\vee\, \theta = \Writehat(l\at r) \,\vee\,
    \theta = \Rhat(r) \,\vee\, \theta = \What(r)}
   {\What(r)\s\theta \;\wedge\; \Writehat(l\at r)\s\theta}
-\end{mathpar}
+\end{rulemathpar}
 \end{formalbox}
 
-\begin{formalbox}{Existence of conflicts ($\otimes$) in $\Theta$}
-\footnotesize
-\[
-\boxed{\Theta_1\conflict\Theta_2}
-\]
-\begin{mathpar}
-\inferrule*[lab=C-EXT-THETA]
+\begin{formalbox}{Computed-effect conflicts ($\otimes$) in $\Theta$}
+\small
+\noindent\textbf{Computed-effect conflict}\hfill $\boxed{\Theta_1\conflict\Theta_2}$
+\rulepair{
+\inferrule*[lab={[C-EXT-THETA]}]
   {\theta_1 \in \Theta_1 \\ \theta_2 \in \Theta_2 \\
    \theta_1 \s \theta_2}
   {\Theta_1 \conflict \Theta_2}
-
-\inferrule*[lab=C-TOP]{ }
+}{
+\inferrule*[lab={[C-TOP]}]{ }
   {\Theta \conflict \top}
-\end{mathpar}
+}
 \end{formalbox}
 
 \section{Syntax}
 \label{sec:syntax}
 
-The surface language is a region-polymorphic, call-by-value simply typed
+The language is a region-polymorphic, call-by-value simply typed
 $\lambda$-calculus with mutable references and recursive functions. The
 distinctive syntactic form is the recursive abstraction
 $\mu f.\lambda x.\{e_b\mid e_s\}$, which packages two source expressions: the
 computational body $e_b$ and the surface-effect body $e_s$.  Computational
 application, written $\capp e_f\,e_a$, runs $e_b$; effect application, written
 $\eapp e_f\,e_a$, runs $e_s$ and must produce a value of type
-$\mathsf{eff}$.
+$\mathsf{eff}$. The checked pair-parallel expression $\pairpar{e_1}{e_2}$
+evaluates the surface-effect terms for its two branches before running the
+branch computations and returns a pair value. The checked typing and machine
+rules specialize this form to computational applications,
+$\pairpar{\capp e_{f1}\,e_{a1}}{\capp e_{f2}\,e_{a2}}$, so that the
+corresponding effect applications $\eapp e_{fi}\,e_{ai}$ are determined by the
+branch syntax.
 
-The grammar below presents the surface language in a compact, framed form. It uses the
-current terminology.  A surface-effect term is not a separate run-time language:
-it is source syntax of type $\mathsf{eff}$.  The meta-variable $\thetahat$ only
-isolates the expressions normally used as executable summaries.  In the
-mechanized syntax, $\Pure$ is represented by the empty effect expression, while
-$\Top$ is the conservative effect expression.
+The grammar below presents the language in a compact, framed form. It uses the
+current terminology.  A static region $p$ is either a region variable $\rho$ or
+a concrete region $r$. A surface-effect term is not a separate run-time
+language: it is source syntax of type $\mathsf{eff}$.  The meta-variable
+$\thetahat$ only isolates the expressions normally used as executable surface
+effects.  In the mechanized syntax, $\Pure$ is represented by the empty effect
+expression, while $\Top$ is the conservative effect expression.
 
-\begin{formalbox}{Surface Language Syntax}
+\begin{formalbox}{Language Syntax}
 \small
 \begin{align*}
-\textit{Regions}\quad
+\textit{Static regions}\quad
 p ::= {}& \rho \mid r.\\[.7ex]
 \textit{Types}\quad
 \tau ::= {}& \mathsf{nat}
@@ -713,6 +822,7 @@ p ::= {}& \rho \mid r.\\[.7ex]
   \mid \mathsf{unit}
   \mid \mathsf{eff}\\
 & \mid \mathsf{ref}\;p\;\tau
+  \mid \tau_1 \times \tau_2
   \mid \tau_x \to \{\tau_c\,!\,\epsilon_c \mid
                      \mathsf{eff}\,!\,\epsilon_s\}
   \mid \forall \rho.\tau\,!\,\epsilon.\\[.7ex]
@@ -728,7 +838,8 @@ p ::= {}& \rho \mid r.\\[.7ex]
   \mid \getop p\,e
   \mid \setop p\,e\,e\\
 & \mid e+e \mid e-e \mid e*e \mid e=e\\
-& \mid \thetahat.\\[.7ex]
+& \mid \pairpar{e_1}{e_2}
+  \mid \thetahat.\\[.7ex]
 \textit{Surface-effect terms}\quad
 \thetahat ::= {}& \Pure
   \mid \Ahat(p)
@@ -742,26 +853,29 @@ p ::= {}& \rho \mid r.\\[.7ex]
 \end{formalbox}
 
 Types follow the region-polymorphic simply typed calculus used throughout the
-formalization, with two additions made explicit here. The base types $\mathsf{nat}$,
-$\mathsf{bool}$, and $\mathsf{unit}$ classify numbers, booleans, and the result
-of destructive updates; $\mathsf{eff}$ classifies computed-effect values
-$\Theta$. A reference type $\mathsf{ref}\;p\;\tau$ describes a mutable cell of
+formalization. The base types $\mathsf{nat}$, $\mathsf{bool}$, and
+$\mathsf{unit}$ classify numbers, booleans, and the result of destructive
+updates; $\mathsf{eff}$ classifies computed-effect values $\Theta$; and
+$\tau_1\times\tau_2$ classifies pair values produced by checked pair-parallel
+expressions. A reference type $\mathsf{ref}\;p\;\tau$ describes a mutable cell of
 contents type $\tau$ allocated in region $p$, where $p$ may be a region variable
 or a concrete region. Function types record two latent effects: in
 $\tau_x \to \{\tau_c\,!\,\epsilon_c \mid \mathsf{eff}\,!\,\epsilon_s\}$,
 $\epsilon_c$ is the static effect of the computational body and $\epsilon_s$ is
-the static effect of the executable summary body. Region-polymorphic types
+the static effect of the executable surface-effect body. Region-polymorphic types
 $\forall \rho.\tau\,!\,\epsilon$ abstract over regions and record the latent
 effect of the body under that abstraction.
 
 Expressions include variables, numeric and Boolean constants, recursive
-computation/summary abstractions, region abstractions, computational
+computation/surface-effect abstractions, region abstractions, computational
 applications, surface-effect applications, region applications, conditionals,
-arithmetic and equality, heap operations, and surface-effect terms. In
+arithmetic and equality, heap operations, checked pair-parallel expressions, and
+surface-effect terms. In
 $\mu f.\lambda x.\{e_b\mid e_s\}$, the argument
 variable $x$ and recursive variable $f$ are available in both $e_b$ and $e_s$.
-The type system later requires the summary body to be read-only when it is used
-as the executable summary for a computation.
+The type system later requires the executable surface-effect evaluation used by
+a checked computation/surface-effect pair to be heap-neutral: it may inspect
+memory, but it may not allocate or write while computing the effect value.
 
 Returning to Fig.~\ref{fig:example}, the function \lstinline|incr| has a
 computation body that reads and writes its argument, while \lstinline|incr_eff|
@@ -788,11 +902,14 @@ variables and their types and a region context $\Delta$ is a set of region
 variables in scope. The judgment
 $\Gamma; \Delta \vdash e : \tau\,!\,\epsilon$ asserts that expression $e$ has
 type $\tau$ under $\Gamma$ and $\Delta$ and the latent (static) effect
-$\epsilon$. As declared in rule [T-ABST], the correctness between a
-computational--effect pair is denoted by the binary relation ($\desc$). The
-rule [T-CAPP] declares the return type of a computational application,
-$\mathsf{capp}$, and the same reasoning is made for $\mathsf{eapp}$ (whose
-return type is always $\mathsf{eff}$).
+$\epsilon$. The rules below display the checked typing layer used by the
+proofs: besides ordinary typing and well-formedness, the abstraction and
+region-abstraction cases carry the surface-effect correctness obligations. The
+correctness relation between a computation and its surface-effect expression is
+denoted by the binary relation ($\desc$). The rule [T-CAPP] declares the
+return type of a computational application, $\mathsf{capp}$, and the same
+reasoning is made for $\mathsf{eapp}$, whose return type is always
+$\mathsf{eff}$.
 
 Because the mechanization uses logical equality when proving soundness
 properties about surface-effect terms, types are represented in a locally nameless
@@ -801,38 +918,249 @@ $\alpha$-conversion. Bound variables are represented with de Bruijn indices
 and free-variable names are left unchanged. This representation lets
 substitution be stated directly by type-level $\beta$-reduction.
 
-The mechanized predicate $\ReadOnly$ on static effects is generated by three
-cases: the empty effect is read-only, a singleton region-read effect is
-read-only, and unions of read-only effects are read-only. Ordinary
-static-effect soundness is an auxiliary theorem about evaluation traces: if the
-static erasure $\staticset{\phi}$ of a trace is contained in a read-only static
-effect, then the trace itself contains only reads. This is separate from the
-computed-effect precision bridge $\phi\approxx\Theta$, which deliberately keeps
-concrete locations until they are erased for static comparison. The
-corresponding dynamic-trace predicate contains only the empty trace, concrete
-read actions, and sequential or parallel compositions of read-only traces;
-allocation and write actions are excluded. Consequently, read-only summary
+\begin{formalbox}{Static Semantics}
+\small
+\noindent\textbf{Well-typed expressions}\hfill
+  $\boxed{\Gamma;\Delta\vdash e:\tau\,!\,\epsilon}$
+
+\ruletriple{
+\inferrule*[lab={[T-Var]}]
+  {\Gamma(x)=\tau}
+  {\Gamma;\Delta\vdash x:\tau\,!\,\emptyset}
+}{
+\inferrule*[lab={[T-Const]}]{ }
+  {\Gamma;\Delta\vdash n:\mathsf{nat}\,!\,\emptyset}
+}{
+\inferrule*[lab={[T-Bool]}]{ }
+  {\Gamma;\Delta\vdash b:\mathsf{bool}\,!\,\emptyset}
+}
+
+\begin{rulemathpar}
+\inferrule*[lab={[T-Abst]}]
+  {\tau_f=\tau_x\to\{\tau_b\,!\,\epsilon_b
+      \mid \mathsf{eff}\,!\,\epsilon_s\} \\
+   \Gamma,f:\tau_f,x:\tau_x;\Delta\vdash e_b:\tau_b\,!\,\epsilon_b \\
+   \Gamma,f:\tau_f,x:\tau_x;\Delta\vdash e_s:\mathsf{eff}\,!\,\epsilon_s \\
+   \Gamma,f:\tau_f,x:\tau_x;\Delta;P\vdash e_b\desc e_s}
+  {\Gamma;\Delta\vdash
+   \mu f.\lambda x.\{e_b\mid e_s\}:\tau_f\,!\,\emptyset}
+\end{rulemathpar}
+
+\rulepair{
+\inferrule*[lab={[T-Capp]}]
+  {\Gamma;\Delta\vdash e_f:
+      \tau_x\to\{\tau_b\,!\,\epsilon_b
+        \mid \mathsf{eff}\,!\,\epsilon_s\}\,!\,\emptyset \\
+   \Gamma;\Delta\vdash e_a:\tau_x\,!\,\epsilon_a}
+  {\Gamma;\Delta\vdash
+   \capp e_f\,e_a:\tau_b\,!\,\epsilon_b\cup\epsilon_a}
+}{
+\inferrule*[lab={[T-Eapp]}]
+  {\Gamma;\Delta\vdash e_f:
+      \tau_x\to\{\tau_b\,!\,\epsilon_b
+        \mid \mathsf{eff}\,!\,\epsilon_s\}\,!\,\emptyset \\
+   \Gamma;\Delta\vdash e_a:\tau_x\,!\,\epsilon_a}
+  {\Gamma;\Delta\vdash
+   \eapp e_f\,e_a:\mathsf{eff}\,!\,\epsilon_s\cup\epsilon_a}
+}
+
+\rulepair{
+\inferrule*[lab={[T-Rgn-Abst]}]
+  {\Gamma;\Delta,\rho\vdash e:\tau\,!\,\epsilon \\
+   \rho\notin\Delta \\
+   \Gamma;\Delta,\rho;P\vdash e\desc\Pure}
+  {\Gamma;\Delta\vdash
+   \Lambda\rho.e:(\forall\rho.\tau\,!\,\epsilon)\,!\,\emptyset}
+}{
+\inferrule*[lab={[T-Rgn-App]}]
+  {\Gamma;\Delta\vdash e:\forall\rho.\tau\,!\,\epsilon \\
+   \Delta\vdash p}
+  {\Gamma;\Delta\vdash e[p]:\tau[p/\rho]\,!\,\epsilon[p/\rho]}
+}
+
+\begin{rulemathpar}
+\inferrule*[lab={[T-PairPar]}]
+  {\Gamma;\Delta\vdash \capp e_{f1}\,e_{a1}:\tau_1\,!\,\epsilon_1 \\
+   \Gamma;\Delta\vdash \capp e_{f2}\,e_{a2}:\tau_2\,!\,\epsilon_2 \\
+   \Gamma;\Delta\vdash \eapp e_{f1}\,e_{a1}:\mathsf{eff}\,!\,\epsilon_{s1} \\
+   \Gamma;\Delta\vdash \eapp e_{f2}\,e_{a2}:\mathsf{eff}\,!\,\epsilon_{s2}}
+  {\Gamma;\Delta\vdash
+   \pairpar{\capp e_{f1}\,e_{a1}}{\capp e_{f2}\,e_{a2}}
+   :\tau_1\times\tau_2\,!\,
+    \epsilon_1\cup\epsilon_{s1}\cup\epsilon_2\cup\epsilon_{s2}}
+\end{rulemathpar}
+
+\rulepair{
+\inferrule*[lab={[T-Cond]}]
+  {\Gamma;\Delta\vdash e_c:\mathsf{bool}\,!\,\epsilon_c \\
+   \Gamma;\Delta\vdash e_t:\tau\,!\,\epsilon_t \\
+   \Gamma;\Delta\vdash e_f:\tau\,!\,\epsilon_f}
+  {\Gamma;\Delta\vdash
+   \cond(e_c,e_t,e_f):\tau\,!\,
+     \epsilon_c\cup\epsilon_t\cup\epsilon_f}
+}{
+\inferrule*[lab={[T-Arith]}]
+  {\Gamma;\Delta\vdash e_1:\tau_1\,!\,\epsilon_1 \\
+   \Gamma;\Delta\vdash e_2:\tau_2\,!\,\epsilon_2}
+  {\Gamma;\Delta\vdash
+   e_1\mathbin{\odot}e_2:\tau\,!\,\epsilon_1\cup\epsilon_2}
+}
+
+\ruletriple{
+\inferrule*[lab={[T-Alloc]}]
+  {\Gamma;\Delta\vdash e:\tau\,!\,\epsilon \\
+   \Delta\vdash p}
+  {\Gamma;\Delta\vdash
+   \alloc p\,e:\mathsf{ref}\;p\;\tau\,!\,\epsilon\cup\{\As(p)\}}
+}{
+\inferrule*[lab={[T-Get]}]
+  {\Gamma;\Delta\vdash e:\mathsf{ref}\;p\;\tau\,!\,\epsilon}
+  {\Gamma;\Delta\vdash
+   \getop p\,e:\tau\,!\,\epsilon\cup\{\Rs(p)\}}
+}{
+\inferrule*[lab={[T-Set]}]
+  {\Gamma;\Delta\vdash e_r:\mathsf{ref}\;p\;\tau\,!\,\epsilon_r \\
+   \Gamma;\Delta\vdash e_v:\tau\,!\,\epsilon_v}
+  {\Gamma;\Delta\vdash
+   \setop p\,e_r\,e_v:\mathsf{unit}\,!\,
+     \epsilon_r\cup\epsilon_v\cup\{\Ws(p)\}}
+}
+
+\ruletriple{
+\inferrule*[lab={[T-Abst-Alloc]}]{ }
+  {\Gamma;\Delta\vdash \Ahat(p):\mathsf{eff}\,!\,\emptyset}
+}{
+\inferrule*[lab={[T-Abst-Read]}]{ }
+  {\Gamma;\Delta\vdash \Rhat(p):\mathsf{eff}\,!\,\emptyset}
+}{
+\inferrule*[lab={[T-Abst-Write]}]{ }
+  {\Gamma;\Delta\vdash \What(p):\mathsf{eff}\,!\,\emptyset}
+}
+
+\rulepair{
+\inferrule*[lab={[T-Conc-Read]}]
+  {\Gamma;\Delta\vdash e:\mathsf{ref}\;p\;\tau\,!\,\epsilon}
+  {\Gamma;\Delta\vdash
+   \widehat{\Read(e)}:\mathsf{eff}\,!\,\epsilon}
+}{
+\inferrule*[lab={[T-Conc-Write]}]
+  {\Gamma;\Delta\vdash e:\mathsf{ref}\;p\;\tau\,!\,\epsilon}
+  {\Gamma;\Delta\vdash
+   \widehat{\Write(e)}:\mathsf{eff}\,!\,\epsilon}
+}
+
+\ruletriple{
+\inferrule*[lab={[T-Concat]}]
+  {\Gamma;\Delta\vdash \thetahat_1:\mathsf{eff}\,!\,\epsilon_1 \\
+   \Gamma;\Delta\vdash \thetahat_2:\mathsf{eff}\,!\,\epsilon_2}
+  {\Gamma;\Delta\vdash
+   \thetahat_1\oplus\thetahat_2:\mathsf{eff}\,!\,
+     \epsilon_1\cup\epsilon_2}
+}{
+\inferrule*[lab={[T-Top]}]{ }
+  {\Gamma;\Delta\vdash \Top:\mathsf{eff}\,!\,\emptyset}
+}{
+\inferrule*[lab={[T-Pure]}]{ }
+  {\Gamma;\Delta\vdash \Pure:\mathsf{eff}\,!\,\emptyset}
+}
+\end{formalbox}
+
+Here $\odot \in \{+,-,\times,=\}$ abbreviates the arithmetic and equality
+cases. The correctness premises in [T-Abst] and [T-Rgn-Abst] are read under the
+current region map $P$, matching the $P$-indexed back-triangle judgment below.
+In the mechanization, this displayed judgment corresponds to the checked
+typing predicate: it packages ordinary typing, regularity of contexts, and the
+shape obligations shown in the rules.
+
+On static effects, the write-freedom side condition rules out writes, while the
+separate no-allocation side condition rules out allocation. Their conjunction is
+the proof-side predicate $\HeapNeutral$: a heap-neutral static effect has neither
+allocation nor write actions. Ordinary static-effect soundness is an auxiliary
+theorem about evaluation traces: if the static erasure $\staticset{\phi}$ of a
+trace is contained in a write-free static effect, then the trace contains no
+writes; if it is contained in a heap-neutral static effect, then the trace has no
+allocations and no writes. This is separate from the computed-effect precision
+bridge $\phi\approxx\Theta$, which deliberately keeps concrete locations until
+they are erased for static comparison. Consequently, heap-neutral surface-effect
 evaluation preserves the heap. This is a semantic property, not a cost claim:
-the development does not prove that a read-only summary terminates or that
-evaluating it has constant overhead.
+the development does not prove that a heap-neutral surface effect terminates or
+that evaluating it has constant overhead.
 
 \begin{corollary}[Empty static trace erasure implies the empty trace]
 For all traces $\phi$, if $\staticset{\phi}$ is contained in the empty static
 effect, then $\phi = \Nil$.
 \end{corollary}
 
-\begin{lemma}[Read-only traces of dynamic effects imply no side-effects]
-Given that $\ReadOnly(\phi)$, a terminal structured execution
+\begin{lemma}[Heap-neutral traces imply heap preservation]
+Given that $\HeapNeutral(\phi)$, a terminal execution
 \[
 \mathsf{init}(H,E,P,e)\longrightarrow^{*}\mathsf{done}(H',v)\,;\,\phi
 \]
 implies that $H \equiv H'$ up to key-value pairs.
 \end{lemma}
 
-\begin{lemma}[Read-only static effects imply read-only traces]
-If $\staticset{\phi}\subseteq \epsilon$ and $\ReadOnly(\epsilon)$ holds for
-static effects, then $\ReadOnly(\phi)$ holds for the dynamic trace.
+\begin{lemma}[Heap-neutral static effects imply heap-neutral traces]
+If $\staticset{\phi}\subseteq \epsilon$ and $\HeapNeutral(\epsilon)$ holds for
+static effects, then $\HeapNeutral(\phi)$ holds for the dynamic trace.
 \end{lemma}
+
+\paragraph{Machine safety and static effects.}
+Write $\mathsf{CheckedCtx}_{\Gamma,\Delta}(H,E,P)$ for the checked run-time
+context used in the mechanization: the heap, environment, and region map are
+well formed and store resolved for $\Gamma$ and $\Delta$. Write
+$\mathsf{CheckedInit}_{\Gamma,\Delta}(H,E,P,e)$ when, in addition, $e$ is
+checked by the typing rules above. Write
+$\Gamma;\Delta\vdash_{\mathsf{wt}}s$ for the machine-state typing invariant
+used by progress, and $\Sigma\vdash_{\mathsf{st}}s:\tau$ for the
+store-resolved state-shape invariant used by preservation. The following three
+statements are the continuation-machine safety facts used by the correctness
+theorem.
+
+\begin{theorem}[Progress]\label{thm:progress}
+If $\Gamma;\Delta\vdash_{\mathsf{wt}}s$, then either
+$s=\mathsf{done}(H,v)$, $s=\mathsf{error}(H)$, or there exist $s'$ and $\eta$
+such that
+\[
+s\longrightarrow s'\,;\,\eta.
+\]
+In particular, $\mathsf{CheckedInit}_{\Gamma,\Delta}(H,E,P,e)$ implies this
+not-stuck property for $\mathsf{init}(H,E,P,e)$.
+\end{theorem}
+
+\begin{theorem}[Preservation]\label{thm:preservation}
+If
+\[
+\Sigma\vdash_{\mathsf{st}} s : \tau
+\qquad\text{and}\qquad
+s\longrightarrow s'\,;\,\eta,
+\]
+then there exists a store typing $\Sigma'$ such that
+\[
+\Sigma'\vdash_{\mathsf{st}} s' : \tau
+\qquad\text{and}\qquad
+\mathsf{Transport}(\Sigma,s,\Sigma',s').
+\]
+The transport relation records heap/store stability for ordinary steps and the
+fresh store extension for allocation steps.
+\end{theorem}
+
+\begin{theorem}[Static-effect trace soundness]
+\label{thm:static-effect-trace-soundness}
+Assume $\mathsf{CheckedCtx}_{\Gamma,\Delta}(H,E,P)$. If $e$ is checked by the
+typing rules above,
+\[
+\Gamma;\Delta\vdash e:\tau\,!\,\epsilon,
+\qquad
+\mathsf{init}(H,E,P,e)
+  \longrightarrow^{*}
+  \mathsf{done}(H',v)\,;\,\phi,
+\]
+then the static erasure of the emitted trace is included in the resolved
+static effect:
+\[
+\staticset{\phi}\subseteq\epsilon[P].
+\]
+\end{theorem}
 
 \section{Correctness of Surface Effects}
 \label{sec:correctness}
@@ -854,10 +1182,10 @@ are part of the general effect vocabulary in Section~\ref{sec:effects}; this
 section proves that verified surface-effect terms establish that relation.
 
 The judgment is intentionally syntax directed but incomplete: there are
-infinitely many sound summaries for a given expression, and some expressions can
+infinitely many sound surface effects for a given expression, and some expressions can
 always be over-described by `$\Top$'.  The theorem below therefore states a
 soundness property for derivable descriptions, not a completeness result for all
-possible summaries.
+possible surface effects.
 
 
 The correctness theorem below follows the clean direction of the design.
@@ -869,120 +1197,154 @@ computation trace:
 \qquad\text{and}\qquad
 \phi\approxx\Theta.
 \]
-The proof keeps traces and summaries as separate objects.  If evaluating a
-function position, an argument position, or another subexpression may perform
+The proof keeps traces and surface effects as separate objects.  If evaluating
+a function position, an argument position, or another subexpression may perform
 memory actions, those actions must be accounted for by the surface-effect term
 and by the source-level correctness judgment itself; they are not recovered
 after the fact.
 
 \begin{formalbox}{Back-Triangle Rules}
-\noindent\textbf{Back-triangle rules ($\Gamma; \Delta; P \vdash e \desc \thetahat$).}
+\small
+\noindent\textbf{Executable surface-effect correctness}\hfill
+  $\boxed{\Gamma; \Delta; P \vdash e \desc \thetahat}$
 
-\noindent\emph{In words.}  The judgment says that the source term $\thetahat$ is an executable summary for the computation $e$ under the current region map $P$.
+\noindent\emph{In words.}  The judgment says that the source term $\thetahat$ is an executable surface effect for the computation $e$ under the current region map $P$.
 The judgment is indexed by the run-time region map $P$. For a static effect
 $\epsilon$, write $\epsilon[P]$ for the effect obtained by substituting the
 region values in $P$. The following rules give the paper-facing inductive
 presentation. In particular, pure constants, booleans, variables, abstractions,
 and region abstractions are described by $\Pure$, rather than by an arbitrary
-summary.
+surface effect.
 
-\begin{mathpar}
-\inferrule*[lab=Eff-Const]
+\rulepair{
+\inferrule*[lab={[Eff-Const]}]
   {\Gamma;\Delta \vdash \mathsf{const}\; n : \mathsf{nat}\,!\,\emptyset}
   {\Gamma;\Delta;P \vdash \mathsf{const}\; n \desc \Pure}
-
-\inferrule*[lab=Eff-Bool]
+}{
+\inferrule*[lab={[Eff-Bool]}]
   {\Gamma;\Delta \vdash \mathsf{bool}\; b : \mathsf{bool}\,!\,\emptyset}
   {\Gamma;\Delta;P \vdash \mathsf{bool}\; b \desc \Pure}
+}
 
-\inferrule*[lab=Eff-Var]
+\rulepair{
+\inferrule*[lab={[Eff-Var]}]
   {\Gamma;\Delta \vdash \mathsf{var}\; x : \tau\,!\,\emptyset}
   {\Gamma;\Delta;P \vdash \mathsf{var}\; x \desc \Pure}
-
-\inferrule*[lab=Eff-Abst]{ }
+}{
+\inferrule*[lab={[Eff-Abst]}]{ }
   {\Gamma;\Delta;P \vdash \mu f. \lambda x. \{e_b \mid e_e\} \desc \Pure}
-\end{mathpar}
+}
 
-\begin{mathpar}
-\inferrule*[lab=Eff-Rgn-Abst]{ }
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Rgn-Abst]}]{ }
   {\Gamma;\Delta;P \vdash \lambda \rho.\,e \desc \Pure}
+\end{rulemathpar}
 
-\inferrule*[lab=Eff-App]
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-App]}]
   {\Gamma;\Delta \vdash \capp e_f\,e_a : \tau_b\,!\,\epsilon_b \\
    \Gamma;\Delta \vdash \eapp e_f\,e_a : \mathsf{eff}\,!\,\epsilon_e \\
-   \ReadOnly(\epsilon_e[P]) \\
+   \HeapNeutral(\epsilon_e[P]) \\
    \Gamma;\Delta \vdash e_f : \tau_f\,!\,\epsilon_f \\
    \Gamma;\Delta \vdash e_a : \tau_a\,!\,\epsilon_a \\
    \Gamma;\Delta;P \vdash e_f \desc (\eapp e_f\,e_a) \\
    \Gamma;\Delta;P \vdash e_a \desc (\eapp e_f\,e_a) \\
-   \ReadOnly(\epsilon_f[P]) \\
-   \ReadOnly(\epsilon_a[P])}
+   \HeapNeutral(\epsilon_f[P]) \\
+   \HeapNeutral(\epsilon_a[P])}
   {\Gamma;\Delta;P \vdash \capp e_f\,e_a \desc (\eapp e_f\,e_a)}
+\end{rulemathpar}
 
-\inferrule*[lab=Eff-Rgn-App]
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-PairPar]}]
+  {\Gamma;\Delta \vdash \capp e_{f1}\,e_{a1} : \tau_1\,!\,\epsilon_1 \\
+   \Gamma;\Delta \vdash \capp e_{f2}\,e_{a2} : \tau_2\,!\,\epsilon_2 \\
+   \Gamma;\Delta \vdash \eapp e_{f1}\,e_{a1} : \mathsf{eff}\,!\,\epsilon_{s1} \\
+   \Gamma;\Delta \vdash \eapp e_{f2}\,e_{a2} : \mathsf{eff}\,!\,\epsilon_{s2} \\
+   \HeapNeutral(\epsilon_{s1}[P]) \\
+   \HeapNeutral(\epsilon_{s2}[P]) \\
+   \Gamma;\Delta;P \vdash \capp e_{f1}\,e_{a1} \desc \eapp e_{f1}\,e_{a1} \\
+   \Gamma;\Delta;P \vdash \capp e_{f2}\,e_{a2} \desc \eapp e_{f2}\,e_{a2}}
+  {\Gamma;\Delta;P \vdash
+    \pairpar{\capp e_{f1}\,e_{a1}}{\capp e_{f2}\,e_{a2}}
+    \desc
+    (\eapp e_{f1}\,e_{a1}) \oplus (\eapp e_{f2}\,e_{a2})}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Rgn-App]}]
   {\Gamma;\Delta \vdash e_r : \tau\,!\,\epsilon \\
    \Gamma;\Delta \vdash \Pure : \mathsf{eff}\,!\,\emptyset \\
    \Gamma;\Delta;P \vdash e_r \desc \Pure}
   {\Gamma;\Delta;P \vdash e_r\,[r] \desc \Pure}
+\end{rulemathpar}
 
-\inferrule*[lab=Eff-Cond]
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Cond]}]
   {\Gamma;\Delta \vdash e_c : \tau_c\,!\,\epsilon_c \\
    \Gamma;\Delta \vdash e_t : \tau_t\,!\,\epsilon_t \\
    \Gamma;\Delta \vdash e_f : \tau_f\,!\,\epsilon_f \\
-   \ReadOnly(\epsilon_c[P]) \\
+   \HeapNeutral(\epsilon_c[P]) \\
    \Gamma;\Delta;P \vdash e_c \desc \Pure \\
    \Gamma;\Delta;P \vdash e_t \desc e_1 \\
    \Gamma;\Delta;P \vdash e_f \desc e_2}
   {\Gamma;\Delta;P \vdash \cond e_c\,e_t\,e_f \desc
    \cond e_c\,e_1\,e_2}
+\end{rulemathpar}
 
-\inferrule*[lab=Eff-Alloc]
+\rulepair{
+\inferrule*[lab={[Eff-Alloc]}]
   {\Gamma;\Delta \vdash e : \tau\,!\,\epsilon \\
    \Gamma;\Delta;P \vdash e \desc e_1}
   {\Gamma;\Delta;P \vdash \alloc r\;e \desc e_1 \oplus \Ahat(r)}
-
-\inferrule*[lab=Eff-Get-Abs]
+}{
+\inferrule*[lab={[Eff-Get-Abs]}]
   {\Gamma;\Delta \vdash e : \tau\,!\,\epsilon \\
    \Gamma;\Delta;P \vdash e \desc e_1}
   {\Gamma;\Delta;P \vdash \getop p\;e \desc e_1 \oplus \Rhat(p)}
-\end{mathpar}
+}
 
-\begin{mathpar}
-\inferrule*[lab=Eff-Get-Conc]
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Get-Conc]}]
   {\Gamma;\Delta \vdash e : \tau\,!\,\epsilon \\
    \Gamma;\Delta;P \vdash e \desc \Pure}
   {\Gamma;\Delta;P \vdash \getop r\;e \desc \widehat{\Read(e)}}
+\end{rulemathpar}
 
-\inferrule*[lab=Eff-Set-Abs]
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Set-Abs]}]
   {\Gamma;\Delta;P \vdash e_r \desc e_1 \\
    \Gamma;\Delta;P \vdash e_v \desc e_2 \\
    \Gamma;\Delta \vdash e_r : \tau_r\,!\,\epsilon_r \\
-   \ReadOnly(\epsilon_r[P])}
+   \HeapNeutral(\epsilon_r[P])}
   {\Gamma;\Delta;P \vdash \setop p\;e_r\,e_v \desc
    e_1 \oplus (e_2 \oplus \What(p))}
+\end{rulemathpar}
 
-\inferrule*[lab=Eff-Set-Conc]
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Set-Conc]}]
   {\Gamma;\Delta;P \vdash e_r \desc e_1 \\
    \Gamma;\Delta;P \vdash e_v \desc e_2 \\
    \Gamma;\Delta \vdash e_r : \tau_r\,!\,\epsilon_r \\
-   \ReadOnly(\epsilon_r[P])}
+   \HeapNeutral(\epsilon_r[P])}
   {\Gamma;\Delta;P \vdash \setop r\;e_r\,e_v \desc
    e_1 \oplus (e_2 \oplus \Writehat(e_r))}
+\end{rulemathpar}
 
-\inferrule*[lab=Eff-Arith]
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Arith]}]
   {\Gamma;\Delta \vdash e_1 : \tau_1\,!\,\epsilon_1 \\
    \Gamma;\Delta \vdash e_2 : \tau_2\,!\,\epsilon_2 \\
-   \ReadOnly(\epsilon_1[P]) \\
+   \HeapNeutral(\epsilon_1[P]) \\
    \Gamma;\Delta;P \vdash e_1 \desc \thetahat_1 \\
    \Gamma;\Delta;P \vdash e_2 \desc \thetahat_2}
   {\Gamma;\Delta;P \vdash e_1\,\mathbin{\odot}\,e_2
    \desc \thetahat_1 \oplus \thetahat_2}
-\end{mathpar}
+\end{rulemathpar}
 
-\begin{mathpar}
-\inferrule*[lab=Eff-Top]{ }
+\begin{rulemathpar}
+\inferrule*[lab={[Eff-Top]}]{ }
   {\Gamma;\Delta;P \vdash e \desc \Top}
-\end{mathpar}
+\end{rulemathpar}
 
 Here $\odot \in \{+,-,\times,=\}$ abbreviates the four corresponding arithmetic
 and equality cases. The concrete read and write rules above use a concrete
@@ -992,9 +1354,9 @@ region value $r$.
 \noindent\emph{In words.} A verified surface-effect term evaluates to a computed effect that covers the entire trace of the paired computation.
 
 \begin{theorem}[Correctness of surface-effect terms]
-Assume well-formed region, typing, heap-typing, and environment-typing
-judgments for $H$, $E$, $P$, and $e_b$. If the computation and summary are
-related by
+\label{thm:surface-effect-correctness}
+Assume $\mathsf{CheckedCtx}_{\Gamma,\Delta}(H,E,P)$. If the computation and
+surface-effect term are related by
 $\Gamma;\Delta;P \vdash e_b \desc e_e$, and
 \[
 \mathsf{init}(H,E,P,e_b)\longrightarrow^{*}\mathsf{done}(H_b,v_b)\,;\,\phi_b
@@ -1002,7 +1364,7 @@ $\Gamma;\Delta;P \vdash e_b \desc e_e$, and
 \mathsf{init}(H,E,P,e_e)\longrightarrow^{*}
   \mathsf{done}(H_e,\mathsf{eff}(\Theta_e))\,;\,\phi_e,
 \]
-with $\ReadOnly(\phi_e)$, then
+then
 \[
 \Theta_e\covers\phi_b
 \qquad\text{equivalently}\qquad
@@ -1012,25 +1374,25 @@ with $\ReadOnly(\phi_e)$, then
 
 The conclusion of the correctness theorem is exactly the right-hand typed
 bridge. In particular, it does \emph{not} conclude that the computation trace
-$\phi_b$ is read-only, nor does it prove the left-hand bridge
-$\epsilon\covers\Theta_e$. The small-step results in Section~\ref{sec:smallstep}
-reuse this approximation story while stating progress, preservation, terminal
-determinism, and terminal correctness directly over the continuation machine.
+$\phi_b$ is heap-neutral, nor does it prove the left-hand bridge
+$\epsilon\covers\Theta_e$. The later small-step discussion reuses this
+approximation story for terminal determinism and terminal correctness directly
+over the continuation machine.
 
-\begin{corollary}[Read-only, heap-preserving summary evaluation]
+\begin{corollary}[Heap-neutral, heap-preserving surface-effect evaluation]
 For a well-typed computation/effect application pair, static effect soundness
 and the typing premises of the correctness relation imply
-$\ReadOnly(\phi_e)$. Therefore summary evaluation preserves the initial heap:
+$\HeapNeutral(\phi_e)$. Therefore surface-effect evaluation preserves the initial heap:
 $H \equiv H_e$.
 \end{corollary}
 
 The proof separates two facts: the computation trace is shown to satisfy
 $\phi_b \approxx \Theta_e$, while the trace produced by evaluating the effect
-application is separately shown to be read-only. Thus a computed action such as
+application is separately shown to be heap-neutral. Thus a computed action such as
 $\As(r)$ may \emph{describe} a future allocation without the evaluation of the
-summary itself allocating memory.
+surface-effect term itself allocating memory.
 
-\paragraph{Trace/summary separation.}
+\paragraph{Trace/surface-effect separation.}
 The previous theorem is the only coverage principle needed for surface-effect
 correctness: a verified surface-effect term must cover the whole trace of its
 paired computation.  The dynamic-action views $\dynset{\phi}$ and
@@ -1056,46 +1418,94 @@ and $\DetTrace(\phi_1)$ and $\DetTrace(\phi_2)$, then
 
 The proof first shows that a dynamic read--write or write--write
 conflict would induce a corresponding computed conflict, contradicting the
-summary-level premise. It separately transports computed-action disjointness to
+computed-effect premise. It separately transports computed-action disjointness to
 every cross-trace pair of dynamic actions. The result is the deterministic
 parallel trace judgment above.
 
 Combining the preceding results gives the trace-level proof dependency:
+\par\smallskip
+\begin{fixedformalbox}{Trace-Level Proof Dependency}
+{\small
 \[
 \begin{array}{c}
-\text{verified computation/summary pair}
-\\[1mm]\Longrightarrow\\[-1mm]
-\phi_i \approxx \Theta_i
-\\[1mm]\Longrightarrow\;\Disjoint(\Theta_1,\Theta_2)\land
-  \neg(\Theta_1\conflict\Theta_2)\\[-1mm]
+\textbf{Per-branch correctness}
+\\[.45ex]
+\begin{array}{c@{\qquad\qquad}c}
+\Gamma;\Delta;P\vdash e_1\desc\thetahat_1
+&
+\Gamma;\Delta;P\vdash e_2\desc\thetahat_2
+\\
+e_1\longmapsto\phi_1
+&
+e_2\longmapsto\phi_2
+\\
+\thetahat_1\longrightarrow^{*}\Theta_1
+&
+\thetahat_2\longrightarrow^{*}\Theta_2
+\\
+\phi_1\approxx\Theta_1
+&
+\phi_2\approxx\Theta_2
+\end{array}
+\\[1.1ex]
+\Downarrow
+\\[1.1ex]
+\textbf{Pair check}
+\\[.45ex]
+\Disjoint(\Theta_1,\Theta_2)
+\;\text{and}\;
+\neg(\Theta_1\conflict\Theta_2)
+\;\text{and}\;
+\DetTrace(\phi_1)
+\;\text{and}\;
+\DetTrace(\phi_2)
+\\[1.1ex]
+\Downarrow
+\\[1.1ex]
+\textbf{Trace composition}
+\\[.45ex]
 \DetTrace(\phi_1\,\|\,\phi_2)
-\\[1mm]\Longrightarrow\\[-1mm]
-\text{equivalent final heaps under terminating trace replay.}
+\\[1.1ex]
+\Downarrow
+\\[1.1ex]
+\textbf{Terminating replay consequence}
+\\[.45ex]
+\text{equivalent final heaps under terminating trace replay}
 \end{array}
 \]
+}
+\end{fixedformalbox}
 
-\paragraph{Runtime definitions.}
-\[
-\Sigma \triangleq \mathit{Addr} \rightharpoonup \mathit{Type}
-\qquad \text{(heap type assignment)}
-\]
+Here $e_i\longmapsto\phi_i$ is the trace notation used in
+Figure~\ref{fig:middleground}, and
+$\thetahat_i\longrightarrow^{*}\Theta_i$ abbreviates terminating evaluation of
+the surface effect to a computed effect.
 
-\begin{mathpar}
-\inferrule*[lab=T-Heap]
+\begin{formalbox}{Runtime Definitions}
+\small
+\noindent
+$\Sigma \triangleq \mathit{Addr}\rightharpoonup\mathit{Type}$
+\hfill heap type assignment
+
+\begin{rulemathpar}
+\inferrule*[lab={[T-Heap]}]
   {\forall l\at r \in H,\; \Sigma \vdash H(l\at r) : \Sigma(l\at r)}
   {\star \vdash H : \Sigma}
+\end{rulemathpar}
 
-\inferrule*[lab=T-Heap-Empty]{ }
+\rulepair{
+\inferrule*[lab={[T-Heap-Empty]}]{ }
   {\Sigma \vdash \emptyset : \emptyset}
-
-\inferrule*[lab=T-Heap-Ext]
+}{
+\inferrule*[lab={[T-Heap-Ext]}]
   {\Sigma \vdash E : \Gamma \\ \Sigma \vdash v : \tau}
   {\Sigma \vdash E, [x \mapsto v] : \Gamma, v : \tau}
-\end{mathpar}
+}
+\end{formalbox}
 
 As previously mentioned, the static relation ($\desc$) is intentionally
-incomplete: many sound summaries may describe the same computation, while some
-computations may be related only to a coarse summary by the supplied inductive
+incomplete: many sound surface effects may describe the same computation, while some
+computations may be related only to a coarse surface effect by the supplied inductive
 rules. Concrete computed actions can refine a region-level distinction and may
 therefore satisfy computed-effect disjointness even when a region-only
 comparison would be inconclusive. `$\Top$', by contrast, is a sound
@@ -1111,19 +1521,19 @@ application ($\capp e_f\, e_a$) by its corresponding effect application
 functional type to the expression $e_f$ is that it may carry a non-empty
 latent effect for the computational term which can be soundly described by the
 evaluation of the corresponding ``surface'' effect term. The returned computed
-summary of $\eapp e_f\,e_a$ is produced by the function body's summary
+effect of $\eapp e_f\,e_a$ is produced by the function body's surface-effect
 expression.  If evaluating $e_f$ or $e_a$ may itself perform memory actions,
 those actions must be covered by the surface-effect term assigned to the whole
 computation by the correctness judgment.  They are not converted into computed
-summary components after the fact.
+effect components after the fact.
 
 Another example is the expression $e_b$ whose reference type is parametrized
-by a region $p$. Two different effect summaries are proven sound: the first is
+by a region $p$. Two different surface effects are proven sound: the first is
 as much precise as the static effect would be (rule [EFF-GET]) and the second
 is potentially ``much'' more precise than the static effect (rule
 [EFF-GET-CONC]). The type of the argument of $\mathsf{get}$ is the reference
 type parametrized by a region variable or a region constant. Given the region
-$p$, the rule [EFF-GET] applies by chaining the effect summary of the argument
+$p$, the rule [EFF-GET] applies by chaining the surface effect of the argument
 with the static surface term $\Rhat(p)$. When evaluated, this term yields a
 value that is equivalent to a de facto static effect. However, we can
 precisely describe a $\mathsf{get}$ operation using the surface-effect term
@@ -1143,51 +1553,38 @@ possible to decide that the effects $\Read$ and $\Write$ do not conflict if
 the addresses are different even though they belong to the same region,
 allowing more precision (hence the motivating example presented in
 Fig.~\ref{fig:example}). However, if only the region is known, the ``static
-version'' of the summary, $\Rs$ and $\Ws$, does not allow the conflict decision
+version'' of the surface effect, $\Rs$ and $\Ws$, does not allow the conflict decision
 at run-time to be more precise than the static analysis.
 
 \section{Small-Step Runtime Safety}
 \label{sec:smallstep}
 
 The continuation machine supports safety statements over finite executions,
-not only over completed runs. The ordinary small-step safety invariant is
-indexed by a store typing
-$\Sigma$. Along a finite trace, allocation may extend $\Sigma$; preservation
-therefore produces a final store typing $\Sigma'$ with
-$\Sigma \subseteq \Sigma'$. We write
+not only over completed runs. The small-step safety invariant is indexed by a store typing
+$\Sigma$. Along a finite trace, allocation and mutation may change the heap;
+preservation therefore produces a final store typing $\Sigma'$ together with
+the store-transport relation that carries the state, environment, and
+continuation invariants from the old heap/store pair to the new one. We write
 $s\longrightarrow^{*} s'\,;\,\phi$ for a finite small-step execution whose
 transition fragments accumulate to $\phi$, $\mathsf{init}(H,E,P,e)$ for the initial machine state,
-and $\mathsf{done}(H,v)$ for a terminal state. The judgment
-$\Sigma \vdash_{\mathsf{st}} s : \tau$ abbreviates the mechanized typed-state
-invariant, and $\Sigma \vdash_{\mathsf{tr}} \phi$ states that the trace
-$\phi$ is well typed with respect to $\Sigma$.
-The predicate $\mathsf{NotStuck}(s)$ means that $s$ is terminal or has a next
-small-step transition. The predicate $\mathsf{Shape}_{\Sigma}(v,\tau)$ records
+and $\mathsf{done}(H,v)$ for a successful terminal state. The checked-failure
+state $\mathsf{error}(H)$ is terminal as well. The judgment
+$\Sigma \vdash_{\mathsf{st}} s : \tau$ abbreviates the store-resolved
+typed-state invariant, and $\Sigma \vdash_{\mathsf{tr}} \phi$ states that the
+trace $\phi$ is well typed with respect to $\Sigma$.
+The predicate $\mathsf{NotStuck}(s)$ means that $s$ is terminal
+($\mathsf{done}$ or $\mathsf{error}$) or has a next small-step transition. The
+predicate $\mathsf{Shape}_{\Sigma}(v,\tau)$ records
 that the run-time form of $v$ matches type $\tau$ under store typing $\Sigma$.
 
-\noindent\emph{In words.} Well-typed ordinary machine states do not get stuck,
-and ordinary machine steps preserve the typed-state invariant.
+\noindent\emph{In words.} The progress, preservation, and static-effect trace
+soundness theorems are stated before
+Theorem~\ref{thm:surface-effect-correctness}, because the surface-effect
+correctness proof depends on that checked machine layer. The remaining results
+below specialize completed continuation-machine executions.
 
-\begin{theorem}[Progress]
-If $\Sigma\vdash_{\mathsf{st}} s : \tau$, then either $s$ is terminal or there
-exist $s'$ and $\eta$ such that
-\[
-s\longrightarrow s'\,;\,\eta.
-\]
-\end{theorem}
-
-\begin{theorem}[One-step preservation]
-If
-\[
-\Sigma\vdash_{\mathsf{st}} s : \tau
-\qquad\text{and}\qquad
-s\longrightarrow s'\,;\,\eta,
-\]
-then $\Sigma\vdash_{\mathsf{st}} s' : \tau$.
-\end{theorem}
-
-\begin{theorem}[Terminal trace determinism]
-For any ordinary initial state $s$, if
+\begin{theorem}[Successful terminal trace determinism]
+For any initial state $s$, if
 \[
 s\longrightarrow^{*}\mathsf{done}(H_1,v_1)\,;\,\phi_1
 \qquad\text{and}\qquad
@@ -1204,8 +1601,7 @@ v_1=v_2.
 \end{theorem}
 
 \begin{theorem}[Terminal surface-effect correctness]
-Assume the counted-run correctness invariant holds for every natural bound.
-If
+Assume $H,E,P$ form a checked run-time context for $\Gamma,\Delta$. If
 \[
 \Gamma;\Delta\vdash e\desc \thetahat,
 \qquad
@@ -1213,7 +1609,7 @@ If
   \longrightarrow^{*}
   \mathsf{done}(H',v)\,;\,\phi,
 \]
-and the summary expression terminates with computed effect $\Theta$,
+and the surface-effect expression terminates with computed effect $\Theta$,
 \[
 \mathsf{init}(H,E,P,\thetahat)
   \longrightarrow^{*}
@@ -1225,11 +1621,27 @@ then the computation trace is covered by the computed effect:
 \]
 \end{theorem}
 
-The structured-trace version follows from the raw trace statement by erasing
-the structured view to its underlying machine trace. The premise about the
-counted-run correctness invariant is the mechanized induction closure used by
-the ordinary small-step proof; it is not an operational assumption and it is
-not evidence extracted from a trace.
+\begin{theorem}[Structured terminal surface-effect correctness]
+Assume $H,E,P$ form a checked run-time context for $\Gamma,\Delta$. If
+\[
+\Gamma;\Delta\vdash e\desc \thetahat,
+\qquad
+\mathsf{init}(H,E,P,e)
+  \longrightarrow^{*}
+  \mathsf{done}(H',v)\,;\,\Phi,
+\]
+where $\Phi$ is a structured trace view, and the surface-effect expression terminates
+with computed effect $\Theta$ and structured trace view $\Phi_s$, then
+\[
+\mathsf{flatten}(\Phi)\approxx\Theta.
+\]
+\end{theorem}
+
+The structured-trace theorem is the view-level counterpart of terminal
+surface-effect correctness. In the current mechanization, trace-view coverage
+is defined by flattening the view to its underlying machine trace; future
+scheduler-sensitive semantics can strengthen this interface by preserving
+parallel trace structure directly.
 
 \section{Discussion and Related Work}
 \label{sec:related}
@@ -1237,21 +1649,21 @@ not evidence extracted from a trace.
 The closest static comparator is Deterministic Parallel Java (DPJ)
 \citep{bocchino2009}. DPJ uses a modular compile-time type-and-effect system to
 guarantee deterministic semantics and expresses effects over regions. Surface
-effects retain static verification but move a value-dependent access summary
+effects retain static verification but move a value-dependent access description
 into an executable source-level term. From the run-time side, classic
 inspector--executor work analyzes irregular dependences before the executor
 runs conflict-free work in parallel \citep{arenaz2004}. The distinctive point
 of the present formulation is therefore not region effects or pre-execution
 access prediction in isolation, but the integration of a programmer-written,
-typed summary term with an approximation theorem and a trace-composition
+typed surface-effect term with an approximation theorem and a trace-composition
 proof.
 
 This positioning also exposes a limitation. Expressive region/effect
 annotations can be difficult to write manually, and prior work has investigated
 inference precisely to reduce that burden \citep{tzannes2019}. The present
-calculus assumes programmer-written surface-effect summaries and does not give
+calculus assumes programmer-written surface effects and does not give
 an inference or synthesis algorithm. Annotation effort and the frequency with
-which summaries collapse to `$\Top$' are empirical questions left open here.
+which surface effects collapse to `$\Top$' are empirical questions left open here.
 
 Hybrid verification platforms are also close in spirit
 \citep{kawaguchi2012,flanagan2006}.  They use expressive specifications, such
@@ -1264,13 +1676,13 @@ our calculus, these specifications are pure: evaluating them does not update
 mutable data.
 
 The design is hybrid in a precise sense. Verification of the
-computation/summary relation is static, while the summary value is dynamic:
-the summary term is evaluated with run-time values and its computed effect can
-be checked for disjointness and conflict absence by later clients. Summary
+computation/surface-effect relation is static, while the computed effect is dynamic:
+the surface-effect term is evaluated with run-time values and its computed effect can
+be checked for disjointness and conflict absence by later clients. Surface-effect
 evaluation is still run-time computation and may itself be input dependent.
 The continuation-machine metatheory proves progress, preservation, terminal
-determinism, and terminal surface-effect correctness for ordinary executions.
-It does not prove termination of summary terms, bound their cost, or compare
+determinism, and terminal surface-effect correctness for checked executions.
+It does not prove termination of surface-effect terms, bound their cost, or compare
 that cost with dynamic validation mechanisms. A future adequacy theorem could
 relate terminal machine runs to the archived terminating evaluator, but that
 bridge is not used as a paper theorem here.
@@ -1300,16 +1712,16 @@ Irregular data structures such as trees, queues, and graphs motivate the use of
 run-time information because region-level analyses may merge accesses that are
 concrete-address disjoint. The Galois approach \citep{kulkarni2007} is a useful
 contrast because it uses run-time conflict detection in an optimistic execution
-model. The surface-effects approach instead evaluates a summary before the parallel
-computation and therefore do not require the calculus to roll back a
-computation after a summary-level conflict is found. This is a semantic
+model. The surface-effects approach instead evaluates a surface effect before the parallel
+computation and therefore does not require the calculus to roll back a
+computation after a surface-effect conflict is found. This is a semantic
 difference, not an established performance comparison.
 
 The present work supplies neither a cost semantics nor an implementation study.
-Consequently, we make no claim that summary evaluation is constant in the size
-of the summary, that pre-checking has lower total overhead than access logging,
+Consequently, we make no claim that surface-effect evaluation is constant in the size
+of the surface-effect term, that pre-checking has lower total overhead than access logging,
 or that useful parallelism is recovered frequently in practice. A future
-evaluation should measure at least summary-evaluation time, conflict-test time,
+evaluation should measure at least surface-effect-evaluation time, conflict-test time,
 false-positive rate, the frequency of `$\Top$', recovered parallelism relative
 to region-only static effects, and programmer annotation effort. These
 measurements are necessary to determine whether the formal precision mechanism
@@ -1319,23 +1731,23 @@ translates into a practical advantage.
 \label{sec:conclusions}
 
 We have presented a region-polymorphic calculus in which a computation is
-paired with a statically verified, executable effect-summary term. Evaluating
-the summary before the computation can expose concrete region/location actions
+paired with a statically verified, executable surface-effect term. Evaluating
+the surface effect before the computation can expose concrete region/location actions
 that a region-only static effect does not distinguish. The mechanized
 correctness theorem proves trace approximation, and the trace-composition
 lemma makes the bridge explicit: disjoint and non-conflicting computed
-summaries of deterministic component traces yield a deterministic parallel
+effects for deterministic component traces yield a deterministic parallel
 trace. The trace semantics then establishes equivalent terminating replay
-heaps. The continuation-machine theorem stack adds ordinary runtime safety:
+heaps. The continuation-machine theorem stack adds checked runtime safety:
 well-typed states make progress, machine steps preserve typing, and two
 terminal executions from the same initial state have the same trace, heap, and
 value.
 
 These results are formal, not empirical performance results. The calculus does
-not include summary inference, a termination argument for summary evaluation, a
+not include surface-effect inference, a termination argument for surface-effect evaluation, a
 cost semantics, an implementation evaluation, or a separate adequacy theorem for
 terminal continuation-machine runs.
-Establishing the annotation burden and the run-time trade-off between summary
+Establishing the annotation burden and the run-time trade-off between surface-effect
 precision, pre-checking cost, and recovered parallelism is therefore left to
 future work.
 
@@ -1346,6 +1758,12 @@ future work.
 
 \section{Deterministic Parallelism}
 \label{app:determinism}
+
+This appendix records the replay-oriented deterministic-parallelism layer used
+by the earlier trace semantics. It is separate from the primitive
+NewSmallStep continuation-machine trace in Section~\ref{sec:opsem}: the machine
+trace there is a list of value-free dynamic actions, while this replay layer uses
+the richer trace syntax needed to state replay over heaps.
 
 \begin{definition}[Heap equivalence]
 The mechanization represents a heap as a finite map from keys $(r,l)$ to
@@ -1384,11 +1802,11 @@ A terminating replay has the form
 $(\phi,H)\Rightarrow^{*}(\Nil,H')$.
 \end{definition}
 
-\begin{lemma}[Read-only trace properties]
-A read-only trace preserves the heap during replay. Two read-only component
-traces form a deterministic parallel trace. These results follow from the
-inductive definition of $\ReadOnly$ on traces, which contains only the empty
-trace, read actions, and sequential/parallel compositions of read-only traces.
+\begin{lemma}[Read-trace properties]
+A trace consisting only of reads preserves the heap during replay. Two such
+component traces form a deterministic parallel trace. These results follow from
+the inductive trace predicate whose constructors contain only the empty trace,
+read actions, and sequential/parallel compositions.
 \end{lemma}
 
 \begin{lemma}[Scheduler soundness]
@@ -1424,7 +1842,7 @@ equivalent.
 The result does not claim uniqueness of an intermediate trace independently of
 the stated confluence property.
 
-\begin{theorem}[Heap uniqueness for safe parallel summaries]
+\begin{theorem}[Heap uniqueness for safe parallel surface effects]
 Let $\phi_1 \approxx \Theta_1$ and $\phi_2 \approxx \Theta_2$, with deterministic
 component traces and
 \[

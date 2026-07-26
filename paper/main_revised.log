@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2026.5.22)  24 JUL 2026 16:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2026.5.22)  26 JUL 2026 17:58
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -751,24 +751,24 @@ File: l3backend-pdftex.def 2023-01-16 L3 backend support: PDF output (pdfTeX)
 (./main_revised.aux)
 \openout1 = `main_revised.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 99.
-LaTeX Font Info:    ... okay on input line 99.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 144.
+LaTeX Font Info:    ... okay on input line 144.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -827,111 +827,98 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-Package hyperref Info: Link coloring OFF on input line 99.
+Package hyperref Info: Link coloring OFF on input line 144.
 
 (./main_revised.out) (./main_revised.out)
 \@outlinefile=\write4
 \openout4 = `main_revised.out'.
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 101
+LaTeX Font Info:    Trying to load font information for U+msa on input line 146
 .
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 101
+LaTeX Font Info:    Trying to load font information for U+msb on input line 146
 .
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Trying to load font information for U+stmry on input line 1
-01.
+46.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stmaryrd/Ustmry.fd)
 LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 1
-01.
+46.
 
 (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2022/07/10 v2.5l Standard LaTeX font definitions
-) (./main_revised.toc)
-\tf@toc=\write5
-\openout5 = `main_revised.toc'.
-
-
-[1
+) [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf-di
 st/fonts/enc/dvips/cm-super/cm-super-t1.enc}{/usr/share/texlive/texmf-dist/font
-s/enc/dvips/cm-super/cm-super-ts1.enc}] [2] [3]
+s/enc/dvips/cm-super/cm-super-ts1.enc}] [2]
 LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <9> not available
-(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 342.
- [4] [5] [6] [7]
-Overfull \hbox (0.96996pt too wide) in paragraph at lines 757--765
-\T1/cmr/m/n/10 ca-tions, con-di-tion-als, arith-metic and equal-ity, heap op-er
--a-tions, and surface-effect terms. In $\OML/cmm/m/it/10 ^^Vf:^^Ux:\OMS/cmsy/m/
-n/10 f\OML/cmm/m/it/10 e[] \OMS/cmsy/m/n/10 j
- []
+(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 396.
+ [3] [4] [5] [6] [7] [8] (./operational_semantics.tex
+[9] [10] [11] [12]) [13] [14] [15
 
-(./operational_semantics.tex [8] [9] [10]) [11] [12] [13] [14] [15] [16]
-(./main_revised.bbl [17]) [18] [19] (./main_revised.aux)
+] [16] [17] [18] [19] [20] [21]
+(./main_revised.bbl) [22] [23] (./main_revised.aux)
 Package rerunfilecheck Info: File `main_revised.out' has not changed.
-(rerunfilecheck)             Checksum: 63FD8E36379868E56CDF2F5C25651C2D;1741.
+(rerunfilecheck)             Checksum: 9A4A0637C42A36029D2166E5D0B983C6;1741.
  ) 
 Here is how much of TeX's memory you used:
- 27509 strings out of 476041
- 524541 string characters out of 5793174
- 1887388 words of memory out of 6000000
- 47409 multiletter control sequences out of 15000+600000
- 542340 words of font info for 109 fonts, out of 8000000 for 9000
+ 27537 strings out of 476041
+ 524943 string characters out of 5793174
+ 1885388 words of memory out of 6000000
+ 47435 multiletter control sequences out of 15000+600000
+ 542472 words of font info for 108 fonts, out of 8000000 for 9000
  1137 hyphenation exceptions out of 8191
- 83i,18n,80p,461b,1264s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 83i,20n,80p,461b,1264s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex7.pfb></usr/
-share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex8.pfb></usr/sh
-are/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9.pfb></usr/shar
-e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texl
-ive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/tex
-mf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist
-/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/
-type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
-ublic/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/a
-msfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
-cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.
-pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></us
-r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/
-texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></usr/share/texliv
-e/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/share/texlive/texmf
--dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></usr/share/texlive/texmf-dist/f
-onts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/t
-ype1/public/amsfonts/cm/cmsy5.pfb></usr/share/texlive/texmf-dist/fonts/type1/pu
-blic/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/am
-sfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
-cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy
-9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti9.pfb></usr/s
-hare/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb></usr/sh
-are/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msam7.pfb></usr/shar
-e/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share
-/texlive/texmf-dist/fonts/type1/public/cm-super/sfbx0700.pfb></usr/share/texliv
-e/texmf-dist/fonts/type1/public/cm-super/sfbx0800.pfb></usr/share/texlive/texmf
--dist/fonts/type1/public/cm-super/sfbx0900.pfb></usr/share/texlive/texmf-dist/f
-onts/type1/public/cm-super/sfbx1000.pfb></usr/share/texlive/texmf-dist/fonts/ty
-pe1/public/cm-super/sfbx1440.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
-lic/cm-super/sfcc0900.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-
-super/sfrm0600.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/s
-frm0800.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm0900
-.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb></
-usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb></usr/sha
-re/texlive/texmf-dist/fonts/type1/public/cm-super/sfrm1728.pfb></usr/share/texl
-ive/texmf-dist/fonts/type1/public/cm-super/sfti0900.pfb></usr/share/texlive/tex
-mf-dist/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/texlive/texmf-dist
-/fonts/type1/public/cm-super/sftt0800.pfb></usr/share/texlive/texmf-dist/fonts/
-type1/public/cm-super/sftt0900.pfb>
-Output written on main_revised.pdf (19 pages, 747960 bytes).
+share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9.pfb></usr/sh
+are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/te
+xlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/t
+exmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-di
+st/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dist/font
+s/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1
+/public/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/
+amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts
+/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9
+.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb><
+/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr/sh
+are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></usr/share/tex
+live/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/t
+exmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></usr/share/texlive/texmf-di
+st/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/font
+s/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1
+/public/amsfonts/cm/cmsy9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public
+/amsfonts/cm/cmti9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfon
+ts/symbols/msam10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfont
+s/symbols/msam7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
+symbols/msbm10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/s
+fbx0700.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfbx0900
+.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb></
+usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb></usr/sha
+re/texlive/texmf-dist/fonts/type1/public/cm-super/sfcc0900.pfb></usr/share/texl
+ive/texmf-dist/fonts/type1/public/cm-super/sfrm0600.pfb></usr/share/texlive/tex
+mf-dist/fonts/type1/public/cm-super/sfrm0800.pfb></usr/share/texlive/texmf-dist
+/fonts/type1/public/cm-super/sfrm0900.pfb></usr/share/texlive/texmf-dist/fonts/
+type1/public/cm-super/sfrm1000.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
+ublic/cm-super/sfrm1200.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/c
+m-super/sfrm1728.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super
+/sfti0900.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfti10
+00.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sftt0800.pfb>
+</usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sftt0900.pfb></usr/s
+hare/texlive/texmf-dist/fonts/type1/public/stmaryrd/stmary10.pfb></usr/share/te
+xlive/texmf-dist/fonts/type1/public/stmaryrd/stmary9.pfb>
+Output written on main_revised.pdf (23 pages, 692108 bytes).
 PDF statistics:
- 492 PDF objects out of 1000 (max. 8388607)
- 375 compressed objects within 4 object streams
- 80 named destinations out of 1000 (max. 500000)
+ 482 PDF objects out of 1000 (max. 8388607)
+ 369 compressed objects within 4 object streams
+ 85 named destinations out of 1000 (max. 500000)
  93 words of extra memory for PDF output out of 10000 (max. 10000000)
 

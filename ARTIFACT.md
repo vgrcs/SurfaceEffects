@@ -18,10 +18,11 @@ theories/PaperTheorems.v
 
 Exports:
 
-- the checked-pair-free ordinary syntax `NExpr`;
-- the checked-pair-free ordinary typing judgment `NTcExp`;
-- progress, preservation, terminal determinism, and terminal correctness
-  wrappers from `theories/PaperTheorems.v`.
+- the `NewSmallStep` syntax `NExpr`, including `EPairPar`;
+- the ordinary and checked typing judgments, including `NTcExp`,
+  `NCheckedTcExp`, and `NCheckedBackTriangle`;
+- progress, preservation, static-effect soundness, terminal determinism, and
+  terminal surface-effect correctness from `theories/NewSmallStep`.
 
 ## Known-Good Toolchain
 
@@ -124,33 +125,36 @@ The paper uses mathematical theorem statements.
 
 Main mechanized names:
 
-Ordinary small-step safety:
+Runtime safety:
 
-- `PaperOrdinarySmallStepProgress`
-- `PaperOrdinarySmallStepEvalPreservation`
-- `PaperOrdinarySmallStepReturnPreservation`
+- `NStep_progress`
+- `NStep_store_resolved_state_preservation`
+- `NSteps_store_resolved_state_preservation`
+- `NStepsN_store_resolved_state_preservation`
+
+Static-effect soundness:
+
+- `checked_store_computation_trace_soundness`
 
 Terminal determinism:
 
-- `PaperOrdinarySmallStepTerminalTraceDeterminism`
-- `PaperOrdinarySmallStepTerminalDeterminism`
+- `NSteps_terminal_trace_deterministic`
+- `NSteps_terminal_deterministic`
 
 Surface-effect correctness:
 
-- `PaperOrdinarySurfaceEffectCorrectnessFromBelow`
-- `PaperOrdinaryStructuredSurfaceEffectCorrectnessFromBelow`
+- `checked_context_terminal_correctness_from_store_dispatch`
+- `checked_context_structured_terminal_correctness_from_store_dispatch`
 
-All of these quantify over the ordinary `NExpr` language. Since `NExpr` has no
-checked-pair constructor, the public theorem map excludes checked pairs by
-construction.
+Pair-parallel dispatcher case:
+
+- `EPairPar_checked_store_context_case_from_below`
 
 Exported by:
 
 ```text
 theories/PaperTheorems.v
 ```
-
-The older checked-pair wrappers are not exported by the public facade.
 
 ## Source Navigation
 
@@ -160,9 +164,9 @@ Use `REPORT.md` for the detailed proof narrative.
 For artifact checking, the shortest path is still the review path above:
 
 1. public facade;
-2. checked-pair-free syntax and typing;
-3. ordinary machine;
-4. terminal correctness and determinism wrappers.
+2. `NewSmallStep` syntax and checked typing;
+3. continuation machine, progress, and preservation;
+4. static-effect soundness and dispatcher terminal correctness.
 
 ## Scope
 
@@ -173,8 +177,9 @@ It does not prove:
 
 - terminal small-step/big-step adequacy;
 - equivalence with a separate sequential pair constructor;
-- termination or cost bounds for summary evaluation;
-- summary inference or synthesis.
+- termination or cost bounds for surface-effect evaluation;
+- surface-effect inference or synthesis;
+- scheduler determinism for a nondeterministic/interleaving scheduler.
 
 Archived:
 

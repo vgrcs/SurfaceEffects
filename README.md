@@ -1,7 +1,7 @@
 # SurfaceEffects
 
 SurfaceEffects is a Rocq mechanization of a language with regions, mutable
-references, dynamic traces, and executable effect summaries.
+references, dynamic traces, and executable surface effects.
 
 The current paper-facing semantics is a small-step continuation machine. The
 public theorem facade is:
@@ -55,41 +55,44 @@ theories/
   Archive/       inactive proof experiments
 ```
 
-The paper-facing ordinary calculus is the checked-pair-free `NewSmallStep`
-development:
+The paper-facing calculus is the active `NewSmallStep` development:
 
-- `NewSmallStep/Core/Syntax.v`: `NExpr`, with no checked-pair constructor.
-- `NewSmallStep/Typing/Judgments.v`: `NTcExp`, with no checked-pair rule.
+- `NewSmallStep/Core/Syntax.v`: `NExpr`, including `EPairPar`.
+- `NewSmallStep/Typing/Judgments.v`: ordinary and checked typing judgments.
 - `NewSmallStep/Runtime/Machine.v`: continuation-machine semantics.
 - `NewSmallStep/Runtime/Trace.v`: finite executions and traces.
 - `NewSmallStep/Runtime/Progress.v`: progress for well-typed states.
-- `NewSmallStep/Runtime/Preservation.v`: preservation lemmas.
-- `NewSmallStep/Soundness/BackTriangle.v`: ordinary summary relation.
-- `NewSmallStep/Soundness/Correctness.v`: terminal correctness shape.
+- `NewSmallStep/Runtime/RegularPreservation.v`: store-resolved preservation.
+- `NewSmallStep/Soundness/BackTriangle.v`: checked surface-effect relation.
+- `NewSmallStep/Soundness/Dispatcher.v`: static-effect soundness and terminal
+  correctness dispatcher.
 - `NewSmallStep/Determinism/Terminal.v`: terminal determinism.
-- `PaperTheorems.v`: paper-facing theorem wrappers.
+- `PaperTheorems.v`: paper-facing theorem exports.
 
-Older checked-pair files remain in the repository for comparison and future
-experiments, but they are not exported by the public theorem facade.
+Older proof experiments remain in the repository for comparison and future
+work, but the public theorem facade is the `NewSmallStep` stack exported through
+`PaperTheorems.v`.
 
 ## Current Status
 
 The active theorem stack proves:
 
-- progress for the checked-pair-free ordinary small-step machine;
-- preservation for evaluation and return steps;
+- progress for the `NewSmallStep` continuation machine;
+- store-resolved preservation for machine steps and finite executions;
+- static-effect trace soundness;
 - terminal trace determinism;
 - terminal value/heap determinism;
-- terminal surface-effect correctness from the counted-run induction package;
-- structured terminal correctness as a corollary of raw trace correctness.
+- closed terminal surface-effect correctness;
+- structured terminal correctness as a corollary of terminal trace correctness.
 
 There are no source-level `Axiom` or `Admitted` declarations in `theories/`.
 
 Current non-goals:
 
 - terminal small-step/big-step adequacy;
-- termination or cost bounds for summary evaluation;
-- summary inference or synthesis.
+- termination or cost bounds for surface-effect evaluation;
+- surface-effect inference or synthesis;
+- scheduler determinism for a nondeterministic/interleaving scheduler.
 
 For the exact theorem names and build environment, see
 [ARTIFACT.md](ARTIFACT.md).

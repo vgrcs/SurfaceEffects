@@ -10,9 +10,9 @@
 \contentsline {paragraph}{Effect-valued expression steps.}{10}{section*.25}%
 \contentsline {section}{\numberline {5}Static Semantics}{11}{section.26}%
 \contentsline {section}{\numberline {6}Correctness of Surface Effects}{12}{section.30}%
-\contentsline {paragraph}{Trace/summary separation.}{14}{section*.33}%
-\contentsline {paragraph}{Runtime definitions.}{14}{section*.35}%
+\contentsline {paragraph}{Trace/surface-effect separation.}{14}{section*.33}%
+\contentsline {paragraph}{Runtime definitions.}{15}{section*.35}%
 \contentsline {section}{\numberline {7}Small-Step Runtime Safety}{15}{section.36}%
-\contentsline {section}{\numberline {8}Discussion and Related Work}{16}{section.41}%
-\contentsline {section}{\numberline {9}Conclusions}{17}{section.42}%
-\contentsline {section}{\numberline {A}Deterministic Parallelism}{18}{appendix.44}%
+\contentsline {section}{\numberline {8}Discussion and Related Work}{17}{section.43}%
+\contentsline {section}{\numberline {9}Conclusions}{18}{section.44}%
+\contentsline {section}{\numberline {A}Deterministic Parallelism}{19}{appendix.46}%
