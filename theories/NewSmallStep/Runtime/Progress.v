@@ -18,14 +18,15 @@ Theorem NStep_progress :
 Proof.
   intros gamma omega state HWT.
   unfold NProgressState.
-  inversion HWT as
-    [gamma0 omega0 heap env rho e k ty eff
-      HHeap HEnv HRho HTc HK
-    | gamma0 omega0 heap rho v k ty
-      HHeap HRho HV HK
-    | gamma0 omega0 heap v rho ty
-      HHeap HRho HV];
-    subst; clear HWT.
+  induction HWT as
+    [gamma omega heap env rho e k ty eff HHeap HEnv HRho HTc HK
+    | gamma omega heap rho v k ty HHeap HRho HV HK
+    | gamma omega heap v rho ty HHeap HRho HV
+    | gamma omega heap rho HHeap HRho
+    | gamma omega left_state right_state phi_left phi_right k
+      heap rho ty1 ty2 HHeapLeft HHeapRight HLeft IHLeft HRight IHRight
+      HHeap HRho HK];
+    subst.
   - right.
     inversion HTc; subst;
       try solve [
@@ -69,6 +70,15 @@ Proof.
       constructor.
     + eexists; eexists.
       constructor.
+    + inversion HV; subst.
+      eexists; eexists.
+      constructor.
+    + inversion HV; subst.
+      destruct (summary_disjointb theta1 theta) eqn:HCheck.
+      * eexists; eexists.
+        eapply StepPairParCheckPass. exact HCheck.
+      * eexists; eexists.
+        eapply StepPairParCheckFail. exact HCheck.
     + inversion HV; subst.
       destruct
         (NRhoModels_eval_region omega rho r HRho H)
@@ -131,4 +141,30 @@ Proof.
       eexists; eexists.
       constructor.
   - left. constructor.
+  - left. constructor.
+  - destruct IHLeft as [HTermLeft | (label & left_state' & HStepLeft)].
+    + inversion HTermLeft; subst.
+      * destruct IHRight as
+          [HTermRight | (label & right_state' & HStepRight)].
+        -- inversion HTermRight; subst.
+           simpl in HHeapRight; subst.
+           ++ destruct (trace_disjointb phi_left phi_right) eqn:HCheck.
+              ** right.
+                 eexists; eexists.
+                 eapply StepPairParRunDonePass. exact HCheck.
+              ** right.
+                 eexists; eexists.
+                 eapply StepPairParRunDoneFail. exact HCheck.
+           ++ right.
+              eexists; eexists.
+              eapply StepPairParRunRightError.
+        -- right.
+           eexists; eexists.
+           eapply StepPairParRunRight. exact HStepRight.
+      * right.
+        eexists; eexists.
+        eapply StepPairParRunLeftError.
+    + right.
+      eexists; eexists.
+      eapply StepPairParRunLeft. exact HStepLeft.
 Qed.

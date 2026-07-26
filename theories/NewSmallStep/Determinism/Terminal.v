@@ -12,9 +12,28 @@ Theorem NStep_deterministic :
     NStep state label2 state2 ->
     label1 = label2 /\ state1 = state2.
 Proof.
-  intros state label1 state1 label2 state2 HStep1 HStep2.
-  inversion HStep1; subst; inversion HStep2; subst;
+  intros state label1 state1 label2 state2 HStep1.
+  revert label2 state2.
+  induction HStep1; intros label2 state2 HStep2;
+    inversion HStep2; subst;
     try solve [split; reflexivity | split; congruence].
+  all: try match goal with
+  | H : NStep (StDone _ _) _ _ |- _ => inversion H
+  | H : NStep (StError _) _ _ |- _ => inversion H
+  end.
+  all: try match goal with
+  | HTrue : ?b = true, HFalse : ?b = false |- _ =>
+      rewrite HTrue in HFalse; discriminate
+  | HFalse : ?b = false, HTrue : ?b = true |- _ =>
+      rewrite HTrue in HFalse; discriminate
+  end.
+  all: try match goal with
+  | IH : forall label2 state2,
+      NStep ?state label2 state2 -> ?label1 = label2 /\ ?state' = state2,
+    HStep : NStep ?state ?label2 ?state2 |- _ =>
+      destruct (IH _ _ HStep) as [HLabel HState];
+      subst; split; reflexivity
+  end.
 Qed.
 
 Lemma StDone_no_step :

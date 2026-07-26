@@ -9,13 +9,16 @@ Import ListNotations.
 Inductive NTraceView :=
 | NTraceEmpty : NTraceView
 | NTraceAction : DynamicAction -> NTraceView
-| NTraceSeq : NTraceView -> NTraceView -> NTraceView.
+| NTraceSeq : NTraceView -> NTraceView -> NTraceView
+| NTracePar : NTraceView -> NTraceView -> NTraceView.
 
 Fixpoint trace_view_flatten (view : NTraceView) : Trace :=
   match view with
   | NTraceEmpty => []
   | NTraceAction action => [action]
   | NTraceSeq view1 view2 =>
+      trace_view_flatten view1 ++ trace_view_flatten view2
+  | NTracePar view1 view2 =>
       trace_view_flatten view1 ++ trace_view_flatten view2
   end.
 
@@ -124,6 +127,20 @@ Lemma trace_view_covered_seq_summary_union :
     TraceViewCoveredBySummary view2 theta2 ->
     TraceViewCoveredBySummary
       (NTraceSeq view1 view2)
+      (summary_union theta1 theta2).
+Proof.
+  intros view1 view2 theta1 theta2 HCovered1 HCovered2.
+  unfold TraceViewCoveredBySummary in *.
+  simpl.
+  apply trace_covered_app_summary_union; assumption.
+Qed.
+
+Lemma trace_view_covered_par_summary_union :
+  forall view1 view2 theta1 theta2,
+    TraceViewCoveredBySummary view1 theta1 ->
+    TraceViewCoveredBySummary view2 theta2 ->
+    TraceViewCoveredBySummary
+      (NTracePar view1 view2)
       (summary_union theta1 theta2).
 Proof.
   intros view1 view2 theta1 theta2 HCovered1 HCovered2.

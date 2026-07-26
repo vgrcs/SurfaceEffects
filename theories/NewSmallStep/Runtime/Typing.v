@@ -47,6 +47,11 @@ Inductive NValHasType : Rho -> Heap -> NVal -> NTy -> Prop :=
 | NVT_Summary :
     forall rho heap theta,
       NValHasType rho heap (VSummary theta) TyEffect
+| NVT_Pair :
+    forall rho heap v1 v2 ty1 ty2,
+      NValHasType rho heap v1 ty1 ->
+      NValHasType rho heap v2 ty2 ->
+      NValHasType rho heap (VPair v1 v2) (TyPair ty1 ty2)
 | NVT_Loc :
     forall rho heap rgn ty r l cell,
       eval_region_type rho rgn = Some r ->
@@ -262,6 +267,29 @@ Inductive NKontHasType :
       NKontHasType gamma omega rho heap
         (KEffAppArg closure_env closure_rho f x ec ee k)
         ty_arg
+| NKT_PairParEff1 :
+    forall gamma omega rho heap ef1 ea1 ef2 ea2 env k
+      ty1 ty2 eff1 eff2 eff_summary2,
+      NRuntimeEnvShape rho heap env gamma ->
+      NRhoModels omega rho ->
+      NTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
+      NTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      NTcExp gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2 ->
+      NKontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      NKontHasType gamma omega rho heap
+        (KPairParEff1 ef1 ea1 ef2 ea2 env rho k)
+        TyEffect
+| NKT_PairParEff2 :
+    forall gamma omega rho heap ef1 ea1 ef2 ea2 env theta1 k
+      ty1 ty2 eff1 eff2,
+      NRuntimeEnvShape rho heap env gamma ->
+      NRhoModels omega rho ->
+      NTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
+      NTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      NKontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      NKontHasType gamma omega rho heap
+        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
+        TyEffect
 | NKT_RgnApp :
     forall gamma omega rho heap r k eff ty,
       region_expr_wf omega r ->
@@ -418,4 +446,21 @@ Inductive NWTState : NCtx -> NRgnCtx -> NState -> Prop :=
       NRuntimeHeapShape rho heap ->
       NRhoModels omega rho ->
       NValHasType rho heap v ty ->
-      NWTState gamma omega (StDone heap v).
+      NWTState gamma omega (StDone heap v)
+| NWT_Error :
+    forall gamma omega heap rho,
+      NRuntimeHeapShape rho heap ->
+      NRhoModels omega rho ->
+      NWTState gamma omega (StError heap)
+| NWT_PairParRun :
+    forall gamma omega left_state right_state phi_left phi_right k
+      heap rho ty1 ty2,
+      state_heap left_state = heap ->
+      state_heap right_state = heap ->
+      NWTState gamma omega left_state ->
+      NWTState gamma omega right_state ->
+      NRuntimeHeapShape rho heap ->
+      NRhoModels omega rho ->
+      NKontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      NWTState gamma omega
+        (StPairParRun left_state right_state phi_left phi_right k).

@@ -52,6 +52,8 @@ Inductive NKont :=
 | KMuAppArg : NEnv -> Rho -> VarId -> VarId -> NExpr -> NExpr -> NKont -> NKont
 | KEffAppFun : NExpr -> NEnv -> Rho -> NKont -> NKont
 | KEffAppArg : NEnv -> Rho -> VarId -> VarId -> NExpr -> NExpr -> NKont -> NKont
+| KPairParEff1 : NExpr -> NExpr -> NExpr -> NExpr -> NEnv -> Rho -> NKont -> NKont
+| KPairParEff2 : NExpr -> NExpr -> NExpr -> NExpr -> NEnv -> Rho -> Summary -> NKont -> NKont
 | KRgnApp : RegionExpr -> Rho -> NKont -> NKont
 | KCond : NExpr -> NExpr -> NEnv -> Rho -> NKont -> NKont
 | KRef : RegionId -> NKont -> NKont
@@ -74,7 +76,33 @@ Inductive NKont :=
 Inductive NState :=
 | StEval : Heap -> NEnv -> Rho -> NExpr -> NKont -> NState
 | StReturn : Heap -> NVal -> NKont -> NState
-| StDone : Heap -> NVal -> NState.
+| StDone : Heap -> NVal -> NState
+| StPairParRun : NState -> NState -> Trace -> Trace -> NKont -> NState
+| StError : Heap -> NState.
+
+Fixpoint state_heap (state : NState) : Heap :=
+  match state with
+  | StEval heap _ _ _ _ => heap
+  | StReturn heap _ _ => heap
+  | StDone heap _ => heap
+  | StPairParRun left_state _ _ _ _ => state_heap left_state
+  | StError heap => heap
+  end.
+
+Fixpoint with_state_heap (heap : Heap) (state : NState) : NState :=
+  match state with
+  | StEval _ env rho e k => StEval heap env rho e k
+  | StReturn _ v k => StReturn heap v k
+  | StDone _ v => StDone heap v
+  | StPairParRun left_state right_state phi_left phi_right k =>
+      StPairParRun
+        (with_state_heap heap left_state)
+        (with_state_heap heap right_state)
+        phi_left
+        phi_right
+        k
+  | StError _ => StError heap
+  end.
 
 Inductive NLabel :=
 | LSilent : NLabel
@@ -176,6 +204,108 @@ Inductive NStep : NState -> NLabel -> NState -> Prop :=
           closure_rho
           ee
           k)
+| StepPairPar :
+    forall heap env rho ef1 ea1 ef2 ea2 k,
+      NStep
+        (StEval heap env rho
+          (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)) k)
+        LSilent
+        (StEval heap env rho (EEffApp ef1 ea1)
+          (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
+| StepPairParEff1 :
+    forall heap theta1 ef1 ea1 ef2 ea2 env rho k,
+      NStep
+        (StReturn heap (VSummary theta1)
+          (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
+        LSilent
+        (StEval heap env rho (EEffApp ef2 ea2)
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
+| StepPairParCheckPass :
+    forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k,
+      summary_disjointb theta1 theta2 = true ->
+      NStep
+        (StReturn heap (VSummary theta2)
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
+        LSilent
+        (StPairParRun
+          (StEval heap env rho (EMuApp ef1 ea1) KDone)
+          (StEval heap env rho (EMuApp ef2 ea2) KDone)
+          []
+          []
+          k)
+| StepPairParCheckFail :
+    forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k,
+      summary_disjointb theta1 theta2 = false ->
+      NStep
+        (StReturn heap (VSummary theta2)
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
+        LSilent
+        (StError heap)
+| StepPairParRunLeft :
+    forall left_state right_state phi_left phi_right k label left_state',
+      NStep left_state label left_state' ->
+      NStep
+        (StPairParRun left_state right_state phi_left phi_right k)
+        label
+        (StPairParRun
+          left_state'
+          (with_state_heap (state_heap left_state') right_state)
+          (phi_left ++ label_trace label)
+          phi_right
+          k)
+| StepPairParRunRight :
+    forall heap v1 right_state phi_left phi_right k label right_state',
+      NStep right_state label right_state' ->
+      NStep
+        (StPairParRun (StDone heap v1) right_state phi_left phi_right k)
+        label
+        (StPairParRun
+          (with_state_heap (state_heap right_state') (StDone heap v1))
+          right_state'
+          phi_left
+          (phi_right ++ label_trace label)
+          k)
+| StepPairParRunLeftError :
+    forall heap right_state phi_left phi_right k,
+      NStep
+        (StPairParRun (StError heap) right_state phi_left phi_right k)
+        LSilent
+        (StError heap)
+| StepPairParRunRightError :
+    forall heap_left v1 heap_right phi_left phi_right k,
+      NStep
+        (StPairParRun
+          (StDone heap_left v1)
+          (StError heap_right)
+          phi_left
+          phi_right
+          k)
+        LSilent
+        (StError heap_right)
+| StepPairParRunDonePass :
+    forall heap v1 v2 phi_left phi_right k,
+      trace_disjointb phi_left phi_right = true ->
+      NStep
+        (StPairParRun
+          (StDone heap v1)
+          (StDone heap v2)
+          phi_left
+          phi_right
+          k)
+        LSilent
+        (StReturn heap (VPair v1 v2) k)
+| StepPairParRunDoneFail :
+    forall heap v1 v2 phi_left phi_right k,
+      trace_disjointb phi_left phi_right = false ->
+      NStep
+        (StPairParRun
+          (StDone heap v1)
+          (StDone heap v2)
+          phi_left
+          phi_right
+          k)
+        LSilent
+        (StError heap)
 | StepRgnApp :
     forall heap env rho er r k,
       NStep
@@ -410,7 +540,10 @@ Inductive NStep : NState -> NLabel -> NState -> Prop :=
 Inductive NTerminal : NState -> Prop :=
 | TerminalDone :
     forall heap v,
-      NTerminal (StDone heap v).
+      NTerminal (StDone heap v)
+| TerminalError :
+    forall heap,
+      NTerminal (StError heap).
 
 Definition NInitialState (heap : Heap) (env : NEnv) (rho : Rho)
     (e : NExpr) : NState :=

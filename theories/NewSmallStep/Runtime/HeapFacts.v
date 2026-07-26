@@ -14,6 +14,11 @@ Definition NHeapKeysBounded (heap : Heap) : Prop :=
     In (r, l, v) heap ->
     l < length heap.
 
+Definition NHeapLookupsBounded (heap : Heap) : Prop :=
+  forall r l v,
+    heap_lookup r l heap = Some v ->
+    l < length heap.
+
 Lemma heap_lookup_in :
   forall heap r l v,
     heap_lookup r l heap = Some v ->
@@ -30,6 +35,34 @@ Proof.
       inversion HLookup; subst.
       left. subst. reflexivity.
     + right. eapply IH. exact HLookup.
+Qed.
+
+Lemma heap_in_lookup_key_exists :
+  forall heap r l v,
+    In (r, l, v) heap ->
+    exists v',
+      heap_lookup r l heap = Some v'.
+Proof.
+  induction heap as [| [[r0 l0] v0] heap IH];
+    intros r l v HIn; simpl in *.
+  - contradiction.
+  - destruct HIn as [HHead | HTail].
+    + inversion HHead; subst.
+      rewrite Nat.eqb_refl, Nat.eqb_refl.
+      eexists. reflexivity.
+    + destruct (Nat.eqb r r0 && Nat.eqb l l0) eqn:HEq.
+      * eexists. reflexivity.
+      * eapply IH; eauto.
+Qed.
+
+Lemma NHeapKeysBounded_to_lookups_bounded :
+  forall heap,
+    NHeapKeysBounded heap ->
+    NHeapLookupsBounded heap.
+Proof.
+  intros heap HBounded r l v HLookup.
+  eapply HBounded.
+  eapply heap_lookup_in; eauto.
 Qed.
 
 Lemma heap_bounded_lookup_lt :
@@ -79,6 +112,30 @@ Proof.
   simpl.
   rewrite Nat.eqb_refl, Nat.eqb_refl.
   reflexivity.
+Qed.
+
+Lemma heap_lookup_alloc_old :
+  forall heap r_alloc v_alloc l_alloc heap' r l v,
+    NHeapKeysBounded heap ->
+    heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
+    heap_lookup r l heap = Some v ->
+    heap_lookup r l heap' = Some v.
+Proof.
+  intros heap r_alloc v_alloc l_alloc heap' r l v
+    HBounded HAlloc HLookup.
+  destruct (heap_alloc_result heap r_alloc v_alloc l_alloc heap' HAlloc)
+    as [-> ->].
+  simpl.
+  destruct (Nat.eqb r r_alloc && Nat.eqb l (length heap)) eqn:HEq;
+    [| exact HLookup].
+  apply andb_true_iff in HEq.
+  destruct HEq as [_ HL].
+  apply Nat.eqb_eq in HL.
+  subst l.
+  pose proof
+    (heap_bounded_lookup_lt heap r (length heap) v HBounded HLookup)
+    as HLen.
+  lia.
 Qed.
 
 Lemma heap_update_lookup_same :

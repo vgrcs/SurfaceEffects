@@ -1,9 +1,12 @@
 Require Export theories.NewSmallStep.Runtime.Machine.
 Require Export theories.NewSmallStep.Runtime.HeapFacts.
 Require Export theories.NewSmallStep.Runtime.Trace.
+Require Export theories.NewSmallStep.Runtime.HeapNeutral.
 Require Export theories.NewSmallStep.Runtime.TraceView.
 Require Export theories.NewSmallStep.Runtime.Continuation.
 Require Export theories.NewSmallStep.Runtime.Typing.
 Require Export theories.NewSmallStep.Runtime.StateShape.
+Require Export theories.NewSmallStep.Runtime.RegularStateShape.
 Require Export theories.NewSmallStep.Runtime.Preservation.
+Require Export theories.NewSmallStep.Runtime.RegularPreservation.
 Require Export theories.NewSmallStep.Runtime.Progress.

@@ -11,6 +11,7 @@ Inductive NExpr :=
 | EMuApp : NExpr -> NExpr -> NExpr
 | ERgnApp : NExpr -> RegionExpr -> NExpr
 | EEffApp : NExpr -> NExpr -> NExpr
+| EPairPar : NExpr -> NExpr -> NExpr
 | ECond : NExpr -> NExpr -> NExpr -> NExpr
 | ERef : RegionExpr -> NExpr -> NExpr
 | EDeref : RegionExpr -> NExpr -> NExpr

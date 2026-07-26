@@ -6,6 +6,7 @@ Inductive NTy :=
 | TyBool : NTy
 | TyUnit : NTy
 | TyEffect : NTy
+| TyPair : NTy -> NTy -> NTy
 | TyRef : RegionType -> NTy -> NTy
 | TyArrow : NTy -> StaticEffect -> NTy -> StaticEffect -> NTy
 | TyForallRgn : StaticEffect -> NTy -> NTy.
@@ -16,6 +17,8 @@ Fixpoint open_ty_at (k : nat) (u : RegionType) (ty : NTy) : NTy :=
   | TyBool => TyBool
   | TyUnit => TyUnit
   | TyEffect => TyEffect
+  | TyPair ty1 ty2 =>
+      TyPair (open_ty_at k u ty1) (open_ty_at k u ty2)
   | TyRef rgn ty_inner =>
       TyRef (open_region_type_at k u rgn) (open_ty_at k u ty_inner)
   | TyArrow ty_arg eff_body ty_body eff_summary =>
@@ -42,6 +45,8 @@ Fixpoint close_ty_at (k : nat) (x : VarId) (ty : NTy) : NTy :=
   | TyBool => TyBool
   | TyUnit => TyUnit
   | TyEffect => TyEffect
+  | TyPair ty1 ty2 =>
+      TyPair (close_ty_at k x ty1) (close_ty_at k x ty2)
   | TyRef rgn ty_inner =>
       TyRef (close_region_type_at k x rgn) (close_ty_at k x ty_inner)
   | TyArrow ty_arg eff_body ty_body eff_summary =>

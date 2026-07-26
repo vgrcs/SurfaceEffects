@@ -12,6 +12,7 @@ Inductive NVal :=
 | VNat : nat -> NVal
 | VBool : bool -> NVal
 | VUnit : NVal
+| VPair : NVal -> NVal -> NVal
 | VLoc : RegionId -> Location -> NVal
 | VClosure : NEnv -> Rho -> VarId -> VarId -> NExpr -> NExpr -> NVal
 | VRegionClosure : NEnv -> Rho -> VarId -> NExpr -> NVal
