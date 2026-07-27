@@ -44,6 +44,49 @@ Proof.
   inversion HStep.
 Qed.
 
+Lemma NTerminal_no_step :
+  forall state label state',
+    NTerminal state ->
+    ~ NStep state label state'.
+Proof.
+  intros state label state' HTerminal HStep.
+  inversion HTerminal; subst; inversion HStep.
+Qed.
+
+Lemma NSteps_terminal_start_inv :
+  forall state phi state',
+    NTerminal state ->
+    NSteps state phi state' ->
+    phi = [] /\ state' = state.
+Proof.
+  intros state phi state' HTerminal HSteps.
+  inversion HSteps; subst.
+  - split; reflexivity.
+  - exfalso.
+    eapply NTerminal_no_step; eauto.
+Qed.
+
+Lemma NSteps_known_first_step_to_terminal_inv :
+  forall state label state' phi final_state,
+    NStep state label state' ->
+    NSteps state phi final_state ->
+    NTerminal final_state ->
+    exists phi_tail,
+      NSteps state' phi_tail final_state /\
+      phi = label_trace label ++ phi_tail.
+Proof.
+  intros state label state' phi final_state HStep HRun HTerminal.
+  inversion HRun; subst.
+  - exfalso.
+    eapply NTerminal_no_step; eauto.
+  - destruct
+      (NStep_deterministic state label state' label0 state'0 HStep H)
+      as [HLabel HState].
+    subst label0 state'0.
+    exists phi0.
+    split; reflexivity || assumption.
+Qed.
+
 Lemma NSteps_known_first_step_terminal_inv :
   forall state label state' phi heap v,
     NStep state label state' ->
@@ -83,6 +126,14 @@ Proof.
     repeat split; reflexivity || assumption.
 Qed.
 
+Definition TerminalStateTraceDeterminismGoal : Prop :=
+  forall state phi1 final1 phi2 final2,
+    NSteps state phi1 final1 ->
+    NTerminal final1 ->
+    NSteps state phi2 final2 ->
+    NTerminal final2 ->
+    phi1 = phi2 /\ final1 = final2.
+
 Definition TerminalDeterminismGoal : Prop :=
   forall state phi1 heap1 v1 phi2 heap2 v2,
     NSteps state phi1 (StDone heap1 v1) ->
@@ -94,6 +145,47 @@ Definition TerminalTraceDeterminismGoal : Prop :=
     NSteps state phi1 (StDone heap1 v1) ->
     NSteps state phi2 (StDone heap2 v2) ->
     phi1 = phi2 /\ heap1 = heap2 /\ v1 = v2.
+
+Theorem NSteps_terminal_state_trace_deterministic :
+  TerminalStateTraceDeterminismGoal.
+Proof.
+  unfold TerminalStateTraceDeterminismGoal.
+  intros state phi1 final1 phi2 final2 HSteps1.
+  revert phi2 final2.
+  induction HSteps1 as
+    [state
+    | state label state' phi state'' HStep _ IH];
+    intros phi2 final2 HTerminal1 HSteps2 HTerminal2.
+  - destruct
+      (NSteps_terminal_start_inv state phi2 final2 HTerminal1 HSteps2)
+      as [HPhi HState].
+    subst.
+    split; reflexivity.
+  - destruct
+      (NSteps_known_first_step_to_terminal_inv
+        state label state' phi2 final2 HStep HSteps2 HTerminal2)
+      as (phi_tail & HStepsTail & HPhi2).
+    destruct (IH phi_tail final2 HTerminal1 HStepsTail HTerminal2)
+      as [HPhiTail HState].
+    subst.
+    split; reflexivity.
+Qed.
+
+Corollary NSteps_error_trace_deterministic :
+  forall state phi1 heap1 phi2 heap2,
+    NSteps state phi1 (StError heap1) ->
+    NSteps state phi2 (StError heap2) ->
+    phi1 = phi2 /\ heap1 = heap2.
+Proof.
+  intros state phi1 heap1 phi2 heap2 HSteps1 HSteps2.
+  destruct
+    (NSteps_terminal_state_trace_deterministic
+      state phi1 (StError heap1) phi2 (StError heap2)
+      HSteps1 (TerminalError heap1) HSteps2 (TerminalError heap2))
+    as [HPhi HState].
+  inversion HState; subst.
+  split; reflexivity || assumption.
+Qed.
 
 Theorem NSteps_terminal_trace_deterministic :
   TerminalTraceDeterminismGoal.

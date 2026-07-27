@@ -112,6 +112,19 @@ s[H]\in\mathit{State}
   & \text{heap replacement}
 \end{array}
 \]
+
+For a list trace $\phi$, write
+\[
+\mathsf{Wr}(\phi)=
+  \{\,l\at r \mid \Write(l\at r)\in\phi\,\}
+\]
+for its heap-write footprint.  If $W$ is a set of heap addresses, write
+$H_1\equiv_{\overline W}H_2$ when the two heaps agree outside $W$:
+\[
+H_1\equiv_{\overline W}H_2
+\quad\Longleftrightarrow\quad
+\forall a.\; a\notin W \Rightarrow H_1(a)=H_2(a).
+\]
 \end{formalbox}
 
 \begin{formalbox}{Finite Machine Executions}

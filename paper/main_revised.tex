@@ -1737,6 +1737,55 @@ pair-parallel correctness rule. They are weaker than heap-neutrality: run
 branches may write, while surface-effect evaluation is the part required to be
 heap-neutral.
 
+\begin{theorem}[Checked scheduler error-cause determinism]
+Under the assumptions of the scheduler determinism theorem, suppose two
+derivations of the same scheduled relation terminate in checked failure:
+\[
+s_0
+  \Longrightarrow_{\mathsf{sch}}^{\Phi_L^1,\Phi_R^1}
+  \mathsf{error}(H_1)
+\qquad\text{and}\qquad
+s_0
+  \Longrightarrow_{\mathsf{sch}}^{\Phi_L^2,\Phi_R^2}
+  \mathsf{error}(H_2).
+\]
+Then the two derivations have the same branch error cause.  Either both fail
+because the left branch reaches an error,
+\[
+s_0
+  \Longrightarrow_{\mathsf{sch}}^{\Phi_L^i,\Phi_R^i}
+  \mathsf{pairRun}(
+    \mathsf{error}(H_i),s_R^i,\phi_L^i,\phi_R^i,k)
+\qquad(i=1,2),
+\]
+and, writing
+\[
+W_R^i=\mathsf{Wr}(\mathsf{flatten}(\Phi_R^i)),
+\]
+the final error heaps agree outside the addresses written by either right
+projection,
+\[
+H_1\equiv_{\overline{W_R^1\cup W_R^2}}H_2;
+\]
+or both fail because the right branch reaches an error after the left branch
+has completed,
+\[
+s_0
+  \Longrightarrow_{\mathsf{sch}}^{\Phi_L^i,\Phi_R^i}
+  \mathsf{pairRun}(
+    \mathsf{done}(H_L^i,v_L^i),\mathsf{error}(H_i),
+    \phi_L^i,\phi_R^i,k)
+\qquad(i=1,2),
+\]
+and in that case
+\[
+H_1=H_2.
+\]
+The mixed cases, where one derivation is left-caused and the other is
+right-caused, are impossible.  In particular, if both right projections perform
+no writes, then the left-caused case gives global heap-lookup agreement.
+\end{theorem}
+
 \begin{corollary}[Scheduled continuation determinism]
 Under the assumptions of the scheduler determinism theorem, if the two joined
 states continue to successful terminal states,
