@@ -35,7 +35,6 @@ Require Import theories.Meta.StoreFacts.
 Require Import theories.Meta.EffectFacts.
 Require Import theories.Meta.TraceFacts.
 Require Import theories.Meta.TraceTypingFacts.
-Require Import theories.Determinism.SmallStepPairParScheduleDeterminism.
 
 Theorem PaperSmallStepFinitePrefixSafety :
   PairParCheckDecidable ->

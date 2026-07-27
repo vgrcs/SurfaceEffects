@@ -19,7 +19,6 @@ Require Import theories.Runtime.SmallStepTraceSafety.
 Require Import theories.Runtime.SmallStepStructuredTrace.
 Require Import theories.Runtime.SmallStepCorrectness.
 Require Import theories.Runtime.SmallStepEffectSoundness.
-Require Import theories.Determinism.SmallStepPairParScheduleDeterminism.
 Require Import theories.Core.ComputedActions.
 Require Import theories.Core.DynamicActions.
 Require Import theories.Core.Expressions.

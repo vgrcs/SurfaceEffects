@@ -22,17 +22,17 @@ The Rocq Prover, version 9.1.1
 compiled with OCaml 4.14.2
 ```
 
-Verification command:
+Verification commands:
 
 ```sh
-make
+make build-newsmallstep
+make build-bigstep
 ```
 
 Current trust status:
 
 - no `Admitted` declarations in `theories/`;
 - no source-level `Axiom` declarations in `theories/`;
-- `Definitions/Axioms.v` is no longer part of `_CoqProject`;
 - known Rocq 9 notation-prefix and non-recursive-fixpoint warnings remain
   non-blocking.
 

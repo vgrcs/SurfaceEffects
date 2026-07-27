@@ -1,0 +1,7 @@
+.PHONY: build-newsmallstep build-bigstep
+
+build-newsmallstep: real-all
+
+build-bigstep:
+	rocq makefile -f _CoqProject.bigstep -o Makefile.bigstep
+	$(MAKE) -f Makefile.bigstep real-all

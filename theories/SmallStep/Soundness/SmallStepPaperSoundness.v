@@ -16,7 +16,6 @@ Require Import theories.Core.ComputedActions.
 Require Import theories.Core.DynamicActions.
 Require Import theories.Core.Expressions.
 Require Import theories.Core.Values.
-Require Import theories.Determinism.SmallStepPairParScheduleDeterminism.
 Require Import theories.Meta.EffectFacts.
 Require Import theories.Typing.TypingJudgments.
 

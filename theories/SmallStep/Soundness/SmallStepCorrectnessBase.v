@@ -31,7 +31,6 @@ Require Import theories.Meta.StoreFacts.
 Require Import theories.Meta.TraceTypingFacts.
 Require Import theories.Meta.TypingWeakeningFacts.
 Require Import theories.Meta.TypeFacts.
-Require Import theories.Determinism.SmallStepPairParScheduleDeterminism.
 
 Inductive StepsPhiN : nat -> State -> Phi -> State -> Prop :=
 | StepsPhiN_Refl :

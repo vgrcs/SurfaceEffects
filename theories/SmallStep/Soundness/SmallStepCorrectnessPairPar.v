@@ -37,7 +37,6 @@ Require Import theories.Meta.TraceTypingFacts.
 Require Import theories.Meta.TypingWeakeningFacts.
 Require Import theories.Meta.TypeFacts.
 Require Import theories.Determinism.SmallStepStructuredReplay.
-Require Import theories.Determinism.SmallStepPairParScheduleDeterminism.
 
 
 Require Export theories.Soundness.SmallStepCorrectnessApps.
