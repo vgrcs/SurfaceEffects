@@ -1945,6 +1945,7 @@ Proof.
           _HCheckedLeft & _HCheckedRight &
           _HCheckedSummary1 & _HCheckedSummary2 &
           _HStaticNeutral1 & _HStaticNeutral2 &
+          _HNoAllocLeft & _HNoAllocRight &
           HBackLeft & HBackRight).
       destruct
         (NCheckedBackTriangle_summary_checked_heap_neutral

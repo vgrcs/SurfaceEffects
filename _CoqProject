@@ -142,6 +142,7 @@ theories/NewSmallStep/Runtime/StateShape.v
 theories/NewSmallStep/Runtime/RegularStateShape.v
 theories/NewSmallStep/Runtime/Preservation.v
 theories/NewSmallStep/Runtime/RegularPreservation.v
+theories/NewSmallStep/Runtime/NoAllocPreservation.v
 theories/NewSmallStep/Runtime/Progress.v
 theories/NewSmallStep/Runtime/All.v
 theories/NewSmallStep/Soundness/BackTriangle.v

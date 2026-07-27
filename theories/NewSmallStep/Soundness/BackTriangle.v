@@ -150,6 +150,8 @@ Lemma NCheckedTcExp_pair_par :
       eff_summary1 ->
     NCheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
       eff_summary2 ->
+    static_noalloc eff1 ->
+    static_noalloc eff2 ->
     NCheckedTcExp gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (TyPair ty1 ty2)
@@ -157,7 +159,8 @@ Lemma NCheckedTcExp_pair_par :
         (static_union eff1 eff2)).
 Proof.
   intros gamma omega ef1 ea1 ef2 ea2 ty1 ty2 eff1 eff2
-    eff_summary1 eff_summary2 HMu1 HMu2 HSummary1 HSummary2.
+    eff_summary1 eff_summary2 HMu1 HMu2 HSummary1 HSummary2
+    HNoAlloc1 HNoAlloc2.
   eapply NCheckedTcExp_intro.
   - eapply NT_PairPar; eauto using NCheckedTcExp_to_NTcExp.
   - eapply NCheckedTcExp_rgn_ctx_wf; eauto.
@@ -202,7 +205,7 @@ Proof.
         (static_union eff1 eff2)),
       (static_union eff_summary1 eff_summary2).
     split.
-    + eapply NCheckedTcExp_pair_par; eauto.
+    + eapply NCheckedTcExp_pair_par; eauto; assumption.
     + eapply NCheckedTcExp_concat; eauto.
   - exists ty_app, eff_app, []. split.
     + assumption.

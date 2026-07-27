@@ -156,6 +156,8 @@ Lemma NCBT_PairPar_components :
         eff_summary2 /\
       static_heap_neutral eff_summary1 /\
       static_heap_neutral eff_summary2 /\
+      static_noalloc eff1 /\
+      static_noalloc eff2 /\
       NCheckedBackTriangle gamma omega
         (EMuApp ef1 ea1) (EEffApp ef1 ea1) /\
       NCheckedBackTriangle gamma omega
@@ -168,6 +170,8 @@ Proof.
   split; [exact H4 |].
   split; [exact H5 |].
   split; [exact H6 |].
+  split; [assumption |].
+  split; [assumption |].
   split; [assumption |].
   split; [assumption |].
   split.
@@ -1911,7 +1915,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
-      HCheckedLeft & _ & _ & _ & _ & _ & _ & _).
+      HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & _ & _).
   assert
     (HLeftComp :
       CountedComputationEvaluation n_left heap env rho
@@ -2207,7 +2211,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
-      _ & _ & _ & _ & _ & _ & HBackLeft & _).
+      _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & _).
   assert
     (HSummary1 :
       SummaryEvaluation heap env rho (EEffApp ef1 ea1)
@@ -2324,7 +2328,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
-      HCheckedLeft & _ & _ & _ & _ & _ & HBackLeft & _).
+      HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & _).
   assert
     (HSummary1 :
       SummaryEvaluation heap env rho (EEffApp ef1 ea1)
@@ -2460,7 +2464,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
-      HCheckedLeft & _ & _ & _ & _ & _ & HBackLeft & _).
+      HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & _).
   assert
     (HSummary1 :
       SummaryEvaluation heap env rho (EEffApp ef1 ea1)
@@ -2821,7 +2825,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
-      HCheckedLeft & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
+      HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
   assert
     (HSummary1 :
       SummaryEvaluation heap env rho (EEffApp ef1 ea1)
@@ -2976,7 +2980,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
-      HCheckedLeft & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
+      HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
   assert
     (HSummary1 :
       SummaryEvaluation heap env rho (EEffApp ef1 ea1)
@@ -3127,7 +3131,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
-      _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
+      _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
   eapply
     (EPairPar_checked_store_context_counted_trace_covered_from_below_left
       n gamma omega heap env rho ef1 ea1 ef2 ea2
@@ -3241,7 +3245,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
-      _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
+      _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
   eapply
     (EPairPar_checked_store_context_counted_trace_covered_from_below_left
       n gamma omega heap env rho ef1 ea1 ef2 ea2
@@ -3409,7 +3413,7 @@ Proof.
     (NCBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
-      _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
+      _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
   eapply
     (EPairPar_checked_store_entry_counted_trace_covered_from_below_left_replayed_after_left
       n gamma omega heap env rho ef1 ea1 ef2 ea2

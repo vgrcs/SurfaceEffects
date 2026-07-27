@@ -9,4 +9,5 @@ Require Export theories.NewSmallStep.Runtime.StateShape.
 Require Export theories.NewSmallStep.Runtime.RegularStateShape.
 Require Export theories.NewSmallStep.Runtime.Preservation.
 Require Export theories.NewSmallStep.Runtime.RegularPreservation.
+Require Export theories.NewSmallStep.Runtime.NoAllocPreservation.
 Require Export theories.NewSmallStep.Runtime.Progress.

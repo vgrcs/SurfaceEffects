@@ -119,6 +119,8 @@ with NCheckedTcExpShape :
       NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
       NCheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect eff_summary1 ->
       NCheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2 ->
+      static_noalloc eff1 ->
+      static_noalloc eff2 ->
       NCheckedTcExpShape gamma omega
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
         (TyPair ty1 ty2)
@@ -253,6 +255,8 @@ with NCheckedBackTriangle :
       NCheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2 ->
       static_heap_neutral eff_summary1 ->
       static_heap_neutral eff_summary2 ->
+      static_noalloc eff1 ->
+      static_noalloc eff2 ->
       NCheckedBackTriangle gamma omega
         (EMuApp ef1 ea1) (EEffApp ef1 ea1) ->
       NCheckedBackTriangle gamma omega
