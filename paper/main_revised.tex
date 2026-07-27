@@ -55,6 +55,7 @@
 \newcommand{\pairpar}[2]{\pparl\,#1,#2\,\pparr}
 \newcommand{\thetahat}{\widehat{\Theta}}
 \newcommand{\HeapNeutral}{\mathsf{HeapNeutral}}
+\newcommand{\NoAlloc}{\mathsf{NoAlloc}}
 \newcommand{\Disjoint}{\mathsf{Disjoint}}
 \newcommand{\DetTrace}{\mathsf{Det}}
 \newcommand{\MapDisjoint}{\mathsf{MapDisjoint}}
@@ -158,8 +159,10 @@ We present a region-polymorphic simply typed $\lambda$-calculus with mutable
 references and executable surface effects. The mechanized development proves
 that verified surface effects approximate the dynamic traces of their paired
 computations, and that terminating continuation-machine executions are
-deterministic. Surface effects therefore provide a statically verified,
-source-level form of pre-execution access prediction: programmers may expose
+deterministic. It also validates an arbitrary scheduler relation for
+successful checked pair-parallel joins. Surface effects therefore provide a
+statically verified, source-level form of pre-execution access prediction:
+programmers may expose
 value-dependent access information before a computation is run, while the
 metatheory ensures that the surface effect covers the computation trace it
 claims to describe.
@@ -237,7 +240,7 @@ Here it is only schematic: $s\longrightarrow s';\eta$ denotes one step of the
 operational machine together with the trace fragment $\eta$ emitted by that
 step, while $s\longrightarrow^{*}s';\phi$ denotes a finite execution whose
 fragments have been accumulated into the machine trace $\phi$. Structured trace
-views are introduced later as proof-facing views over this list trace. Static
+views are introduced later as auxiliary views over this list trace. Static
 checking compares region effects $\epsilon_i$. Surface-effect checking first
 verifies source expressions against surface-effect terms $\thetahat_i$, then
 evaluates those terms by the same operational machine to computed effects
@@ -334,10 +337,13 @@ The formal contribution is therefore a sound scheduling interface rather than
 an asymptotic performance result. At compile time, an inductive correctness
 relation validates programmer-written computation/surface-effect pairs. At run time,
 the surface-effect terms evaluate to computed effects that may contain concrete
-region/location information. The mechanized development connects these stages:
+region/location information. The formal development connects these stages:
 branch correctness gives trace approximation, the pair-parallel checks reject
 conflicting computed effects or conflicting branch traces, and terminal
 continuation-machine theorems connect terminating traces to unique final heaps.
+For the pair-parallel run phase, the metatheory also includes an arbitrary
+scheduler whose successful checked joins are deterministic; the
+ordinary left-then-right machine run embeds as one scheduler instance.
 False positives remain possible because surface effects are approximations and
 `$\Top$' is deliberately maximally conservative.
 
@@ -353,7 +359,8 @@ The contributions of this paper are:
         computation;
   \item a checked pair-parallel interface based on a decidable computed-effect
         precheck and a final trace-disjointness check, connecting verified
-        branch surface effects to deterministic terminal executions;
+        branch surface effects to deterministic terminal executions and to a
+        deterministic scheduler relation for successful checked joins;
   \item mechanized soundness theorems: progress, store-resolved preservation,
         static-effect trace soundness, terminal determinism, and terminal
         surface-effect correctness for checked continuation-machine executions.
@@ -535,7 +542,7 @@ action $\iota$. A dynamic trace $\phi$ is produced by the operational semantics
 by concatenating these fragments; it records the concrete allocation, read, and
 write events emitted by a particular execution as a list. Structured trace views
 $\Phi$ decompose into one-step fragments $\eta$, sequential composition, and
-parallel composition when a theorem needs to remember proof-facing trace
+parallel composition when a theorem needs to remember structured trace
 structure.
 
 \paragraph{Surface-effect terms and computed effects.}
@@ -1072,16 +1079,17 @@ In the mechanization, this displayed judgment corresponds to the checked
 typing predicate: it packages ordinary typing, regularity of contexts, and the
 shape obligations shown in the rules.
 
-On static effects, the write-freedom side condition rules out writes, while the
-separate no-allocation side condition rules out allocation. Their conjunction is
-the proof-side predicate $\HeapNeutral$: a heap-neutral static effect has neither
-allocation nor write actions. Ordinary static-effect soundness is an auxiliary
-theorem about evaluation traces: if the static erasure $\staticset{\phi}$ of a
-trace is contained in a write-free static effect, then the trace contains no
-writes; if it is contained in a heap-neutral static effect, then the trace has no
-allocations and no writes. This is separate from the computed-effect precision
-bridge $\phi\approxx\Theta$, which deliberately keeps concrete locations until
-they are erased for static comparison. Consequently, heap-neutral surface-effect
+On static effects, write $\NoAlloc(\epsilon)$ when $\epsilon$ contains no
+allocation action $\As(p)$. The write-freedom side condition rules out writes,
+while $\NoAlloc$ rules out allocation. Their conjunction is the derived
+predicate $\HeapNeutral$: a heap-neutral static effect has neither allocation
+nor write actions. Ordinary static-effect soundness is an auxiliary theorem
+about evaluation traces: if the static erasure $\staticset{\phi}$ of a trace is
+contained in a write-free static effect, then the trace contains no writes; if it
+is contained in a heap-neutral static effect, then the trace has no allocations
+and no writes. This is separate from the computed-effect precision bridge
+$\phi\approxx\Theta$, which deliberately keeps concrete locations until they
+are erased for static comparison. Consequently, heap-neutral surface-effect
 evaluation preserves the heap. This is a semantic property, not a cost claim:
 the development does not prove that a heap-neutral surface effect terminates or
 that evaluating it has constant overhead.
@@ -1258,6 +1266,8 @@ surface effect.
 \inferrule*[lab={[Eff-PairPar]}]
   {\Gamma;\Delta \vdash \capp e_{f1}\,e_{a1} : \tau_1\,!\,\epsilon_1 \\
    \Gamma;\Delta \vdash \capp e_{f2}\,e_{a2} : \tau_2\,!\,\epsilon_2 \\
+   \NoAlloc(\epsilon_1[P]) \\
+   \NoAlloc(\epsilon_2[P]) \\
    \Gamma;\Delta \vdash \eapp e_{f1}\,e_{a1} : \mathsf{eff}\,!\,\epsilon_{s1} \\
    \Gamma;\Delta \vdash \eapp e_{f2}\,e_{a2} : \mathsf{eff}\,!\,\epsilon_{s2} \\
    \HeapNeutral(\epsilon_{s1}[P]) \\
@@ -1626,22 +1636,157 @@ Assume $H,E,P$ form a checked run-time context for $\Gamma,\Delta$. If
 \[
 \Gamma;\Delta\vdash e\desc \thetahat,
 \qquad
-\mathsf{init}(H,E,P,e)
-  \longrightarrow^{*}
-  \mathsf{done}(H',v)\,;\,\Phi,
+\mathsf{view}(
+  \mathsf{init}(H,E,P,e),
+  \Phi,
+  \mathsf{done}(H',v)),
 \]
-where $\Phi$ is a structured trace view, and the surface-effect expression terminates
-with computed effect $\Theta$ and structured trace view $\Phi_s$, then
+and the surface-effect expression terminates with computed effect $\Theta$ and
+structured trace view $\Phi_s$,
+\[
+\mathsf{view}(
+  \mathsf{init}(H,E,P,\thetahat),
+  \Phi_s,
+  \mathsf{done}(H_s,\mathsf{eff}(\Theta))),
+\]
+then
 \[
 \mathsf{flatten}(\Phi)\approxx\Theta.
 \]
 \end{theorem}
 
 The structured-trace theorem is the view-level counterpart of terminal
-surface-effect correctness. In the current mechanization, trace-view coverage
-is defined by flattening the view to its underlying machine trace; future
-scheduler-sensitive semantics can strengthen this interface by preserving
-parallel trace structure directly.
+surface-effect correctness. Trace-view coverage is defined by flattening the
+view to its underlying machine trace. The pair-parallel scheduler relation uses
+the same view datatype differently: it keeps the left and right run-branch views
+as separate projections and normalizes the scheduled run view to
+$\Phi_1\parallel\Phi_2$. Write
+$s\Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R}s'$ for the scheduled
+pair-parallel run relation with left and right branch views $\Phi_L$ and
+$\Phi_R$.
+
+\begin{theorem}[Checked pair-parallel scheduler determinism]
+Let
+\[
+e_L^\mu=\capp e_{f1}\,e_{a1},\qquad
+e_R^\mu=\capp e_{f2}\,e_{a2},\qquad
+e_L^e=\eapp e_{f1}\,e_{a1},\qquad
+e_R^e=\eapp e_{f2}\,e_{a2}.
+\]
+Assume
+\[
+\mathsf{CheckedCtx}_{\Gamma,\Delta}(H,E,P)
+\qquad\text{and}\qquad
+\Gamma;\Delta;P\vdash
+\pairpar{e_L^\mu}{e_R^\mu}
+\desc
+e_L^e\oplus e_R^e.
+\]
+Suppose the two surface-effect applications terminate with computed effects
+$\Theta_L$ and $\Theta_R$ and the computed-effect precheck succeeds:
+\[
+\mathsf{init}(H,E,P,e_L^e)
+  \longrightarrow^{*}
+  \mathsf{done}(H_L^e,\mathsf{eff}(\Theta_L))\,;\,\phi_L^e,
+\qquad
+\mathsf{init}(H,E,P,e_R^e)
+  \longrightarrow^{*}
+  \mathsf{done}(H_R^e,\mathsf{eff}(\Theta_R))\,;\,\phi_R^e,
+\]
+\[
+\neg(\Theta_L\effconflict\Theta_R).
+\]
+Let
+\[
+s_0 =
+\mathsf{pairRun}(
+  \mathsf{init}(H,E,P,e_L^\mu),
+  \mathsf{init}(H,E,P,e_R^\mu),
+  [\,],[\,],k).
+\]
+For $j\in\{1,2\}$, assume the scheduled branch views are covered by the
+corresponding computed effects,
+\[
+\Phi_L^j\approxx\Theta_L
+\qquad\text{and}\qquad
+\Phi_R^j\approxx\Theta_R,
+\]
+and that both scheduled executions successfully join:
+\[
+s_0
+  \Longrightarrow_{\mathsf{sch}}^{\Phi_L^1,\Phi_R^1}
+  \langle H_1,(v_L^1,v_R^1),k\rangle
+\qquad\text{and}\qquad
+s_0
+  \Longrightarrow_{\mathsf{sch}}^{\Phi_L^2,\Phi_R^2}
+  \langle H_2,(v_L^2,v_R^2),k\rangle.
+\]
+Then
+\[
+H_1=H_2
+\qquad\land\qquad
+v_L^1=v_L^2
+\qquad\land\qquad
+v_R^1=v_R^2.
+\]
+\end{theorem}
+
+The no-allocation assumptions used for the run branches are exactly the
+$\NoAlloc(\epsilon_1[P])$ and $\NoAlloc(\epsilon_2[P])$ premises in the
+pair-parallel correctness rule. They are weaker than heap-neutrality: run
+branches may write, while surface-effect evaluation is the part required to be
+heap-neutral.
+
+\begin{corollary}[Scheduled continuation determinism]
+Under the assumptions of the scheduler determinism theorem, if the two joined
+states continue to successful terminal states,
+\[
+\langle H_1,(v_L^1,v_R^1),k\rangle
+  \longrightarrow^{*}\mathsf{done}(H'_1,w_1)\,;\,\psi_1
+\qquad\text{and}\qquad
+\langle H_2,(v_L^2,v_R^2),k\rangle
+  \longrightarrow^{*}\mathsf{done}(H'_2,w_2)\,;\,\psi_2,
+\]
+then
+\[
+\psi_1=\psi_2
+\qquad\land\qquad
+H'_1=H'_2
+\qquad\land\qquad
+w_1=w_2.
+\]
+\end{corollary}
+
+\begin{corollary}[Left-to-right run embedding]
+Let
+\[
+e_L^\mu=\capp e_{f1}\,e_{a1}
+\qquad\text{and}\qquad
+e_R^\mu=\capp e_{f2}\,e_{a2}.
+\]
+For
+\[
+\begin{array}{rcl}
+s_0 & = &
+\mathsf{pairRun}(
+  \mathsf{init}(H,E,P,e_L^\mu),
+  \mathsf{init}(H,E,P,e_R^\mu),
+  [\,],[\,],\mathsf{doneK}),
+\end{array}
+\]
+if the ordinary left-to-right machine execution terminates successfully,
+\[
+s_0\longrightarrow^{*}\mathsf{done}(H',v)\,;\,\phi,
+\]
+then there exist branch views $\Phi_L,\Phi_R$ such that
+\[
+s_0\Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R}
+  \langle H',v,\mathsf{doneK}\rangle
+\qquad\text{and}\qquad
+\phi\equiv_{\mathsf{perm}}
+\mathsf{flatten}(\Phi_L\parallel\Phi_R).
+\]
+\end{corollary}
 
 \section{Discussion and Related Work}
 \label{sec:related}
@@ -1741,7 +1886,10 @@ trace. The trace semantics then establishes equivalent terminating replay
 heaps. The continuation-machine theorem stack adds checked runtime safety:
 well-typed states make progress, machine steps preserve typing, and two
 terminal executions from the same initial state have the same trace, heap, and
-value.
+value. For checked pair-parallel run phases, the scheduled-run theorem shows
+that successful joins have the same heap and pair value for all branch
+interleavings represented by the scheduler views, with the ordinary
+left-then-right run embedded as a scheduler instance.
 
 These results are formal, not empirical performance results. The calculus does
 not include surface-effect inference, a termination argument for surface-effect evaluation, a

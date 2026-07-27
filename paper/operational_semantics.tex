@@ -3,7 +3,7 @@
 
 The operational semantics has one primitive execution relation: the
 continuation-machine step $s\longrightarrow s'\,;\,\eta$.  The other judgments
-below are derived or proof-facing relations built around that step.  They are
+below are derived or auxiliary relations built around that step.  They are
 kept distinct because they play different roles in the metatheory.
 
 \begin{center}
@@ -22,7 +22,10 @@ finite execution
   & accumulated machine trace, represented as a list of actions\\
 trace view
   & $\mathsf{view}(s,\Phi,s')$
-  & proof-facing structured view whose flattening is a machine trace\\
+  & structured view whose flattening is a machine trace\\
+scheduled pair run
+  & $s\Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R}s'$
+  & finite run-phase scheduler built from branch machine steps\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -98,6 +101,9 @@ k\in\mathit{Kont}
 \mathsf{init}(H,E,P,e)\in\mathit{State}
   & \triangleq & \langle H,E,P,e,\mathsf{doneK}\rangle
   & \text{initial expression state}\\
+\mathsf{pairRun}(s_1,s_2,\phi_1,\phi_2,k)\in\mathit{State}
+  & \triangleq & \text{run }s_1,s_2\text{ with traces }\phi_1,\phi_2
+  & \text{pair-parallel run state}\\
 \mathsf{heap}(s)\in\mathit{Heap}
   & \triangleq & \text{the }H\text{ carried by }s
   & \text{state heap projection}\\
@@ -125,19 +131,30 @@ s[H]\in\mathit{State}
 
 Each finite execution accumulates one-step fragments by induction; $\tracecat$
 denotes list concatenation for machine traces and $\Nil$ is the empty trace.
+We write $\phi\equiv_{\mathsf{perm}}\phi'$ when two list traces contain the same
+actions up to permutation.
 Ordinary expression evaluation is the special case
 $\mathsf{init}(H,E,P,e)\longrightarrow^{*}\mathsf{done}(H',v)\,;\,\phi$.
 A surface-effect term is just an ordinary expression of type $\mathsf{eff}$;
 there is no separate surface-effect evaluator.
 
+The scheduled pair-run relation introduced below is finite in the same
+inductive sense, but it is not another reflexive-transitive closure of the
+ordinary global step relation. Each nonfinal scheduled rule consumes one
+ordinary machine step from one branch and then recurses; the global scheduled
+order may differ from the ordinary left-to-right machine order.
+
 The continuation machine accumulates list traces. A trace view is either a
 one-step fragment $\eta$ or a sequential/parallel composition of views. The
-structured terminal correctness theorem uses this proof-facing view together
-with a flattening map back to the underlying machine trace. The first two rules
+structured terminal correctness theorem uses this auxiliary view together with
+a flattening map back to the underlying machine trace. The first two rules
 are the two cases of the fragment form $\eta$.
 
 \begin{formalbox}{Trace Views}
 \small
+\noindent\textbf{Trace-view flattening}\hfill
+  $\boxed{\mathsf{flatten}(\Phi)=\phi}$
+
 \rulepair{
 \inferrule*[lab={[V-Nil]}]{ }
   {\mathsf{flatten}(\Nil)=[\,]}
@@ -162,6 +179,32 @@ are the two cases of the fragment form $\eta$.
 The flattening map records only the emitted list trace: both sequential and
 parallel view composition flatten by concatenating the component traces.
 
+\begin{formalbox}{Trace-View Executions}
+\small
+\noindent\textbf{Structured finite execution}\hfill
+  $\boxed{\mathsf{view}(s,\Phi,s')}$
+
+\begin{rulemathpar}
+\inferrule*[lab={[View-Refl]}]{ }
+  {\mathsf{view}(s,\Nil,s)}
+\end{rulemathpar}
+
+\rulepair{
+\inferrule*[lab={[View-Step]}]
+  {s\longrightarrow s'\,;\,\eta}
+  {\mathsf{view}(s,\eta,s')}
+}{
+\inferrule*[lab={[View-Seq]}]
+  {\mathsf{view}(s_1,\Phi_1,s_2) \\
+   \mathsf{view}(s_2,\Phi_2,s_3)}
+  {\mathsf{view}(s_1,\Phi_1\tracecat\Phi_2,s_3)}
+}
+\end{formalbox}
+
+Trace-view execution is a structured presentation of finite machine execution:
+if $\mathsf{view}(s,\Phi,s')$, then
+$s\longrightarrow^{*}s'\,;\,\mathsf{flatten}(\Phi)$; conversely, every finite
+machine execution has a trace view with the same flattened trace.
 
 The initial state for expression $e$ is $\mathsf{init}(H,E,P,e)$; terminal
 states $\mathsf{done}(H,v)$ and $\mathsf{error}(H)$ have no outgoing machine
@@ -346,7 +389,11 @@ applications.  The corresponding surface-effect applications are evaluated
 first.  If the computed-effect precheck fails, execution reaches the terminal
 checked-failure state $\mathsf{error}(H)$; if it succeeds, the machine runs the
 left branch to completion, then the right branch, accumulating separate branch
-traces and checking them before returning the pair.
+traces and checking them before returning the pair.  This left-then-right order
+is the ordinary machine semantics.  For the scheduler theorem below, the same
+run states are also equipped with a derived scheduled relation: it does not add
+a new source step, but allows either live branch to take the next run-phase step
+while recording the two branch trace views separately.
 For compactness, write
 \[
 \begin{array}{rcl}
@@ -428,6 +475,105 @@ e_i^e & \triangleq & \eapp e_{fi}\,e_{ai}.
 If either branch reaches $\mathsf{error}(H)$, the pair-parallel state steps to
 the same checked-failure terminal state.
 \end{formalbox}
+
+\begin{formalbox}{Scheduled Pair-Parallel Runs}
+\small
+\noindent\textbf{Scheduled run}\hfill
+  $\boxed{s\Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R}s'}$
+
+Write $s\notin\mathsf{Err}$ when $s\neq\mathsf{error}(H)$ for every heap $H$.
+The final cases coincide with the checked pair-parallel run phase.
+For example, [Sch-Done-OK] has the same state-level premise and conclusion as
+[S-Pair-Done-OK], but it is a base case of the finite scheduled relation rather
+than one primitive machine step. Its branch views are $\Nil,\Nil$ because the
+join itself emits no branch action; the accumulated branch traces
+$\phi_1,\phi_2$ are already stored in the $\mathsf{pairRun}$ state.
+
+\rulepair{
+\inferrule*[lab={[Sch-Err-L]}]{ }
+  {\mathsf{pairRun}(\mathsf{error}(H),s_2,\phi_1,\phi_2,k)
+   \Longrightarrow_{\mathsf{sch}}^{\Nil,\Nil}
+   \mathsf{error}(H)}
+}{
+\inferrule*[lab={[Sch-Err-R]}]{ }
+  {\mathsf{pairRun}(s_1,\mathsf{error}(H),\phi_1,\phi_2,k)
+   \Longrightarrow_{\mathsf{sch}}^{\Nil,\Nil}
+   \mathsf{error}(H)}
+}
+
+\rulepair{
+\inferrule*[lab={[Sch-Done-OK]}]
+  {\neg(\phi_1 \traceconflict \phi_2)}
+  {\mathsf{pairRun}(\mathsf{done}(H,v_1),\mathsf{done}(H,v_2),\phi_1,\phi_2,k)
+   \Longrightarrow_{\mathsf{sch}}^{\Nil,\Nil}
+   \langle H,(v_1,v_2),k\rangle}
+}{
+\inferrule*[lab={[Sch-Done-Fail]}]
+  {\phi_1 \traceconflict \phi_2}
+  {\mathsf{pairRun}(\mathsf{done}(H,v_1),\mathsf{done}(H,v_2),\phi_1,\phi_2,k)
+   \Longrightarrow_{\mathsf{sch}}^{\Nil,\Nil}
+   \mathsf{error}(H)}
+}
+
+\begin{rulemathpar}
+\inferrule*[lab={[Sch-Run-L]}]
+  {s_1\longrightarrow s'_1\,;\,\eta \\
+   s_2\notin\mathsf{Err} \\
+   \mathsf{pairRun}(s'_1,s_2[\mathsf{heap}(s'_1)],
+      \phi_1\tracecat\eta,\phi_2,k)
+      \Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R} s}
+  {\mathsf{pairRun}(s_1,s_2,\phi_1,\phi_2,k)
+      \Longrightarrow_{\mathsf{sch}}^{\eta\tracecat\Phi_L,\Phi_R} s}
+\end{rulemathpar}
+
+\begin{rulemathpar}
+\inferrule*[lab={[Sch-Run-R]}]
+  {s_2\longrightarrow s'_2\,;\,\eta \\
+   s_1\notin\mathsf{Err} \\
+   \mathsf{pairRun}(s_1[\mathsf{heap}(s'_2)],s'_2,
+      \phi_1,\phi_2\tracecat\eta,k)
+      \Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R} s}
+  {\mathsf{pairRun}(s_1,s_2,\phi_1,\phi_2,k)
+      \Longrightarrow_{\mathsf{sch}}^{\Phi_L,\eta\tracecat\Phi_R} s}
+\end{rulemathpar}
+\end{formalbox}
+
+Thus a left-branch step is the same state update as [S-Pair-Run-L]. A
+right-branch step may occur before the left branch has finished; after such a
+step the left state is rebased to the right branch's new heap. The side
+conditions prevent either branch from continuing to schedule steps after the
+other branch has already reached $\mathsf{error}(H)$. From empty branch
+accumulators, the final stored branch traces are exactly
+$\mathsf{flatten}(\Phi_L)$ and $\mathsf{flatten}(\Phi_R)$. The normalized
+scheduler trace view is $\Phi_L\parallel\Phi_R$, whose flattening is the
+canonical branch projection
+$\mathsf{flatten}(\Phi_L)\tracecat\mathsf{flatten}(\Phi_R)$ even when the
+scheduled execution interleaves the one-step fragments.
+
+The connection back to finite machine executions is an embedding, not an
+identification. Let
+\[
+s_0 =
+\mathsf{pairRun}(
+  \mathsf{init}(H,E,P,e_L^\mu),
+  \mathsf{init}(H,E,P,e_R^\mu),
+  [\,],[\,],\mathsf{doneK}).
+\]
+If the ordinary left-to-right machine run terminates,
+\[
+s_0\longrightarrow^{*}\mathsf{done}(H',v)\,;\,\phi,
+\]
+then there exist branch views $\Phi_L,\Phi_R$ such that
+\[
+s_0\Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R}
+  \langle H',v,\mathsf{doneK}\rangle
+\qquad\text{and}\qquad
+\phi\equiv_{\mathsf{perm}}
+\mathsf{flatten}(\Phi_L\parallel\Phi_R).
+\]
+The converse is intentionally not stated as an ordinary finite execution:
+arbitrary scheduled runs may take a right-branch step before the ordinary
+machine would do so.
 
 Surface-effect evaluation is proved heap-neutral from typing: if a well-typed
 surface-effect execution emits a heap-neutral trace, the final heap is the
