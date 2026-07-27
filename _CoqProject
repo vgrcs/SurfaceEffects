@@ -157,6 +157,7 @@ theories/NewSmallStep/Soundness/References.v
 theories/NewSmallStep/Soundness/Dispatcher.v
 theories/NewSmallStep/Soundness/All.v
 theories/NewSmallStep/Determinism/Terminal.v
+theories/NewSmallStep/Determinism/Scheduler.v
 theories/NewSmallStep/Determinism/All.v
 theories/NewSmallStep/All.v
 theories/PaperTheorems.v
