@@ -80,6 +80,14 @@ Pair-parallel dispatcher case:
 
 - `EPairPar_checked_store_context_case_from_below`
 
+Pair-parallel fallback relation:
+
+- `PairParFallbackRun`
+- `PairParFallbackRun_checked_pass_to_Steps`
+- `PairParFallbackRun_check_fail_sequential`
+- `PairParFallbackRun_from_component_evaluations`
+- `PairParFallbackRun_checked_components`
+
 Checked pair-parallel scheduler determinism:
 
 - `ScheduledPairParRun_checked_pairpar_left_then_right_embeds`

@@ -4,6 +4,7 @@ Require Export theories.SmallStep.Soundness.StaticEffect.
 Require Export theories.SmallStep.Soundness.App.
 Require Export theories.SmallStep.Soundness.Summary.
 Require Export theories.SmallStep.Soundness.PairPar.
+Require Export theories.SmallStep.Soundness.PairParFallback.
 Require Export theories.SmallStep.Soundness.Control.
 Require Export theories.SmallStep.Soundness.Arithmetic.
 Require Export theories.SmallStep.Soundness.References.

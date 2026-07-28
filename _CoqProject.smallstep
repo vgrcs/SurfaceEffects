@@ -30,6 +30,7 @@ theories/SmallStep/Soundness/StaticEffect.v
 theories/SmallStep/Soundness/App.v
 theories/SmallStep/Soundness/Summary.v
 theories/SmallStep/Soundness/PairPar.v
+theories/SmallStep/Soundness/PairParFallback.v
 theories/SmallStep/Soundness/Control.v
 theories/SmallStep/Soundness/Arithmetic.v
 theories/SmallStep/Soundness/References.v

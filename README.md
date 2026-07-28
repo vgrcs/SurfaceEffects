@@ -68,6 +68,8 @@ The paper-facing calculus is the active `SmallStep` development:
 - `SmallStep/Runtime/Progress.v`: progress for well-typed states.
 - `SmallStep/Runtime/RegularPreservation.v`: store-resolved preservation.
 - `SmallStep/Soundness/BackTriangle.v`: checked surface-effect relation.
+- `SmallStep/Soundness/PairParFallback.v`: proof-facing sequential fallback
+  relation for failed pair-parallel summary checks.
 - `SmallStep/Soundness/Dispatcher.v`: static-effect soundness and terminal
   correctness dispatcher.
 - `SmallStep/Determinism/Terminal.v`: terminal determinism.
