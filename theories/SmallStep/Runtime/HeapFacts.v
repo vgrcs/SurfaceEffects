@@ -9,12 +9,12 @@ Require Import theories.SmallStep.Runtime.Machine.
 
 Import ListNotations.
 
-Definition NHeapKeysBounded (heap : Heap) : Prop :=
+Definition HeapKeysBounded (heap : Heap) : Prop :=
   forall r l v,
     In (r, l, v) heap ->
     l < length heap.
 
-Definition NHeapLookupsBounded (heap : Heap) : Prop :=
+Definition HeapLookupsBounded (heap : Heap) : Prop :=
   forall r l v,
     heap_lookup r l heap = Some v ->
     l < length heap.
@@ -55,10 +55,10 @@ Proof.
       * eapply IH; eauto.
 Qed.
 
-Lemma NHeapKeysBounded_to_lookups_bounded :
+Lemma HeapKeysBounded_to_lookups_bounded :
   forall heap,
-    NHeapKeysBounded heap ->
-    NHeapLookupsBounded heap.
+    HeapKeysBounded heap ->
+    HeapLookupsBounded heap.
 Proof.
   intros heap HBounded r l v HLookup.
   eapply HBounded.
@@ -67,7 +67,7 @@ Qed.
 
 Lemma heap_bounded_lookup_lt :
   forall heap r l v,
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     heap_lookup r l heap = Some v ->
     l < length heap.
 Proof.
@@ -79,7 +79,7 @@ Qed.
 
 Lemma heap_bounded_fresh_lookup_none :
   forall heap r,
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     heap_lookup r (length heap) heap = None.
 Proof.
   intros heap r HBounded.
@@ -116,7 +116,7 @@ Qed.
 
 Lemma heap_lookup_alloc_old :
   forall heap r_alloc v_alloc l_alloc heap' r l v,
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
     heap_lookup r l heap = Some v ->
     heap_lookup r l heap' = Some v.
@@ -214,8 +214,8 @@ Qed.
 
 Lemma heap_update_preserves_bounded :
   forall heap r l v,
-    NHeapKeysBounded heap ->
-    NHeapKeysBounded (heap_update r l v heap).
+    HeapKeysBounded heap ->
+    HeapKeysBounded (heap_update r l v heap).
 Proof.
   intros heap r l v HBounded r' l' v' HIn.
   destruct
@@ -228,9 +228,9 @@ Qed.
 
 Lemma heap_alloc_preserves_bounded :
   forall heap r v l heap',
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     heap_alloc r v heap = (l, heap') ->
-    NHeapKeysBounded heap'.
+    HeapKeysBounded heap'.
 Proof.
   intros heap r v l heap' HBounded HAlloc.
   destruct (heap_alloc_result heap r v l heap' HAlloc) as [-> ->].

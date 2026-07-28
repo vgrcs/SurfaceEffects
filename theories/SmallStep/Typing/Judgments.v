@@ -8,17 +8,17 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Definition NCtx := list (VarId * NTy).
-Definition NRgnCtx := list VarId.
+Definition Ctx := list (VarId * Ty).
+Definition RgnCtx := list VarId.
 
-Fixpoint ctx_lookup (x : VarId) (gamma : NCtx) : option NTy :=
+Fixpoint ctx_lookup (x : VarId) (gamma : Ctx) : option Ty :=
   match gamma with
   | [] => None
   | (y, ty) :: gamma' =>
       if ascii_dec x y then Some ty else ctx_lookup x gamma'
   end.
 
-Definition ctx_binds (x : VarId) (ty : NTy) (gamma : NCtx) : Prop :=
+Definition ctx_binds (x : VarId) (ty : Ty) (gamma : Ctx) : Prop :=
   ctx_lookup x gamma = Some ty.
 
 Definition static_union (eff1 eff2 : StaticEffect) : StaticEffect :=
@@ -165,7 +165,7 @@ Proof.
   - eapply static_readonly_app_r; eauto.
 Qed.
 
-Inductive region_expr_wf : NRgnCtx -> RegionExpr -> Prop :=
+Inductive region_expr_wf : RgnCtx -> RegionExpr -> Prop :=
 | REWF_Const :
     forall omega r,
       region_expr_wf omega (region_const_expr r)
@@ -174,151 +174,151 @@ Inductive region_expr_wf : NRgnCtx -> RegionExpr -> Prop :=
       In x omega ->
       region_expr_wf omega (region_var_expr x).
 
-Inductive NTcExp : NCtx -> NRgnCtx -> NExpr -> NTy -> StaticEffect -> Prop :=
-| NT_Const :
+Inductive TcExp : Ctx -> RgnCtx -> Expr -> Ty -> StaticEffect -> Prop :=
+| T_Const :
     forall gamma omega n,
-      NTcExp gamma omega (EConst n) TyNat []
-| NT_Bool :
+      TcExp gamma omega (EConst n) TyNat []
+| T_Bool :
     forall gamma omega b,
-      NTcExp gamma omega (EBool b) TyBool []
-| NT_Var :
+      TcExp gamma omega (EBool b) TyBool []
+| T_Var :
     forall gamma omega x ty,
       ctx_binds x ty gamma ->
-      NTcExp gamma omega (EVar x) ty []
-| NT_Mu :
+      TcExp gamma omega (EVar x) ty []
+| T_Mu :
     forall gamma omega f x ec ee ty_arg ty_body eff_body eff_summary,
-      NTcExp
+      TcExp
         ((x, ty_arg) :: (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NTcExp
+      TcExp
         ((x, ty_arg) :: (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NTcExp gamma omega (EMu f x ec ee)
+      TcExp gamma omega (EMu f x ec ee)
         (TyArrow ty_arg eff_body ty_body eff_summary) []
-| NT_LambdaRgn :
+| T_LambdaRgn :
     forall gamma omega x e ty eff,
-      NTcExp gamma (x :: omega) e ty eff ->
-      NTcExp gamma omega (ELambdaRgn x e)
+      TcExp gamma (x :: omega) e ty eff ->
+      TcExp gamma omega (ELambdaRgn x e)
         (TyForallRgn (close_static_effect x eff) (close_ty x ty)) []
-| NT_MuApp :
+| T_MuApp :
     forall gamma omega ef ea ty_arg ty_body eff_body eff_summary eff_f eff_a,
-      NTcExp gamma omega ef
+      TcExp gamma omega ef
         (TyArrow ty_arg eff_body ty_body eff_summary) eff_f ->
-      NTcExp gamma omega ea ty_arg eff_a ->
-      NTcExp gamma omega (EMuApp ef ea) ty_body
+      TcExp gamma omega ea ty_arg eff_a ->
+      TcExp gamma omega (EMuApp ef ea) ty_body
         (static_union eff_f (static_union eff_a eff_body))
-| NT_RgnApp :
+| T_RgnApp :
     forall gamma omega er r ty eff_body eff_f,
       region_expr_wf omega r ->
-      NTcExp gamma omega er (TyForallRgn eff_body ty) eff_f ->
-      NTcExp gamma omega (ERgnApp er r) (open_ty r ty)
+      TcExp gamma omega er (TyForallRgn eff_body ty) eff_f ->
+      TcExp gamma omega (ERgnApp er r) (open_ty r ty)
         (static_union eff_f (open_static_effect r eff_body))
-| NT_EffApp :
+| T_EffApp :
     forall gamma omega ef ea ty_arg ty_body eff_body eff_summary eff_f eff_a,
-      NTcExp gamma omega ef
+      TcExp gamma omega ef
         (TyArrow ty_arg eff_body ty_body eff_summary) eff_f ->
-      NTcExp gamma omega ea ty_arg eff_a ->
-      NTcExp gamma omega (EEffApp ef ea) TyEffect
+      TcExp gamma omega ea ty_arg eff_a ->
+      TcExp gamma omega (EEffApp ef ea) TyEffect
         (static_union eff_f (static_union eff_a eff_summary))
-| NT_PairPar :
+| T_PairPar :
     forall gamma omega ef1 ea1 ef2 ea2 ty1 ty2 eff1 eff2
       eff_summary1 eff_summary2,
-      NTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
-      NTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
-      NTcExp gamma omega (EEffApp ef1 ea1) TyEffect eff_summary1 ->
-      NTcExp gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2 ->
-      NTcExp gamma omega
+      TcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
+      TcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      TcExp gamma omega (EEffApp ef1 ea1) TyEffect eff_summary1 ->
+      TcExp gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2 ->
+      TcExp gamma omega
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
         (TyPair ty1 ty2)
         (static_union (static_union eff_summary1 eff_summary2)
           (static_union eff1 eff2))
-| NT_Cond :
+| T_Cond :
     forall gamma omega e et ef ty eff_e eff_t eff_f,
-      NTcExp gamma omega e TyBool eff_e ->
-      NTcExp gamma omega et ty eff_t ->
-      NTcExp gamma omega ef ty eff_f ->
-      NTcExp gamma omega (ECond e et ef) ty
+      TcExp gamma omega e TyBool eff_e ->
+      TcExp gamma omega et ty eff_t ->
+      TcExp gamma omega ef ty eff_f ->
+      TcExp gamma omega (ECond e et ef) ty
         (static_union eff_e (static_union eff_t eff_f))
-| NT_Ref :
+| T_Ref :
     forall gamma omega r e ty eff,
       region_expr_wf omega r ->
-      NTcExp gamma omega e ty eff ->
-      NTcExp gamma omega (ERef r e) (TyRef (region_expr_to_type r) ty)
+      TcExp gamma omega e ty eff ->
+      TcExp gamma omega (ERef r e) (TyRef (region_expr_to_type r) ty)
         (SAlloc (region_expr_to_type r) :: eff)
-| NT_Deref :
+| T_Deref :
     forall gamma omega r e ty eff,
       region_expr_wf omega r ->
-      NTcExp gamma omega e (TyRef (region_expr_to_type r) ty) eff ->
-      NTcExp gamma omega (EDeref r e) ty
+      TcExp gamma omega e (TyRef (region_expr_to_type r) ty) eff ->
+      TcExp gamma omega (EDeref r e) ty
         (SRead (region_expr_to_type r) :: eff)
-| NT_Assign :
+| T_Assign :
     forall gamma omega r ea ev ty eff_a eff_v,
       region_expr_wf omega r ->
-      NTcExp gamma omega ea (TyRef (region_expr_to_type r) ty) eff_a ->
-      NTcExp gamma omega ev ty eff_v ->
-      NTcExp gamma omega (EAssign r ea ev) TyUnit
+      TcExp gamma omega ea (TyRef (region_expr_to_type r) ty) eff_a ->
+      TcExp gamma omega ev ty eff_v ->
+      TcExp gamma omega (EAssign r ea ev) TyUnit
         (SWrite (region_expr_to_type r) :: static_union eff_a eff_v)
-| NT_Plus :
+| T_Plus :
     forall gamma omega e1 e2 eff1 eff2,
-      NTcExp gamma omega e1 TyNat eff1 ->
-      NTcExp gamma omega e2 TyNat eff2 ->
-      NTcExp gamma omega (EPlus e1 e2) TyNat (static_union eff1 eff2)
-| NT_Minus :
+      TcExp gamma omega e1 TyNat eff1 ->
+      TcExp gamma omega e2 TyNat eff2 ->
+      TcExp gamma omega (EPlus e1 e2) TyNat (static_union eff1 eff2)
+| T_Minus :
     forall gamma omega e1 e2 eff1 eff2,
-      NTcExp gamma omega e1 TyNat eff1 ->
-      NTcExp gamma omega e2 TyNat eff2 ->
-      NTcExp gamma omega (EMinus e1 e2) TyNat (static_union eff1 eff2)
-| NT_Times :
+      TcExp gamma omega e1 TyNat eff1 ->
+      TcExp gamma omega e2 TyNat eff2 ->
+      TcExp gamma omega (EMinus e1 e2) TyNat (static_union eff1 eff2)
+| T_Times :
     forall gamma omega e1 e2 eff1 eff2,
-      NTcExp gamma omega e1 TyNat eff1 ->
-      NTcExp gamma omega e2 TyNat eff2 ->
-      NTcExp gamma omega (ETimes e1 e2) TyNat (static_union eff1 eff2)
-| NT_Eq :
+      TcExp gamma omega e1 TyNat eff1 ->
+      TcExp gamma omega e2 TyNat eff2 ->
+      TcExp gamma omega (ETimes e1 e2) TyNat (static_union eff1 eff2)
+| T_Eq :
     forall gamma omega e1 e2 eff1 eff2,
-      NTcExp gamma omega e1 TyNat eff1 ->
-      NTcExp gamma omega e2 TyNat eff2 ->
-      NTcExp gamma omega (EEq e1 e2) TyBool (static_union eff1 eff2)
-| NT_AllocAbs :
+      TcExp gamma omega e1 TyNat eff1 ->
+      TcExp gamma omega e2 TyNat eff2 ->
+      TcExp gamma omega (EEq e1 e2) TyBool (static_union eff1 eff2)
+| T_AllocAbs :
     forall gamma omega r,
       region_expr_wf omega r ->
-      NTcExp gamma omega (EAllocAbs r) TyEffect []
-| NT_ReadAbs :
+      TcExp gamma omega (EAllocAbs r) TyEffect []
+| T_ReadAbs :
     forall gamma omega r,
       region_expr_wf omega r ->
-      NTcExp gamma omega (EReadAbs r) TyEffect []
-| NT_WriteAbs :
+      TcExp gamma omega (EReadAbs r) TyEffect []
+| T_WriteAbs :
     forall gamma omega r,
       region_expr_wf omega r ->
-      NTcExp gamma omega (EWriteAbs r) TyEffect []
-| NT_ReadConc :
+      TcExp gamma omega (EWriteAbs r) TyEffect []
+| T_ReadConc :
     forall gamma omega e r ty eff,
-      NTcExp gamma omega e (TyRef r ty) eff ->
-      NTcExp gamma omega (EReadConc e) TyEffect eff
-| NT_WriteConc :
+      TcExp gamma omega e (TyRef r ty) eff ->
+      TcExp gamma omega (EReadConc e) TyEffect eff
+| T_WriteConc :
     forall gamma omega e r ty eff,
-      NTcExp gamma omega e (TyRef r ty) eff ->
-      NTcExp gamma omega (EWriteConc e) TyEffect eff
-| NT_Concat :
+      TcExp gamma omega e (TyRef r ty) eff ->
+      TcExp gamma omega (EWriteConc e) TyEffect eff
+| T_Concat :
     forall gamma omega e1 e2 eff1 eff2,
-      NTcExp gamma omega e1 TyEffect eff1 ->
-      NTcExp gamma omega e2 TyEffect eff2 ->
-      NTcExp gamma omega (EConcat e1 e2) TyEffect
+      TcExp gamma omega e1 TyEffect eff1 ->
+      TcExp gamma omega e2 TyEffect eff2 ->
+      TcExp gamma omega (EConcat e1 e2) TyEffect
         (static_union eff1 eff2)
-| NT_Top :
+| T_Top :
     forall gamma omega,
-      NTcExp gamma omega ETop TyEffect []
-| NT_Empty :
+      TcExp gamma omega ETop TyEffect []
+| T_Empty :
     forall gamma omega,
-      NTcExp gamma omega EEmpty TyEffect [].
+      TcExp gamma omega EEmpty TyEffect [].
 
-Lemma NTcExp_EMuApp_static_heap_neutral_inv :
+Lemma TcExp_EMuApp_static_heap_neutral_inv :
   forall gamma omega ef ea ty eff,
-    NTcExp gamma omega (EMuApp ef ea) ty eff ->
+    TcExp gamma omega (EMuApp ef ea) ty eff ->
     static_heap_neutral eff ->
     exists ty_arg eff_body eff_summary eff_f eff_a,
-      NTcExp gamma omega ef
+      TcExp gamma omega ef
         (TyArrow ty_arg eff_body ty eff_summary) eff_f /\
-      NTcExp gamma omega ea ty_arg eff_a /\
+      TcExp gamma omega ea ty_arg eff_a /\
       eff = static_union eff_f (static_union eff_a eff_body) /\
       static_heap_neutral eff_f /\
       static_heap_neutral eff_a /\
@@ -339,14 +339,14 @@ Proof.
       eapply static_heap_neutral_app_r. exact HNeutral.
 Qed.
 
-Lemma NTcExp_EEffApp_static_heap_neutral_inv :
+Lemma TcExp_EEffApp_static_heap_neutral_inv :
   forall gamma omega ef ea eff,
-    NTcExp gamma omega (EEffApp ef ea) TyEffect eff ->
+    TcExp gamma omega (EEffApp ef ea) TyEffect eff ->
     static_heap_neutral eff ->
     exists ty_arg ty_body eff_body eff_summary eff_f eff_a,
-      NTcExp gamma omega ef
+      TcExp gamma omega ef
         (TyArrow ty_arg eff_body ty_body eff_summary) eff_f /\
-      NTcExp gamma omega ea ty_arg eff_a /\
+      TcExp gamma omega ea ty_arg eff_a /\
       eff = static_union eff_f (static_union eff_a eff_summary) /\
       static_heap_neutral eff_f /\
       static_heap_neutral eff_a /\

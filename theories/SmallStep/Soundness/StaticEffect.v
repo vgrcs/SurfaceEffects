@@ -50,7 +50,7 @@ Fixpoint trace_static_effect (phi : Trace) : StaticEffect :=
         (trace_static_effect phi')
   end.
 
-Definition label_static_effect (label : NLabel) : StaticEffect :=
+Definition label_static_effect (label : Label) : StaticEffect :=
   match label with
   | LSilent => []
   | LAction da => dynamic_action_static_effect da
@@ -482,12 +482,12 @@ Qed.
 
 Theorem TraceCoveredByResolvedStaticEffect_heap_neutral :
   forall rho phi eff eff_res,
-    NResolveStaticEffect rho eff eff_res ->
+    ResolveStaticEffect rho eff eff_res ->
     TraceCoveredByStaticEffect phi eff_res ->
     static_heap_neutral eff ->
     HeapNeutralTrace phi.
 Proof.
   intros rho phi eff eff_res HResolve HCovered HNeutral.
   eapply TraceCoveredByStaticEffect_heap_neutral; eauto.
-  eapply NResolveStaticEffect_static_heap_neutral; eauto.
+  eapply ResolveStaticEffect_static_heap_neutral; eauto.
 Qed.

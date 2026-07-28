@@ -1,17 +1,17 @@
 Require Import theories.SmallStep.Core.Effects.
 Require Import theories.SmallStep.Core.Syntax.
 
-Inductive NTy :=
-| TyNat : NTy
-| TyBool : NTy
-| TyUnit : NTy
-| TyEffect : NTy
-| TyPair : NTy -> NTy -> NTy
-| TyRef : RegionType -> NTy -> NTy
-| TyArrow : NTy -> StaticEffect -> NTy -> StaticEffect -> NTy
-| TyForallRgn : StaticEffect -> NTy -> NTy.
+Inductive Ty :=
+| TyNat : Ty
+| TyBool : Ty
+| TyUnit : Ty
+| TyEffect : Ty
+| TyPair : Ty -> Ty -> Ty
+| TyRef : RegionType -> Ty -> Ty
+| TyArrow : Ty -> StaticEffect -> Ty -> StaticEffect -> Ty
+| TyForallRgn : StaticEffect -> Ty -> Ty.
 
-Fixpoint open_ty_at (k : nat) (u : RegionType) (ty : NTy) : NTy :=
+Fixpoint open_ty_at (k : nat) (u : RegionType) (ty : Ty) : Ty :=
   match ty with
   | TyNat => TyNat
   | TyBool => TyBool
@@ -33,13 +33,13 @@ Fixpoint open_ty_at (k : nat) (u : RegionType) (ty : NTy) : NTy :=
         (open_ty_at (S k) u ty_body)
   end.
 
-Definition open_ty_type (u : RegionType) (ty : NTy) : NTy :=
+Definition open_ty_type (u : RegionType) (ty : Ty) : Ty :=
   open_ty_at 0 u ty.
 
-Definition open_ty (rgn : RegionExpr) (ty : NTy) : NTy :=
+Definition open_ty (rgn : RegionExpr) (ty : Ty) : Ty :=
   open_ty_type (region_expr_to_type rgn) ty.
 
-Fixpoint close_ty_at (k : nat) (x : VarId) (ty : NTy) : NTy :=
+Fixpoint close_ty_at (k : nat) (x : VarId) (ty : Ty) : Ty :=
   match ty with
   | TyNat => TyNat
   | TyBool => TyBool
@@ -61,5 +61,5 @@ Fixpoint close_ty_at (k : nat) (x : VarId) (ty : NTy) : NTy :=
         (close_ty_at (S k) x ty_body)
   end.
 
-Definition close_ty (x : VarId) (ty : NTy) : NTy :=
+Definition close_ty (x : VarId) (ty : Ty) : Ty :=
   close_ty_at 0 x ty.

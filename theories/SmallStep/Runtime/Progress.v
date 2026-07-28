@@ -8,16 +8,16 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Definition NProgressState (state : NState) : Prop :=
-  NTerminal state \/ exists label state', NStep state label state'.
+Definition ProgressState (state : State) : Prop :=
+  Terminal state \/ exists label state', Step state label state'.
 
-Theorem NStep_progress :
+Theorem Step_progress :
   forall gamma omega state,
-    NWTState gamma omega state ->
-    NProgressState state.
+    WTState gamma omega state ->
+    ProgressState state.
 Proof.
   intros gamma omega state HWT.
-  unfold NProgressState.
+  unfold ProgressState.
   induction HWT as
     [gamma omega heap env rho e k ty eff HHeap HEnv HRho HTc HK
     | gamma omega heap rho v k ty HHeap HRho HV HK
@@ -33,27 +33,27 @@ Proof.
         eexists; eexists; constructor
       ].
     + destruct
-        (NEnvHasType_lookup rho heap env gamma x ty HEnv H)
+        (EnvHasType_lookup rho heap env gamma x ty HEnv H)
         as (v_lookup & HLookup & _).
       exists LSilent, (StReturn heap v_lookup k).
       eapply StepVar. exact HLookup.
     + destruct
-        (NRhoModels_eval_region omega rho r HRho H)
+        (RhoModels_eval_region omega rho r HRho H)
         as (r_val & HRgn).
       exists LSilent, (StEval heap env rho e0 (KRef r_val k)).
       eapply StepRef. exact HRgn.
     + destruct
-        (NRhoModels_eval_region omega rho r HRho H)
+        (RhoModels_eval_region omega rho r HRho H)
         as (r_val & HRgn).
       exists LSilent, (StReturn heap (VSummary (SummarySet [CAllocAbs r_val])) k).
       eapply StepAllocAbs. exact HRgn.
     + destruct
-        (NRhoModels_eval_region omega rho r HRho H)
+        (RhoModels_eval_region omega rho r HRho H)
         as (r_val & HRgn).
       exists LSilent, (StReturn heap (VSummary (SummarySet [CReadAbs r_val])) k).
       eapply StepReadAbs. exact HRgn.
     + destruct
-        (NRhoModels_eval_region omega rho r HRho H)
+        (RhoModels_eval_region omega rho r HRho H)
         as (r_val & HRgn).
       exists LSilent, (StReturn heap (VSummary (SummarySet [CWriteAbs r_val])) k).
       eapply StepWriteAbs. exact HRgn.
@@ -81,7 +81,7 @@ Proof.
         eapply StepPairParCheckFail. exact HCheck.
     + inversion HV; subst.
       destruct
-        (NRhoModels_eval_region omega rho r HRho H)
+        (RhoModels_eval_region omega rho r HRho H)
         as (r_val & HRgn).
       eexists; eexists.
       eapply StepRgnAppReturn. exact HRgn.
@@ -99,7 +99,7 @@ Proof.
       eexists; eexists.
       constructor.
     + match goal with
-      | HLoc : NValHasType _ _ _ (TyRef _ _) |- _ =>
+      | HLoc : ValHasType _ _ _ (TyRef _ _) |- _ =>
           inversion HLoc; subst
       end.
       eexists; eexists.

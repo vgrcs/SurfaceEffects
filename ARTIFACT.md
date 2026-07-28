@@ -18,9 +18,9 @@ theories/PaperTheorems.v
 
 Exports:
 
-- the `SmallStep` syntax `NExpr`, including `EPairPar`;
-- the ordinary and checked typing judgments, including `NTcExp`,
-  `NCheckedTcExp`, and `NCheckedBackTriangle`;
+- the `SmallStep` syntax `Expr`, including `EPairPar`;
+- the ordinary and checked typing judgments, including `TcExp`,
+  `CheckedTcExp`, and `CheckedBackTriangle`;
 - progress, preservation, static-effect soundness, terminal determinism, and
   terminal surface-effect correctness from `theories/SmallStep`;
 - checked pair-parallel scheduler determinism from
@@ -137,10 +137,10 @@ Main mechanized names:
 
 Runtime safety:
 
-- `NStep_progress`
-- `NStep_store_resolved_state_preservation`
-- `NSteps_store_resolved_state_preservation`
-- `NStepsN_store_resolved_state_preservation`
+- `Step_progress`
+- `Step_store_resolved_state_preservation`
+- `Steps_store_resolved_state_preservation`
+- `StepsN_store_resolved_state_preservation`
 
 Static-effect soundness:
 
@@ -148,8 +148,8 @@ Static-effect soundness:
 
 Terminal determinism:
 
-- `NSteps_terminal_trace_deterministic`
-- `NSteps_terminal_deterministic`
+- `Steps_terminal_trace_deterministic`
+- `Steps_terminal_deterministic`
 
 Surface-effect correctness:
 
@@ -162,12 +162,12 @@ Pair-parallel dispatcher case:
 
 Checked pair-parallel scheduler determinism:
 
-- `NScheduledPairParRun_checked_pairpar_left_then_right_embeds`
-- `NScheduledPairParRun_checked_pairpar_success_join_deterministic`
-- `NScheduledPairParRun_checked_pairpar_success_continuation_deterministic`
-- `NScheduledPairParRun_checked_pairpar_error_classifies`
-- `NScheduledPairParRun_checked_pairpar_error_same_cause`
-- `NScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic`
+- `ScheduledPairParRun_checked_pairpar_left_then_right_embeds`
+- `ScheduledPairParRun_checked_pairpar_success_join_deterministic`
+- `ScheduledPairParRun_checked_pairpar_success_continuation_deterministic`
+- `ScheduledPairParRun_checked_pairpar_error_classifies`
+- `ScheduledPairParRun_checked_pairpar_error_same_cause`
+- `ScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic`
 
 Exported by:
 

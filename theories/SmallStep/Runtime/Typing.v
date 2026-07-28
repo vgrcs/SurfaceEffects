@@ -11,19 +11,19 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Definition NRhoModels (omega : NRgnCtx) (rho : Rho) : Prop :=
+Definition RhoModels (omega : RgnCtx) (rho : Rho) : Prop :=
   forall x,
     In x omega ->
     exists r,
       rho_lookup x rho = Some r.
 
-Definition NRegionResolves (rho : Rho) (rgn : RegionExpr)
+Definition RegionResolves (rho : Rho) (rgn : RegionExpr)
     (r : RegionId) : Prop :=
   eval_region rho rgn = Some r.
 
-Lemma NRhoModels_eval_region :
+Lemma RhoModels_eval_region :
   forall omega rho rgn,
-    NRhoModels omega rho ->
+    RhoModels omega rho ->
     region_expr_wf omega rgn ->
     exists r,
       eval_region rho rgn = Some r.
@@ -34,83 +34,83 @@ Proof.
   - apply HRho. assumption.
 Qed.
 
-Inductive NValHasType : Rho -> Heap -> NVal -> NTy -> Prop :=
-| NVT_Nat :
+Inductive ValHasType : Rho -> Heap -> Val -> Ty -> Prop :=
+| VT_Nat :
     forall rho heap n,
-      NValHasType rho heap (VNat n) TyNat
-| NVT_Bool :
+      ValHasType rho heap (VNat n) TyNat
+| VT_Bool :
     forall rho heap b,
-      NValHasType rho heap (VBool b) TyBool
-| NVT_Unit :
+      ValHasType rho heap (VBool b) TyBool
+| VT_Unit :
     forall rho heap,
-      NValHasType rho heap VUnit TyUnit
-| NVT_Summary :
+      ValHasType rho heap VUnit TyUnit
+| VT_Summary :
     forall rho heap theta,
-      NValHasType rho heap (VSummary theta) TyEffect
-| NVT_Pair :
+      ValHasType rho heap (VSummary theta) TyEffect
+| VT_Pair :
     forall rho heap v1 v2 ty1 ty2,
-      NValHasType rho heap v1 ty1 ->
-      NValHasType rho heap v2 ty2 ->
-      NValHasType rho heap (VPair v1 v2) (TyPair ty1 ty2)
-| NVT_Loc :
+      ValHasType rho heap v1 ty1 ->
+      ValHasType rho heap v2 ty2 ->
+      ValHasType rho heap (VPair v1 v2) (TyPair ty1 ty2)
+| VT_Loc :
     forall rho heap rgn ty r l cell,
       eval_region_type rho rgn = Some r ->
       heap_lookup r l heap = Some cell ->
-      NValHasType rho heap cell ty ->
-      NValHasType rho heap (VLoc r l) (TyRef rgn ty)
-| NVT_Closure :
+      ValHasType rho heap cell ty ->
+      ValHasType rho heap (VLoc r l) (TyRef rgn ty)
+| VT_Closure :
     forall rho heap closure_env closure_rho f x ec ee
       gamma omega ty_arg ty_body eff_body eff_summary,
-      NEnvHasType closure_rho heap closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NTcExp
+      EnvHasType closure_rho heap closure_env gamma ->
+      RhoModels omega closure_rho ->
+      TcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NTcExp
+      TcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NValHasType rho heap
+      ValHasType rho heap
         (VClosure closure_env closure_rho f x ec ee)
         (TyArrow ty_arg eff_body ty_body eff_summary)
-| NVT_RegionClosure :
+| VT_RegionClosure :
     forall rho heap closure_env closure_rho x e gamma omega ty eff,
-      NEnvHasType closure_rho heap closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NTcExp gamma (x :: omega) e ty eff ->
-      NValHasType rho heap
+      EnvHasType closure_rho heap closure_env gamma ->
+      RhoModels omega closure_rho ->
+      TcExp gamma (x :: omega) e ty eff ->
+      ValHasType rho heap
         (VRegionClosure closure_env closure_rho x e)
         (TyForallRgn (close_static_effect x eff) (close_ty x ty))
-with NEnvHasType : Rho -> Heap -> NEnv -> NCtx -> Prop :=
-| NET_EnvNil :
+with EnvHasType : Rho -> Heap -> Env -> Ctx -> Prop :=
+| ET_EnvNil :
     forall rho heap,
-      NEnvHasType rho heap EnvNil []
-| NET_EnvCons :
+      EnvHasType rho heap EnvNil []
+| ET_EnvCons :
     forall rho heap x v env ty gamma,
-      NValHasType rho heap v ty ->
-      NEnvHasType rho heap env gamma ->
-      NEnvHasType rho heap (EnvCons x v env) ((x, ty) :: gamma).
+      ValHasType rho heap v ty ->
+      EnvHasType rho heap env gamma ->
+      EnvHasType rho heap (EnvCons x v env) ((x, ty) :: gamma).
 
-Scheme NValHasType_ind' := Induction for NValHasType Sort Prop
-with NEnvHasType_ind' := Induction for NEnvHasType Sort Prop.
+Scheme ValHasType_ind' := Induction for ValHasType Sort Prop
+with EnvHasType_ind' := Induction for EnvHasType Sort Prop.
 
-Combined Scheme NValHasType_NEnvHasType_ind
-  from NValHasType_ind', NEnvHasType_ind'.
+Combined Scheme ValHasType_EnvHasType_ind
+  from ValHasType_ind', EnvHasType_ind'.
 
-Definition NRuntimeHeapShape (rho : Rho) (heap : Heap) : Prop :=
+Definition RuntimeHeapShape (rho : Rho) (heap : Heap) : Prop :=
   forall r l v,
     heap_lookup r l heap = Some v ->
     exists ty,
-      NValHasType rho heap v ty.
+      ValHasType rho heap v ty.
 
-Definition NRuntimeEnvShape
-    (rho : Rho) (heap : Heap) (env : NEnv) (gamma : NCtx) : Prop :=
-  NEnvHasType rho heap env gamma.
+Definition RuntimeEnvShape
+    (rho : Rho) (heap : Heap) (env : Env) (gamma : Ctx) : Prop :=
+  EnvHasType rho heap env gamma.
 
-Lemma NValHasType_ref_region :
+Lemma ValHasType_ref_region :
   forall rho heap r l rgn ty,
-    NValHasType rho heap (VLoc r l) (TyRef rgn ty) ->
+    ValHasType rho heap (VLoc r l) (TyRef rgn ty) ->
     eval_region_type rho rgn = Some r.
 Proof.
   intros rho heap r l rgn ty HTy.
@@ -118,12 +118,12 @@ Proof.
   assumption.
 Qed.
 
-Lemma NValHasType_ref_lookup :
+Lemma ValHasType_ref_lookup :
   forall rho heap r l rgn ty,
-    NValHasType rho heap (VLoc r l) (TyRef rgn ty) ->
+    ValHasType rho heap (VLoc r l) (TyRef rgn ty) ->
     exists cell,
       heap_lookup r l heap = Some cell /\
-      NValHasType rho heap cell ty.
+      ValHasType rho heap cell ty.
 Proof.
   intros rho heap r l rgn ty HTy.
   inversion HTy; subst.
@@ -131,13 +131,13 @@ Proof.
   split; assumption.
 Qed.
 
-Lemma NEnvHasType_lookup :
+Lemma EnvHasType_lookup :
   forall rho heap env gamma x ty,
-    NEnvHasType rho heap env gamma ->
+    EnvHasType rho heap env gamma ->
     ctx_binds x ty gamma ->
     exists v,
       env_lookup x env = Some v /\
-      NValHasType rho heap v ty.
+      ValHasType rho heap v ty.
 Proof.
   intros rho heap env gamma x ty HEnv.
   induction HEnv as
@@ -154,20 +154,20 @@ Proof.
     + apply IH. exact HBind.
 Qed.
 
-Lemma NEnvHasType_extend :
+Lemma EnvHasType_extend :
   forall rho heap env gamma x v ty,
-    NValHasType rho heap v ty ->
-    NEnvHasType rho heap env gamma ->
-    NEnvHasType rho heap (env_extend x v env) ((x, ty) :: gamma).
+    ValHasType rho heap v ty ->
+    EnvHasType rho heap env gamma ->
+    EnvHasType rho heap (env_extend x v env) ((x, ty) :: gamma).
 Proof.
   intros rho heap env gamma x v ty HV HEnv.
   constructor; assumption.
 Qed.
 
-Lemma NRhoModels_extend :
+Lemma RhoModels_extend :
   forall omega rho x r,
-    NRhoModels omega rho ->
-    NRhoModels (x :: omega) (rho_extend x r rho).
+    RhoModels omega rho ->
+    RhoModels (x :: omega) (rho_extend x r rho).
 Proof.
   intros omega rho x r HRho y HIn.
   simpl in HIn.
@@ -204,263 +204,263 @@ Proof.
   left. split; reflexivity.
 Qed.
 
-Inductive NKontHasType :
-    NCtx -> NRgnCtx -> Rho -> Heap -> NKont -> NTy -> Prop :=
-| NKT_Done :
+Inductive KontHasType :
+    Ctx -> RgnCtx -> Rho -> Heap -> Kont -> Ty -> Prop :=
+| KT_Done :
     forall gamma omega rho heap ty,
-      NKontHasType gamma omega rho heap KDone ty
-| NKT_MuAppFun :
+      KontHasType gamma omega rho heap KDone ty
+| KT_MuAppFun :
     forall gamma omega rho heap ea env k
       ty_arg ty_body eff_body eff_summary eff_arg,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega ea ty_arg eff_arg ->
-      NKontHasType gamma omega rho heap k ty_body ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega ea ty_arg eff_arg ->
+      KontHasType gamma omega rho heap k ty_body ->
+      KontHasType gamma omega rho heap
         (KMuAppFun ea env rho k)
         (TyArrow ty_arg eff_body ty_body eff_summary)
-| NKT_MuAppArg :
+| KT_MuAppArg :
     forall gamma omega rho heap closure_env closure_rho f x ec ee k
       gamma_closure omega_closure ty_arg ty_body eff_body eff_summary,
-      NRuntimeEnvShape closure_rho heap closure_env gamma_closure ->
-      NRhoModels omega_closure closure_rho ->
-      NTcExp
+      RuntimeEnvShape closure_rho heap closure_env gamma_closure ->
+      RhoModels omega_closure closure_rho ->
+      TcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) ::
           gamma_closure)
         omega_closure ec ty_body eff_body ->
-      NTcExp
+      TcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) ::
           gamma_closure)
         omega_closure ee TyEffect eff_summary ->
-      NKontHasType gamma omega rho heap k ty_body ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k ty_body ->
+      KontHasType gamma omega rho heap
         (KMuAppArg closure_env closure_rho f x ec ee k)
         ty_arg
-| NKT_EffAppFun :
+| KT_EffAppFun :
     forall gamma omega rho heap ea env k
       ty_arg ty_body eff_body eff_summary eff_arg,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega ea ty_arg eff_arg ->
-      NKontHasType gamma omega rho heap k TyEffect ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega ea ty_arg eff_arg ->
+      KontHasType gamma omega rho heap k TyEffect ->
+      KontHasType gamma omega rho heap
         (KEffAppFun ea env rho k)
         (TyArrow ty_arg eff_body ty_body eff_summary)
-| NKT_EffAppArg :
+| KT_EffAppArg :
     forall gamma omega rho heap closure_env closure_rho f x ec ee k
       gamma_closure omega_closure ty_arg ty_body eff_body eff_summary,
-      NRuntimeEnvShape closure_rho heap closure_env gamma_closure ->
-      NRhoModels omega_closure closure_rho ->
-      NTcExp
+      RuntimeEnvShape closure_rho heap closure_env gamma_closure ->
+      RhoModels omega_closure closure_rho ->
+      TcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) ::
           gamma_closure)
         omega_closure ec ty_body eff_body ->
-      NTcExp
+      TcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) ::
           gamma_closure)
         omega_closure ee TyEffect eff_summary ->
-      NKontHasType gamma omega rho heap k TyEffect ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyEffect ->
+      KontHasType gamma omega rho heap
         (KEffAppArg closure_env closure_rho f x ec ee k)
         ty_arg
-| NKT_PairParEff1 :
+| KT_PairParEff1 :
     forall gamma omega rho heap ef1 ea1 ef2 ea2 env k
       ty1 ty2 eff1 eff2 eff_summary2,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
-      NTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
-      NTcExp gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2 ->
-      NKontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
+      TcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      TcExp gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2 ->
+      KontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      KontHasType gamma omega rho heap
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k)
         TyEffect
-| NKT_PairParEff2 :
+| KT_PairParEff2 :
     forall gamma omega rho heap ef1 ea1 ef2 ea2 env theta1 k
       ty1 ty2 eff1 eff2,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
-      NTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
-      NKontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
+      TcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      KontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      KontHasType gamma omega rho heap
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
-| NKT_RgnApp :
+| KT_RgnApp :
     forall gamma omega rho heap r k eff ty,
       region_expr_wf omega r ->
-      NKontHasType gamma omega rho heap k (open_ty r ty) ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k (open_ty r ty) ->
+      KontHasType gamma omega rho heap
         (KRgnApp r rho k)
         (TyForallRgn eff ty)
-| NKT_Cond :
+| KT_Cond :
     forall gamma omega rho heap et ef env k ty eff_t eff_f,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega et ty eff_t ->
-      NTcExp gamma omega ef ty eff_f ->
-      NKontHasType gamma omega rho heap k ty ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega et ty eff_t ->
+      TcExp gamma omega ef ty eff_f ->
+      KontHasType gamma omega rho heap k ty ->
+      KontHasType gamma omega rho heap
         (KCond et ef env rho k)
         TyBool
-| NKT_Ref :
+| KT_Ref :
     forall gamma omega rho heap rgn r_val k ty,
       eval_region rho rgn = Some r_val ->
-      NKontHasType gamma omega rho heap k
+      KontHasType gamma omega rho heap k
         (TyRef (region_expr_to_type rgn) ty) ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap
         (KRef r_val k)
         ty
-| NKT_Deref :
+| KT_Deref :
     forall gamma omega rho heap rgn k ty,
-      NKontHasType gamma omega rho heap k ty ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k ty ->
+      KontHasType gamma omega rho heap
         (KDeref rgn k)
         (TyRef (region_expr_to_type rgn) ty)
-| NKT_AssignLoc :
+| KT_AssignLoc :
     forall gamma omega rho heap rgn ev env k ty eff_v,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega ev ty eff_v ->
-      NKontHasType gamma omega rho heap k TyUnit ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega ev ty eff_v ->
+      KontHasType gamma omega rho heap k TyUnit ->
+      KontHasType gamma omega rho heap
         (KAssignLoc rgn ev env rho k)
         (TyRef (region_expr_to_type rgn) ty)
-| NKT_AssignVal :
+| KT_AssignVal :
     forall gamma omega rho heap rgn loc k ty,
-      NValHasType rho heap loc (TyRef (region_expr_to_type rgn) ty) ->
-      NKontHasType gamma omega rho heap k TyUnit ->
-      NKontHasType gamma omega rho heap
+      ValHasType rho heap loc (TyRef (region_expr_to_type rgn) ty) ->
+      KontHasType gamma omega rho heap k TyUnit ->
+      KontHasType gamma omega rho heap
         (KAssignVal rgn loc k)
         ty
-| NKT_PlusL :
+| KT_PlusL :
     forall gamma omega rho heap e2 env k eff,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega e2 TyNat eff ->
-      NKontHasType gamma omega rho heap k TyNat ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega e2 TyNat eff ->
+      KontHasType gamma omega rho heap k TyNat ->
+      KontHasType gamma omega rho heap
         (KPlusL e2 env rho k)
         TyNat
-| NKT_PlusR :
+| KT_PlusR :
     forall gamma omega rho heap n k,
-      NKontHasType gamma omega rho heap k TyNat ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyNat ->
+      KontHasType gamma omega rho heap
         (KPlusR n k)
         TyNat
-| NKT_MinusL :
+| KT_MinusL :
     forall gamma omega rho heap e2 env k eff,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega e2 TyNat eff ->
-      NKontHasType gamma omega rho heap k TyNat ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega e2 TyNat eff ->
+      KontHasType gamma omega rho heap k TyNat ->
+      KontHasType gamma omega rho heap
         (KMinusL e2 env rho k)
         TyNat
-| NKT_MinusR :
+| KT_MinusR :
     forall gamma omega rho heap n k,
-      NKontHasType gamma omega rho heap k TyNat ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyNat ->
+      KontHasType gamma omega rho heap
         (KMinusR n k)
         TyNat
-| NKT_TimesL :
+| KT_TimesL :
     forall gamma omega rho heap e2 env k eff,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega e2 TyNat eff ->
-      NKontHasType gamma omega rho heap k TyNat ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega e2 TyNat eff ->
+      KontHasType gamma omega rho heap k TyNat ->
+      KontHasType gamma omega rho heap
         (KTimesL e2 env rho k)
         TyNat
-| NKT_TimesR :
+| KT_TimesR :
     forall gamma omega rho heap n k,
-      NKontHasType gamma omega rho heap k TyNat ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyNat ->
+      KontHasType gamma omega rho heap
         (KTimesR n k)
         TyNat
-| NKT_EqL :
+| KT_EqL :
     forall gamma omega rho heap e2 env k eff,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega e2 TyNat eff ->
-      NKontHasType gamma omega rho heap k TyBool ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega e2 TyNat eff ->
+      KontHasType gamma omega rho heap k TyBool ->
+      KontHasType gamma omega rho heap
         (KEqL e2 env rho k)
         TyNat
-| NKT_EqR :
+| KT_EqR :
     forall gamma omega rho heap n k,
-      NKontHasType gamma omega rho heap k TyBool ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyBool ->
+      KontHasType gamma omega rho heap
         (KEqR n k)
         TyNat
-| NKT_ReadConc :
+| KT_ReadConc :
     forall gamma omega rho heap k rgn ty,
-      NKontHasType gamma omega rho heap k TyEffect ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyEffect ->
+      KontHasType gamma omega rho heap
         (KReadConc k)
         (TyRef rgn ty)
-| NKT_WriteConc :
+| KT_WriteConc :
     forall gamma omega rho heap k rgn ty,
-      NKontHasType gamma omega rho heap k TyEffect ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyEffect ->
+      KontHasType gamma omega rho heap
         (KWriteConc k)
         (TyRef rgn ty)
-| NKT_ConcatL :
+| KT_ConcatL :
     forall gamma omega rho heap e2 env k eff,
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega e2 TyEffect eff ->
-      NKontHasType gamma omega rho heap k TyEffect ->
-      NKontHasType gamma omega rho heap
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega e2 TyEffect eff ->
+      KontHasType gamma omega rho heap k TyEffect ->
+      KontHasType gamma omega rho heap
         (KConcatL e2 env rho k)
         TyEffect
-| NKT_ConcatR :
+| KT_ConcatR :
     forall gamma omega rho heap theta k,
-      NKontHasType gamma omega rho heap k TyEffect ->
-      NKontHasType gamma omega rho heap
+      KontHasType gamma omega rho heap k TyEffect ->
+      KontHasType gamma omega rho heap
         (KConcatR theta k)
         TyEffect.
 
-Inductive NWTState : NCtx -> NRgnCtx -> NState -> Prop :=
-| NWT_Eval :
+Inductive WTState : Ctx -> RgnCtx -> State -> Prop :=
+| WT_Eval :
     forall gamma omega heap env rho e k ty eff,
-      NRuntimeHeapShape rho heap ->
-      NRuntimeEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NTcExp gamma omega e ty eff ->
-      NKontHasType gamma omega rho heap k ty ->
-      NWTState gamma omega (StEval heap env rho e k)
-| NWT_Return :
+      RuntimeHeapShape rho heap ->
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega e ty eff ->
+      KontHasType gamma omega rho heap k ty ->
+      WTState gamma omega (StEval heap env rho e k)
+| WT_Return :
     forall gamma omega heap rho v k ty,
-      NRuntimeHeapShape rho heap ->
-      NRhoModels omega rho ->
-      NValHasType rho heap v ty ->
-      NKontHasType gamma omega rho heap k ty ->
-      NWTState gamma omega (StReturn heap v k)
-| NWT_Done :
+      RuntimeHeapShape rho heap ->
+      RhoModels omega rho ->
+      ValHasType rho heap v ty ->
+      KontHasType gamma omega rho heap k ty ->
+      WTState gamma omega (StReturn heap v k)
+| WT_Done :
     forall gamma omega heap v rho ty,
-      NRuntimeHeapShape rho heap ->
-      NRhoModels omega rho ->
-      NValHasType rho heap v ty ->
-      NWTState gamma omega (StDone heap v)
-| NWT_Error :
+      RuntimeHeapShape rho heap ->
+      RhoModels omega rho ->
+      ValHasType rho heap v ty ->
+      WTState gamma omega (StDone heap v)
+| WT_Error :
     forall gamma omega heap rho,
-      NRuntimeHeapShape rho heap ->
-      NRhoModels omega rho ->
-      NWTState gamma omega (StError heap)
-| NWT_PairParRun :
+      RuntimeHeapShape rho heap ->
+      RhoModels omega rho ->
+      WTState gamma omega (StError heap)
+| WT_PairParRun :
     forall gamma omega left_state right_state phi_left phi_right k
       heap rho ty1 ty2,
       state_heap left_state = heap ->
       state_heap right_state = heap ->
-      NWTState gamma omega left_state ->
-      NWTState gamma omega right_state ->
-      NRuntimeHeapShape rho heap ->
-      NRhoModels omega rho ->
-      NKontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
-      NWTState gamma omega
+      WTState gamma omega left_state ->
+      WTState gamma omega right_state ->
+      RuntimeHeapShape rho heap ->
+      RhoModels omega rho ->
+      KontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      WTState gamma omega
         (StPairParRun left_state right_state phi_left phi_right k).

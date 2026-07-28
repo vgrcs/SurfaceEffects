@@ -25,61 +25,61 @@ Require Import theories.SmallStep.Soundness.StaticEffect.
 
 Import ListNotations.
 
-Definition NStateNotError (state : NState) : Prop :=
+Definition StateNotError (state : State) : Prop :=
   match state with
   | StError _ => False
   | _ => True
   end.
 
-Definition NTracePermutation (phi1 phi2 : Trace) : Prop :=
+Definition TracePermutation (phi1 phi2 : Trace) : Prop :=
   phi1 ≡ₚ phi2.
 
-Definition NoAllocTraceView (view : NTraceView) : Prop :=
+Definition NoAllocTraceView (view : TraceView) : Prop :=
   NoAllocTrace (trace_view_flatten view).
 
-Definition HeapNeutralTraceView (view : NTraceView) : Prop :=
+Definition HeapNeutralTraceView (view : TraceView) : Prop :=
   HeapNeutralTrace (trace_view_flatten view).
 
-Definition NHeapFootprint : Type :=
+Definition HeapFootprint : Type :=
   RegionId -> Location -> Prop.
 
-Definition NHeapEqOn
-    (footprint : NHeapFootprint) (heap1 heap2 : Heap) : Prop :=
+Definition HeapEqOn
+    (footprint : HeapFootprint) (heap1 heap2 : Heap) : Prop :=
   forall r l,
     footprint r l ->
     heap_lookup r l heap1 = heap_lookup r l heap2.
 
-Definition NTraceReads (phi : Trace) : NHeapFootprint :=
+Definition TraceReads (phi : Trace) : HeapFootprint :=
   fun r l => In (DRead r l) phi.
 
-Definition NTraceWrites (phi : Trace) : NHeapFootprint :=
+Definition TraceWrites (phi : Trace) : HeapFootprint :=
   fun r l => In (DWrite r l) phi.
 
-Definition NTraceTouches (phi : Trace) : NHeapFootprint :=
+Definition TraceTouches (phi : Trace) : HeapFootprint :=
   fun r l =>
     In (DAlloc r l) phi \/
     In (DRead r l) phi \/
     In (DWrite r l) phi.
 
-Definition NHeapEqOnTrace (phi : Trace) : Heap -> Heap -> Prop :=
-  NHeapEqOn (NTraceTouches phi).
+Definition HeapEqOnTrace (phi : Trace) : Heap -> Heap -> Prop :=
+  HeapEqOn (TraceTouches phi).
 
-Definition NHeapEqOnTraceView
-    (view : NTraceView) : Heap -> Heap -> Prop :=
-  NHeapEqOnTrace (trace_view_flatten view).
+Definition HeapEqOnTraceView
+    (view : TraceView) : Heap -> Heap -> Prop :=
+  HeapEqOnTrace (trace_view_flatten view).
 
-Lemma NHeapEqOn_refl :
+Lemma HeapEqOn_refl :
   forall footprint heap,
-    NHeapEqOn footprint heap heap.
+    HeapEqOn footprint heap heap.
 Proof.
   intros footprint heap r l _HIn.
   reflexivity.
 Qed.
 
-Lemma NHeapEqOn_sym :
+Lemma HeapEqOn_sym :
   forall footprint heap1 heap2,
-    NHeapEqOn footprint heap1 heap2 ->
-    NHeapEqOn footprint heap2 heap1.
+    HeapEqOn footprint heap1 heap2 ->
+    HeapEqOn footprint heap2 heap1.
 Proof.
   intros footprint heap1 heap2 HEq r l HIn.
   symmetry.
@@ -87,11 +87,11 @@ Proof.
   exact HIn.
 Qed.
 
-Lemma NHeapEqOn_trans :
+Lemma HeapEqOn_trans :
   forall footprint heap1 heap2 heap3,
-    NHeapEqOn footprint heap1 heap2 ->
-    NHeapEqOn footprint heap2 heap3 ->
-    NHeapEqOn footprint heap1 heap3.
+    HeapEqOn footprint heap1 heap2 ->
+    HeapEqOn footprint heap2 heap3 ->
+    HeapEqOn footprint heap1 heap3.
 Proof.
   intros footprint heap1 heap2 heap3 HEq12 HEq23 r l HIn.
   rewrite HEq12 by exact HIn.
@@ -99,11 +99,11 @@ Proof.
   exact HIn.
 Qed.
 
-Lemma NHeapEqOn_weaken :
+Lemma HeapEqOn_weaken :
   forall footprint_small footprint_big heap1 heap2,
     (forall r l, footprint_small r l -> footprint_big r l) ->
-    NHeapEqOn footprint_big heap1 heap2 ->
-    NHeapEqOn footprint_small heap1 heap2.
+    HeapEqOn footprint_big heap1 heap2 ->
+    HeapEqOn footprint_small heap1 heap2.
 Proof.
   intros footprint_small footprint_big heap1 heap2 HIncl HEq r l HIn.
   apply HEq.
@@ -111,65 +111,65 @@ Proof.
   exact HIn.
 Qed.
 
-Lemma NHeapEqOn_from_heap_eq :
+Lemma HeapEqOn_from_heap_eq :
   forall footprint heap1 heap2,
     heap1 = heap2 ->
-    NHeapEqOn footprint heap1 heap2.
+    HeapEqOn footprint heap1 heap2.
 Proof.
   intros footprint heap1 heap2 HHeap.
   subst heap2.
-  apply NHeapEqOn_refl.
+  apply HeapEqOn_refl.
 Qed.
 
-Corollary NSteps_error_heap_footprint_deterministic :
+Corollary Steps_error_heap_footprint_deterministic :
   forall footprint state phi1 heap1 phi2 heap2,
-    NSteps state phi1 (StError heap1) ->
-    NSteps state phi2 (StError heap2) ->
-    phi1 = phi2 /\ NHeapEqOn footprint heap1 heap2.
+    Steps state phi1 (StError heap1) ->
+    Steps state phi2 (StError heap2) ->
+    phi1 = phi2 /\ HeapEqOn footprint heap1 heap2.
 Proof.
   intros footprint state phi1 heap1 phi2 heap2 HSteps1 HSteps2.
   destruct
-    (NSteps_error_trace_deterministic
+    (Steps_error_trace_deterministic
       state phi1 heap1 phi2 heap2 HSteps1 HSteps2)
     as (HPhi & HHeap).
   subst heap2.
   split.
   - exact HPhi.
-  - apply NHeapEqOn_refl.
+  - apply HeapEqOn_refl.
 Qed.
 
-Corollary NSteps_error_heap_trace_footprint_deterministic :
+Corollary Steps_error_heap_trace_footprint_deterministic :
   forall state phi1 heap1 phi2 heap2,
-    NSteps state phi1 (StError heap1) ->
-    NSteps state phi2 (StError heap2) ->
-    phi1 = phi2 /\ NHeapEqOnTrace phi1 heap1 heap2.
+    Steps state phi1 (StError heap1) ->
+    Steps state phi2 (StError heap2) ->
+    phi1 = phi2 /\ HeapEqOnTrace phi1 heap1 heap2.
 Proof.
   intros state phi1 heap1 phi2 heap2 HSteps1 HSteps2.
-  eapply NSteps_error_heap_footprint_deterministic; eauto.
+  eapply Steps_error_heap_footprint_deterministic; eauto.
 Qed.
 
 
-Definition NSchedulerTraceRepresentsViews
-    (phi : Trace) (view_left view_right : NTraceView) : Prop :=
-  NTracePermutation phi (trace_view_flatten (NTracePar view_left view_right)).
+Definition SchedulerTraceRepresentsViews
+    (phi : Trace) (view_left view_right : TraceView) : Prop :=
+  TracePermutation phi (trace_view_flatten (TracePar view_left view_right)).
 
-Lemma NTracePar_flatten_canonical :
+Lemma TracePar_flatten_canonical :
   forall view_left view_right,
-    trace_view_flatten (NTracePar view_left view_right) =
+    trace_view_flatten (TracePar view_left view_right) =
     trace_view_flatten view_left ++ trace_view_flatten view_right.
 Proof.
   reflexivity.
 Qed.
 
-Lemma NSchedulerTraceRepresentsViews_canonical :
+Lemma SchedulerTraceRepresentsViews_canonical :
   forall view_left view_right,
-    NSchedulerTraceRepresentsViews
+    SchedulerTraceRepresentsViews
       (trace_view_flatten view_left ++ trace_view_flatten view_right)
       view_left
       view_right.
 Proof.
   intros view_left view_right.
-  unfold NSchedulerTraceRepresentsViews, NTracePermutation.
+  unfold SchedulerTraceRepresentsViews, TracePermutation.
   simpl.
   reflexivity.
 Qed.
@@ -211,10 +211,10 @@ Proof.
       exact HDistinct.
 Qed.
 
-Lemma NStep_noalloc_preserves_lookup_none_aligned :
+Lemma Step_noalloc_preserves_lookup_none_aligned :
   forall state label state' r_lookup l_lookup,
-    NStep state label state' ->
-    NStateHeapsAligned state ->
+    Step state label state' ->
+    StateHeapsAligned state ->
     NoAllocTrace (label_trace label) ->
     heap_lookup r_lookup l_lookup (state_heap state) = None ->
     heap_lookup r_lookup l_lookup (state_heap state') = None.
@@ -250,11 +250,11 @@ Proof.
         exact HLookup.
 Qed.
 
-Lemma NStep_noalloc_lookup_preserved_without_write_aligned :
+Lemma Step_noalloc_lookup_preserved_without_write_aligned :
   forall state label state' r_lookup l_lookup,
-    NStep state label state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Step state label state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     NoAllocTrace (label_trace label) ->
     TraceDoesNotWrite r_lookup l_lookup (label_trace label) ->
     heap_lookup r_lookup l_lookup (state_heap state') =
@@ -265,33 +265,33 @@ Proof.
   destruct
     (heap_lookup r_lookup l_lookup (state_heap state))
     as [cell |] eqn:HLookup.
-  - eapply NStep_lookup_preserved_without_write_aligned; eauto.
-  - eapply NStep_noalloc_preserves_lookup_none_aligned; eauto.
+  - eapply Step_lookup_preserved_without_write_aligned; eauto.
+  - eapply Step_noalloc_preserves_lookup_none_aligned; eauto.
 Qed.
 
-Lemma NStep_noalloc_heap_eq_on_unwritten_aligned :
+Lemma Step_noalloc_heap_eq_on_unwritten_aligned :
   forall state label state',
-    NStep state label state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Step state label state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     NoAllocTrace (label_trace label) ->
-    NHeapEqOn
+    HeapEqOn
       (fun r l => TraceDoesNotWrite r l (label_trace label))
       (state_heap state')
       (state_heap state).
 Proof.
   intros state label state' HStep HAligned HBounded HNoAlloc
     r l HNoWrite.
-  eapply NStep_noalloc_lookup_preserved_without_write_aligned; eauto.
+  eapply Step_noalloc_lookup_preserved_without_write_aligned; eauto.
 Qed.
 
-Lemma NSteps_noalloc_heap_eq_on_unwritten_aligned :
+Lemma Steps_noalloc_heap_eq_on_unwritten_aligned :
   forall state phi state',
-    NSteps state phi state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Steps state phi state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     NoAllocTrace phi ->
-    NHeapEqOn
+    HeapEqOn
       (fun r l => TraceDoesNotWrite r l phi)
       (state_heap state')
       (state_heap state).
@@ -318,26 +318,26 @@ Proof.
         r l (label_trace label) phi HNoWrite)
       as HNoWriteTail.
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         state label state1 HStep HAligned)
       as HAligned1.
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         state label state1 HStep HAligned HBounded)
       as HBounded1.
     rewrite
       (IH HAligned1 HBounded1 HNoAllocTail r l HNoWriteTail).
-    eapply NStep_noalloc_lookup_preserved_without_write_aligned; eauto.
+    eapply Step_noalloc_lookup_preserved_without_write_aligned; eauto.
 Qed.
 
-Lemma NStepsN_noalloc_read_agreement_terminal_replay :
+Lemma StepsN_noalloc_read_agreement_terminal_replay :
   forall n state phi heap_final value heap_replay,
-    NStepsN n state phi (StDone heap_final value) ->
-    NStateHeapsAligned state ->
+    StepsN n state phi (StDone heap_final value) ->
+    StateHeapsAligned state ->
     NoAllocTrace phi ->
     TraceReadHeapAgreement phi (state_heap state) heap_replay ->
     exists heap_final_replay,
-      NStepsN n
+      StepsN n
         (with_state_heap heap_replay state)
         phi
         (StDone heap_final_replay value).
@@ -345,15 +345,15 @@ Proof.
   assert
     (HStepReplay :
       forall state label state' heap_replay phi_tail,
-        NStep state label state' ->
-        NStateHeapsAligned state ->
+        Step state label state' ->
+        StateHeapsAligned state ->
         NoAllocTrace (label_trace label) ->
         TraceReadHeapAgreement
           (label_trace label ++ phi_tail)
           (state_heap state)
           heap_replay ->
         exists heap_replay',
-          NStep
+          Step
             (with_state_heap heap_replay state)
             label
             (with_state_heap heap_replay' state') /\
@@ -495,7 +495,7 @@ Proof.
                 inversion HLookup; subst.
                 reflexivity.
              ++ pose proof
-                  (NStep_noalloc_preserves_lookup_none_aligned
+                  (Step_noalloc_preserves_lookup_none_aligned
                     (StReturn heap v (KAssignVal r_static (VLoc r l) k))
                     (LAction (DWrite r l))
                     (StReturn (heap_update r l v heap) VUnit k)
@@ -577,7 +577,7 @@ Proof.
         HStep HAligned HNoAllocLabel HAgree)
       as (heap_replay' & HStepReplayed & HAgreeTail).
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         state label state1 HStep HAligned)
       as HAligned1.
     destruct
@@ -588,11 +588,11 @@ Proof.
     eapply StepsNStep; eauto.
 Qed.
 
-Lemma NStep_noalloc_disjoint_read_agreement_reverse :
+Lemma Step_noalloc_disjoint_read_agreement_reverse :
   forall state label state' phi_read,
-    NStep state label state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Step state label state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     NoAllocTrace (label_trace label) ->
     TraceDisjoint (label_trace label) phi_read ->
     TraceReadHeapAgreement
@@ -634,24 +634,24 @@ Proof.
       exact HLookup.
 Qed.
 
-Lemma NStep_disjoint_noalloc_local_diamond_reheap :
+Lemma Step_disjoint_noalloc_local_diamond_reheap :
   forall state label state' other other_label other',
     state_heap state = state_heap other ->
-    NStateHeapsAligned state ->
-    NStateHeapsAligned other ->
-    NHeapKeysBounded (state_heap state) ->
-    NStep state label state' ->
-    NStep other other_label other' ->
+    StateHeapsAligned state ->
+    StateHeapsAligned other ->
+    HeapKeysBounded (state_heap state) ->
+    Step state label state' ->
+    Step other other_label other' ->
     NoAllocTrace (label_trace label) ->
     NoAllocTrace (label_trace other_label) ->
     TraceDisjoint (label_trace label) (label_trace other_label) ->
     TraceDisjoint (label_trace other_label) (label_trace label) ->
     exists heap_state_after heap_other_after,
-      NStep
+      Step
         (with_state_heap (state_heap other') state)
         label
         (with_state_heap heap_state_after state') /\
-      NStep
+      Step
         (with_state_heap (state_heap state') other)
         other_label
         (with_state_heap heap_other_after other') /\
@@ -661,20 +661,20 @@ Proof.
     (HHeapNeutralDiamond :
       forall state label state' other other_label other',
         state_heap state = state_heap other ->
-        NStateHeapsAligned state ->
-        NStateHeapsAligned other ->
-        NHeapKeysBounded (state_heap state) ->
-        NStep state label state' ->
-        NStep other other_label other' ->
+        StateHeapsAligned state ->
+        StateHeapsAligned other ->
+        HeapKeysBounded (state_heap state) ->
+        Step state label state' ->
+        Step other other_label other' ->
         HeapNeutralTrace (label_trace label) ->
         TraceDisjoint (label_trace label) (label_trace other_label) ->
         TraceDisjoint (label_trace other_label) (label_trace label) ->
         exists heap_state_after heap_other_after,
-          NStep
+          Step
             (with_state_heap (state_heap other') state)
             label
             (with_state_heap heap_state_after state') /\
-          NStep
+          Step
             (with_state_heap (state_heap state') other)
             other_label
             (with_state_heap heap_other_after other') /\
@@ -691,7 +691,7 @@ Proof.
           (state_heap other')).
     {
       intros r l cell HRead HLookup.
-      eapply NStep_lookup_preserved_without_write_aligned.
+      eapply Step_lookup_preserved_without_write_aligned.
       - exact HOther.
       - exact HAlignedOther.
       - rewrite <- HHeapAligned.
@@ -701,12 +701,12 @@ Proof.
       - eapply TraceDisjoint_right_read_no_left_write; eauto.
     }
     pose proof
-      (NStep_heap_neutral_read_agreement_replay
+      (Step_heap_neutral_read_agreement_replay
         state label state' (state_heap other')
         HStep HAlignedState HNeutral HReadAgreement)
       as HReplayedState.
     destruct
-      (NStep_heap_neutral_preserves_alignment
+      (Step_heap_neutral_preserves_alignment
         state label state' HStep HAlignedState HNeutral)
       as (_HAlignedState' & HHeapState').
     assert (HOtherSame :
@@ -718,7 +718,7 @@ Proof.
         symmetry. exact HHeapAligned.
     }
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         other other_label other' HOther HAlignedOther)
       as HAlignedOther'.
     exists (state_heap other'), (state_heap other').
@@ -733,11 +733,11 @@ Proof.
     (HWriteDiamond :
       forall state r_write l_write state' other other_label other',
         state_heap state = state_heap other ->
-        NStateHeapsAligned state ->
-        NStateHeapsAligned other ->
-        NHeapKeysBounded (state_heap state) ->
-        NStep state (LAction (DWrite r_write l_write)) state' ->
-        NStep other other_label other' ->
+        StateHeapsAligned state ->
+        StateHeapsAligned other ->
+        HeapKeysBounded (state_heap state) ->
+        Step state (LAction (DWrite r_write l_write)) state' ->
+        Step other other_label other' ->
         NoAllocTrace (label_trace other_label) ->
         TraceDisjoint
           (label_trace (LAction (DWrite r_write l_write)))
@@ -746,11 +746,11 @@ Proof.
           (label_trace other_label)
           (label_trace (LAction (DWrite r_write l_write))) ->
         exists heap_state_after heap_other_after,
-          NStep
+          Step
             (with_state_heap (state_heap other') state)
             (LAction (DWrite r_write l_write))
             (with_state_heap heap_state_after state') /\
-          NStep
+          Step
             (with_state_heap (state_heap state') other)
             other_label
             (with_state_heap heap_other_after other') /\
@@ -804,7 +804,7 @@ Proof.
         rewrite <- HHeapDoneRight.
         exact HHeapAligned.
       }
-      assert (HBoundedRight : NHeapKeysBounded (state_heap right_state)).
+      assert (HBoundedRight : HeapKeysBounded (state_heap right_state)).
       {
         rewrite <- HHeapDoneRight.
         exact HBounded.
@@ -899,7 +899,7 @@ Proof.
         * assert
             (HOtherWrite :
               exists heap_state_after heap_other_after,
-		                NStep
+		                Step
 		                  (with_state_heap (state_heap other'0)
 		                    (StReturn heap v (KAssignVal r_static (VLoc r_write l_write) k)))
 		                  (LAction (DWrite r_write l_write))
@@ -909,7 +909,7 @@ Proof.
                           (heap_update r_write l_write v heap)
                           VUnit
                           k)) /\
-		                NStep
+		                Step
 		                  (with_state_heap
 		                    (state_heap
 		                      (StReturn (heap_update r_write l_write v heap) VUnit k))
@@ -1055,15 +1055,15 @@ Proof.
     + eapply HWriteDiamond; eauto.
 Qed.
 
-Lemma NStepsN_noalloc_disjoint_step_after_run :
+Lemma StepsN_noalloc_disjoint_step_after_run :
   forall n left other other_label other'
     phi_left heap_after_other_left v_left,
     state_heap left = state_heap other ->
-    NStateHeapsAligned left ->
-    NStateHeapsAligned other ->
-    NHeapKeysBounded (state_heap left) ->
-    NStep other other_label other' ->
-    NStepsN n
+    StateHeapsAligned left ->
+    StateHeapsAligned other ->
+    HeapKeysBounded (state_heap left) ->
+    Step other other_label other' ->
+    StepsN n
       (with_state_heap (state_heap other') left)
       phi_left
       (StDone heap_after_other_left v_left) ->
@@ -1072,8 +1072,8 @@ Lemma NStepsN_noalloc_disjoint_step_after_run :
     TraceDisjoint (label_trace other_label) phi_left ->
     TraceDisjoint phi_left (label_trace other_label) ->
     exists heap_left heap_after_left_other,
-      NStepsN n left phi_left (StDone heap_left v_left) /\
-      NStep
+      StepsN n left phi_left (StDone heap_left v_left) /\
+      Step
         (with_state_heap heap_left other)
         other_label
         (with_state_heap heap_after_left_other other') /\
@@ -1082,15 +1082,15 @@ Proof.
   assert
     (HStepReadAgreementReplay :
       forall state label state' heap_replay,
-        NStep state label state' ->
-        NStateHeapsAligned state ->
+        Step state label state' ->
+        StateHeapsAligned state ->
         NoAllocTrace (label_trace label) ->
         TraceReadHeapAgreement
           (label_trace label)
           (state_heap state)
           heap_replay ->
         exists heap_replay',
-          NStep
+          Step
             (with_state_heap heap_replay state)
             label
             (with_state_heap heap_replay' state')).
@@ -1187,7 +1187,7 @@ Proof.
            ++ exact HOther.
            ++ symmetry.
               apply with_state_heap_state_heap_aligned.
-              eapply NStep_preserves_alignment; eauto.
+              eapply Step_preserves_alignment; eauto.
         -- symmetry.
            eapply with_state_heap_aligned_same.
            ++ exact HAlignedOther.
@@ -1196,12 +1196,12 @@ Proof.
       * reflexivity.
   - inversion HLeftAfterOther; subst.
     match goal with
-    | HStep : NStep
+    | HStep : Step
         (with_state_heap (state_heap other') left) _ _ |- _ =>
         rename HStep into HStepScheduledHead
     end.
     match goal with
-    | HTail : NStepsN n _ _ (StDone heap_after_other_left v_left) |- _ =>
+    | HTail : StepsN n _ _ (StDone heap_after_other_left v_left) |- _ =>
         rename HTail into HStepsTail
     end.
     pose proof
@@ -1228,7 +1228,7 @@ Proof.
       as (HDisjointLabelOther & HDisjointTailOther).
     assert
       (HAlignedStart :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap other') left)).
     {
       destruct
@@ -1249,7 +1249,7 @@ Proof.
       rewrite state_heap_with_state_heap in HLookup.
       rewrite HHeapAligned.
       eapply
-        (NStep_noalloc_disjoint_read_agreement_reverse
+        (Step_noalloc_disjoint_read_agreement_reverse
           other other_label other' (label_trace label)).
       - exact HOther.
       - exact HAlignedOther.
@@ -1275,13 +1275,13 @@ Proof.
     rewrite (with_state_heap_state_heap_aligned left HAlignedLeft)
       in HStepLeftReplayed.
     set (left_head := with_state_heap heap_left_head state').
-    assert (HStepLeft : NStep left label left_head).
+    assert (HStepLeft : Step left label left_head).
     {
       subst left_head.
       exact HStepLeftReplayed.
     }
     destruct
-      (NStep_disjoint_noalloc_local_diamond_reheap
+      (Step_disjoint_noalloc_local_diamond_reheap
         left label left_head other other_label other'
         HHeapAligned HAlignedLeft HAlignedOther HBounded
         HStepLeft HOther HNoAllocLabel HNoAllocOther
@@ -1290,7 +1290,7 @@ Proof.
         HStepScheduledDiamond & HStepOtherAfterHead & HHeapHead).
     subst heap_after_scheduled_head.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (with_state_heap (state_heap other') left)
         label
         state'
@@ -1302,7 +1302,7 @@ Proof.
     rewrite HStateHead in HStepsTail.
     assert
       (HLeftTailAfterOtherHead' :
-        NStepsN n
+        StepsN n
           (with_state_heap
             (state_heap
               (with_state_heap heap_after_canonical_head other'))
@@ -1314,18 +1314,18 @@ Proof.
       exact HStepsTail.
     }
     assert
-      (HAlignedLeftHead : NStateHeapsAligned left_head).
+      (HAlignedLeftHead : StateHeapsAligned left_head).
     {
-      eapply NStep_preserves_alignment; eauto.
+      eapply Step_preserves_alignment; eauto.
     }
     assert
-      (HBoundedLeftHead : NHeapKeysBounded (state_heap left_head)).
+      (HBoundedLeftHead : HeapKeysBounded (state_heap left_head)).
     {
-      eapply NStep_preserves_heap_bounded_aligned; eauto.
+      eapply Step_preserves_heap_bounded_aligned; eauto.
     }
     assert
       (HAlignedOtherHead :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap left_head) other)).
     {
       destruct
@@ -1367,15 +1367,15 @@ Proof.
         -- exact HHeapTail.
 Qed.
 
-Lemma NStepsN_noalloc_disjoint_step_after_run_error :
+Lemma StepsN_noalloc_disjoint_step_after_run_error :
   forall n left other other_label other'
     phi_left heap_after_other_left,
     state_heap left = state_heap other ->
-    NStateHeapsAligned left ->
-    NStateHeapsAligned other ->
-    NHeapKeysBounded (state_heap left) ->
-    NStep other other_label other' ->
-    NStepsN n
+    StateHeapsAligned left ->
+    StateHeapsAligned other ->
+    HeapKeysBounded (state_heap left) ->
+    Step other other_label other' ->
+    StepsN n
       (with_state_heap (state_heap other') left)
       phi_left
       (StError heap_after_other_left) ->
@@ -1384,8 +1384,8 @@ Lemma NStepsN_noalloc_disjoint_step_after_run_error :
     TraceDisjoint (label_trace other_label) phi_left ->
     TraceDisjoint phi_left (label_trace other_label) ->
     exists heap_left_error heap_after_left_other,
-      NStepsN n left phi_left (StError heap_left_error) /\
-      NStep
+      StepsN n left phi_left (StError heap_left_error) /\
+      Step
         (with_state_heap heap_left_error other)
         other_label
         (with_state_heap heap_after_left_other other') /\
@@ -1394,15 +1394,15 @@ Proof.
   assert
     (HStepReadAgreementReplay :
       forall state label state' heap_replay,
-        NStep state label state' ->
-        NStateHeapsAligned state ->
+        Step state label state' ->
+        StateHeapsAligned state ->
         NoAllocTrace (label_trace label) ->
         TraceReadHeapAgreement
           (label_trace label)
           (state_heap state)
           heap_replay ->
         exists heap_replay',
-          NStep
+          Step
             (with_state_heap heap_replay state)
             label
             (with_state_heap heap_replay' state')).
@@ -1499,7 +1499,7 @@ Proof.
            ++ exact HOther.
            ++ symmetry.
               apply with_state_heap_state_heap_aligned.
-              eapply NStep_preserves_alignment; eauto.
+              eapply Step_preserves_alignment; eauto.
         -- symmetry.
            eapply with_state_heap_aligned_same.
            ++ exact HAlignedOther.
@@ -1508,12 +1508,12 @@ Proof.
       * reflexivity.
   - inversion HLeftAfterOther; subst.
     match goal with
-    | HStep : NStep
+    | HStep : Step
         (with_state_heap (state_heap other') left) _ _ |- _ =>
         rename HStep into HStepScheduledHead
     end.
     match goal with
-    | HTail : NStepsN n _ _ (StError heap_after_other_left) |- _ =>
+    | HTail : StepsN n _ _ (StError heap_after_other_left) |- _ =>
         rename HTail into HStepsTail
     end.
     pose proof
@@ -1540,7 +1540,7 @@ Proof.
       as (HDisjointLabelOther & HDisjointTailOther).
     assert
       (HAlignedStart :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap other') left)).
     {
       destruct
@@ -1561,7 +1561,7 @@ Proof.
       rewrite state_heap_with_state_heap in HLookup.
       rewrite HHeapAligned.
       eapply
-        (NStep_noalloc_disjoint_read_agreement_reverse
+        (Step_noalloc_disjoint_read_agreement_reverse
           other other_label other' (label_trace label)).
       - exact HOther.
       - exact HAlignedOther.
@@ -1587,13 +1587,13 @@ Proof.
     rewrite (with_state_heap_state_heap_aligned left HAlignedLeft)
       in HStepLeftReplayed.
     set (left_head := with_state_heap heap_left_head state').
-    assert (HStepLeft : NStep left label left_head).
+    assert (HStepLeft : Step left label left_head).
     {
       subst left_head.
       exact HStepLeftReplayed.
     }
     destruct
-      (NStep_disjoint_noalloc_local_diamond_reheap
+      (Step_disjoint_noalloc_local_diamond_reheap
         left label left_head other other_label other'
         HHeapAligned HAlignedLeft HAlignedOther HBounded
         HStepLeft HOther HNoAllocLabel HNoAllocOther
@@ -1602,7 +1602,7 @@ Proof.
         HStepScheduledDiamond & HStepOtherAfterHead & _HHeapHead).
     subst heap_after_scheduled_head.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (with_state_heap (state_heap other') left)
         label
         state'
@@ -1614,7 +1614,7 @@ Proof.
     rewrite HStateHead in HStepsTail.
     assert
       (HLeftTailAfterOtherHead' :
-        NStepsN n
+        StepsN n
           (with_state_heap
             (state_heap
               (with_state_heap heap_after_canonical_head other'))
@@ -1626,18 +1626,18 @@ Proof.
       exact HStepsTail.
     }
     assert
-      (HAlignedLeftHead : NStateHeapsAligned left_head).
+      (HAlignedLeftHead : StateHeapsAligned left_head).
     {
-      eapply NStep_preserves_alignment; eauto.
+      eapply Step_preserves_alignment; eauto.
     }
     assert
-      (HBoundedLeftHead : NHeapKeysBounded (state_heap left_head)).
+      (HBoundedLeftHead : HeapKeysBounded (state_heap left_head)).
     {
-      eapply NStep_preserves_heap_bounded_aligned; eauto.
+      eapply Step_preserves_heap_bounded_aligned; eauto.
     }
     assert
       (HAlignedOtherHead :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap left_head) other)).
     {
       destruct
@@ -1678,17 +1678,17 @@ Proof.
         -- exact HHeapTail.
 Qed.
 
-Inductive NScheduledPairParRun :
-    NState -> NTraceView -> NTraceView -> NState -> Prop :=
+Inductive ScheduledPairParRun :
+    State -> TraceView -> TraceView -> State -> Prop :=
 | SchedPairParRefl :
     forall state,
-      NScheduledPairParRun state NTraceEmpty NTraceEmpty state
+      ScheduledPairParRun state TraceEmpty TraceEmpty state
 | SchedPairParRunLeft :
     forall left_state right_state phi_left phi_right k
       label left_state' view_left view_right state_final,
-      NStateNotError right_state ->
-      NStep left_state label left_state' ->
-      NScheduledPairParRun
+      StateNotError right_state ->
+      Step left_state label left_state' ->
+      ScheduledPairParRun
         (StPairParRun
           left_state'
           (with_state_heap (state_heap left_state') right_state)
@@ -1698,17 +1698,17 @@ Inductive NScheduledPairParRun :
         view_left
         view_right
         state_final ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun left_state right_state phi_left phi_right k)
-        (NTraceSeq (label_view label) view_left)
+        (TraceSeq (label_view label) view_left)
         view_right
         state_final
 | SchedPairParRunRight :
     forall left_state right_state phi_left phi_right k
       label right_state' view_left view_right state_final,
-      NStateNotError left_state ->
-      NStep right_state label right_state' ->
-      NScheduledPairParRun
+      StateNotError left_state ->
+      Step right_state label right_state' ->
+      ScheduledPairParRun
         (StPairParRun
           (with_state_heap (state_heap right_state') left_state)
           right_state'
@@ -1718,60 +1718,60 @@ Inductive NScheduledPairParRun :
         view_left
         view_right
         state_final ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun left_state right_state phi_left phi_right k)
         view_left
-        (NTraceSeq (label_view label) view_right)
+        (TraceSeq (label_view label) view_right)
         state_final
 | SchedPairParRunLeftError :
     forall heap right_state phi_left phi_right k,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun (StError heap) right_state phi_left phi_right k)
-        NTraceEmpty
-        NTraceEmpty
+        TraceEmpty
+        TraceEmpty
         (StError heap)
 | SchedPairParRunRightError :
     forall heap_left v_left heap_right phi_left phi_right k,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
           (StDone heap_left v_left)
           (StError heap_right)
           phi_left
           phi_right
           k)
-        NTraceEmpty
-        NTraceEmpty
+        TraceEmpty
+        TraceEmpty
         (StError heap_right)
 | SchedPairParRunDonePass :
     forall heap v_left v_right phi_left phi_right k,
       trace_disjointb phi_left phi_right = true ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
           (StDone heap v_left)
           (StDone heap v_right)
           phi_left
           phi_right
           k)
-        NTraceEmpty
-        NTraceEmpty
+        TraceEmpty
+        TraceEmpty
         (StReturn heap (VPair v_left v_right) k)
 | SchedPairParRunDoneFail :
     forall heap v_left v_right phi_left phi_right k,
       trace_disjointb phi_left phi_right = false ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
           (StDone heap v_left)
           (StDone heap v_right)
           phi_left
           phi_right
           k)
-        NTraceEmpty
-        NTraceEmpty
+        TraceEmpty
+        TraceEmpty
         (StError heap).
 
-Lemma NScheduledPairParRun_success_accumulators_general :
+Lemma ScheduledPairParRun_success_accumulators_general :
   forall state view_left view_right heap value k,
-    NScheduledPairParRun state view_left view_right
+    ScheduledPairParRun state view_left view_right
       (StReturn heap value k) ->
     forall left_state right_state phi_left phi_right,
       state = StPairParRun left_state right_state phi_left phi_right k ->
@@ -1848,10 +1848,10 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma NScheduledPairParRun_success_accumulators :
+Lemma ScheduledPairParRun_success_accumulators :
   forall left_state right_state phi_left phi_right k
     view_left view_right heap value,
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
       view_left
       view_right
@@ -1864,12 +1864,12 @@ Lemma NScheduledPairParRun_success_accumulators :
 Proof.
   intros left_state right_state phi_left phi_right k
     view_left view_right heap value HRun.
-  eapply NScheduledPairParRun_success_accumulators_general; eauto.
+  eapply ScheduledPairParRun_success_accumulators_general; eauto.
 Qed.
 
-Corollary NScheduledPairParRun_success_empty_accumulators :
+Corollary ScheduledPairParRun_success_empty_accumulators :
   forall left_state right_state k view_left view_right heap value,
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left
       view_right
@@ -1882,7 +1882,7 @@ Corollary NScheduledPairParRun_success_empty_accumulators :
 Proof.
   intros left_state right_state k view_left view_right heap value HRun.
   destruct
-    (NScheduledPairParRun_success_accumulators
+    (ScheduledPairParRun_success_accumulators
       left_state right_state [] [] k view_left view_right heap value HRun)
     as (v_left & v_right & phi_left_final & phi_right_final &
       HValue & HLeft & HRight & HDisjoint).
@@ -1891,11 +1891,11 @@ Proof.
   repeat split; assumption.
 Qed.
 
-Lemma NScheduledPairParRun_pairpar_accumulators :
+Lemma ScheduledPairParRun_pairpar_accumulators :
   forall left_state right_state phi_left phi_right k
     view_left view_right left_final right_final
     phi_left_final phi_right_final,
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
       view_left
       view_right
@@ -1977,10 +1977,10 @@ Proof.
   - discriminate HFinal.
 Qed.
 
-Corollary NScheduledPairParRun_pairpar_empty_accumulators :
+Corollary ScheduledPairParRun_pairpar_empty_accumulators :
   forall left_state right_state k view_left view_right
     left_final right_final phi_left_final phi_right_final,
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left
       view_right
@@ -1992,7 +1992,7 @@ Proof.
   intros left_state right_state k view_left view_right
     left_final right_final phi_left_final phi_right_final HRun.
   destruct
-    (NScheduledPairParRun_pairpar_accumulators
+    (ScheduledPairParRun_pairpar_accumulators
       left_state right_state [] [] k view_left view_right
       left_final right_final phi_left_final phi_right_final HRun)
     as (HLeft & HRight).
@@ -2000,20 +2000,20 @@ Proof.
   split; assumption.
 Qed.
 
-Lemma NScheduledPairParRun_noalloc_disjoint_left_error_canonical :
+Lemma ScheduledPairParRun_noalloc_disjoint_left_error_canonical :
   forall left_state right_state phi_left_acc phi_right_acc
     view_left view_right k heap_error right_final
     phi_left_final phi_right_final,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     TraceDisjoint
       (phi_left_acc ++ trace_view_flatten view_left)
       (phi_right_acc ++ trace_view_flatten view_right) ->
     NoAllocTrace (trace_view_flatten view_left) ->
     NoAllocTrace (trace_view_flatten view_right) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left_acc phi_right_acc k)
       view_left
       view_right
@@ -2024,9 +2024,9 @@ Lemma NScheduledPairParRun_noalloc_disjoint_left_error_canonical :
         phi_right_final
         k) ->
     exists heap_left_error,
-      NSteps left_state (trace_view_flatten view_left)
+      Steps left_state (trace_view_flatten view_left)
         (StError heap_left_error) /\
-      NHeapEqOn
+      HeapEqOn
         (fun r l =>
           TraceDoesNotWrite
             r l
@@ -2080,7 +2080,7 @@ Proof.
     exists heap_error0.
     split.
     + constructor.
-    + apply NHeapEqOn_refl.
+    + apply HeapEqOn_refl.
   - pose proof HFinal as HFinalTail.
     inversion HStart; subst.
     simpl in HNoAllocLeft.
@@ -2108,16 +2108,16 @@ Proof.
       exact HDisjointFinal.
     }
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         left0 label left_state' H0 HAlignedLeft)
       as HAlignedLeft'.
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         left0 label left_state' H0 HAlignedLeft HBounded)
       as HBoundedLeft'.
     assert
       (HAlignedRightRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap left_state') right0)).
     {
       destruct
@@ -2221,12 +2221,12 @@ Proof.
         HDisjointLeftLabel)
       as HDisjointLabelLeft.
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         right0 label right_state' H0 HAlignedRight)
       as HAlignedRight'.
     assert
       (HAlignedLeftRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap right_state') left0)).
     {
       destruct
@@ -2243,18 +2243,18 @@ Proof.
       rewrite state_heap_with_state_heap.
       reflexivity.
     }
-    assert (HBoundedRight : NHeapKeysBounded (state_heap right0)).
+    assert (HBoundedRight : HeapKeysBounded (state_heap right0)).
     {
       rewrite <- HHeapAligned.
       exact HBounded.
     }
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         right0 label right_state' H0 HAlignedRight HBoundedRight)
       as HBoundedRight'.
     assert
       (HBoundedTail :
-        NHeapKeysBounded
+        HeapKeysBounded
           (state_heap
             (with_state_heap (state_heap right_state') left0))).
     {
@@ -2280,14 +2280,14 @@ Proof.
         HFinalTail)
       as (heap_left_rebased_error & HLeftAfterRight & HEqTail).
     destruct
-      (NSteps_to_NStepsN
+      (Steps_to_StepsN
         (with_state_heap (state_heap right_state') left0)
         (trace_view_flatten view_left)
         (StError heap_left_rebased_error)
         HLeftAfterRight)
       as (n_left & HLeftAfterRightN).
     destruct
-      (NStepsN_noalloc_disjoint_step_after_run_error
+      (StepsN_noalloc_disjoint_step_after_run_error
         n_left
         left0
         right0
@@ -2309,7 +2309,7 @@ Proof.
         HLeftCanonicalN & HRightAfterLeft & HHeapAfterLeftRight).
     subst heap_left_rebased_error.
     assert (HAlignedRightAfterLeftStart :
-      NStateHeapsAligned (with_state_heap heap_left_error right0)).
+      StateHeapsAligned (with_state_heap heap_left_error right0)).
     {
       destruct
         (with_state_heap_aligned
@@ -2317,10 +2317,10 @@ Proof.
         as (HAligned & _).
       exact HAligned.
     }
-    assert (HBoundedLeftError : NHeapKeysBounded heap_left_error).
+    assert (HBoundedLeftError : HeapKeysBounded heap_left_error).
     {
       pose proof
-        (NStepsN_preserves_heap_bounded_aligned
+        (StepsN_preserves_heap_bounded_aligned
           n_left
           left0
           (trace_view_flatten view_left)
@@ -2333,7 +2333,7 @@ Proof.
     }
     exists heap_left_error.
     split.
-    + eapply NStepsN_to_NSteps.
+    + eapply StepsN_to_Steps.
       exact HLeftCanonicalN.
     + intros r l HNoWriteFull.
       simpl in HNoWriteFull.
@@ -2371,7 +2371,7 @@ Proof.
       replace heap_left_error with
         (state_heap (with_state_heap heap_left_error right0))
         by (rewrite state_heap_with_state_heap; reflexivity).
-      eapply NStep_noalloc_lookup_preserved_without_write_aligned.
+      eapply Step_noalloc_lookup_preserved_without_write_aligned.
       * exact HRightAfterLeft.
       * exact HAlignedRightAfterLeftStart.
       * rewrite state_heap_with_state_heap.
@@ -2384,20 +2384,20 @@ Proof.
   - discriminate HFinal.
 Qed.
 
-Lemma NScheduledPairParRun_noalloc_disjoint_right_error_canonical :
+Lemma ScheduledPairParRun_noalloc_disjoint_right_error_canonical :
   forall left_state right_state phi_left_acc phi_right_acc
     view_left view_right k heap_left_done v_left_done heap_error
     phi_left_final phi_right_final,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     TraceDisjoint
       (phi_left_acc ++ trace_view_flatten view_left)
       (phi_right_acc ++ trace_view_flatten view_right) ->
     NoAllocTrace (trace_view_flatten view_left) ->
     NoAllocTrace (trace_view_flatten view_right) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left_acc phi_right_acc k)
       view_left
       view_right
@@ -2408,9 +2408,9 @@ Lemma NScheduledPairParRun_noalloc_disjoint_right_error_canonical :
         phi_right_final
         k) ->
     exists heap_left v_left heap_right_error,
-      NSteps left_state (trace_view_flatten view_left)
+      Steps left_state (trace_view_flatten view_left)
         (StDone heap_left v_left) /\
-      NSteps
+      Steps
         (with_state_heap heap_left right_state)
         (trace_view_flatten view_right)
         (StError heap_right_error) /\
@@ -2496,16 +2496,16 @@ Proof.
       exact HDisjointFinal.
     }
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         left0 label left_state' H0 HAlignedLeft)
       as HAlignedLeft'.
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         left0 label left_state' H0 HAlignedLeft HBounded)
       as HBoundedLeft'.
     assert
       (HAlignedRightRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap left_state') right0)).
     {
       destruct
@@ -2613,12 +2613,12 @@ Proof.
         HDisjointLeftLabel)
       as HDisjointLabelLeft.
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         right0 label right_state' H0 HAlignedRight)
       as HAlignedRight'.
     assert
       (HAlignedLeftRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap right_state') left0)).
     {
       destruct
@@ -2635,18 +2635,18 @@ Proof.
       rewrite state_heap_with_state_heap.
       reflexivity.
     }
-    assert (HBoundedRight : NHeapKeysBounded (state_heap right0)).
+    assert (HBoundedRight : HeapKeysBounded (state_heap right0)).
     {
       rewrite <- HHeapAligned.
       exact HBounded.
     }
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         right0 label right_state' H0 HAlignedRight HBoundedRight)
       as HBoundedRight'.
     assert
       (HBoundedTail :
-        NHeapKeysBounded
+        HeapKeysBounded
           (state_heap
             (with_state_heap (state_heap right_state') left0))).
     {
@@ -2673,14 +2673,14 @@ Proof.
       as (heap_left_after_right & v_left & heap_right_error &
         HLeftAfterRight & HRightTailScheduled & HHeapError).
     destruct
-      (NSteps_to_NStepsN
+      (Steps_to_StepsN
         (with_state_heap (state_heap right_state') left0)
         (trace_view_flatten view_left)
         (StDone heap_left_after_right v_left)
         HLeftAfterRight)
       as (n_left & HLeftAfterRightN).
     destruct
-      (NStepsN_noalloc_disjoint_step_after_run
+      (StepsN_noalloc_disjoint_step_after_run
         n_left
         left0
         right0
@@ -2704,7 +2704,7 @@ Proof.
     subst heap_left_after_right.
     exists heap_left, v_left, heap_right_error.
     split.
-    + eapply NStepsN_to_NSteps.
+    + eapply StepsN_to_Steps.
       exact HLeftCanonicalN.
     + split.
       * simpl.
@@ -2719,17 +2719,17 @@ Proof.
   - discriminate HFinal.
 Qed.
 
-Corollary NScheduledPairParRun_noalloc_disjoint_left_error_footprint_deterministic :
+Corollary ScheduledPairParRun_noalloc_disjoint_left_error_footprint_deterministic :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     k heap_error1 heap_error2
     right_final1 right_final2
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     TraceDisjoint
       (trace_view_flatten view_left1)
       (trace_view_flatten view_right1) ->
@@ -2740,7 +2740,7 @@ Corollary NScheduledPairParRun_noalloc_disjoint_left_error_footprint_determinist
     NoAllocTrace (trace_view_flatten view_right1) ->
     NoAllocTrace (trace_view_flatten view_left2) ->
     NoAllocTrace (trace_view_flatten view_right2) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
@@ -2750,7 +2750,7 @@ Corollary NScheduledPairParRun_noalloc_disjoint_left_error_footprint_determinist
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -2760,7 +2760,7 @@ Corollary NScheduledPairParRun_noalloc_disjoint_left_error_footprint_determinist
         phi_left_final2
         phi_right_final2
         k) ->
-    NHeapEqOn
+    HeapEqOn
       (fun r l =>
         TraceDoesNotWrite r l (trace_view_flatten view_right1) /\
         TraceDoesNotWrite r l (trace_view_flatten view_right2))
@@ -2778,7 +2778,7 @@ Proof.
     HNoAllocLeft1 HNoAllocRight1 HNoAllocLeft2 HNoAllocRight2
     HRun1 HRun2.
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_left_error_canonical
+    (ScheduledPairParRun_noalloc_disjoint_left_error_canonical
       left_state right_state [] [] view_left1 view_right1
       k heap_error1 right_final1
       phi_left_final1 phi_right_final1
@@ -2786,7 +2786,7 @@ Proof.
       HDisjoint1 HNoAllocLeft1 HNoAllocRight1 HRun1)
     as (heap_left_error1 & HLeftError1 & HEq1).
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_left_error_canonical
+    (ScheduledPairParRun_noalloc_disjoint_left_error_canonical
       left_state right_state [] [] view_left2 view_right2
       k heap_error2 right_final2
       phi_left_final2 phi_right_final2
@@ -2794,7 +2794,7 @@ Proof.
       HDisjoint2 HNoAllocLeft2 HNoAllocRight2 HRun2)
     as (heap_left_error2 & HLeftError2 & HEq2).
   destruct
-    (NSteps_error_trace_deterministic
+    (Steps_error_trace_deterministic
       left_state
       (trace_view_flatten view_left1)
       heap_left_error1
@@ -2812,17 +2812,17 @@ Proof.
 Qed.
 
 Corollary
-  NScheduledPairParRun_noalloc_disjoint_left_error_read_only_right_heap_lookup_deterministic :
+  ScheduledPairParRun_noalloc_disjoint_left_error_read_only_right_heap_lookup_deterministic :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     k heap_error1 heap_error2
     right_final1 right_final2
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     TraceDisjoint
       (trace_view_flatten view_left1)
       (trace_view_flatten view_right1) ->
@@ -2835,7 +2835,7 @@ Corollary
     NoAllocTrace (trace_view_flatten view_right2) ->
     ReadOnlyTraceView view_right1 ->
     ReadOnlyTraceView view_right2 ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
@@ -2845,7 +2845,7 @@ Corollary
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -2855,7 +2855,7 @@ Corollary
         phi_left_final2
         phi_right_final2
         k) ->
-    NHeapEqOn (fun _ _ => True) heap_error1 heap_error2.
+    HeapEqOn (fun _ _ => True) heap_error1 heap_error2.
 Proof.
   intros left_state right_state
     view_left1 view_right1 view_left2 view_right2
@@ -2868,7 +2868,7 @@ Proof.
     HNoAllocLeft1 HNoAllocRight1 HNoAllocLeft2 HNoAllocRight2
     HReadOnlyRight1 HReadOnlyRight2 HRun1 HRun2.
   eapply
-    (NHeapEqOn_weaken
+    (HeapEqOn_weaken
       (fun _ _ => True)
       (fun r l =>
         TraceDoesNotWrite r l (trace_view_flatten view_right1) /\
@@ -2882,7 +2882,7 @@ Proof.
         TraceDoesNotWrite in *.
       apply HReadOnlyRight2.
   - eapply
-      (NScheduledPairParRun_noalloc_disjoint_left_error_footprint_deterministic
+      (ScheduledPairParRun_noalloc_disjoint_left_error_footprint_deterministic
         left_state right_state
         view_left1 view_right1 view_left2 view_right2
         k heap_error1 heap_error2
@@ -2892,7 +2892,7 @@ Proof.
       eauto.
 Qed.
 
-Corollary NScheduledPairParRun_noalloc_disjoint_right_error_heap_deterministic :
+Corollary ScheduledPairParRun_noalloc_disjoint_right_error_heap_deterministic :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     k heap_left_done1 heap_left_done2
@@ -2900,10 +2900,10 @@ Corollary NScheduledPairParRun_noalloc_disjoint_right_error_heap_deterministic :
     heap_error1 heap_error2
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     TraceDisjoint
       (trace_view_flatten view_left1)
       (trace_view_flatten view_right1) ->
@@ -2914,7 +2914,7 @@ Corollary NScheduledPairParRun_noalloc_disjoint_right_error_heap_deterministic :
     NoAllocTrace (trace_view_flatten view_right1) ->
     NoAllocTrace (trace_view_flatten view_left2) ->
     NoAllocTrace (trace_view_flatten view_right2) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
@@ -2924,7 +2924,7 @@ Corollary NScheduledPairParRun_noalloc_disjoint_right_error_heap_deterministic :
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -2948,7 +2948,7 @@ Proof.
     HNoAllocLeft1 HNoAllocRight1 HNoAllocLeft2 HNoAllocRight2
     HRun1 HRun2.
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_right_error_canonical
+    (ScheduledPairParRun_noalloc_disjoint_right_error_canonical
       left_state right_state [] [] view_left1 view_right1
       k heap_left_done1 v_left_done1 heap_error1
       phi_left_final1 phi_right_final1
@@ -2957,7 +2957,7 @@ Proof.
     as (heap_left1 & v_left1 & heap_right_error1 &
       HLeft1 & HRight1 & HHeap1).
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_right_error_canonical
+    (ScheduledPairParRun_noalloc_disjoint_right_error_canonical
       left_state right_state [] [] view_left2 view_right2
       k heap_left_done2 v_left_done2 heap_error2
       phi_left_final2 phi_right_final2
@@ -2966,7 +2966,7 @@ Proof.
     as (heap_left2 & v_left2 & heap_right_error2 &
       HLeft2 & HRight2 & HHeap2).
   destruct
-    (NSteps_terminal_deterministic
+    (Steps_terminal_deterministic
       left_state
       (trace_view_flatten view_left1)
       heap_left1
@@ -2979,7 +2979,7 @@ Proof.
     as (HHeapLeft & HValueLeft).
   subst heap_left2 v_left2.
   destruct
-    (NSteps_error_trace_deterministic
+    (Steps_error_trace_deterministic
       (with_state_heap heap_left1 right_state)
       (trace_view_flatten view_right1)
       heap_right_error1
@@ -2993,17 +2993,17 @@ Proof.
   reflexivity.
 Qed.
 
-Corollary NScheduledPairParRun_noalloc_disjoint_left_right_error_impossible :
+Corollary ScheduledPairParRun_noalloc_disjoint_left_right_error_impossible :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     k heap_error_left right_final
     heap_left_done v_left_done heap_error_right
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     TraceDisjoint
       (trace_view_flatten view_left1)
       (trace_view_flatten view_right1) ->
@@ -3014,7 +3014,7 @@ Corollary NScheduledPairParRun_noalloc_disjoint_left_right_error_impossible :
     NoAllocTrace (trace_view_flatten view_right1) ->
     NoAllocTrace (trace_view_flatten view_left2) ->
     NoAllocTrace (trace_view_flatten view_right2) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
@@ -3024,7 +3024,7 @@ Corollary NScheduledPairParRun_noalloc_disjoint_left_right_error_impossible :
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -3047,7 +3047,7 @@ Proof.
     HNoAllocLeft1 HNoAllocRight1 HNoAllocLeft2 HNoAllocRight2
     HLeftErrorRun HRightErrorRun.
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_left_error_canonical
+    (ScheduledPairParRun_noalloc_disjoint_left_error_canonical
       left_state right_state [] [] view_left1 view_right1
       k heap_error_left right_final
       phi_left_final1 phi_right_final1
@@ -3055,7 +3055,7 @@ Proof.
       HDisjoint1 HNoAllocLeft1 HNoAllocRight1 HLeftErrorRun)
     as (heap_left_error & HLeftError & _HEqLeftError).
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_right_error_canonical
+    (ScheduledPairParRun_noalloc_disjoint_right_error_canonical
       left_state right_state [] [] view_left2 view_right2
       k heap_left_done v_left_done heap_error_right
       phi_left_final2 phi_right_final2
@@ -3064,7 +3064,7 @@ Proof.
     as (heap_left & v_left & heap_right_error &
       HLeftDone & _HRightError & _HHeapRightError).
   destruct
-    (NSteps_terminal_state_trace_deterministic
+    (Steps_terminal_state_trace_deterministic
       left_state
       (trace_view_flatten view_left1)
       (StError heap_left_error)
@@ -3167,21 +3167,21 @@ Proof.
   discriminate.
 Qed.
 
-Corollary NScheduledPairParRun_done_fail_covered_summaries_impossible :
+Corollary ScheduledPairParRun_done_fail_covered_summaries_impossible :
   forall heap_done heap_error v_left v_right phi_left phi_right
     theta_left theta_right k,
     summary_disjointb theta_left theta_right = true ->
     TraceCoveredBySummary phi_left theta_left ->
     TraceCoveredBySummary phi_right theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
         (StDone heap_done v_left)
         (StDone heap_done v_right)
         phi_left
         phi_right
         k)
-      NTraceEmpty
-      NTraceEmpty
+      TraceEmpty
+      TraceEmpty
       (StError heap_error) ->
     False.
 Proof.
@@ -3192,14 +3192,14 @@ Proof.
   eapply TraceCoveredBySummary_disjoint_trace_check_no_fail; eauto.
 Qed.
 
-Corollary NScheduledPairParRun_done_fail_covered_views_impossible :
+Corollary ScheduledPairParRun_done_fail_covered_views_impossible :
   forall left_state right_state heap_done heap_error
     v_left v_right phi_left phi_right
     view_left view_right theta_left theta_right k,
     summary_disjointb theta_left theta_right = true ->
     TraceViewCoveredBySummary view_left theta_left ->
     TraceViewCoveredBySummary view_right theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left
       view_right
@@ -3209,15 +3209,15 @@ Corollary NScheduledPairParRun_done_fail_covered_views_impossible :
         phi_left
         phi_right
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
         (StDone heap_done v_left)
         (StDone heap_done v_right)
         phi_left
         phi_right
         k)
-      NTraceEmpty
-      NTraceEmpty
+      TraceEmpty
+      TraceEmpty
       (StError heap_error) ->
     False.
 Proof.
@@ -3227,7 +3227,7 @@ Proof.
     HSummaryDisjoint HCoveredLeft HCoveredRight
     HPrefix HFail.
   destruct
-    (NScheduledPairParRun_pairpar_empty_accumulators
+    (ScheduledPairParRun_pairpar_empty_accumulators
       left_state right_state k view_left view_right
       (StDone heap_done v_left)
       (StDone heap_done v_right)
@@ -3235,25 +3235,25 @@ Proof.
     as (HLeftAcc & HRightAcc).
   subst phi_left phi_right.
   unfold TraceViewCoveredBySummary in *.
-  eapply NScheduledPairParRun_done_fail_covered_summaries_impossible;
+  eapply ScheduledPairParRun_done_fail_covered_summaries_impossible;
     eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_done_fail_impossible :
+Corollary ScheduledPairParRun_checked_pairpar_done_fail_impossible :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     heap_done heap_error v_left v_right
     phi_left phi_right view_left view_right theta_left theta_right k,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
     summary_disjointb theta_left theta_right = true ->
     TraceViewCoveredBySummary view_left theta_left ->
     TraceViewCoveredBySummary view_right theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left
       view_right
@@ -3263,15 +3263,15 @@ Corollary NScheduledPairParRun_checked_pairpar_done_fail_impossible :
         phi_left
         phi_right
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
         (StDone heap_done v_left)
         (StDone heap_done v_right)
         phi_left
         phi_right
         k)
-      NTraceEmpty
-      NTraceEmpty
+      TraceEmpty
+      TraceEmpty
       (StError heap_error) ->
     False.
 Proof.
@@ -3281,25 +3281,25 @@ Proof.
     _HBack _HContext HSummaryDisjoint HCoveredLeft HCoveredRight
     HPrefix HFail.
   eapply
-    (NScheduledPairParRun_done_fail_covered_views_impossible
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_done_fail_covered_views_impossible
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       heap_done heap_error v_left v_right
       phi_left phi_right view_left view_right
       theta_left theta_right k);
     eauto.
 Qed.
 
-Lemma NScheduledPairParRun_error_base_classification :
+Lemma ScheduledPairParRun_error_base_classification :
   forall left_state right_state phi_left phi_right k
     view_left view_right heap_error,
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
       view_left
       view_right
       (StError heap_error) ->
     (exists right_final phi_left_final phi_right_final,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun left_state right_state phi_left phi_right k)
         view_left
         view_right
@@ -3310,7 +3310,7 @@ Lemma NScheduledPairParRun_error_base_classification :
           phi_right_final
           k)) \/
     (exists heap_left v_left phi_left_final phi_right_final,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun left_state right_state phi_left phi_right k)
         view_left
         view_right
@@ -3321,7 +3321,7 @@ Lemma NScheduledPairParRun_error_base_classification :
           phi_right_final
           k)) \/
     (exists heap_done v_left v_right phi_left_final phi_right_final,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun left_state right_state phi_left phi_right k)
         view_left
         view_right
@@ -3419,29 +3419,29 @@ Proof.
     repeat split; try constructor; try assumption; reflexivity.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_error_is_branch_error :
+Corollary ScheduledPairParRun_checked_pairpar_error_is_branch_error :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     heap_error view_left view_right theta_left theta_right k,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
     summary_disjointb theta_left theta_right = true ->
     TraceViewCoveredBySummary view_left theta_left ->
     TraceViewCoveredBySummary view_right theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left
       view_right
       (StError heap_error) ->
     (exists right_final phi_left_final phi_right_final,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left
         view_right
@@ -3452,10 +3452,10 @@ Corollary NScheduledPairParRun_checked_pairpar_error_is_branch_error :
           phi_right_final
           k)) \/
     (exists heap_left v_left phi_left_final phi_right_final,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left
         view_right
@@ -3470,9 +3470,9 @@ Proof.
     heap_error view_left view_right theta_left theta_right k
     _HBack _HContext HSummaryDisjoint HCoveredLeft HCoveredRight HRun.
   destruct
-    (NScheduledPairParRun_error_base_classification
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_error_base_classification
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       [] [] k view_left view_right heap_error HRun)
     as [HLeftError | [HRightError | HDoneFail]].
   - left. exact HLeftError.
@@ -3484,9 +3484,9 @@ Proof.
     subst heap_error.
     exfalso.
     eapply
-      (NScheduledPairParRun_done_fail_covered_views_impossible
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+      (ScheduledPairParRun_done_fail_covered_views_impossible
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         heap_done heap_done v_left v_right
         phi_left_final phi_right_final
         view_left view_right theta_left theta_right k);
@@ -3495,28 +3495,28 @@ Proof.
     exact HFail.
 Qed.
 
-Lemma NScheduledPairParRun_noalloc_disjoint_canonical :
+Lemma ScheduledPairParRun_noalloc_disjoint_canonical :
   forall left_state right_state phi_left_acc phi_right_acc
     view_left view_right k heap value,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     TraceDisjoint
       (phi_left_acc ++ trace_view_flatten view_left)
       (phi_right_acc ++ trace_view_flatten view_right) ->
     NoAllocTrace (trace_view_flatten view_left) ->
     NoAllocTrace (trace_view_flatten view_right) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left_acc phi_right_acc k)
       view_left
       view_right
       (StReturn heap value k) ->
     exists heap_left heap_canonical v_left v_right,
       value = VPair v_left v_right /\
-      NSteps left_state (trace_view_flatten view_left)
+      Steps left_state (trace_view_flatten view_left)
         (StDone heap_left v_left) /\
-      NSteps (with_state_heap heap_left right_state)
+      Steps (with_state_heap heap_left right_state)
         (trace_view_flatten view_right)
         (StDone heap_canonical v_right) /\
       heap = heap_canonical.
@@ -3579,16 +3579,16 @@ Proof.
       exact HDisjointFinal.
     }
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         left0 label left_state' H0 HAlignedLeft)
       as HAlignedLeft'.
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         left0 label left_state' H0 HAlignedLeft HBounded)
       as HBoundedLeft'.
     assert
       (HAlignedRightRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap left_state') right0)).
     {
       destruct
@@ -3695,12 +3695,12 @@ Proof.
         HDisjointLeftLabel)
       as HDisjointLabelLeft.
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         right0 label right_state' H0 HAlignedRight)
       as HAlignedRight'.
     assert
       (HAlignedLeftRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap right_state') left0)).
     {
       destruct
@@ -3717,18 +3717,18 @@ Proof.
       rewrite state_heap_with_state_heap.
       reflexivity.
     }
-    assert (HBoundedRight : NHeapKeysBounded (state_heap right0)).
+    assert (HBoundedRight : HeapKeysBounded (state_heap right0)).
     {
       rewrite <- HHeapAligned.
       exact HBounded.
     }
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         right0 label right_state' H0 HAlignedRight HBoundedRight)
       as HBoundedRight'.
     assert
       (HBoundedTail :
-        NHeapKeysBounded
+        HeapKeysBounded
           (state_heap
             (with_state_heap (state_heap right_state') left0))).
     {
@@ -3756,14 +3756,14 @@ Proof.
         HValue & HLeftAfterRight & HRightTailScheduled &
         HHeapScheduledTail).
     destruct
-      (NSteps_to_NStepsN
+      (Steps_to_StepsN
         (with_state_heap (state_heap right_state') left0)
         (trace_view_flatten view_left)
         (StDone heap_after_right_left v_left)
         HLeftAfterRight)
       as (n_left & HLeftAfterRightN).
     destruct
-      (NStepsN_noalloc_disjoint_step_after_run
+      (StepsN_noalloc_disjoint_step_after_run
         n_left
         left0
         right0
@@ -3786,7 +3786,7 @@ Proof.
         HLeftCanonicalN & HRightStepAfterLeft & HHeapCommute).
     subst heap_after_right_left.
     destruct
-      (NSteps_to_NStepsN
+      (Steps_to_StepsN
         (with_state_heap heap_after_left_right right_state')
         (trace_view_flatten view_right)
         (StDone heap_tail_scheduled v_right)
@@ -3795,14 +3795,14 @@ Proof.
     exists heap_left, heap_tail_scheduled, v_left, v_right.
     split; [exact HValue |].
     split.
-    + eapply NStepsN_to_NSteps.
+    + eapply StepsN_to_Steps.
       exact HLeftCanonicalN.
     + split.
       * simpl.
         rewrite label_view_flatten.
         eapply StepsStep.
         -- exact HRightStepAfterLeft.
-        -- eapply NStepsN_to_NSteps.
+        -- eapply StepsN_to_Steps.
            exact HRightTailScheduledN.
       * exact HHeapScheduledTail.
   - discriminate.
@@ -3814,13 +3814,13 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma NScheduledPairParRun_noalloc_checked_canonical :
+Lemma ScheduledPairParRun_noalloc_checked_canonical :
   forall left_state right_state phi_left_acc phi_right_acc
     view_left view_right theta_left theta_right k heap value,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     summary_disjointb theta_left theta_right = true ->
     TraceCoveredBySummary
       (phi_left_acc ++ trace_view_flatten view_left) theta_left ->
@@ -3828,16 +3828,16 @@ Lemma NScheduledPairParRun_noalloc_checked_canonical :
       (phi_right_acc ++ trace_view_flatten view_right) theta_right ->
     NoAllocTrace (trace_view_flatten view_left) ->
     NoAllocTrace (trace_view_flatten view_right) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left_acc phi_right_acc k)
       view_left
       view_right
       (StReturn heap value k) ->
     exists heap_left heap_canonical v_left v_right,
       value = VPair v_left v_right /\
-      NSteps left_state (trace_view_flatten view_left)
+      Steps left_state (trace_view_flatten view_left)
         (StDone heap_left v_left) /\
-      NSteps (with_state_heap heap_left right_state)
+      Steps (with_state_heap heap_left right_state)
         (trace_view_flatten view_right)
         (StDone heap_canonical v_right) /\
       heap = heap_canonical.
@@ -3847,7 +3847,7 @@ Proof.
     HAlignedLeft HAlignedRight HHeapAligned HBounded HSummaryDisjoint
     HCoveredLeft HCoveredRight HNoAllocLeft HNoAllocRight HRun.
   eapply
-    (NScheduledPairParRun_noalloc_disjoint_canonical
+    (ScheduledPairParRun_noalloc_disjoint_canonical
       left_state right_state phi_left_acc phi_right_acc
       view_left view_right k heap value); eauto.
   eapply summary_disjoint_covered_trace_disjoint; eauto.
@@ -3855,7 +3855,7 @@ Qed.
 
 Lemma HeapNeutralTraceView_seq_label :
   forall label view,
-    HeapNeutralTraceView (NTraceSeq (label_view label) view) ->
+    HeapNeutralTraceView (TraceSeq (label_view label) view) ->
     HeapNeutralTrace (label_trace label).
 Proof.
   intros label view HNeutral.
@@ -3867,7 +3867,7 @@ Qed.
 
 Lemma HeapNeutralTraceView_seq_tail :
   forall label view,
-    HeapNeutralTraceView (NTraceSeq (label_view label) view) ->
+    HeapNeutralTraceView (TraceSeq (label_view label) view) ->
     HeapNeutralTraceView view.
 Proof.
   intros label view HNeutral.
@@ -3878,7 +3878,7 @@ Proof.
 Qed.
 
 Lemma NoAllocTraceView_empty :
-  NoAllocTraceView NTraceEmpty.
+  NoAllocTraceView TraceEmpty.
 Proof.
   unfold NoAllocTraceView.
   simpl.
@@ -3889,7 +3889,7 @@ Lemma NoAllocTraceView_seq :
   forall label view,
     NoAllocTrace (label_trace label) ->
     NoAllocTraceView view ->
-    NoAllocTraceView (NTraceSeq (label_view label) view).
+    NoAllocTraceView (TraceSeq (label_view label) view).
 Proof.
   intros label view HNoAllocLabel HNoAllocView.
   unfold NoAllocTraceView in *.
@@ -3898,13 +3898,13 @@ Proof.
   eapply no_alloc_trace_app; eauto.
 Qed.
 
-Lemma NScheduledPairParRun_noalloc_views_from_shapes :
+Lemma ScheduledPairParRun_noalloc_views_from_shapes :
   forall left_state right_state phi_left phi_right k
     view_left view_right state_final store ty_left ty_right,
-    NNoAllocStateShape store left_state ty_left ->
-    NNoAllocStateShape store right_state ty_right ->
+    NoAllocStateShape store left_state ty_left ->
+    NoAllocStateShape store right_state ty_right ->
     state_heap left_state = state_heap right_state ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
       view_left
       view_right
@@ -3925,12 +3925,12 @@ Proof.
     split; apply NoAllocTraceView_empty.
   - inversion HStart; subst.
     destruct
-      (NNoAllocStateShape_step_preservation
+      (NoAllocStateShape_step_preservation
         left0 label left_state' store ty_left H0 HLeft)
       as (HNoAllocLabel & HLeft' & HTransport).
     assert
       (HRight' :
-        NNoAllocStateShape store
+        NoAllocStateShape store
           (with_state_heap (state_heap left_state') right0)
           ty_right).
     {
@@ -3965,12 +3965,12 @@ Proof.
     + exact HNoAllocRight.
   - inversion HStart; subst.
     destruct
-      (NNoAllocStateShape_step_preservation
+      (NoAllocStateShape_step_preservation
         right0 label right_state' store ty_right H0 HRight)
       as (HNoAllocLabel & HRight' & HTransport).
     assert
       (HLeft' :
-        NNoAllocStateShape store
+        NoAllocStateShape store
           (with_state_heap (state_heap right_state') left0)
           ty_left).
     {
@@ -4015,17 +4015,17 @@ Proof.
     split; apply NoAllocTraceView_empty.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_noalloc_views :
+Corollary ScheduledPairParRun_checked_pairpar_noalloc_views :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left view_right state_final k,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left
       view_right
@@ -4040,7 +4040,7 @@ Proof.
       HStoreExists & HRho & _HBounded).
   destruct HStoreExists as (store & HStore).
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty_left & ty_right & eff_left & eff_right &
       _eff_summary_left & _eff_summary_right &
@@ -4050,49 +4050,49 @@ Proof.
       HNoAllocLeft & HNoAllocRight &
       _HBackLeft & _HBackRight).
   destruct
-    (NResolveTy_exists
+    (ResolveTy_exists
       0 omega rho ty_left HRho
-      (NCheckedTcExp_ty_wf
+      (CheckedTcExp_ty_wf
         gamma omega (EMuApp ef1 ea1) ty_left eff_left
         HCheckedLeft))
     as (ty_left_res & HResolveTyLeft).
   destruct
-    (NResolveTy_exists
+    (ResolveTy_exists
       0 omega rho ty_right HRho
-      (NCheckedTcExp_ty_wf
+      (CheckedTcExp_ty_wf
         gamma omega (EMuApp ef2 ea2) ty_right eff_right
         HCheckedRight))
     as (ty_right_res & HResolveTyRight).
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_left HRho
-      (NCheckedTcExp_eff_wf
+      (CheckedTcExp_eff_wf
         gamma omega (EMuApp ef1 ea1) ty_left eff_left
         HCheckedLeft))
     as (eff_left_res & HResolveEffLeft).
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_right HRho
-      (NCheckedTcExp_eff_wf
+      (CheckedTcExp_eff_wf
         gamma omega (EMuApp ef2 ea2) ty_right eff_right
         HCheckedRight))
     as (eff_right_res & HResolveEffRight).
   assert (HNoAllocLeftRes : static_noalloc eff_left_res).
   {
-    eapply NResolveStaticEffect_static_noalloc; eauto.
+    eapply ResolveStaticEffect_static_noalloc; eauto.
   }
   assert (HNoAllocRightRes : static_noalloc eff_right_res).
   {
-    eapply NResolveStaticEffect_static_noalloc; eauto.
+    eapply ResolveStaticEffect_static_noalloc; eauto.
   }
   assert
     (HLeftShape :
-      NNoAllocStateShape store
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+      NoAllocStateShape store
+        (InitialState heap env rho (EMuApp ef1 ea1))
         ty_left_res).
   {
-    unfold NInitialState.
-    eapply NNAS_Eval with
+    unfold InitialState.
+    eapply NAS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty_left) (eff := eff_left)
       (eff_res := eff_left_res);
@@ -4101,12 +4101,12 @@ Proof.
   }
   assert
     (HRightShape :
-      NNoAllocStateShape store
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+      NoAllocStateShape store
+        (InitialState heap env rho (EMuApp ef2 ea2))
         ty_right_res).
   {
-    unfold NInitialState.
-    eapply NNAS_Eval with
+    unfold InitialState.
+    eapply NAS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty_right) (eff := eff_right)
       (eff_res := eff_right_res);
@@ -4114,16 +4114,16 @@ Proof.
     constructor.
   }
   eapply
-    (NScheduledPairParRun_noalloc_views_from_shapes
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_noalloc_views_from_shapes
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       [] [] k view_left view_right state_final
       store ty_left_res ty_right_res);
     eauto.
 Qed.
 
 Corollary
-  NScheduledPairParRun_checked_pairpar_left_error_footprint_deterministic :
+  ScheduledPairParRun_checked_pairpar_left_error_footprint_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k
@@ -4131,7 +4131,7 @@ Corollary
     right_final1 right_final2
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -4140,10 +4140,10 @@ Corollary
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
@@ -4153,10 +4153,10 @@ Corollary
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -4166,7 +4166,7 @@ Corollary
         phi_left_final2
         phi_right_final2
         k) ->
-    NHeapEqOn
+    HeapEqOn
       (fun r l =>
         TraceDoesNotWrite r l (trace_view_flatten view_right1) /\
         TraceDoesNotWrite r l (trace_view_flatten view_right2))
@@ -4188,7 +4188,7 @@ Proof.
     (_HHeap & _HEnv & _HRegHeap & _HRegEnv &
       _HStore & _HRho & HBounded).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1
       (StPairParRun
@@ -4200,7 +4200,7 @@ Proof.
       k HBack HContext HRun1)
     as (HNoAllocLeft1 & HNoAllocRight1).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left2 view_right2
       (StPairParRun
@@ -4226,9 +4226,9 @@ Proof.
       HSummaryDisjoint HCoveredLeft2 HCoveredRight2)
     as HDisjoint2.
   eapply
-    (NScheduledPairParRun_noalloc_disjoint_left_error_footprint_deterministic
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_noalloc_disjoint_left_error_footprint_deterministic
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       view_left1 view_right1 view_left2 view_right2
       k heap_error1 heap_error2
       right_final1 right_final2
@@ -4238,7 +4238,7 @@ Proof.
 Qed.
 
 Corollary
-  NScheduledPairParRun_checked_pairpar_left_error_read_only_right_heap_lookup_deterministic :
+  ScheduledPairParRun_checked_pairpar_left_error_read_only_right_heap_lookup_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k
@@ -4246,7 +4246,7 @@ Corollary
     right_final1 right_final2
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -4257,10 +4257,10 @@ Corollary
     TraceViewCoveredBySummary view_right2 theta_right ->
     ReadOnlyTraceView view_right1 ->
     ReadOnlyTraceView view_right2 ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
@@ -4270,10 +4270,10 @@ Corollary
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -4283,7 +4283,7 @@ Corollary
         phi_left_final2
         phi_right_final2
         k) ->
-    NHeapEqOn (fun _ _ => True) heap_error1 heap_error2.
+    HeapEqOn (fun _ _ => True) heap_error1 heap_error2.
 Proof.
   intros gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
@@ -4296,7 +4296,7 @@ Proof.
     HCoveredLeft1 HCoveredRight1 HCoveredLeft2 HCoveredRight2
     HReadOnlyRight1 HReadOnlyRight2 HRun1 HRun2.
   eapply
-    (NHeapEqOn_weaken
+    (HeapEqOn_weaken
       (fun _ _ => True)
       (fun r l =>
         TraceDoesNotWrite r l (trace_view_flatten view_right1) /\
@@ -4310,7 +4310,7 @@ Proof.
         TraceDoesNotWrite in *.
       apply HReadOnlyRight2.
   - eapply
-      (NScheduledPairParRun_checked_pairpar_left_error_footprint_deterministic
+      (ScheduledPairParRun_checked_pairpar_left_error_footprint_deterministic
         gamma omega rho heap env ef1 ea1 ef2 ea2
         view_left1 view_right1 view_left2 view_right2
         theta_left theta_right k
@@ -4322,7 +4322,7 @@ Proof.
 Qed.
 
 Corollary
-  NScheduledPairParRun_checked_pairpar_right_error_heap_deterministic :
+  ScheduledPairParRun_checked_pairpar_right_error_heap_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k
@@ -4331,7 +4331,7 @@ Corollary
     heap_error1 heap_error2
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -4340,10 +4340,10 @@ Corollary
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
@@ -4353,10 +4353,10 @@ Corollary
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -4384,7 +4384,7 @@ Proof.
     (_HHeap & _HEnv & _HRegHeap & _HRegEnv &
       _HStore & _HRho & HBounded).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1
       (StPairParRun
@@ -4396,7 +4396,7 @@ Proof.
       k HBack HContext HRun1)
     as (HNoAllocLeft1 & HNoAllocRight1).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left2 view_right2
       (StPairParRun
@@ -4422,9 +4422,9 @@ Proof.
       HSummaryDisjoint HCoveredLeft2 HCoveredRight2)
     as HDisjoint2.
   eapply
-    (NScheduledPairParRun_noalloc_disjoint_right_error_heap_deterministic
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_noalloc_disjoint_right_error_heap_deterministic
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       view_left1 view_right1 view_left2 view_right2
       k heap_left_done1 heap_left_done2
       v_left_done1 v_left_done2
@@ -4434,7 +4434,7 @@ Proof.
     simpl; eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_left_right_error_impossible :
+Corollary ScheduledPairParRun_checked_pairpar_left_right_error_impossible :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k
@@ -4442,7 +4442,7 @@ Corollary NScheduledPairParRun_checked_pairpar_left_right_error_impossible :
     heap_left_done v_left_done heap_error_right
     phi_left_final1 phi_right_final1
     phi_left_final2 phi_right_final2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -4451,10 +4451,10 @@ Corollary NScheduledPairParRun_checked_pairpar_left_right_error_impossible :
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
@@ -4464,10 +4464,10 @@ Corollary NScheduledPairParRun_checked_pairpar_left_right_error_impossible :
         phi_left_final1
         phi_right_final1
         k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -4494,7 +4494,7 @@ Proof.
     (_HHeap & _HEnv & _HRegHeap & _HRegEnv &
       _HStore & _HRho & HBounded).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1
       (StPairParRun
@@ -4506,7 +4506,7 @@ Proof.
       k HBack HContext HLeftErrorRun)
     as (HNoAllocLeft1 & HNoAllocRight1).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left2 view_right2
       (StPairParRun
@@ -4532,9 +4532,9 @@ Proof.
       HSummaryDisjoint HCoveredLeft2 HCoveredRight2)
     as HDisjoint2.
   eapply
-    (NScheduledPairParRun_noalloc_disjoint_left_right_error_impossible
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_noalloc_disjoint_left_right_error_impossible
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       view_left1 view_right1 view_left2 view_right2
       k heap_error_left right_final
       heap_left_done v_left_done heap_error_right
@@ -4543,12 +4543,12 @@ Proof.
     simpl; eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_error_cause_deterministic :
+Corollary ScheduledPairParRun_checked_pairpar_error_cause_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k
     heap_error1 heap_error2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -4557,27 +4557,27 @@ Corollary NScheduledPairParRun_checked_pairpar_error_cause_deterministic :
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StError heap_error1) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
       (StError heap_error2) ->
     ((exists right_final1 phi_left_final1 phi_right_final1,
-        NScheduledPairParRun
+        ScheduledPairParRun
           (StPairParRun
-            (NInitialState heap env rho (EMuApp ef1 ea1))
-            (NInitialState heap env rho (EMuApp ef2 ea2))
+            (InitialState heap env rho (EMuApp ef1 ea1))
+            (InitialState heap env rho (EMuApp ef2 ea2))
             [] [] k)
           view_left1
           view_right1
@@ -4588,10 +4588,10 @@ Corollary NScheduledPairParRun_checked_pairpar_error_cause_deterministic :
             phi_right_final1
             k)) /\
       (exists right_final2 phi_left_final2 phi_right_final2,
-        NScheduledPairParRun
+        ScheduledPairParRun
           (StPairParRun
-            (NInitialState heap env rho (EMuApp ef1 ea1))
-            (NInitialState heap env rho (EMuApp ef2 ea2))
+            (InitialState heap env rho (EMuApp ef1 ea1))
+            (InitialState heap env rho (EMuApp ef2 ea2))
             [] [] k)
           view_left2
           view_right2
@@ -4601,17 +4601,17 @@ Corollary NScheduledPairParRun_checked_pairpar_error_cause_deterministic :
             phi_left_final2
             phi_right_final2
             k)) /\
-      NHeapEqOn
+      HeapEqOn
         (fun r l =>
           TraceDoesNotWrite r l (trace_view_flatten view_right1) /\
           TraceDoesNotWrite r l (trace_view_flatten view_right2))
         heap_error1
         heap_error2) \/
     ((exists heap_left1 v_left1 phi_left_final1 phi_right_final1,
-        NScheduledPairParRun
+        ScheduledPairParRun
           (StPairParRun
-            (NInitialState heap env rho (EMuApp ef1 ea1))
-            (NInitialState heap env rho (EMuApp ef2 ea2))
+            (InitialState heap env rho (EMuApp ef1 ea1))
+            (InitialState heap env rho (EMuApp ef2 ea2))
             [] [] k)
           view_left1
           view_right1
@@ -4622,10 +4622,10 @@ Corollary NScheduledPairParRun_checked_pairpar_error_cause_deterministic :
             phi_right_final1
             k)) /\
       (exists heap_left2 v_left2 phi_left_final2 phi_right_final2,
-        NScheduledPairParRun
+        ScheduledPairParRun
           (StPairParRun
-            (NInitialState heap env rho (EMuApp ef1 ea1))
-            (NInitialState heap env rho (EMuApp ef2 ea2))
+            (InitialState heap env rho (EMuApp ef1 ea1))
+            (InitialState heap env rho (EMuApp ef2 ea2))
             [] [] k)
           view_left2
           view_right2
@@ -4645,14 +4645,14 @@ Proof.
     HCoveredLeft1 HCoveredRight1 HCoveredLeft2 HCoveredRight2
     HRun1 HRun2.
   destruct
-    (NScheduledPairParRun_checked_pairpar_error_is_branch_error
+    (ScheduledPairParRun_checked_pairpar_error_is_branch_error
       gamma omega rho heap env ef1 ea1 ef2 ea2
       heap_error1 view_left1 view_right1 theta_left theta_right k
       HBack HContext HSummaryDisjoint
       HCoveredLeft1 HCoveredRight1 HRun1)
     as [HLeftError1 | HRightError1].
   - destruct
-      (NScheduledPairParRun_checked_pairpar_error_is_branch_error
+      (ScheduledPairParRun_checked_pairpar_error_is_branch_error
         gamma omega rho heap env ef1 ea1 ef2 ea2
         heap_error2 view_left2 view_right2 theta_left theta_right k
         HBack HContext HSummaryDisjoint
@@ -4669,7 +4669,7 @@ Proof.
       * exists right_final2, phi_left_final2, phi_right_final2.
         exact HPrefix2.
       * eapply
-          (NScheduledPairParRun_checked_pairpar_left_error_footprint_deterministic
+          (ScheduledPairParRun_checked_pairpar_left_error_footprint_deterministic
             gamma omega rho heap env ef1 ea1 ef2 ea2
             view_left1 view_right1 view_left2 view_right2
             theta_left theta_right k
@@ -4685,7 +4685,7 @@ Proof.
           phi_right_final2 & HPrefix2).
       exfalso.
       eapply
-        (NScheduledPairParRun_checked_pairpar_left_right_error_impossible
+        (ScheduledPairParRun_checked_pairpar_left_right_error_impossible
           gamma omega rho heap env ef1 ea1 ef2 ea2
           view_left1 view_right1 view_left2 view_right2
           theta_left theta_right k
@@ -4695,7 +4695,7 @@ Proof.
           phi_left_final2 phi_right_final2);
         eauto.
   - destruct
-      (NScheduledPairParRun_checked_pairpar_error_is_branch_error
+      (ScheduledPairParRun_checked_pairpar_error_is_branch_error
         gamma omega rho heap env ef1 ea1 ef2 ea2
         heap_error2 view_left2 view_right2 theta_left theta_right k
         HBack HContext HSummaryDisjoint
@@ -4708,7 +4708,7 @@ Proof.
         (right_final2 & phi_left_final2 & phi_right_final2 & HPrefix2).
       exfalso.
       eapply
-        (NScheduledPairParRun_checked_pairpar_left_right_error_impossible
+        (ScheduledPairParRun_checked_pairpar_left_right_error_impossible
           gamma omega rho heap env ef1 ea1 ef2 ea2
           view_left2 view_right2 view_left1 view_right1
           theta_left theta_right k
@@ -4730,7 +4730,7 @@ Proof.
       * exists heap_left2, v_left2, phi_left_final2, phi_right_final2.
         exact HPrefix2.
       * eapply
-          (NScheduledPairParRun_checked_pairpar_right_error_heap_deterministic
+          (ScheduledPairParRun_checked_pairpar_right_error_heap_deterministic
             gamma omega rho heap env ef1 ea1 ef2 ea2
             view_left1 view_right1 view_left2 view_right2
             theta_left theta_right k
@@ -4742,24 +4742,24 @@ Proof.
           eauto.
 Qed.
 
-Lemma NScheduledPairParRun_heap_neutral_success_branch_steps :
+Lemma ScheduledPairParRun_heap_neutral_success_branch_steps :
   forall left_state right_state phi_left phi_right k
     view_left view_right heap value,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
     HeapNeutralTraceView view_left ->
     HeapNeutralTraceView view_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
       view_left
       view_right
       (StReturn heap value k) ->
     exists v_left v_right,
       value = VPair v_left v_right /\
-      NSteps left_state (trace_view_flatten view_left)
+      Steps left_state (trace_view_flatten view_left)
         (StDone heap v_left) /\
-      NSteps right_state (trace_view_flatten view_right)
+      Steps right_state (trace_view_flatten view_right)
         (StDone heap v_right).
 Proof.
   intros left_state right_state phi_left phi_right k
@@ -4784,12 +4784,12 @@ Proof.
       (HeapNeutralTraceView_seq_tail label view_left HNeutralLeft)
       as HNeutralLeftTail.
     destruct
-      (NStep_heap_neutral_preserves_alignment
+      (Step_heap_neutral_preserves_alignment
         left0 label left_state' H0 HAlignedLeft HNeutralLabel)
       as (HAlignedLeft' & HHeapLeft').
     assert
       (HAlignedRightRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap left_state') right0)).
     {
       destruct
@@ -4848,12 +4848,12 @@ Proof.
       (HeapNeutralTraceView_seq_tail label view_right HNeutralRight)
       as HNeutralRightTail.
     destruct
-      (NStep_heap_neutral_preserves_alignment
+      (Step_heap_neutral_preserves_alignment
         right0 label right_state' H0 HAlignedRight HNeutralLabel)
       as (HAlignedRight' & HHeapRight').
     assert
       (HAlignedLeftRebased :
-        NStateHeapsAligned
+        StateHeapsAligned
           (with_state_heap (state_heap right_state') left0)).
     {
       destruct
@@ -4914,23 +4914,23 @@ Proof.
   - discriminate.
 Qed.
 
-Theorem NScheduledPairParRun_heap_neutral_join_determinism :
+Theorem ScheduledPairParRun_heap_neutral_join_determinism :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     k heap1 heap2 value1 value2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
     HeapNeutralTraceView view_left1 ->
     HeapNeutralTraceView view_right1 ->
     HeapNeutralTraceView view_left2 ->
     HeapNeutralTraceView view_right2 ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
       (StReturn heap1 value1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -4944,21 +4944,21 @@ Proof.
     HNeutralLeft1 HNeutralRight1 HNeutralLeft2 HNeutralRight2
     HSchedule1 HSchedule2.
   destruct
-    (NScheduledPairParRun_heap_neutral_success_branch_steps
+    (ScheduledPairParRun_heap_neutral_success_branch_steps
       left_state right_state [] [] k
       view_left1 view_right1 heap1 value1
       HAlignedLeft HAlignedRight HHeapAligned
       HNeutralLeft1 HNeutralRight1 HSchedule1)
     as (v_left1 & v_right1 & HValue1 & HLeftSteps1 & HRightSteps1).
   destruct
-    (NScheduledPairParRun_heap_neutral_success_branch_steps
+    (ScheduledPairParRun_heap_neutral_success_branch_steps
       left_state right_state [] [] k
       view_left2 view_right2 heap2 value2
       HAlignedLeft HAlignedRight HHeapAligned
       HNeutralLeft2 HNeutralRight2 HSchedule2)
     as (v_left2 & v_right2 & HValue2 & HLeftSteps2 & HRightSteps2).
   destruct
-    (NSteps_terminal_deterministic
+    (Steps_terminal_deterministic
       left_state
       (trace_view_flatten view_left1)
       heap1
@@ -4970,7 +4970,7 @@ Proof.
       HLeftSteps2)
     as (HHeap & HLeftValue).
   destruct
-    (NSteps_terminal_deterministic
+    (Steps_terminal_deterministic
       right_state
       (trace_view_flatten view_right1)
       heap1
@@ -4987,15 +4987,15 @@ Proof.
   reflexivity.
 Qed.
 
-Theorem NStep_PairParRun_embeds_scheduled :
+Theorem Step_PairParRun_embeds_scheduled :
   forall left_state right_state phi_left phi_right k label state',
-    NStateNotError right_state ->
-    NStep
+    StateNotError right_state ->
+    Step
       (StPairParRun left_state right_state phi_left phi_right k)
       label
       state' ->
     exists view_left view_right,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun left_state right_state phi_left phi_right k)
         view_left
         view_right
@@ -5004,34 +5004,34 @@ Proof.
   intros left_state right_state phi_left phi_right k label state'
     HRightNotError HStep.
   inversion HStep; subst.
-  - exists (NTraceSeq (label_view label) NTraceEmpty), NTraceEmpty.
+  - exists (TraceSeq (label_view label) TraceEmpty), TraceEmpty.
     eapply SchedPairParRunLeft.
     + exact HRightNotError.
     + eassumption.
     + constructor.
-  - exists NTraceEmpty, (NTraceSeq (label_view label) NTraceEmpty).
+  - exists TraceEmpty, (TraceSeq (label_view label) TraceEmpty).
     eapply SchedPairParRunRight.
     + simpl. exact I.
     + eassumption.
     + constructor.
-  - exists NTraceEmpty, NTraceEmpty.
+  - exists TraceEmpty, TraceEmpty.
     apply SchedPairParRunLeftError.
-  - exists NTraceEmpty, NTraceEmpty.
+  - exists TraceEmpty, TraceEmpty.
     apply SchedPairParRunRightError.
-  - exists NTraceEmpty, NTraceEmpty.
+  - exists TraceEmpty, TraceEmpty.
     now apply SchedPairParRunDonePass.
-  - exists NTraceEmpty, NTraceEmpty.
+  - exists TraceEmpty, TraceEmpty.
     now apply SchedPairParRunDoneFail.
 Qed.
 
-Theorem NStep_PairParRunLeft_embeds_scheduled :
+Theorem Step_PairParRunLeft_embeds_scheduled :
   forall left_state right_state phi_left phi_right k label left_state',
-    NStateNotError right_state ->
-    NStep left_state label left_state' ->
-    NScheduledPairParRun
+    StateNotError right_state ->
+    Step left_state label left_state' ->
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
-      (NTraceSeq (label_view label) NTraceEmpty)
-      NTraceEmpty
+      (TraceSeq (label_view label) TraceEmpty)
+      TraceEmpty
       (StPairParRun
         left_state'
         (with_state_heap (state_heap left_state') right_state)
@@ -5045,14 +5045,14 @@ Proof.
   constructor.
 Qed.
 
-Theorem NStep_PairParRunRight_embeds_scheduled :
+Theorem Step_PairParRunRight_embeds_scheduled :
   forall left_state right_state phi_left phi_right k label right_state',
-    NStateNotError left_state ->
-    NStep right_state label right_state' ->
-    NScheduledPairParRun
+    StateNotError left_state ->
+    Step right_state label right_state' ->
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
-      NTraceEmpty
-      (NTraceSeq (label_view label) NTraceEmpty)
+      TraceEmpty
+      (TraceSeq (label_view label) TraceEmpty)
       (StPairParRun
         (with_state_heap (state_heap right_state') left_state)
         right_state'
@@ -5066,34 +5066,34 @@ Proof.
   constructor.
 Qed.
 
-Lemma NStateNotError_with_state_heap :
+Lemma StateNotError_with_state_heap :
   forall heap state,
-    NStateNotError state ->
-    NStateNotError (with_state_heap heap state).
+    StateNotError state ->
+    StateNotError (with_state_heap heap state).
 Proof.
   intros heap state HNotError.
   destruct state; simpl in *; try exact I.
   contradiction.
 Qed.
 
-Lemma NStepsView_left_branch_embeds_scheduled_tail :
+Lemma StepsView_left_branch_embeds_scheduled_tail :
   forall left_state right_state phi_left phi_right k
     view_left left_state' view_right state_final,
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NStateNotError right_state ->
-    NStepsView left_state view_left left_state' ->
-    NScheduledPairParRun
+    StateNotError right_state ->
+    StepsView left_state view_left left_state' ->
+    ScheduledPairParRun
       (StPairParRun
         left_state'
         (with_state_heap (state_heap left_state') right_state)
         (phi_left ++ trace_view_flatten view_left)
         phi_right
         k)
-      NTraceEmpty
+      TraceEmpty
       view_right
       state_final ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
       view_left
       view_right
@@ -5130,33 +5130,33 @@ Proof.
         exact HAligned.
       * rewrite state_heap_with_state_heap.
         reflexivity.
-      * eapply NStateNotError_with_state_heap.
+      * eapply StateNotError_with_state_heap.
         exact HRightNotError.
       * rewrite with_state_heap_twice.
         rewrite <- app_assoc.
         exact HTail.
 Qed.
 
-Lemma NStepsView_right_branch_embeds_scheduled_tail :
+Lemma StepsView_right_branch_embeds_scheduled_tail :
   forall left_state right_state phi_left phi_right k
     view_right right_state' state_final,
-    NStateHeapsAligned left_state ->
+    StateHeapsAligned left_state ->
     state_heap left_state = state_heap right_state ->
-    NStateNotError left_state ->
-    NStepsView right_state view_right right_state' ->
-    NScheduledPairParRun
+    StateNotError left_state ->
+    StepsView right_state view_right right_state' ->
+    ScheduledPairParRun
       (StPairParRun
         (with_state_heap (state_heap right_state') left_state)
         right_state'
         phi_left
         (phi_right ++ trace_view_flatten view_right)
         k)
-      NTraceEmpty
-      NTraceEmpty
+      TraceEmpty
+      TraceEmpty
       state_final ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left phi_right k)
-      NTraceEmpty
+      TraceEmpty
       view_right
       state_final.
 Proof.
@@ -5191,28 +5191,28 @@ Proof.
         exact HAligned.
       * rewrite state_heap_with_state_heap.
         reflexivity.
-      * eapply NStateNotError_with_state_heap.
+      * eapply StateNotError_with_state_heap.
         exact HLeftNotError.
       * rewrite with_state_heap_twice.
         rewrite <- app_assoc.
         exact HTail.
 Qed.
 
-Theorem NScheduledPairParRun_left_then_right_success :
+Theorem ScheduledPairParRun_left_then_right_success :
   forall left_state right_state phi_left_acc phi_right_acc
     view_left view_right k heap_left heap_right v_left v_right,
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NStateNotError right_state ->
-    NStepsView left_state view_left (StDone heap_left v_left) ->
-    NStepsView
+    StateNotError right_state ->
+    StepsView left_state view_left (StDone heap_left v_left) ->
+    StepsView
       (with_state_heap heap_left right_state)
       view_right
       (StDone heap_right v_right) ->
     trace_disjointb
       (phi_left_acc ++ trace_view_flatten view_left)
       (phi_right_acc ++ trace_view_flatten view_right) = true ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state phi_left_acc phi_right_acc k)
       view_left
       view_right
@@ -5222,12 +5222,12 @@ Proof.
     view_left view_right k heap_left heap_right v_left v_right
     HAlignedRight HHeapAligned HRightNotError
     HLeftSteps HRightSteps HTraceDisjoint.
-  eapply NStepsView_left_branch_embeds_scheduled_tail.
+  eapply StepsView_left_branch_embeds_scheduled_tail.
   - exact HAlignedRight.
   - exact HHeapAligned.
   - exact HRightNotError.
   - exact HLeftSteps.
-  - eapply NStepsView_right_branch_embeds_scheduled_tail.
+  - eapply StepsView_right_branch_embeds_scheduled_tail.
     + simpl. exact I.
     + rewrite state_heap_with_state_heap.
       reflexivity.
@@ -5238,14 +5238,14 @@ Proof.
       exact HTraceDisjoint.
 Qed.
 
-Corollary NSteps_PairParRun_left_then_right_success_embeds_scheduled :
+Corollary Steps_PairParRun_left_then_right_success_embeds_scheduled :
   forall left_state right_state phi_left_acc phi_right_acc
     phi_left phi_right k heap_left heap_right v_left v_right,
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NStateNotError right_state ->
-    NSteps left_state phi_left (StDone heap_left v_left) ->
-    NSteps
+    StateNotError right_state ->
+    Steps left_state phi_left (StDone heap_left v_left) ->
+    Steps
       (with_state_heap heap_left right_state)
       phi_right
       (StDone heap_right v_right) ->
@@ -5253,41 +5253,41 @@ Corollary NSteps_PairParRun_left_then_right_success_embeds_scheduled :
       (phi_left_acc ++ phi_left)
       (phi_right_acc ++ phi_right) = true ->
     exists view_left view_right,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun left_state right_state phi_left_acc phi_right_acc k)
         view_left
         view_right
         (StReturn heap_right (VPair v_left v_right) k) /\
       TraceViewRepresents view_left phi_left /\
       TraceViewRepresents view_right phi_right /\
-      NSchedulerTraceRepresentsViews (phi_left ++ phi_right)
+      SchedulerTraceRepresentsViews (phi_left ++ phi_right)
         view_left view_right.
 Proof.
   intros left_state right_state phi_left_acc phi_right_acc
     phi_left phi_right k heap_left heap_right v_left v_right
     HAlignedRight HHeapAligned HRightNotError
     HLeftSteps HRightSteps HTraceDisjoint.
-  destruct (NSteps_to_NStepsView _ _ _ HLeftSteps)
+  destruct (Steps_to_StepsView _ _ _ HLeftSteps)
     as (view_left & HLeftView & HLeftRep).
-  destruct (NSteps_to_NStepsView _ _ _ HRightSteps)
+  destruct (Steps_to_StepsView _ _ _ HRightSteps)
     as (view_right & HRightView & HRightRep).
   exists view_left, view_right.
   unfold TraceViewRepresents in HLeftRep, HRightRep.
   split.
-  - eapply NScheduledPairParRun_left_then_right_success; eauto.
+  - eapply ScheduledPairParRun_left_then_right_success; eauto.
     rewrite HLeftRep, HRightRep.
     exact HTraceDisjoint.
   - repeat split; try assumption.
-    unfold NSchedulerTraceRepresentsViews, NTracePermutation.
+    unfold SchedulerTraceRepresentsViews, TracePermutation.
     simpl.
     rewrite HLeftRep, HRightRep.
     reflexivity.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_left_then_right_success :
+Corollary ScheduledPairParRun_checked_pairpar_left_then_right_success :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left view_right heap_left heap_right v_left v_right k,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -5300,10 +5300,10 @@ Corollary NScheduledPairParRun_checked_pairpar_left_then_right_success :
     trace_disjointb
       (trace_view_flatten view_left)
       (trace_view_flatten view_right) = true ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left
       view_right
@@ -5312,7 +5312,7 @@ Proof.
   intros gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left view_right heap_left heap_right v_left v_right k
     _HBack _HContext HLeft HRight HTraceDisjoint.
-  eapply NScheduledPairParRun_left_then_right_success.
+  eapply ScheduledPairParRun_left_then_right_success.
   - simpl. exact I.
   - reflexivity.
   - simpl. exact I.
@@ -5322,10 +5322,10 @@ Proof.
     exact HTraceDisjoint.
 Qed.
 
-Corollary NSteps_checked_pairpar_left_then_right_success_embeds_scheduled :
+Corollary Steps_checked_pairpar_left_then_right_success_embeds_scheduled :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     phi_left phi_right heap_left heap_right v_left v_right k,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -5337,17 +5337,17 @@ Corollary NSteps_checked_pairpar_left_then_right_success_embeds_scheduled :
       phi_right heap_right v_right ->
     trace_disjointb phi_left phi_right = true ->
     exists view_left view_right,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left
         view_right
         (StReturn heap_right (VPair v_left v_right) k) /\
       TraceViewRepresents view_left phi_left /\
       TraceViewRepresents view_right phi_right /\
-      NSchedulerTraceRepresentsViews (phi_left ++ phi_right)
+      SchedulerTraceRepresentsViews (phi_left ++ phi_right)
         view_left view_right.
 Proof.
   intros gamma omega rho heap env ef1 ea1 ef2 ea2
@@ -5355,9 +5355,9 @@ Proof.
     _HBack _HContext HLeft HRight HTraceDisjoint.
   unfold ComputationEvaluation in HLeft, HRight.
   destruct
-    (NSteps_PairParRun_left_then_right_success_embeds_scheduled
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (Steps_PairParRun_left_then_right_success_embeds_scheduled
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       [] []
       phi_left phi_right k heap_left heap_right v_left v_right)
     as (view_left & view_right &
@@ -5373,36 +5373,36 @@ Proof.
     repeat split; assumption.
 Qed.
 
-Corollary NSteps_PairParRun_kdone_terminal_embeds_scheduled :
+Corollary Steps_PairParRun_kdone_terminal_embeds_scheduled :
   forall heap env rho e_left e_right phi heap_final value_final,
-    NSteps
+    Steps
       (StPairParRun
-        (NInitialState heap env rho e_left)
-        (NInitialState heap env rho e_right)
+        (InitialState heap env rho e_left)
+        (InitialState heap env rho e_right)
         [] [] KDone)
       phi
       (StDone heap_final value_final) ->
     exists view_left view_right,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho e_left)
-          (NInitialState heap env rho e_right)
+          (InitialState heap env rho e_left)
+          (InitialState heap env rho e_right)
           [] [] KDone)
         view_left
         view_right
         (StReturn heap_final value_final KDone) /\
-      NSteps
+      Steps
         (StReturn heap_final value_final KDone)
         []
         (StDone heap_final value_final) /\
-      NSchedulerTraceRepresentsViews phi view_left view_right.
+      SchedulerTraceRepresentsViews phi view_left view_right.
 Proof.
   intros heap env rho e_left e_right phi heap_final value_final HSteps.
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StPairParRun
-        (NInitialState heap env rho e_left)
-        (NInitialState heap env rho e_right)
+        (InitialState heap env rho e_left)
+        (InitialState heap env rho e_right)
         [] [] KDone)
       phi
       (StDone heap_final value_final)
@@ -5417,9 +5417,9 @@ Proof.
       HHeap & HValue & HTrace).
   subst heap_final value_final phi.
   destruct
-    (NSteps_PairParRun_left_then_right_success_embeds_scheduled
-      (NInitialState heap env rho e_left)
-      (NInitialState heap env rho e_right)
+    (Steps_PairParRun_left_then_right_success_embeds_scheduled
+      (InitialState heap env rho e_left)
+      (InitialState heap env rho e_right)
       [] []
       phi_left phi_right KDone heap_left heap_right v_left v_right)
     as (view_left & view_right &
@@ -5442,59 +5442,59 @@ Proof.
     + exact HRepresents.
 Qed.
 
-Corollary NSteps_checked_pairpar_kdone_terminal_embeds_scheduled :
+Corollary Steps_checked_pairpar_kdone_terminal_embeds_scheduled :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     phi heap_final value_final,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
-    NSteps
+    Steps
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] KDone)
       phi
       (StDone heap_final value_final) ->
     exists view_left view_right,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] KDone)
         view_left
         view_right
         (StReturn heap_final value_final KDone) /\
-      NSteps
+      Steps
         (StReturn heap_final value_final KDone)
         []
         (StDone heap_final value_final) /\
-      NSchedulerTraceRepresentsViews phi view_left view_right.
+      SchedulerTraceRepresentsViews phi view_left view_right.
 Proof.
   intros gamma omega rho heap env ef1 ea1 ef2 ea2
     phi heap_final value_final _HBack _HContext HSteps.
-  eapply NSteps_PairParRun_kdone_terminal_embeds_scheduled.
+  eapply Steps_PairParRun_kdone_terminal_embeds_scheduled.
   exact HSteps.
 Qed.
 
-Theorem NScheduledPairParRun_noalloc_join_determinism :
+Theorem ScheduledPairParRun_noalloc_join_determinism :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     k heap1 heap2 value1 value2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     NoAllocTraceView view_left1 ->
     NoAllocTraceView view_right1 ->
     NoAllocTraceView view_left2 ->
     NoAllocTraceView view_right2 ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
       (StReturn heap1 value1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -5508,7 +5508,7 @@ Proof.
     HNoAllocLeft1 HNoAllocRight1 HNoAllocLeft2 HNoAllocRight2
     HSchedule1 HSchedule2.
   destruct
-    (NScheduledPairParRun_success_empty_accumulators
+    (ScheduledPairParRun_success_empty_accumulators
       left_state right_state k view_left1 view_right1 heap1 value1
       HSchedule1)
     as (_v_left_acc1 & _v_right_acc1 &
@@ -5522,7 +5522,7 @@ Proof.
       HDisjointBool1)
     as HDisjoint1.
   destruct
-    (NScheduledPairParRun_success_empty_accumulators
+    (ScheduledPairParRun_success_empty_accumulators
       left_state right_state k view_left2 view_right2 heap2 value2
       HSchedule2)
     as (_v_left_acc2 & _v_right_acc2 &
@@ -5536,7 +5536,7 @@ Proof.
       HDisjointBool2)
     as HDisjoint2.
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_canonical
+    (ScheduledPairParRun_noalloc_disjoint_canonical
       left_state right_state [] []
       view_left1 view_right1 k heap1 value1
       HAlignedLeft HAlignedRight HHeapAligned HBounded
@@ -5544,7 +5544,7 @@ Proof.
     as (heap_left1 & heap_canonical1 & v_left1 & v_right1 &
       HValue1 & HLeft1 & HRight1 & HHeap1).
   destruct
-    (NScheduledPairParRun_noalloc_disjoint_canonical
+    (ScheduledPairParRun_noalloc_disjoint_canonical
       left_state right_state [] []
       view_left2 view_right2 k heap2 value2
       HAlignedLeft HAlignedRight HHeapAligned HBounded
@@ -5552,7 +5552,7 @@ Proof.
     as (heap_left2 & heap_canonical2 & v_left2 & v_right2 &
       HValue2 & HLeft2 & HRight2 & HHeap2).
   destruct
-    (NSteps_terminal_deterministic
+    (Steps_terminal_deterministic
       left_state
       (trace_view_flatten view_left1)
       heap_left1
@@ -5565,7 +5565,7 @@ Proof.
     as (HHeapLeft & HValueLeft).
   subst heap_left2 v_left2.
   destruct
-    (NSteps_terminal_deterministic
+    (Steps_terminal_deterministic
       (with_state_heap heap_left1 right_state)
       (trace_view_flatten view_right1)
       heap_canonical1
@@ -5583,14 +5583,14 @@ Proof.
     reflexivity.
 Qed.
 
-Theorem NScheduledPairParRun_checked_join_determinism :
+Theorem ScheduledPairParRun_checked_join_determinism :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k heap1 heap2 value1 value2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     summary_disjointb theta_left theta_right = true ->
     NoAllocTraceView view_left1 ->
     NoAllocTraceView view_right1 ->
@@ -5600,12 +5600,12 @@ Theorem NScheduledPairParRun_checked_join_determinism :
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
       (StReturn heap1 value1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -5621,28 +5621,28 @@ Proof.
     _HCoveredLeft1 _HCoveredRight1 _HCoveredLeft2 _HCoveredRight2
     HSchedule1 HSchedule2.
   eapply
-    (NScheduledPairParRun_noalloc_join_determinism
+    (ScheduledPairParRun_noalloc_join_determinism
       left_state right_state
       view_left1 view_right1 view_left2 view_right2
       k heap1 heap2 value1 value2);
     eauto.
 Qed.
 
-Corollary NScheduledPairParRun_static_noalloc_join_determinism :
+Corollary ScheduledPairParRun_static_noalloc_join_determinism :
   forall rho left_state right_state
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right
     eff_left eff_left_res eff_right eff_right_res
     k heap1 heap2 value1 value2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     summary_disjointb theta_left theta_right = true ->
     static_noalloc eff_left ->
     static_noalloc eff_right ->
-    NResolveStaticEffect rho eff_left eff_left_res ->
-    NResolveStaticEffect rho eff_right eff_right_res ->
+    ResolveStaticEffect rho eff_left eff_left_res ->
+    ResolveStaticEffect rho eff_right eff_right_res ->
     TraceCoveredByStaticEffect
       (trace_view_flatten view_left1) eff_left_res ->
     TraceCoveredByStaticEffect
@@ -5655,12 +5655,12 @@ Corollary NScheduledPairParRun_static_noalloc_join_determinism :
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
       (StReturn heap1 value1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
@@ -5680,11 +5680,11 @@ Proof.
     HSchedule1 HSchedule2.
   assert (HNoAllocLeftRes : static_noalloc eff_left_res).
   {
-    eapply NResolveStaticEffect_static_noalloc; eauto.
+    eapply ResolveStaticEffect_static_noalloc; eauto.
   }
   assert (HNoAllocRightRes : static_noalloc eff_right_res).
   {
-    eapply NResolveStaticEffect_static_noalloc; eauto.
+    eapply ResolveStaticEffect_static_noalloc; eauto.
   }
   assert (HNoAllocLeft1 : NoAllocTraceView view_left1).
   {
@@ -5707,26 +5707,26 @@ Proof.
     eapply TraceCoveredByStaticEffect_no_alloc; eauto.
   }
   eapply
-    (NScheduledPairParRun_checked_join_determinism
+    (ScheduledPairParRun_checked_join_determinism
       left_state right_state
       view_left1 view_right1 view_left2 view_right2
       theta_left theta_right k heap1 heap2 value1 value2);
     eauto.
 Qed.
 
-Corollary NScheduledPairParRun_pairpar_canonical_computations :
+Corollary ScheduledPairParRun_pairpar_canonical_computations :
   forall heap env rho ef1 ea1 ef2 ea2
     view_left view_right theta_left theta_right k heap_join value_join,
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     summary_disjointb theta_left theta_right = true ->
     TraceViewCoveredBySummary view_left theta_left ->
     TraceViewCoveredBySummary view_right theta_right ->
     NoAllocTraceView view_left ->
     NoAllocTraceView view_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left
       view_right
@@ -5748,9 +5748,9 @@ Proof.
     HBounded HSummaryDisjoint HCoveredLeft HCoveredRight
     HNoAllocLeft HNoAllocRight HSchedule.
   destruct
-    (NScheduledPairParRun_noalloc_checked_canonical
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_noalloc_checked_canonical
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       [] []
       view_left view_right theta_left theta_right k heap_join value_join)
     as (heap_left & heap_right & v_left & v_right &
@@ -5776,26 +5776,26 @@ Proof.
       * exact HHeap.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_join_determinism :
+Corollary ScheduledPairParRun_checked_pairpar_join_determinism :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right eff_left_res eff_right_res
     k heap1 heap2 value1 value2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     summary_disjointb theta_left theta_right = true ->
     (forall ty_left eff_left,
-      NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty_left eff_left ->
-      NResolveStaticEffect rho eff_left eff_left_res /\
+      CheckedTcExp gamma omega (EMuApp ef1 ea1) ty_left eff_left ->
+      ResolveStaticEffect rho eff_left eff_left_res /\
       TraceCoveredByStaticEffect
         (trace_view_flatten view_left1) eff_left_res /\
       TraceCoveredByStaticEffect
         (trace_view_flatten view_left2) eff_left_res) ->
     (forall ty_right eff_right,
-      NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty_right eff_right ->
-      NResolveStaticEffect rho eff_right eff_right_res /\
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty_right eff_right ->
+      ResolveStaticEffect rho eff_right eff_right_res /\
       TraceCoveredByStaticEffect
         (trace_view_flatten view_right1) eff_right_res /\
       TraceCoveredByStaticEffect
@@ -5804,18 +5804,18 @@ Corollary NScheduledPairParRun_checked_pairpar_join_determinism :
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StReturn heap1 value1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -5831,7 +5831,7 @@ Proof.
     HCoveredLeft1 HCoveredRight1 HCoveredLeft2 HCoveredRight2
     HSchedule1 HSchedule2.
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ty_left & _ty_right & eff_left & eff_right &
       _eff_summary_left & _eff_summary_right &
@@ -5845,10 +5845,10 @@ Proof.
   destruct (HStaticRight _ _ HCheckedRight)
     as (HResolveRight & HStaticRight1 & HStaticRight2).
   eapply
-    (NScheduledPairParRun_static_noalloc_join_determinism
+    (ScheduledPairParRun_static_noalloc_join_determinism
       rho
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       view_left1 view_right1 view_left2 view_right2
       theta_left theta_right
       eff_left eff_left_res eff_right eff_right_res
@@ -5856,26 +5856,26 @@ Proof.
 	    simpl; eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_scheduled_join_determinism :
+Corollary ScheduledPairParRun_checked_pairpar_scheduled_join_determinism :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     k heap_join1 heap_join2 value_join1 value_join2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StReturn heap_join1 value_join1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -5891,35 +5891,35 @@ Proof.
     (_HHeap & _HEnv & _HRegHeap & _HRegEnv &
       _HStore & _HRho & HBounded).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1
       (StReturn heap_join1 value_join1 k)
       k HBack HContext HSchedule1)
     as (HNoAllocLeft1 & HNoAllocRight1).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left2 view_right2
       (StReturn heap_join2 value_join2 k)
       k HBack HContext HSchedule2)
     as (HNoAllocLeft2 & HNoAllocRight2).
   eapply
-    (NScheduledPairParRun_noalloc_join_determinism
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_noalloc_join_determinism
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       view_left1 view_right1 view_left2 view_right2
       k heap_join1 heap_join2 value_join1 value_join2);
     simpl; eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_success_error_impossible :
+Corollary ScheduledPairParRun_checked_pairpar_success_error_impossible :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left_success view_right_success
     view_left_error view_right_error
     theta_left theta_right k
     heap_join value_join heap_error,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -5928,18 +5928,18 @@ Corollary NScheduledPairParRun_checked_pairpar_success_error_impossible :
     TraceViewCoveredBySummary view_right_success theta_right ->
     TraceViewCoveredBySummary view_left_error theta_left ->
     TraceViewCoveredBySummary view_right_error theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left_success
       view_right_success
       (StReturn heap_join value_join k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left_error
       view_right_error
@@ -5961,34 +5961,34 @@ Proof.
       _HStore & _HRho & HBounded).
   assert
     (HAlignedLeftStart :
-      NStateHeapsAligned
-        (NInitialState heap env rho (EMuApp ef1 ea1))).
+      StateHeapsAligned
+        (InitialState heap env rho (EMuApp ef1 ea1))).
   {
     simpl. exact I.
   }
   assert
     (HAlignedRightStart :
-      NStateHeapsAligned
-        (NInitialState heap env rho (EMuApp ef2 ea2))).
+      StateHeapsAligned
+        (InitialState heap env rho (EMuApp ef2 ea2))).
   {
     simpl. exact I.
   }
   assert
     (HHeapStart :
-      state_heap (NInitialState heap env rho (EMuApp ef1 ea1)) =
-      state_heap (NInitialState heap env rho (EMuApp ef2 ea2))).
+      state_heap (InitialState heap env rho (EMuApp ef1 ea1)) =
+      state_heap (InitialState heap env rho (EMuApp ef2 ea2))).
   {
     reflexivity.
   }
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left_success view_right_success
       (StReturn heap_join value_join k)
       k HBack HContext HSuccess)
     as (HNoAllocLeftSuccess & HNoAllocRightSuccess).
   destruct
-    (NScheduledPairParRun_checked_pairpar_noalloc_views
+    (ScheduledPairParRun_checked_pairpar_noalloc_views
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left_error view_right_error
       (StError heap_error)
@@ -6002,9 +6002,9 @@ Proof.
       HSummaryDisjoint HCoveredLeftError HCoveredRightError)
     as HDisjointError.
   destruct
-    (NScheduledPairParRun_noalloc_checked_canonical
-      (NInitialState heap env rho (EMuApp ef1 ea1))
-      (NInitialState heap env rho (EMuApp ef2 ea2))
+    (ScheduledPairParRun_noalloc_checked_canonical
+      (InitialState heap env rho (EMuApp ef1 ea1))
+      (InitialState heap env rho (EMuApp ef2 ea2))
       [] []
       view_left_success view_right_success
       theta_left theta_right k heap_join value_join
@@ -6018,7 +6018,7 @@ Proof.
       _HValueSuccess & HLeftSuccess &
       HRightSuccess & _HHeapSuccess).
   destruct
-    (NScheduledPairParRun_checked_pairpar_error_is_branch_error
+    (ScheduledPairParRun_checked_pairpar_error_is_branch_error
       gamma omega rho heap env ef1 ea1 ef2 ea2
       heap_error view_left_error view_right_error
       theta_left theta_right k
@@ -6029,9 +6029,9 @@ Proof.
       (right_final_error & phi_left_error &
         phi_right_error & HErrorPrefix).
     destruct
-      (NScheduledPairParRun_noalloc_disjoint_left_error_canonical
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+      (ScheduledPairParRun_noalloc_disjoint_left_error_canonical
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] []
         view_left_error view_right_error
         k heap_error right_final_error
@@ -6042,8 +6042,8 @@ Proof.
         HErrorPrefix)
       as (heap_left_error & HLeftErrorSteps & _HHeapEq).
     destruct
-      (NSteps_terminal_state_trace_deterministic
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+      (Steps_terminal_state_trace_deterministic
+        (InitialState heap env rho (EMuApp ef1 ea1))
         (trace_view_flatten view_left_success)
         (StDone heap_left_success v_left_success)
         (trace_view_flatten view_left_error)
@@ -6058,9 +6058,9 @@ Proof.
       (heap_left_done_error & v_left_done_error &
         phi_left_error & phi_right_error & HErrorPrefix).
     destruct
-      (NScheduledPairParRun_noalloc_disjoint_right_error_canonical
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+      (ScheduledPairParRun_noalloc_disjoint_right_error_canonical
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] []
         view_left_error view_right_error
         k heap_left_done_error v_left_done_error heap_error
@@ -6073,8 +6073,8 @@ Proof.
         heap_right_error & HLeftDoneError &
         HRightErrorSteps & _HHeapError).
     destruct
-      (NSteps_terminal_deterministic
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+      (Steps_terminal_deterministic
+        (InitialState heap env rho (EMuApp ef1 ea1))
         (trace_view_flatten view_left_success)
         heap_left_success
         v_left_success
@@ -6086,9 +6086,9 @@ Proof.
       as (HHeapLeft & HValueLeft).
     subst heap_left_error v_left_error.
     destruct
-      (NSteps_terminal_state_trace_deterministic
+      (Steps_terminal_state_trace_deterministic
         (with_state_heap heap_left_success
-          (NInitialState heap env rho (EMuApp ef2 ea2)))
+          (InitialState heap env rho (EMuApp ef2 ea2)))
         (trace_view_flatten view_right_success)
         (StDone heap_canonical_success v_right_success)
         (trace_view_flatten view_right_error)
@@ -6101,11 +6101,11 @@ Proof.
     discriminate HStateRight.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_outcome_deterministic :
+Corollary ScheduledPairParRun_checked_pairpar_outcome_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -6115,45 +6115,45 @@ Corollary NScheduledPairParRun_checked_pairpar_outcome_deterministic :
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
     (forall heap_join1 heap_join2 value_join1 value_join2,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left1
         view_right1
         (StReturn heap_join1 value_join1 k) ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left2
         view_right2
         (StReturn heap_join2 value_join2 k) ->
       heap_join1 = heap_join2 /\ value_join1 = value_join2) /\
     (forall heap_error1 heap_error2,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left1
         view_right1
         (StError heap_error1) ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left2
         view_right2
         (StError heap_error2) ->
       ((exists right_final1 phi_left_final1 phi_right_final1,
-          NScheduledPairParRun
+          ScheduledPairParRun
             (StPairParRun
-              (NInitialState heap env rho (EMuApp ef1 ea1))
-              (NInitialState heap env rho (EMuApp ef2 ea2))
+              (InitialState heap env rho (EMuApp ef1 ea1))
+              (InitialState heap env rho (EMuApp ef2 ea2))
               [] [] k)
             view_left1
             view_right1
@@ -6164,10 +6164,10 @@ Corollary NScheduledPairParRun_checked_pairpar_outcome_deterministic :
               phi_right_final1
               k)) /\
         (exists right_final2 phi_left_final2 phi_right_final2,
-          NScheduledPairParRun
+          ScheduledPairParRun
             (StPairParRun
-              (NInitialState heap env rho (EMuApp ef1 ea1))
-              (NInitialState heap env rho (EMuApp ef2 ea2))
+              (InitialState heap env rho (EMuApp ef1 ea1))
+              (InitialState heap env rho (EMuApp ef2 ea2))
               [] [] k)
             view_left2
             view_right2
@@ -6177,17 +6177,17 @@ Corollary NScheduledPairParRun_checked_pairpar_outcome_deterministic :
               phi_left_final2
               phi_right_final2
               k)) /\
-        NHeapEqOn
+        HeapEqOn
           (fun r l =>
             TraceDoesNotWrite r l (trace_view_flatten view_right1) /\
             TraceDoesNotWrite r l (trace_view_flatten view_right2))
           heap_error1
           heap_error2) \/
       ((exists heap_left1 v_left1 phi_left_final1 phi_right_final1,
-          NScheduledPairParRun
+          ScheduledPairParRun
             (StPairParRun
-              (NInitialState heap env rho (EMuApp ef1 ea1))
-              (NInitialState heap env rho (EMuApp ef2 ea2))
+              (InitialState heap env rho (EMuApp ef1 ea1))
+              (InitialState heap env rho (EMuApp ef2 ea2))
               [] [] k)
             view_left1
             view_right1
@@ -6198,10 +6198,10 @@ Corollary NScheduledPairParRun_checked_pairpar_outcome_deterministic :
               phi_right_final1
               k)) /\
         (exists heap_left2 v_left2 phi_left_final2 phi_right_final2,
-          NScheduledPairParRun
+          ScheduledPairParRun
             (StPairParRun
-              (NInitialState heap env rho (EMuApp ef1 ea1))
-              (NInitialState heap env rho (EMuApp ef2 ea2))
+              (InitialState heap env rho (EMuApp ef1 ea1))
+              (InitialState heap env rho (EMuApp ef2 ea2))
               [] [] k)
             view_left2
             view_right2
@@ -6213,36 +6213,36 @@ Corollary NScheduledPairParRun_checked_pairpar_outcome_deterministic :
               k)) /\
         heap_error1 = heap_error2)) /\
     (forall heap_join1 value_join1 heap_error2,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left1
         view_right1
         (StReturn heap_join1 value_join1 k) ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left2
         view_right2
         (StError heap_error2) ->
       False) /\
     (forall heap_error1 heap_join2 value_join2,
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left1
         view_right1
         (StError heap_error1) ->
-      NScheduledPairParRun
+      ScheduledPairParRun
         (StPairParRun
-          (NInitialState heap env rho (EMuApp ef1 ea1))
-          (NInitialState heap env rho (EMuApp ef2 ea2))
+          (InitialState heap env rho (EMuApp ef1 ea1))
+          (InitialState heap env rho (EMuApp ef2 ea2))
           [] [] k)
         view_left2
         view_right2
@@ -6257,14 +6257,14 @@ Proof.
   split.
   - intros ? ? ? ? HRun1 HRun2.
     eapply
-      (NScheduledPairParRun_checked_pairpar_scheduled_join_determinism
+      (ScheduledPairParRun_checked_pairpar_scheduled_join_determinism
         gamma omega rho heap env ef1 ea1 ef2 ea2
         view_left1 view_right1 view_left2 view_right2);
       eauto.
   - split.
     + intros ? ? HRun1 HRun2.
       eapply
-        (NScheduledPairParRun_checked_pairpar_error_cause_deterministic
+        (ScheduledPairParRun_checked_pairpar_error_cause_deterministic
           gamma omega rho heap env ef1 ea1 ef2 ea2
           view_left1 view_right1 view_left2 view_right2
           theta_left theta_right);
@@ -6272,27 +6272,27 @@ Proof.
     + split.
       * intros ? ? ? HRun1 HRun2.
         eapply
-          (NScheduledPairParRun_checked_pairpar_success_error_impossible
+          (ScheduledPairParRun_checked_pairpar_success_error_impossible
             gamma omega rho heap env ef1 ea1 ef2 ea2
             view_left1 view_right1 view_left2 view_right2
             theta_left theta_right);
           eauto.
       * intros ? ? ? HRun1 HRun2.
         eapply
-          (NScheduledPairParRun_checked_pairpar_success_error_impossible
+          (ScheduledPairParRun_checked_pairpar_success_error_impossible
             gamma omega rho heap env ef1 ea1 ef2 ea2
             view_left2 view_right2 view_left1 view_right1
             theta_left theta_right);
           eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_computations_join_determinism :
+Corollary ScheduledPairParRun_checked_pairpar_computations_join_determinism :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     heap_left1 heap_left2 heap_right1 heap_right2
     v_left1 v_left2 v_right1 v_right2
     k heap_join1 heap_join2 value_join1 value_join2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -6308,18 +6308,18 @@ Corollary NScheduledPairParRun_checked_pairpar_computations_join_determinism :
     StructuredComputationEvaluation
       heap env rho (EMuApp ef2 ea2)
       view_right2 heap_right2 v_right2 ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StReturn heap_join1 value_join1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -6335,43 +6335,43 @@ Proof.
     _HCompLeft1 _HCompLeft2 _HCompRight1 _HCompRight2
     HSchedule1 HSchedule2.
   eapply
-    (NScheduledPairParRun_checked_pairpar_scheduled_join_determinism
+    (ScheduledPairParRun_checked_pairpar_scheduled_join_determinism
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1 view_left2 view_right2
       k heap_join1 heap_join2 value_join1 value_join2);
     eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_scheduled_continuation_terminal_trace_deterministic :
+Corollary ScheduledPairParRun_checked_pairpar_scheduled_continuation_terminal_trace_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     k heap_join1 heap_join2 value_join1 value_join2
     phi_tail1 phi_tail2 heap_final1 heap_final2 value_final1 value_final2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StReturn heap_join1 value_join1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
       (StReturn heap_join2 value_join2 k) ->
-    NSteps
+    Steps
       (StReturn heap_join1 value_join1 k)
       phi_tail1
       (StDone heap_final1 value_final1) ->
-    NSteps
+    Steps
       (StReturn heap_join2 value_join2 k)
       phi_tail2
       (StDone heap_final2 value_final2) ->
@@ -6387,7 +6387,7 @@ Proof.
     phi_tail1 phi_tail2 heap_final1 heap_final2 value_final1 value_final2
     HBack HContext HSchedule1 HSchedule2 HTail1 HTail2.
   destruct
-    (NScheduledPairParRun_checked_pairpar_scheduled_join_determinism
+    (ScheduledPairParRun_checked_pairpar_scheduled_join_determinism
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1 view_left2 view_right2
       k heap_join1 heap_join2 value_join1 value_join2
@@ -6395,7 +6395,7 @@ Proof.
     as (HHeapJoin & HValueJoin).
   subst heap_join2 value_join2.
   destruct
-    (NSteps_terminal_trace_deterministic
+    (Steps_terminal_trace_deterministic
       (StReturn heap_join1 value_join1 k)
       phi_tail1
       heap_final1
@@ -6409,7 +6409,7 @@ Proof.
   repeat split; assumption || reflexivity.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_evaluations_join_determinism :
+Corollary ScheduledPairParRun_checked_pairpar_evaluations_join_determinism :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_summary_left view_summary_right
     view_left1 view_right1 view_left2 view_right2
@@ -6418,7 +6418,7 @@ Corollary NScheduledPairParRun_checked_pairpar_evaluations_join_determinism :
     heap_left1 heap_left2 heap_right1 heap_right2
     v_left1 v_left2 v_right1 v_right2
     k heap_join1 heap_join2 value_join1 value_join2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -6441,18 +6441,18 @@ Corollary NScheduledPairParRun_checked_pairpar_evaluations_join_determinism :
     StructuredComputationEvaluation
       heap env rho (EMuApp ef2 ea2)
       view_right2 heap_right2 v_right2 ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StReturn heap_join1 value_join1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
@@ -6472,14 +6472,14 @@ Proof.
     _HCompLeft1 _HCompLeft2 _HCompRight1 _HCompRight2
     HSchedule1 HSchedule2.
   eapply
-    (NScheduledPairParRun_checked_pairpar_scheduled_join_determinism
+    (ScheduledPairParRun_checked_pairpar_scheduled_join_determinism
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1 view_left2 view_right2
       k heap_join1 heap_join2 value_join1 value_join2);
     eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_evaluations_continuation_terminal_trace_deterministic :
+Corollary ScheduledPairParRun_checked_pairpar_evaluations_continuation_terminal_trace_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_summary_left view_summary_right
     view_left1 view_right1 view_left2 view_right2
@@ -6489,7 +6489,7 @@ Corollary NScheduledPairParRun_checked_pairpar_evaluations_continuation_terminal
     v_left1 v_left2 v_right1 v_right2
     k heap_join1 heap_join2 value_join1 value_join2
     phi_tail1 phi_tail2 heap_final1 heap_final2 value_final1 value_final2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -6512,27 +6512,27 @@ Corollary NScheduledPairParRun_checked_pairpar_evaluations_continuation_terminal
     StructuredComputationEvaluation
       heap env rho (EMuApp ef2 ea2)
       view_right2 heap_right2 v_right2 ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StReturn heap_join1 value_join1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
       (StReturn heap_join2 value_join2 k) ->
-    NSteps
+    Steps
       (StReturn heap_join1 value_join1 k)
       phi_tail1
       (StDone heap_final1 value_final1) ->
-    NSteps
+    Steps
       (StReturn heap_join2 value_join2 k)
       phi_tail2
       (StDone heap_final2 value_final2) ->
@@ -6556,7 +6556,7 @@ Proof.
     _HCompLeft1 _HCompLeft2 _HCompRight1 _HCompRight2
     HSchedule1 HSchedule2 HTail1 HTail2.
   eapply
-    (NScheduledPairParRun_checked_pairpar_scheduled_continuation_terminal_trace_deterministic
+    (ScheduledPairParRun_checked_pairpar_scheduled_continuation_terminal_trace_deterministic
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1 view_left2 view_right2
       k heap_join1 heap_join2 value_join1 value_join2
@@ -6565,27 +6565,27 @@ Proof.
     eauto.
 Qed.
 
-Corollary NScheduledPairParRun_checked_pairpar_continuation_terminal_trace_deterministic :
+Corollary ScheduledPairParRun_checked_pairpar_continuation_terminal_trace_deterministic :
   forall gamma omega rho heap env ef1 ea1 ef2 ea2
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right eff_left_res eff_right_res
     k heap_join1 heap_join2 value_join1 value_join2
     phi_tail1 phi_tail2 heap_final1 heap_final2 value_final1 value_final2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     summary_disjointb theta_left theta_right = true ->
     (forall ty_left eff_left,
-      NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty_left eff_left ->
-      NResolveStaticEffect rho eff_left eff_left_res /\
+      CheckedTcExp gamma omega (EMuApp ef1 ea1) ty_left eff_left ->
+      ResolveStaticEffect rho eff_left eff_left_res /\
       TraceCoveredByStaticEffect
         (trace_view_flatten view_left1) eff_left_res /\
       TraceCoveredByStaticEffect
         (trace_view_flatten view_left2) eff_left_res) ->
     (forall ty_right eff_right,
-      NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty_right eff_right ->
-      NResolveStaticEffect rho eff_right eff_right_res /\
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty_right eff_right ->
+      ResolveStaticEffect rho eff_right eff_right_res /\
       TraceCoveredByStaticEffect
         (trace_view_flatten view_right1) eff_right_res /\
       TraceCoveredByStaticEffect
@@ -6594,27 +6594,27 @@ Corollary NScheduledPairParRun_checked_pairpar_continuation_terminal_trace_deter
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left1
       view_right1
       (StReturn heap_join1 value_join1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun
-        (NInitialState heap env rho (EMuApp ef1 ea1))
-        (NInitialState heap env rho (EMuApp ef2 ea2))
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef2 ea2))
         [] [] k)
       view_left2
       view_right2
       (StReturn heap_join2 value_join2 k) ->
-    NSteps
+    Steps
       (StReturn heap_join1 value_join1 k)
       phi_tail1
       (StDone heap_final1 value_final1) ->
-    NSteps
+    Steps
       (StReturn heap_join2 value_join2 k)
       phi_tail2
       (StDone heap_final2 value_final2) ->
@@ -6634,7 +6634,7 @@ Proof.
     HCoveredLeft1 HCoveredRight1 HCoveredLeft2 HCoveredRight2
     HSchedule1 HSchedule2 HTail1 HTail2.
   destruct
-    (NScheduledPairParRun_checked_pairpar_join_determinism
+    (ScheduledPairParRun_checked_pairpar_join_determinism
       gamma omega rho heap env ef1 ea1 ef2 ea2
       view_left1 view_right1 view_left2 view_right2
       theta_left theta_right eff_left_res eff_right_res
@@ -6646,7 +6646,7 @@ Proof.
     as (HHeapJoin & HValueJoin).
   subst heap_join2 value_join2.
   destruct
-    (NSteps_terminal_trace_deterministic
+    (Steps_terminal_trace_deterministic
       (StReturn heap_join1 value_join1 k)
       phi_tail1
       heap_final1
@@ -6660,16 +6660,16 @@ Proof.
   repeat split; assumption || reflexivity.
 Qed.
 
-Corollary NScheduledPairParRun_checked_continuation_terminal_trace_deterministic :
+Corollary ScheduledPairParRun_checked_continuation_terminal_trace_deterministic :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k
     heap_join1 heap_join2 value_join1 value_join2
     phi_tail1 phi_tail2 heap_final1 heap_final2 value_final1 value_final2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     summary_disjointb theta_left theta_right = true ->
     NoAllocTraceView view_left1 ->
     NoAllocTraceView view_right1 ->
@@ -6679,21 +6679,21 @@ Corollary NScheduledPairParRun_checked_continuation_terminal_trace_deterministic
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
       (StReturn heap_join1 value_join1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
       (StReturn heap_join2 value_join2 k) ->
-    NSteps
+    Steps
       (StReturn heap_join1 value_join1 k)
       phi_tail1
       (StDone heap_final1 value_final1) ->
-    NSteps
+    Steps
       (StReturn heap_join2 value_join2 k)
       phi_tail2
       (StDone heap_final2 value_final2) ->
@@ -6713,7 +6713,7 @@ Proof.
     HCoveredLeft1 HCoveredRight1 HCoveredLeft2 HCoveredRight2
     HSchedule1 HSchedule2 HTail1 HTail2.
   destruct
-    (NScheduledPairParRun_checked_join_determinism
+    (ScheduledPairParRun_checked_join_determinism
       left_state right_state
       view_left1 view_right1 view_left2 view_right2
       theta_left theta_right k heap_join1 heap_join2
@@ -6726,7 +6726,7 @@ Proof.
     as (HHeapJoin & HValueJoin).
   subst heap_join2 value_join2.
   destruct
-    (NSteps_terminal_trace_deterministic
+    (Steps_terminal_trace_deterministic
       (StReturn heap_join1 value_join1 k)
       phi_tail1
       heap_final1
@@ -6740,14 +6740,14 @@ Proof.
   repeat split; assumption || reflexivity.
 Qed.
 
-Corollary NScheduledPairParRun_checked_terminal_trace_deterministic :
+Corollary ScheduledPairParRun_checked_terminal_trace_deterministic :
   forall left_state right_state
     view_left1 view_right1 view_left2 view_right2
     theta_left theta_right k heap1 heap2 value1 value2,
-    NStateHeapsAligned left_state ->
-    NStateHeapsAligned right_state ->
+    StateHeapsAligned left_state ->
+    StateHeapsAligned right_state ->
     state_heap left_state = state_heap right_state ->
-    NHeapKeysBounded (state_heap left_state) ->
+    HeapKeysBounded (state_heap left_state) ->
     summary_disjointb theta_left theta_right = true ->
     NoAllocTraceView view_left1 ->
     NoAllocTraceView view_right1 ->
@@ -6757,18 +6757,18 @@ Corollary NScheduledPairParRun_checked_terminal_trace_deterministic :
     TraceViewCoveredBySummary view_right1 theta_right ->
     TraceViewCoveredBySummary view_left2 theta_left ->
     TraceViewCoveredBySummary view_right2 theta_right ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left1
       view_right1
       (StReturn heap1 value1 k) ->
-    NScheduledPairParRun
+    ScheduledPairParRun
       (StPairParRun left_state right_state [] [] k)
       view_left2
       view_right2
       (StReturn heap2 value2 k) ->
-    trace_view_flatten (NTracePar view_left1 view_right1) =
-    trace_view_flatten (NTracePar view_left2 view_right2) /\
+    trace_view_flatten (TracePar view_left1 view_right1) =
+    trace_view_flatten (TracePar view_left2 view_right2) /\
     heap1 = heap2 /\
     value1 = value2.
 Proof.
@@ -6781,7 +6781,7 @@ Proof.
     HCoveredLeft1 HCoveredRight1 HCoveredLeft2 HCoveredRight2
     HSchedule1 HSchedule2.
   destruct
-    (NScheduledPairParRun_noalloc_checked_canonical
+    (ScheduledPairParRun_noalloc_checked_canonical
       left_state right_state [] []
       view_left1 view_right1 theta_left theta_right k heap1 value1
       HAlignedLeft HAlignedRight HHeapAligned HBounded
@@ -6790,7 +6790,7 @@ Proof.
     as (heap_left1 & heap_canonical1 & v_left1 & v_right1 &
       HValue1 & HLeft1 & HRight1 & HHeap1).
   destruct
-    (NScheduledPairParRun_noalloc_checked_canonical
+    (ScheduledPairParRun_noalloc_checked_canonical
       left_state right_state [] []
       view_left2 view_right2 theta_left theta_right k heap2 value2
       HAlignedLeft HAlignedRight HHeapAligned HBounded
@@ -6799,7 +6799,7 @@ Proof.
     as (heap_left2 & heap_canonical2 & v_left2 & v_right2 &
       HValue2 & HLeft2 & HRight2 & HHeap2).
   destruct
-    (NSteps_terminal_trace_deterministic
+    (Steps_terminal_trace_deterministic
       left_state
       (trace_view_flatten view_left1)
       heap_left1
@@ -6812,7 +6812,7 @@ Proof.
     as (HTraceLeft & HHeapLeft & HValueLeft).
   subst heap_left2 v_left2.
   destruct
-    (NSteps_terminal_trace_deterministic
+    (Steps_terminal_trace_deterministic
       (with_state_heap heap_left1 right_state)
       (trace_view_flatten view_right1)
       heap_canonical1
@@ -6825,7 +6825,7 @@ Proof.
     as (HTraceRight & HHeapRight & HValueRight).
   subst heap_canonical2 v_right2.
   split.
-  - repeat rewrite NTracePar_flatten_canonical.
+  - repeat rewrite TracePar_flatten_canonical.
     rewrite HTraceLeft, HTraceRight.
     reflexivity.
   - split.
@@ -6838,32 +6838,32 @@ Qed.
     keep their descriptive proof-oriented names; these aliases are the stable
     entry points for clients that only need the checked PairPar story. *)
 
-Definition NScheduledPairParRun_checked_pairpar_left_then_right_embeds :=
-  NScheduledPairParRun_checked_pairpar_left_then_right_success.
+Definition ScheduledPairParRun_checked_pairpar_left_then_right_embeds :=
+  ScheduledPairParRun_checked_pairpar_left_then_right_success.
 
-Definition NScheduledPairParRun_checked_pairpar_nsteps_embeds :=
-  NSteps_checked_pairpar_kdone_terminal_embeds_scheduled.
+Definition ScheduledPairParRun_checked_pairpar_nsteps_embeds :=
+  Steps_checked_pairpar_kdone_terminal_embeds_scheduled.
 
-Definition NScheduledPairParRun_checked_pairpar_success_join_deterministic :=
-  NScheduledPairParRun_checked_pairpar_scheduled_join_determinism.
-
-Definition
-  NScheduledPairParRun_checked_pairpar_success_continuation_deterministic :=
-  NScheduledPairParRun_checked_pairpar_scheduled_continuation_terminal_trace_deterministic.
-
-Definition NScheduledPairParRun_checked_pairpar_error_classifies :=
-  NScheduledPairParRun_checked_pairpar_error_is_branch_error.
-
-Definition NScheduledPairParRun_checked_pairpar_error_same_cause :=
-  NScheduledPairParRun_checked_pairpar_error_cause_deterministic.
+Definition ScheduledPairParRun_checked_pairpar_success_join_deterministic :=
+  ScheduledPairParRun_checked_pairpar_scheduled_join_determinism.
 
 Definition
-  NScheduledPairParRun_checked_pairpar_left_error_read_only_right_lookup :=
-  NScheduledPairParRun_checked_pairpar_left_error_read_only_right_heap_lookup_deterministic.
+  ScheduledPairParRun_checked_pairpar_success_continuation_deterministic :=
+  ScheduledPairParRun_checked_pairpar_scheduled_continuation_terminal_trace_deterministic.
 
-Definition NScheduledPairParRun_checked_pairpar_success_error_disjoint :=
-  NScheduledPairParRun_checked_pairpar_success_error_impossible.
+Definition ScheduledPairParRun_checked_pairpar_error_classifies :=
+  ScheduledPairParRun_checked_pairpar_error_is_branch_error.
+
+Definition ScheduledPairParRun_checked_pairpar_error_same_cause :=
+  ScheduledPairParRun_checked_pairpar_error_cause_deterministic.
 
 Definition
-  NScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic :=
-  NScheduledPairParRun_checked_pairpar_outcome_deterministic.
+  ScheduledPairParRun_checked_pairpar_left_error_read_only_right_lookup :=
+  ScheduledPairParRun_checked_pairpar_left_error_read_only_right_heap_lookup_deterministic.
+
+Definition ScheduledPairParRun_checked_pairpar_success_error_disjoint :=
+  ScheduledPairParRun_checked_pairpar_success_error_impossible.
+
+Definition
+  ScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic :=
+  ScheduledPairParRun_checked_pairpar_outcome_deterministic.

@@ -22,20 +22,20 @@ Import ListNotations.
 
 Lemma ERef_terminal_first_step :
   forall heap env rho r e phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (ERef r e))
+    Steps
+      (InitialState heap env rho (ERef r e))
       phi
       (StDone heap_final v_final) ->
     exists r_val phi_tail,
       eval_region rho r = Some r_val /\
-      NSteps
+      Steps
         (StEval heap env rho e (KRef r_val KDone))
         phi_tail
         (StDone heap_final v_final) /\
       phi = phi_tail.
 Proof.
   intros heap env rho r e phi heap_final v_final HSteps.
-  remember (NInitialState heap env rho (ERef r e)) as start
+  remember (InitialState heap env rho (ERef r e)) as start
     eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
   destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
@@ -48,21 +48,21 @@ Qed.
 
 Lemma ERef_terminal_first_step_N :
   forall n heap env rho r e phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (ERef r e))
+    StepsN n
+      (InitialState heap env rho (ERef r e))
       phi
       (StDone heap_final v_final) ->
     exists r_val n_tail phi_tail,
       eval_region rho r = Some r_val /\
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho e (KRef r_val KDone))
         phi_tail
         (StDone heap_final v_final) /\
       phi = phi_tail.
 Proof.
   intros n heap env rho r e phi heap_final v_final HSteps.
-  remember (NInitialState heap env rho (ERef r e)) as start
+  remember (InitialState heap env rho (ERef r e)) as start
     eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
   destruct HSteps as
@@ -77,7 +77,7 @@ Qed.
 
 Lemma KRef_terminal_alloc_result :
   forall heap v r_val phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KRef r_val KDone))
       phi
       (StDone heap_final v_final) ->
@@ -96,7 +96,7 @@ Proof.
   - subst state state''.
     inversion HStep; subst.
     destruct
-      (NSteps_known_first_step_terminal_inv
+      (Steps_known_first_step_terminal_inv
         (StReturn heap' (VLoc r_val l) KDone)
         LSilent
         (StDone heap' (VLoc r_val l))
@@ -107,7 +107,7 @@ Proof.
         HTail)
       as (phi_done & HDone & HTraceTail).
     destruct
-      (NSteps_done_inv
+      (Steps_done_inv
         heap'
         (VLoc r_val l)
         phi_done
@@ -123,14 +123,14 @@ Qed.
 
 Definition ERefDecompositionGoal : Prop :=
   forall heap env rho r e phi heap_final loc,
-    NSteps
-      (NInitialState heap env rho (ERef r e))
+    Steps
+      (InitialState heap env rho (ERef r e))
       phi
       (StDone heap_final loc) ->
     exists phi_e heap_e v r_val l,
       eval_region rho r = Some r_val /\
-      NSteps
-        (NInitialState heap env rho e)
+      Steps
+        (InitialState heap env rho e)
         phi_e
         (StDone heap_e v) /\
       heap_alloc r_val v heap_e = (l, heap_final) /\
@@ -139,14 +139,14 @@ Definition ERefDecompositionGoal : Prop :=
 
 Definition ERefCountedDecompositionGoal : Prop :=
   forall n heap env rho r e phi heap_final loc,
-    NStepsN n
-      (NInitialState heap env rho (ERef r e))
+    StepsN n
+      (InitialState heap env rho (ERef r e))
       phi
       (StDone heap_final loc) ->
     exists n_e phi_e heap_e v r_val l,
       eval_region rho r = Some r_val /\
-      NStepsN n_e
-        (NInitialState heap env rho e)
+      StepsN n_e
+        (InitialState heap env rho e)
         phi_e
         (StDone heap_e v) /\
       heap_alloc r_val v heap_e = (l, heap_final) /\
@@ -164,21 +164,21 @@ Proof.
       heap env rho r e phi heap_final loc HSteps)
     as (r_val & phi_tail & HRgn & HExprWithKont & HTraceStart).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap env rho e (KRef r_val KDone))
       phi_tail
       (StDone heap_final loc)
       HExprWithKont)
     as (n_expr & HExprWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_expr
       (StEval heap env rho e (KRef r_val KDone))
       phi_tail
       heap_final
       loc
       HExprWithKontN
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KRef r_val KDone)
       eq_refl)
     as (phi_e & heap_e & v & phi_after_expr &
@@ -205,14 +205,14 @@ Proof.
     as (r_val & n_expr_tail & phi_tail & HRgn & HnStart &
       HExprWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_expr_tail
       (StEval heap env rho e (KRef r_val KDone))
       phi_tail
       heap_final
       loc
       HExprWithKont
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KRef r_val KDone)
       eq_refl)
     as (n_e & n_after_expr & phi_e & heap_e & v &
@@ -222,7 +222,7 @@ Proof.
   - destruct
       (KRef_terminal_alloc_result
         heap_e v r_val phi_after_expr heap_final loc
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_expr
           (StReturn heap_e v (KRef r_val KDone))
           phi_after_expr
@@ -241,26 +241,26 @@ Qed.
 
 Lemma EDeref_terminal_first_step :
   forall heap env rho r e phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (EDeref r e))
+    Steps
+      (InitialState heap env rho (EDeref r e))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho e (KDeref r KDone))
         phi_tail
         (StDone heap_final v_final) /\
       phi = phi_tail.
 Proof.
   intros heap env rho r e phi heap_final v_final HSteps.
-  remember (NInitialState heap env rho (EDeref r e)) as start
+  remember (InitialState heap env rho (EDeref r e)) as start
     eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
   destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StEval heap env rho (EDeref r e) KDone)
         LSilent
         (StEval heap env rho e (KDeref r KDone))
@@ -275,13 +275,13 @@ Qed.
 
 Lemma EDeref_terminal_first_step_N :
   forall n heap env rho r e phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (EDeref r e))
+    StepsN n
+      (InitialState heap env rho (EDeref r e))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho e (KDeref r KDone))
         phi_tail
         (StDone heap_final v_final) /\
@@ -289,9 +289,9 @@ Lemma EDeref_terminal_first_step_N :
 Proof.
   intros n heap env rho r e phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (EDeref r e))
+      (InitialState heap env rho (EDeref r e))
       LSilent
       (StEval heap env rho e (KDeref r KDone))
       phi heap_final v_final
@@ -305,7 +305,7 @@ Qed.
 
 Lemma KDeref_terminal_value_is_loc :
   forall heap v r_static k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KDeref r_static k))
       phi
       (StDone heap_final v_final) ->
@@ -326,7 +326,7 @@ Qed.
 
 Lemma KDeref_loc_terminal_read_result :
   forall heap r_static r l phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VLoc r l) (KDeref r_static KDone))
       phi
       (StDone heap_final v_final) ->
@@ -344,7 +344,7 @@ Proof.
   - subst state state''.
     inversion HStep; subst.
     destruct
-      (NSteps_known_first_step_terminal_inv
+      (Steps_known_first_step_terminal_inv
         (StReturn heap v KDone)
         LSilent
         (StDone heap v)
@@ -355,7 +355,7 @@ Proof.
         HTail)
       as (phi_done & HDone & HTraceTail).
     destruct
-      (NSteps_done_inv
+      (Steps_done_inv
         heap
         v
         phi_done
@@ -370,13 +370,13 @@ Qed.
 
 Definition EDerefDecompositionGoal : Prop :=
   forall heap env rho r_static e phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (EDeref r_static e))
+    Steps
+      (InitialState heap env rho (EDeref r_static e))
       phi
       (StDone heap_final v_final) ->
     exists phi_e heap_e r l,
-      NSteps
-        (NInitialState heap env rho e)
+      Steps
+        (InitialState heap env rho e)
         phi_e
         (StDone heap_e (VLoc r l)) /\
       heap_lookup r l heap_e = Some v_final /\
@@ -385,13 +385,13 @@ Definition EDerefDecompositionGoal : Prop :=
 
 Definition EDerefCountedDecompositionGoal : Prop :=
   forall n heap env rho r_static e phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (EDeref r_static e))
+    StepsN n
+      (InitialState heap env rho (EDeref r_static e))
       phi
       (StDone heap_final v_final) ->
     exists n_e phi_e heap_e r l,
-      NStepsN n_e
-        (NInitialState heap env rho e)
+      StepsN n_e
+        (InitialState heap env rho e)
         phi_e
         (StDone heap_e (VLoc r l)) /\
       heap_lookup r l heap_e = Some v_final /\
@@ -409,21 +409,21 @@ Proof.
       heap env rho r_static e phi heap_final v_final HSteps)
     as (phi_tail & HExprWithKont & HTraceStart).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap env rho e (KDeref r_static KDone))
       phi_tail
       (StDone heap_final v_final)
       HExprWithKont)
     as (n_expr & HExprWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_expr
       (StEval heap env rho e (KDeref r_static KDone))
       phi_tail
       heap_final
       v_final
       HExprWithKontN
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KDeref r_static KDone)
       eq_refl)
     as (phi_e & heap_e & v_loc & phi_after_expr &
@@ -456,14 +456,14 @@ Proof.
     as (n_expr_tail & phi_tail & HnStart &
       HExprWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_expr_tail
       (StEval heap env rho e (KDeref r_static KDone))
       phi_tail
       heap_final
       v_final
       HExprWithKont
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KDeref r_static KDone)
       eq_refl)
     as (n_e & n_after_expr & phi_e & heap_e & v_loc &
@@ -474,7 +474,7 @@ Proof.
       (KDeref_terminal_value_is_loc
         heap_e v_loc r_static KDone
         phi_after_expr heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_expr
           (StReturn heap_e v_loc (KDeref r_static KDone))
           phi_after_expr
@@ -485,7 +485,7 @@ Proof.
     destruct
       (KDeref_loc_terminal_read_result
         heap_e r_static r l phi_after_expr heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_expr
           (StReturn heap_e (VLoc r l) (KDeref r_static KDone))
           phi_after_expr
@@ -504,26 +504,26 @@ Qed.
 
 Lemma EAssign_terminal_first_step :
   forall heap env rho r ea ev phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (EAssign r ea ev))
+    Steps
+      (InitialState heap env rho (EAssign r ea ev))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho ea (KAssignLoc r ev env rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
       phi = phi_tail.
 Proof.
   intros heap env rho r ea ev phi heap_final v_final HSteps.
-  remember (NInitialState heap env rho (EAssign r ea ev)) as start
+  remember (InitialState heap env rho (EAssign r ea ev)) as start
     eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
   destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StEval heap env rho (EAssign r ea ev) KDone)
         LSilent
         (StEval heap env rho ea (KAssignLoc r ev env rho KDone))
@@ -538,13 +538,13 @@ Qed.
 
 Lemma EAssign_terminal_first_step_N :
   forall n heap env rho r ea ev phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (EAssign r ea ev))
+    StepsN n
+      (InitialState heap env rho (EAssign r ea ev))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho ea
           (KAssignLoc r ev env rho KDone))
         phi_tail
@@ -553,9 +553,9 @@ Lemma EAssign_terminal_first_step_N :
 Proof.
   intros n heap env rho r ea ev phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (EAssign r ea ev))
+      (InitialState heap env rho (EAssign r ea ev))
       LSilent
       (StEval heap env rho ea (KAssignLoc r ev env rho KDone))
       phi heap_final v_final
@@ -569,7 +569,7 @@ Qed.
 
 Lemma KAssignLoc_terminal_value_is_loc :
   forall heap v r_static ev env rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KAssignLoc r_static ev env rho k))
       phi
       (StDone heap_final v_final) ->
@@ -590,12 +590,12 @@ Qed.
 
 Lemma KAssignLoc_loc_terminal_first_step :
   forall heap r_static ev env rho r l k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VLoc r l) (KAssignLoc r_static ev env rho k))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho ev
           (KAssignVal r_static (VLoc r l) k))
         phi_tail
@@ -612,7 +612,7 @@ Proof.
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StReturn heap (VLoc r l)
           (KAssignLoc r_static ev env rho k))
         LSilent
@@ -630,14 +630,14 @@ Qed.
 Lemma KAssignLoc_loc_terminal_first_step_N :
   forall n_steps heap r_static ev env rho r l k phi
     heap_final v_final,
-    NStepsN n_steps
+    StepsN n_steps
       (StReturn heap (VLoc r l)
         (KAssignLoc r_static ev env rho k))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n_steps = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho ev
           (KAssignVal r_static (VLoc r l) k))
         phi_tail
@@ -647,7 +647,7 @@ Proof.
   intros n_steps heap r_static ev env rho r l k phi
     heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n_steps
       (StReturn heap (VLoc r l)
         (KAssignLoc r_static ev env rho k))
@@ -665,7 +665,7 @@ Qed.
 
 Lemma KAssignVal_terminal_write_result :
   forall heap v r_static r l phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KAssignVal r_static (VLoc r l) KDone))
       phi
       (StDone heap_final v_final) ->
@@ -683,7 +683,7 @@ Proof.
   - subst state state''.
     inversion HStep; subst.
     destruct
-      (NSteps_known_first_step_terminal_inv
+      (Steps_known_first_step_terminal_inv
         (StReturn (heap_update r l v heap) VUnit KDone)
         LSilent
         (StDone (heap_update r l v heap) VUnit)
@@ -694,7 +694,7 @@ Proof.
         HTail)
       as (phi_done & HDone & HTraceTail).
     destruct
-      (NSteps_done_inv
+      (Steps_done_inv
         (heap_update r l v heap)
         VUnit
         phi_done
@@ -709,17 +709,17 @@ Qed.
 
 Definition EAssignDecompositionGoal : Prop :=
   forall heap env rho r_static ea ev phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (EAssign r_static ea ev))
+    Steps
+      (InitialState heap env rho (EAssign r_static ea ev))
       phi
       (StDone heap_final v_final) ->
     exists phi_addr phi_val heap_addr heap_val r l v,
-      NSteps
-        (NInitialState heap env rho ea)
+      Steps
+        (InitialState heap env rho ea)
         phi_addr
         (StDone heap_addr (VLoc r l)) /\
-      NSteps
-        (NInitialState heap_addr env rho ev)
+      Steps
+        (InitialState heap_addr env rho ev)
         phi_val
         (StDone heap_val v) /\
       heap_final = heap_update r l v heap_val /\
@@ -728,17 +728,17 @@ Definition EAssignDecompositionGoal : Prop :=
 
 Definition EAssignCountedDecompositionGoal : Prop :=
   forall n heap env rho r_static ea ev phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (EAssign r_static ea ev))
+    StepsN n
+      (InitialState heap env rho (EAssign r_static ea ev))
       phi
       (StDone heap_final v_final) ->
     exists n_addr n_val phi_addr phi_val heap_addr heap_val r l v,
-      NStepsN n_addr
-        (NInitialState heap env rho ea)
+      StepsN n_addr
+        (InitialState heap env rho ea)
         phi_addr
         (StDone heap_addr (VLoc r l)) /\
-      NStepsN n_val
-        (NInitialState heap_addr env rho ev)
+      StepsN n_val
+        (InitialState heap_addr env rho ev)
         phi_val
         (StDone heap_val v) /\
       heap_final = heap_update r l v heap_val /\
@@ -757,7 +757,7 @@ Proof.
       heap env rho r_static ea ev phi heap_final v_final HSteps)
     as (phi_tail & HAddrWithKont & HTraceStart).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap env rho ea
         (KAssignLoc r_static ev env rho KDone))
       phi_tail
@@ -765,7 +765,7 @@ Proof.
       HAddrWithKont)
     as (n_addr & HAddrWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_addr
       (StEval heap env rho ea
         (KAssignLoc r_static ev env rho KDone))
@@ -773,7 +773,7 @@ Proof.
       heap_final
       v_final
       HAddrWithKontN
-      (NInitialState heap env rho ea)
+      (InitialState heap env rho ea)
       (KAssignLoc r_static ev env rho KDone)
       eq_refl)
     as (phi_addr & heap_addr & v_addr & phi_after_addr &
@@ -790,7 +790,7 @@ Proof.
       phi_after_addr heap_final v_final HAfterAddr)
     as (phi_val_tail & HValWithKont & HTraceAfterAddr).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap_addr env rho ev
         (KAssignVal r_static (VLoc r l) KDone))
       phi_val_tail
@@ -798,7 +798,7 @@ Proof.
       HValWithKont)
     as (n_val & HValWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_val
       (StEval heap_addr env rho ev
         (KAssignVal r_static (VLoc r l) KDone))
@@ -806,7 +806,7 @@ Proof.
       heap_final
       v_final
       HValWithKontN
-      (NInitialState heap_addr env rho ev)
+      (InitialState heap_addr env rho ev)
       (KAssignVal r_static (VLoc r l) KDone)
       eq_refl)
     as (phi_val & heap_val & v & phi_after_val &
@@ -834,7 +834,7 @@ Proof.
     as (n_addr_tail & phi_tail & HnStart & HAddrWithKont &
       HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_addr_tail
       (StEval heap env rho ea
         (KAssignLoc r_static ev env rho KDone))
@@ -842,7 +842,7 @@ Proof.
       heap_final
       v_final
       HAddrWithKont
-      (NInitialState heap env rho ea)
+      (InitialState heap env rho ea)
       (KAssignLoc r_static ev env rho KDone)
       eq_refl)
     as (n_addr & n_after_addr & phi_addr & heap_addr & v_addr &
@@ -853,7 +853,7 @@ Proof.
       (KAssignLoc_terminal_value_is_loc
         heap_addr v_addr r_static ev env rho KDone
         phi_after_addr heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_addr
           (StReturn heap_addr v_addr
             (KAssignLoc r_static ev env rho KDone))
@@ -869,7 +869,7 @@ Proof.
       as (n_val_tail & phi_val_tail & HCountAfterAddr &
         HValWithKont & HTraceAfterAddr).
     destruct
-      (NStepsN_append_kont_terminal_split_counted
+      (StepsN_append_kont_terminal_split_counted
         n_val_tail
         (StEval heap_addr env rho ev
           (KAssignVal r_static (VLoc r l) KDone))
@@ -877,7 +877,7 @@ Proof.
         heap_final
         v_final
         HValWithKont
-        (NInitialState heap_addr env rho ev)
+        (InitialState heap_addr env rho ev)
         (KAssignVal r_static (VLoc r l) KDone)
         eq_refl)
       as (n_val & n_after_val & phi_val & heap_val & v &
@@ -887,7 +887,7 @@ Proof.
     + destruct
         (KAssignVal_terminal_write_result
           heap_val v r_static r l phi_after_val heap_final v_final
-          (NStepsN_to_NSteps
+          (StepsN_to_Steps
             n_after_val
             (StReturn heap_val v
               (KAssignVal r_static (VLoc r l) KDone))
@@ -937,63 +937,63 @@ Proof.
   split; [simpl; auto | constructor].
 Qed.
 
-Lemma NCheckedTcExp_deref_child_ref_from_deref :
+Lemma CheckedTcExp_deref_child_ref_from_deref :
   forall gamma omega r e ty eff,
-    NCheckedTcExp gamma omega (EDeref r e) ty eff ->
+    CheckedTcExp gamma omega (EDeref r e) ty eff ->
     exists ty_cell eff_child,
-      NCheckedTcExp gamma omega e
+      CheckedTcExp gamma omega e
         (TyRef (region_expr_to_type r) ty_cell) eff_child.
 Proof.
   intros gamma omega r e ty eff HChecked.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HShape; subst.
   match goal with
-  | HChild : NCheckedTcExp gamma omega e
+  | HChild : CheckedTcExp gamma omega e
       (TyRef (region_expr_to_type r) ?ty_cell) ?eff_child |- _ =>
       exists ty_cell, eff_child; exact HChild
   end.
 Qed.
 
-Lemma NCheckedTcExp_assign_children_from_assign :
+Lemma CheckedTcExp_assign_children_from_assign :
   forall gamma omega r ea ev ty eff,
-    NCheckedTcExp gamma omega (EAssign r ea ev) ty eff ->
+    CheckedTcExp gamma omega (EAssign r ea ev) ty eff ->
     exists ty_cell eff_addr eff_val,
-      NCheckedTcExp gamma omega ea
+      CheckedTcExp gamma omega ea
         (TyRef (region_expr_to_type r) ty_cell) eff_addr /\
-      NCheckedTcExp gamma omega ev ty_cell eff_val.
+      CheckedTcExp gamma omega ev ty_cell eff_val.
 Proof.
   intros gamma omega r ea ev ty eff HChecked.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HShape; subst.
   match goal with
-  | HAddr : NCheckedTcExp gamma omega ea
+  | HAddr : CheckedTcExp gamma omega ea
       (TyRef (region_expr_to_type r) ?ty_cell) ?eff_addr,
-    HVal : NCheckedTcExp gamma omega ev ?ty_cell ?eff_val |- _ =>
+    HVal : CheckedTcExp gamma omega ev ?ty_cell ?eff_val |- _ =>
       exists ty_cell, eff_addr, eff_val; split; assumption
   end.
 Qed.
 
-Lemma NStoreResolvedValShape_loc_ref_region :
+Lemma StoreResolvedValShape_loc_ref_region :
   forall store rho r_static ty ty_res r l,
-    NResolveTy rho (TyRef (region_expr_to_type r_static) ty) ty_res ->
-    NStoreResolvedValShape store (VLoc r l) ty_res ->
+    ResolveTy rho (TyRef (region_expr_to_type r_static) ty) ty_res ->
+    StoreResolvedValShape store (VLoc r l) ty_res ->
     eval_region rho r_static = Some r.
 Proof.
   intros store rho r_static ty ty_res r l HResolve HVal.
   inversion HVal; subst.
   rewrite <- eval_region_type_region_expr_to_type.
-  eapply NResolveTy_ref_same_region.
+  eapply ResolveTy_ref_same_region.
   exact HResolve.
 Qed.
 
-Lemma NCBT_Ref_components :
+Lemma CBT_Ref_components :
   forall gamma omega r e eff,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (ERef r e) (EConcat eff (EAllocAbs r)) ->
     exists ty static ty_ref eff_ref,
-      NCheckedTcExp gamma omega e ty static /\
-      NCheckedTcExp gamma omega (ERef r e) ty_ref eff_ref /\
-      NCheckedBackTriangle gamma omega e eff.
+      CheckedTcExp gamma omega e ty static /\
+      CheckedTcExp gamma omega (ERef r e) ty_ref eff_ref /\
+      CheckedBackTriangle gamma omega e eff.
 Proof.
   intros gamma omega r e eff HBack.
   inversion HBack; subst; try discriminate.
@@ -1007,7 +1007,7 @@ Theorem ERef_checked_store_context_case_from_below :
   forall n gamma omega heap env rho r e eff
     phi heap_final v_final phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (ERef r e) (EConcat eff (EAllocAbs r)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
@@ -1021,7 +1021,7 @@ Proof.
     phi heap_final v_final phi_summary heap_summary theta
     HBelow HBack HContext _HComputationTraceSound HComp HSummary.
   destruct
-    (NCBT_Ref_components gamma omega r e eff HBack)
+    (CBT_Ref_components gamma omega r e eff HBack)
     as (_ty & _static & _ty_ref & _eff_ref &
       _HCheckedExpr & _HCheckedRef & HBackExpr).
   unfold CountedComputationEvaluation in HComp.
@@ -1063,14 +1063,14 @@ Proof.
   apply trace_covered_single_alloc_abs.
 Qed.
 
-Lemma NCBT_Deref_components :
+Lemma CBT_Deref_components :
   forall gamma omega r e eff,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EDeref r e) (EConcat eff (EReadAbs r)) ->
     exists ty static ty_deref eff_deref,
-      NCheckedTcExp gamma omega e ty static /\
-      NCheckedTcExp gamma omega (EDeref r e) ty_deref eff_deref /\
-      NCheckedBackTriangle gamma omega e eff.
+      CheckedTcExp gamma omega e ty static /\
+      CheckedTcExp gamma omega (EDeref r e) ty_deref eff_deref /\
+      CheckedBackTriangle gamma omega e eff.
 Proof.
   intros gamma omega r e eff HBack.
   inversion HBack; subst; try discriminate.
@@ -1084,7 +1084,7 @@ Theorem EDeref_checked_store_context_case_from_below :
   forall n gamma omega heap env rho r e eff
     phi heap_final v_final phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EDeref r e) (EConcat eff (EReadAbs r)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
@@ -1098,11 +1098,11 @@ Proof.
     phi heap_final v_final phi_summary heap_summary theta
     HBelow HBack HContext _HComputationTraceSound HComp HSummary.
   destruct
-    (NCBT_Deref_components gamma omega r e eff HBack)
+    (CBT_Deref_components gamma omega r e eff HBack)
     as (_ty & _static & ty_deref & eff_deref &
       _HCheckedExpr & HCheckedDeref & HBackExpr).
   destruct
-    (NCheckedTcExp_deref_child_ref_from_deref
+    (CheckedTcExp_deref_child_ref_from_deref
       gamma omega r e ty_deref eff_deref HCheckedDeref)
     as (ty_cell & eff_child & HCheckedChildRef).
   unfold CountedComputationEvaluation in HComp.
@@ -1122,7 +1122,7 @@ Proof.
     as (store_e & ty_res & HResolveChild & _HBoundedExpr &
       _HHeapExpr & HValLoc).
   pose proof
-    (NStoreResolvedValShape_loc_ref_region
+    (StoreResolvedValShape_loc_ref_region
       store_e rho r ty_cell ty_res r_loc l
       HResolveChild HValLoc)
     as HRegionLoc.
@@ -1159,16 +1159,16 @@ Proof.
   apply trace_covered_single_read_abs.
 Qed.
 
-Lemma NCBT_Assign_components :
+Lemma CBT_Assign_components :
   forall gamma omega r e1 e2 eff1 eff2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EAssign r e1 e2) (EConcat eff1 (EConcat eff2 (EWriteAbs r))) ->
     exists ty static ty_assign eff_assign,
-      NCheckedTcExp gamma omega e1 ty static /\
-      NCheckedTcExp gamma omega (EAssign r e1 e2) ty_assign eff_assign /\
+      CheckedTcExp gamma omega e1 ty static /\
+      CheckedTcExp gamma omega (EAssign r e1 e2) ty_assign eff_assign /\
       static_heap_neutral static /\
-      NCheckedBackTriangle gamma omega e1 eff1 /\
-      NCheckedBackTriangle gamma omega e2 eff2.
+      CheckedBackTriangle gamma omega e1 eff1 /\
+      CheckedBackTriangle gamma omega e2 eff2.
 Proof.
   intros gamma omega r e1 e2 eff1 eff2 HBack.
   inversion HBack; subst; try discriminate.
@@ -1183,7 +1183,7 @@ Theorem EAssign_checked_store_context_case_from_below :
   forall n gamma omega heap env rho r e1 e2 eff1 eff2
     phi heap_final v_final phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EAssign r e1 e2) (EConcat eff1 (EConcat eff2 (EWriteAbs r))) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
@@ -1198,12 +1198,12 @@ Proof.
     phi heap_final v_final phi_summary heap_summary theta
     HBelow HBack HContext HComputationTraceSound HComp HSummary.
   destruct
-    (NCBT_Assign_components gamma omega r e1 e2 eff1 eff2 HBack)
+    (CBT_Assign_components gamma omega r e1 e2 eff1 eff2 HBack)
     as (ty_addr & static_addr & ty_assign & eff_assign &
       HCheckedAddr & HCheckedAssign & HNeutralAddr &
       HBackAddr & HBackVal).
   destruct
-    (NCheckedTcExp_assign_children_from_assign
+    (CheckedTcExp_assign_children_from_assign
       gamma omega r e1 e2 ty_assign eff_assign HCheckedAssign)
     as (ty_cell & eff_addr_ref & _eff_val &
       HCheckedAddrRef & _HCheckedVal).
@@ -1237,7 +1237,7 @@ Proof.
     as (store_addr & ty_res_addr & HResolveAddr & _HBoundedAddr &
       _HHeapAddr & HValLoc).
   pose proof
-    (NStoreResolvedValShape_loc_ref_region
+    (StoreResolvedValShape_loc_ref_region
       store_addr rho r ty_cell ty_res_addr r_loc l
       HResolveAddr HValLoc)
     as HRegionLoc.
@@ -1251,13 +1251,13 @@ Proof.
       heap_summary_rest & HSummaryAddr & HSummaryRest &
       HTheta & _HHeapSummary & _HTraceSummary).
   destruct
-    (NCheckedBackTriangle_summary_checked_heap_neutral
+    (CheckedBackTriangle_summary_checked_heap_neutral
       gamma omega e1 eff1 HBackAddr)
     as (eff_summary_addr & HCheckedSummaryAddr &
       HNeutralSummaryAddr).
   destruct
-    (NSteps_to_NStepsN
-      (NInitialState heap env rho eff1)
+    (Steps_to_StepsN
+      (InitialState heap env rho eff1)
       phi_summary_addr
       (StDone heap_summary_addr (VSummary theta_addr))
       HSummaryAddr)

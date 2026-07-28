@@ -22,57 +22,57 @@ Require Import theories.SmallStep.Typing.Resolve.
 Require Import theories.SmallStep.Typing.Types.
 
 Definition InitialRuntimeTyping
-    (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (expr : NExpr) : Prop :=
+    (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (expr : Expr) : Prop :=
   exists ty eff,
-    NRuntimeHeapShape rho heap /\
-    NRuntimeEnvShape rho heap env gamma /\
-    NRhoModels omega rho /\
-    NTcExp gamma omega expr ty eff.
+    RuntimeHeapShape rho heap /\
+    RuntimeEnvShape rho heap env gamma /\
+    RhoModels omega rho /\
+    TcExp gamma omega expr ty eff.
 
 Definition CheckedRuntimeContext
-    (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho) : Prop :=
-  NRuntimeHeapShape rho heap /\
-  NRuntimeEnvShape rho heap env gamma /\
-  NRegularResolvedHeapShape heap /\
-  NRegularResolvedEnvShape rho heap env gamma /\
+    (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho) : Prop :=
+  RuntimeHeapShape rho heap /\
+  RuntimeEnvShape rho heap env gamma /\
+  RegularResolvedHeapShape heap /\
+  RegularResolvedEnvShape rho heap env gamma /\
   (exists store,
-    NStoreResolvedRuntimeShape heap store env rho gamma) /\
-  NRhoModels omega rho /\
-  NHeapKeysBounded heap.
+    StoreResolvedRuntimeShape heap store env rho gamma) /\
+  RhoModels omega rho /\
+  HeapKeysBounded heap.
 
 Definition CheckedStoreRuntimeContext
-    (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho) : Prop :=
+    (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho) : Prop :=
   (exists store,
-    NStoreResolvedRuntimeShape heap store env rho gamma) /\
-  NRhoModels omega rho.
+    StoreResolvedRuntimeShape heap store env rho gamma) /\
+  RhoModels omega rho.
 
 Definition CheckedBoundedStoreRuntimeContext
-    (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho) : Prop :=
+    (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho) : Prop :=
   CheckedStoreRuntimeContext gamma omega heap env rho /\
-  NHeapKeysBounded heap.
+  HeapKeysBounded heap.
 
 Definition CheckedInitialRuntimeTyping
-    (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (expr : NExpr) : Prop :=
+    (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (expr : Expr) : Prop :=
   exists ty eff,
     CheckedRuntimeContext gamma omega heap env rho /\
-    NCheckedTcExp gamma omega expr ty eff.
+    CheckedTcExp gamma omega expr ty eff.
 
 Lemma InitialRuntimeTyping_to_NWTState :
   forall gamma omega heap env rho expr,
     InitialRuntimeTyping gamma omega heap env rho expr ->
-    NWTState gamma omega (NInitialState heap env rho expr).
+    WTState gamma omega (InitialState heap env rho expr).
 Proof.
   intros gamma omega heap env rho expr HRuntime.
   destruct HRuntime as (ty & eff & HHeap & HEnv & HRho & HTyped).
-  unfold NInitialState.
-  eapply NWT_Eval; eauto.
+  unfold InitialState.
+  eapply WT_Eval; eauto.
   constructor.
 Qed.
 
@@ -86,13 +86,13 @@ Proof.
     (ty & eff & HContext & HChecked).
   destruct HContext as (HHeap & HEnv & _ & _ & _ & HRho & _).
   exists ty, eff.
-  repeat split; eauto using NCheckedTcExp_to_NTcExp.
+  repeat split; eauto using CheckedTcExp_to_TcExp.
 Qed.
 
 Lemma CheckedInitialRuntimeTyping_to_NWTState :
   forall gamma omega heap env rho expr,
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NWTState gamma omega (NInitialState heap env rho expr).
+    WTState gamma omega (InitialState heap env rho expr).
 Proof.
   intros gamma omega heap env rho expr HRuntime.
   eapply InitialRuntimeTyping_to_NWTState.
@@ -103,26 +103,26 @@ Lemma CheckedInitialRuntimeTyping_to_regular_state :
   forall gamma omega heap env rho expr,
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     exists ty_res,
-      NRegularResolvedStateShape
-        (NInitialState heap env rho expr)
+      RegularResolvedStateShape
+        (InitialState heap env rho expr)
         ty_res.
 Proof.
   intros gamma omega heap env rho expr HRuntime.
   destruct HRuntime as
     (ty & eff & HContext & HChecked).
   destruct HContext as (_ & _ & HHeap & HEnv & _ & HRho & _).
-  pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
-  destruct (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+  pose proof (CheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
+  destruct (ResolveTy_exists 0 omega rho ty HRho HTyWF)
     as (ty_res & HResolve).
   exists ty_res.
-  eapply NRegularResolvedStateShape_initial; eauto.
+  eapply RegularResolvedStateShape_initial; eauto.
 Qed.
 
 Lemma CheckedRuntimeContext_to_store_runtime_shape :
   forall gamma omega heap env rho,
     CheckedRuntimeContext gamma omega heap env rho ->
     exists store,
-      NStoreResolvedRuntimeShape heap store env rho gamma.
+      StoreResolvedRuntimeShape heap store env rho gamma.
 Proof.
   intros gamma omega heap env rho HContext.
   destruct HContext as (_ & _ & _ & _ & HStore & _ & _).
@@ -155,7 +155,7 @@ Lemma CheckedStoreRuntimeContext_to_store_runtime_shape :
   forall gamma omega heap env rho,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     exists store,
-      NStoreResolvedRuntimeShape heap store env rho gamma.
+      StoreResolvedRuntimeShape heap store env rho gamma.
 Proof.
   intros gamma omega heap env rho HContext.
   destruct HContext as (HStore & _).
@@ -165,20 +165,20 @@ Qed.
 Lemma CheckedStoreRuntimeContext_to_rho_models :
   forall gamma omega heap env rho,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NRhoModels omega rho.
+    RhoModels omega rho.
 Proof.
   intros gamma omega heap env rho HContext.
   destruct HContext as (_ & HRho).
   exact HRho.
 Qed.
 
-Lemma NStoreResolvedRuntimeShape_heap_lookups_bounded :
+Lemma StoreResolvedRuntimeShape_heap_lookups_bounded :
   forall heap store env rho gamma,
-    NStoreResolvedRuntimeShape heap store env rho gamma ->
-    NHeapLookupsBounded heap.
+    StoreResolvedRuntimeShape heap store env rho gamma ->
+    HeapLookupsBounded heap.
 Proof.
   intros heap store env rho gamma HStoreRuntime r l v HLookup.
-  unfold NStoreResolvedRuntimeShape in HStoreRuntime.
+  unfold StoreResolvedRuntimeShape in HStoreRuntime.
   destruct HStoreRuntime as (HBounded & HHeap & _).
   destruct HHeap as (HHeapToStore & _).
   destruct (HHeapToStore r l v HLookup)
@@ -190,22 +190,22 @@ Qed.
 Lemma CheckedStoreRuntimeContext_heap_lookups_bounded :
   forall gamma omega heap env rho,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NHeapLookupsBounded heap.
+    HeapLookupsBounded heap.
 Proof.
   intros gamma omega heap env rho HContext.
   destruct HContext as ((store & HStoreRuntime) & _).
-  eapply NStoreResolvedRuntimeShape_heap_lookups_bounded; eauto.
+  eapply StoreResolvedRuntimeShape_heap_lookups_bounded; eauto.
 Qed.
 
-Lemma NStoreResolvedRuntimeShape_heap_keys_bounded :
+Lemma StoreResolvedRuntimeShape_heap_keys_bounded :
   forall heap store env rho gamma,
-    NStoreResolvedRuntimeShape heap store env rho gamma ->
-    NHeapKeysBounded heap.
+    StoreResolvedRuntimeShape heap store env rho gamma ->
+    HeapKeysBounded heap.
 Proof.
   intros heap store env rho gamma HStoreRuntime r l v HIn.
   destruct (heap_in_lookup_key_exists heap r l v HIn)
     as (v' & HLookup).
-  unfold NStoreResolvedRuntimeShape in HStoreRuntime.
+  unfold StoreResolvedRuntimeShape in HStoreRuntime.
   destruct HStoreRuntime as (HBounded & HHeap & _).
   destruct HHeap as (HHeapToStore & _).
   destruct (HHeapToStore r l v' HLookup)
@@ -217,11 +217,11 @@ Qed.
 Lemma CheckedStoreRuntimeContext_heap_keys_bounded :
   forall gamma omega heap env rho,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NHeapKeysBounded heap.
+    HeapKeysBounded heap.
 Proof.
   intros gamma omega heap env rho HContext.
   destruct HContext as ((store & HStoreRuntime) & _).
-  eapply NStoreResolvedRuntimeShape_heap_keys_bounded; eauto.
+  eapply StoreResolvedRuntimeShape_heap_keys_bounded; eauto.
 Qed.
 
 Lemma CheckedStoreRuntimeContext_to_bounded_store_context :
@@ -239,8 +239,8 @@ Lemma CheckedInitialRuntimeTyping_to_store_state :
   forall gamma omega heap env rho expr,
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     exists store ty_res,
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res.
 Proof.
   intros gamma omega heap env rho expr HRuntime.
@@ -248,17 +248,17 @@ Proof.
     (ty & eff & HContext & HChecked).
   destruct HContext as (_ & _ & _ & _ & HStore & HRho & _).
   destruct HStore as (store & HStore).
-  pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
-  destruct (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+  pose proof (CheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
+  destruct (ResolveTy_exists 0 omega rho ty HRho HTyWF)
     as (ty_res & HResolve).
   exists store, ty_res.
-  eapply NStoreResolvedStateShape_initial; eauto.
+  eapply StoreResolvedStateShape_initial; eauto.
 Qed.
 
 Lemma CheckedRuntimeContext_to_CheckedInitialRuntimeTyping :
   forall gamma omega heap env rho expr ty eff,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CheckedInitialRuntimeTyping gamma omega heap env rho expr.
 Proof.
   intros gamma omega heap env rho expr ty eff HContext HChecked.
@@ -268,12 +268,12 @@ Qed.
 Lemma CheckedRuntimeContext_backtriangle_initials :
   forall gamma omega heap env rho expr summary_expr,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedInitialRuntimeTyping gamma omega heap env rho expr /\
     CheckedInitialRuntimeTyping gamma omega heap env rho summary_expr.
 Proof.
   intros gamma omega heap env rho expr summary_expr HContext HBack.
-  destruct (NCheckedBackTriangle_typing _ _ _ _ HBack) as
+  destruct (CheckedBackTriangle_typing _ _ _ _ HBack) as
     (ty & eff & eff_summary & HCheckedExpr & HCheckedSummary).
   split.
   - eapply CheckedRuntimeContext_to_CheckedInitialRuntimeTyping;
@@ -285,8 +285,8 @@ Qed.
 Lemma CheckedRuntimeContext_heap_neutral_steps :
   forall gamma omega heap env rho expr phi heap_final v,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NSteps
-      (NInitialState heap env rho expr)
+    Steps
+      (InitialState heap env rho expr)
       phi
       (StDone heap_final v) ->
     HeapNeutralTrace phi ->
@@ -295,7 +295,7 @@ Proof.
   intros gamma omega heap env rho expr phi heap_final v
     HContext HSteps HNeutral.
   pose proof
-    (NSteps_heap_neutral_initial_heap
+    (Steps_heap_neutral_initial_heap
       heap env rho expr phi heap_final v HSteps HNeutral)
     as HHeapEq.
   subst heap_final.
@@ -305,20 +305,20 @@ Qed.
 Theorem checked_initial_progress :
   forall gamma omega heap env rho expr,
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NProgressState (NInitialState heap env rho expr).
+    ProgressState (InitialState heap env rho expr).
 Proof.
   intros gamma omega heap env rho expr HRuntime.
-  eapply NStep_progress.
+  eapply Step_progress.
   eapply CheckedInitialRuntimeTyping_to_NWTState; eauto.
 Qed.
 
 Theorem checked_initial_step_heap_neutral_preservation :
   forall gamma omega heap env rho expr label state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NStep (NInitialState heap env rho expr) label state' ->
+    Step (InitialState heap env rho expr) label state' ->
     HeapNeutralTrace (label_trace label) ->
     exists ty_res,
-      NRegularResolvedStateShape state' ty_res.
+      RegularResolvedStateShape state' ty_res.
 Proof.
   intros gamma omega heap env rho expr label state'
     HRuntime HStep HNeutral.
@@ -327,16 +327,16 @@ Proof.
       gamma omega heap env rho expr HRuntime)
     as (ty_res & HState).
   exists ty_res.
-  eapply NStep_heap_neutral_regular_state_preservation; eauto.
+  eapply Step_heap_neutral_regular_state_preservation; eauto.
 Qed.
 
 Theorem checked_initial_steps_heap_neutral_preservation :
   forall gamma omega heap env rho expr phi state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NSteps (NInitialState heap env rho expr) phi state' ->
+    Steps (InitialState heap env rho expr) phi state' ->
     HeapNeutralTrace phi ->
     exists ty_res,
-      NRegularResolvedStateShape state' ty_res.
+      RegularResolvedStateShape state' ty_res.
 Proof.
   intros gamma omega heap env rho expr phi state'
     HRuntime HSteps HNeutral.
@@ -345,16 +345,16 @@ Proof.
       gamma omega heap env rho expr HRuntime)
     as (ty_res & HState).
   exists ty_res.
-  eapply NSteps_heap_neutral_regular_state_preservation; eauto.
+  eapply Steps_heap_neutral_regular_state_preservation; eauto.
 Qed.
 
 Theorem checked_initial_stepsN_heap_neutral_preservation :
   forall n gamma omega heap env rho expr phi state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NStepsN n (NInitialState heap env rho expr) phi state' ->
+    StepsN n (InitialState heap env rho expr) phi state' ->
     HeapNeutralTrace phi ->
     exists ty_res,
-      NRegularResolvedStateShape state' ty_res.
+      RegularResolvedStateShape state' ty_res.
 Proof.
   intros n gamma omega heap env rho expr phi state'
     HRuntime HSteps HNeutral.
@@ -363,15 +363,15 @@ Proof.
       gamma omega heap env rho expr HRuntime)
     as (ty_res & HState).
   exists ty_res.
-  eapply NStepsN_heap_neutral_regular_state_preservation; eauto.
+  eapply StepsN_heap_neutral_regular_state_preservation; eauto.
 Qed.
 
 Theorem checked_initial_steps_store_preservation :
   forall gamma omega heap env rho expr phi state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NSteps (NInitialState heap env rho expr) phi state' ->
+    Steps (InitialState heap env rho expr) phi state' ->
     exists store ty_res,
-      NStoreResolvedStateShape store state' ty_res.
+      StoreResolvedStateShape store state' ty_res.
 Proof.
   intros gamma omega heap env rho expr phi state'
     HRuntime HSteps.
@@ -380,8 +380,8 @@ Proof.
       gamma omega heap env rho expr HRuntime)
     as (store & ty_res & HState).
   destruct
-    (NSteps_store_resolved_state_preservation
-      (NInitialState heap env rho expr)
+    (Steps_store_resolved_state_preservation
+      (InitialState heap env rho expr)
       phi state' store ty_res HSteps HState)
     as (store' & HState').
   exists store', ty_res.
@@ -391,14 +391,14 @@ Qed.
 Theorem checked_initial_steps_store_preservation_with_transport :
   forall gamma omega heap env rho expr phi state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NSteps (NInitialState heap env rho expr) phi state' ->
+    Steps (InitialState heap env rho expr) phi state' ->
     exists store store' ty_res,
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res /\
-      NStoreResolvedStateShape store' state' ty_res /\
-      NStoreStepTransport store store'
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store' state' ty_res /\
+      StoreStepTransport store store'
+        (InitialState heap env rho expr)
         state'.
 Proof.
   intros gamma omega heap env rho expr phi state'
@@ -408,8 +408,8 @@ Proof.
       gamma omega heap env rho expr HRuntime)
     as (store & ty_res & HState).
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap env rho expr)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap env rho expr)
       phi state' store ty_res HSteps HState)
     as (store' & HState' & HTransport).
   exists store, store', ty_res.
@@ -421,79 +421,79 @@ Qed.
 Theorem checked_initial_stepsN_store_preservation :
   forall n gamma omega heap env rho expr phi state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NStepsN n (NInitialState heap env rho expr) phi state' ->
+    StepsN n (InitialState heap env rho expr) phi state' ->
     exists store ty_res,
-      NStoreResolvedStateShape store state' ty_res.
+      StoreResolvedStateShape store state' ty_res.
 Proof.
   intros n gamma omega heap env rho expr phi state'
     HRuntime HSteps.
   eapply checked_initial_steps_store_preservation; eauto.
-  eapply NStepsN_to_NSteps; eauto.
+  eapply StepsN_to_Steps; eauto.
 Qed.
 
 Theorem checked_initial_stepsN_store_preservation_with_transport :
   forall n gamma omega heap env rho expr phi state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NStepsN n (NInitialState heap env rho expr) phi state' ->
+    StepsN n (InitialState heap env rho expr) phi state' ->
     exists store store' ty_res,
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res /\
-      NStoreResolvedStateShape store' state' ty_res /\
-      NStoreStepTransport store store'
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store' state' ty_res /\
+      StoreStepTransport store store'
+        (InitialState heap env rho expr)
         state'.
 Proof.
   intros n gamma omega heap env rho expr phi state'
     HRuntime HSteps.
   eapply checked_initial_steps_store_preservation_with_transport; eauto.
-  eapply NStepsN_to_NSteps; eauto.
+  eapply StepsN_to_Steps; eauto.
 Qed.
 
 Theorem checked_initial_steps_view_store_preservation :
   forall gamma omega heap env rho expr view state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NStepsView (NInitialState heap env rho expr) view state' ->
+    StepsView (InitialState heap env rho expr) view state' ->
     exists store ty_res,
-      NStoreResolvedStateShape store state' ty_res.
+      StoreResolvedStateShape store state' ty_res.
 Proof.
   intros gamma omega heap env rho expr view state'
     HRuntime HSteps.
   eapply checked_initial_steps_store_preservation; eauto.
-  eapply NStepsView_to_NSteps; eauto.
+  eapply StepsView_to_Steps; eauto.
 Qed.
 
 Theorem checked_initial_steps_view_store_preservation_with_transport :
   forall gamma omega heap env rho expr view state',
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
-    NStepsView (NInitialState heap env rho expr) view state' ->
+    StepsView (InitialState heap env rho expr) view state' ->
     exists store store' ty_res,
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res /\
-      NStoreResolvedStateShape store' state' ty_res /\
-      NStoreStepTransport store store'
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store' state' ty_res /\
+      StoreStepTransport store store'
+        (InitialState heap env rho expr)
         state'.
 Proof.
   intros gamma omega heap env rho expr view state'
     HRuntime HSteps.
   eapply checked_initial_steps_store_preservation_with_transport; eauto.
-  eapply NStepsView_to_NSteps; eauto.
+  eapply StepsView_to_Steps; eauto.
 Qed.
 
-Definition SummaryEvaluation (heap : Heap) (env : NEnv) (rho : Rho)
-    (summary_expr : NExpr) (phi_summary : Trace)
+Definition SummaryEvaluation (heap : Heap) (env : Env) (rho : Rho)
+    (summary_expr : Expr) (phi_summary : Trace)
     (heap_summary : Heap) (theta : Summary) : Prop :=
-  NSteps
-    (NInitialState heap env rho summary_expr)
+  Steps
+    (InitialState heap env rho summary_expr)
     phi_summary
     (StDone heap_summary (VSummary theta)).
 
-Definition ComputationEvaluation (heap : Heap) (env : NEnv) (rho : Rho)
-    (expr : NExpr) (phi : Trace) (heap' : Heap) (v : NVal) : Prop :=
-  NSteps
-    (NInitialState heap env rho expr)
+Definition ComputationEvaluation (heap : Heap) (env : Env) (rho : Rho)
+    (expr : Expr) (phi : Trace) (heap' : Heap) (v : Val) : Prop :=
+  Steps
+    (InitialState heap env rho expr)
     phi
     (StDone heap' v).
 
@@ -501,12 +501,12 @@ Theorem checked_computation_store_transport_checked_initial :
   forall gamma omega heap env rho expr ty eff phi heap' v
     next_expr next_ty next_eff,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
-    NCheckedTcExp gamma omega next_expr next_ty next_eff ->
+    CheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega next_expr next_ty next_eff ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     exists store' next_ty_res,
-      NStoreResolvedStateShape store'
-        (NInitialState heap' env rho next_expr)
+      StoreResolvedStateShape store'
+        (InitialState heap' env rho next_expr)
         next_ty_res.
 Proof.
   intros gamma omega heap env rho expr ty eff phi heap' v
@@ -516,46 +516,46 @@ Proof.
     (_ & _ & _ & _ & HStoreContext & HRho & _).
   destruct HStoreContext as (store & HStoreRuntime).
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega expr ty eff HCheckedExpr)
     as HTyWF.
   destruct
-    (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+    (ResolveTy_exists 0 omega rho ty HRho HTyWF)
     as (ty_res & HResolve).
   assert
     (HInitial :
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold ComputationEvaluation in HComp.
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap env rho expr)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap env rho expr)
       phi (StDone heap' v) store ty_res
       HComp HInitial)
     as (store' & _ & HTransport).
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega next_expr next_ty next_eff HCheckedNext)
     as HNextTyWF.
   destruct
-    (NResolveTy_exists 0 omega rho next_ty HRho HNextTyWF)
+    (ResolveTy_exists 0 omega rho next_ty HRho HNextTyWF)
     as (next_ty_res & HResolveNext).
   assert
     (HNextInitial :
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho next_expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho next_expr)
         next_ty_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   destruct HTransport as (HStateTransport & _ & _).
   specialize
     (HStateTransport
-      (NInitialState heap env rho next_expr)
+      (InitialState heap env rho next_expr)
       next_ty_res
       eq_refl
       HNextInitial)
@@ -568,10 +568,10 @@ Qed.
 Theorem checked_computation_store_runtime_shape :
   forall gamma omega heap env rho expr ty eff phi heap' v,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     exists store',
-      NStoreResolvedRuntimeShape heap' store' env rho gamma.
+      StoreResolvedRuntimeShape heap' store' env rho gamma.
 Proof.
   intros gamma omega heap env rho expr ty eff phi heap' v
     HContext HCheckedExpr HComp.
@@ -579,24 +579,24 @@ Proof.
     (_ & _ & _ & _ & HStoreContext & HRho & _).
   destruct HStoreContext as (store & HStoreRuntime).
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega expr ty eff HCheckedExpr)
     as HTyWF.
   destruct
-    (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+    (ResolveTy_exists 0 omega rho ty HRho HTyWF)
     as (ty_res & HResolve).
   assert
     (HInitial :
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold ComputationEvaluation in HComp.
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap env rho expr)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap env rho expr)
       phi (StDone heap' v) store ty_res
       HComp HInitial)
     as (store' & _ & HTransport).
@@ -609,7 +609,7 @@ Qed.
 Theorem checked_computation_store_runtime_context :
   forall gamma omega heap env rho expr ty eff phi heap' v,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     CheckedStoreRuntimeContext gamma omega heap' env rho.
 Proof.
@@ -630,34 +630,34 @@ Qed.
 Theorem checked_store_computation_store_runtime_shape :
   forall gamma omega heap env rho expr ty eff phi heap' v,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     exists store',
-      NStoreResolvedRuntimeShape heap' store' env rho gamma.
+      StoreResolvedRuntimeShape heap' store' env rho gamma.
 Proof.
   intros gamma omega heap env rho expr ty eff phi heap' v
     HContext HCheckedExpr HComp.
   destruct HContext as (HStoreContext & HRho).
   destruct HStoreContext as (store & HStoreRuntime).
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega expr ty eff HCheckedExpr)
     as HTyWF.
   destruct
-    (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+    (ResolveTy_exists 0 omega rho ty HRho HTyWF)
     as (ty_res & HResolve).
   assert
     (HInitial :
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold ComputationEvaluation in HComp.
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap env rho expr)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap env rho expr)
       phi (StDone heap' v) store ty_res
       HComp HInitial)
     as (store' & _ & HTransport).
@@ -670,7 +670,7 @@ Qed.
 Theorem checked_store_computation_store_runtime_context :
   forall gamma omega heap env rho expr ty eff phi heap' v,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     CheckedStoreRuntimeContext gamma omega heap' env rho.
 Proof.
@@ -693,17 +693,17 @@ Theorem checked_sequential_computations_store_value_shapes :
     expr1 ty1 eff1 phi1 heap1 v1
     expr2 ty2 eff2 phi2 heap2 v2,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr1 ty1 eff1 ->
-    NCheckedTcExp gamma omega expr2 ty2 eff2 ->
+    CheckedTcExp gamma omega expr1 ty1 eff1 ->
+    CheckedTcExp gamma omega expr2 ty2 eff2 ->
     ComputationEvaluation heap env rho expr1 phi1 heap1 v1 ->
     ComputationEvaluation heap1 env rho expr2 phi2 heap2 v2 ->
     exists store2 ty1_res ty2_res,
-      NResolveTy rho ty1 ty1_res /\
-      NResolveTy rho ty2 ty2_res /\
-      NStoreKeysBoundedByHeap heap2 store2 /\
-      NStoreResolvedHeapShape heap2 store2 /\
-      NStoreResolvedValShape store2 v1 ty1_res /\
-      NStoreResolvedValShape store2 v2 ty2_res.
+      ResolveTy rho ty1 ty1_res /\
+      ResolveTy rho ty2 ty2_res /\
+      StoreKeysBoundedByHeap heap2 store2 /\
+      StoreResolvedHeapShape heap2 store2 /\
+      StoreResolvedValShape store2 v1 ty1_res /\
+      StoreResolvedValShape store2 v2 ty2_res.
 Proof.
   intros gamma omega heap env rho
     expr1 ty1 eff1 phi1 heap1 v1
@@ -713,24 +713,24 @@ Proof.
     (_ & _ & _ & _ & HStoreContext & HRho & _).
   destruct HStoreContext as (store0 & HStoreRuntime0).
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega expr1 ty1 eff1 HChecked1)
     as HTyWF1.
   destruct
-    (NResolveTy_exists 0 omega rho ty1 HRho HTyWF1)
+    (ResolveTy_exists 0 omega rho ty1 HRho HTyWF1)
     as (ty1_res & HResolve1).
   assert
     (HInitial1 :
-      NStoreResolvedStateShape store0
-        (NInitialState heap env rho expr1)
+      StoreResolvedStateShape store0
+        (InitialState heap env rho expr1)
         ty1_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold ComputationEvaluation in HComp1.
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap env rho expr1)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap env rho expr1)
       phi1 (StDone heap1 v1) store0 ty1_res
       HComp1 HInitial1)
     as (store1 & HDone1 & HTransport1).
@@ -739,29 +739,29 @@ Proof.
     (HRuntimeTransport1 env rho gamma HStoreRuntime0)
     as HStoreRuntime1.
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega expr2 ty2 eff2 HChecked2)
     as HTyWF2.
   destruct
-    (NResolveTy_exists 0 omega rho ty2 HRho HTyWF2)
+    (ResolveTy_exists 0 omega rho ty2 HRho HTyWF2)
     as (ty2_res & HResolve2).
   assert
     (HInitial2 :
-      NStoreResolvedStateShape store1
-        (NInitialState heap1 env rho expr2)
+      StoreResolvedStateShape store1
+        (InitialState heap1 env rho expr2)
         ty2_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold ComputationEvaluation in HComp2.
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap1 env rho expr2)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap1 env rho expr2)
       phi2 (StDone heap2 v2) store1 ty2_res
       HComp2 HInitial2)
     as (store2 & HDone2 & HTransport2).
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store2 heap2 v2 ty2_res HDone2)
     as (HBounded2 & HHeap2 & HVal2).
   destruct HTransport2 as (HStateTransport2 & _ & _).
@@ -774,7 +774,7 @@ Proof.
     as HDone1Final.
   simpl in HDone1Final.
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store2 heap2 v1 ty1_res HDone1Final)
     as (_ & _ & HVal1).
   exists store2, ty1_res, ty2_res.
@@ -790,17 +790,17 @@ Theorem checked_store_sequential_computations_store_value_shapes :
     expr1 ty1 eff1 phi1 heap1 v1
     expr2 ty2 eff2 phi2 heap2 v2,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr1 ty1 eff1 ->
-    NCheckedTcExp gamma omega expr2 ty2 eff2 ->
+    CheckedTcExp gamma omega expr1 ty1 eff1 ->
+    CheckedTcExp gamma omega expr2 ty2 eff2 ->
     ComputationEvaluation heap env rho expr1 phi1 heap1 v1 ->
     ComputationEvaluation heap1 env rho expr2 phi2 heap2 v2 ->
     exists store2 ty1_res ty2_res,
-      NResolveTy rho ty1 ty1_res /\
-      NResolveTy rho ty2 ty2_res /\
-      NStoreKeysBoundedByHeap heap2 store2 /\
-      NStoreResolvedHeapShape heap2 store2 /\
-      NStoreResolvedValShape store2 v1 ty1_res /\
-      NStoreResolvedValShape store2 v2 ty2_res.
+      ResolveTy rho ty1 ty1_res /\
+      ResolveTy rho ty2 ty2_res /\
+      StoreKeysBoundedByHeap heap2 store2 /\
+      StoreResolvedHeapShape heap2 store2 /\
+      StoreResolvedValShape store2 v1 ty1_res /\
+      StoreResolvedValShape store2 v2 ty2_res.
 Proof.
   intros gamma omega heap env rho
     expr1 ty1 eff1 phi1 heap1 v1
@@ -809,24 +809,24 @@ Proof.
   destruct HContext as (HStoreContext & HRho).
   destruct HStoreContext as (store0 & HStoreRuntime0).
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega expr1 ty1 eff1 HChecked1)
     as HTyWF1.
   destruct
-    (NResolveTy_exists 0 omega rho ty1 HRho HTyWF1)
+    (ResolveTy_exists 0 omega rho ty1 HRho HTyWF1)
     as (ty1_res & HResolve1).
   assert
     (HInitial1 :
-      NStoreResolvedStateShape store0
-        (NInitialState heap env rho expr1)
+      StoreResolvedStateShape store0
+        (InitialState heap env rho expr1)
         ty1_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold ComputationEvaluation in HComp1.
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap env rho expr1)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap env rho expr1)
       phi1 (StDone heap1 v1) store0 ty1_res
       HComp1 HInitial1)
     as (store1 & HDone1 & HTransport1).
@@ -835,29 +835,29 @@ Proof.
     (HRuntimeTransport1 env rho gamma HStoreRuntime0)
     as HStoreRuntime1.
   pose proof
-    (NCheckedTcExp_ty_wf
+    (CheckedTcExp_ty_wf
       gamma omega expr2 ty2 eff2 HChecked2)
     as HTyWF2.
   destruct
-    (NResolveTy_exists 0 omega rho ty2 HRho HTyWF2)
+    (ResolveTy_exists 0 omega rho ty2 HRho HTyWF2)
     as (ty2_res & HResolve2).
   assert
     (HInitial2 :
-      NStoreResolvedStateShape store1
-        (NInitialState heap1 env rho expr2)
+      StoreResolvedStateShape store1
+        (InitialState heap1 env rho expr2)
         ty2_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold ComputationEvaluation in HComp2.
   destruct
-    (NSteps_store_resolved_state_preservation_with_transport
-      (NInitialState heap1 env rho expr2)
+    (Steps_store_resolved_state_preservation_with_transport
+      (InitialState heap1 env rho expr2)
       phi2 (StDone heap2 v2) store1 ty2_res
       HComp2 HInitial2)
     as (store2 & HDone2 & HTransport2).
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store2 heap2 v2 ty2_res HDone2)
     as (HBounded2 & HHeap2 & HVal2).
   destruct HTransport2 as (HStateTransport2 & _ & _).
@@ -870,7 +870,7 @@ Proof.
     as HDone1Final.
   simpl in HDone1Final.
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store2 heap2 v1 ty1_res HDone1Final)
     as (_ & _ & HVal1).
   exists store2, ty1_res, ty2_res.
@@ -882,13 +882,13 @@ Proof.
 Qed.
 
 Definition CheckedSummaryTraceSoundnessFor
-    (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho) : Prop :=
+    (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho) : Prop :=
   forall summary_expr eff phi_summary heap_summary theta eff_res,
-    NCheckedTcExp gamma omega summary_expr TyEffect eff ->
+    CheckedTcExp gamma omega summary_expr TyEffect eff ->
     SummaryEvaluation heap env rho summary_expr
       phi_summary heap_summary theta ->
-    NResolveStaticEffect rho eff eff_res ->
+    ResolveStaticEffect rho eff eff_res ->
     TraceCoveredByStaticEffect phi_summary eff_res.
 
 Definition CheckedSummaryTraceSoundnessGoal : Prop :=
@@ -924,12 +924,12 @@ Proof.
 Qed.
 
 Definition CheckedComputationTraceSoundnessFor
-    (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho) : Prop :=
+    (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho) : Prop :=
   forall expr ty eff phi heap' v eff_res,
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     ComputationEvaluation heap env rho expr phi heap' v ->
-    NResolveStaticEffect rho eff eff_res ->
+    ResolveStaticEffect rho eff eff_res ->
     TraceCoveredByStaticEffect phi eff_res.
 
 Definition CheckedComputationTraceSoundnessGoal : Prop :=
@@ -988,7 +988,7 @@ Theorem summary_static_heap_neutral :
     eff eff_res,
     SummaryEvaluation heap env rho summary_expr
       phi_summary heap_summary theta ->
-    NResolveStaticEffect rho eff eff_res ->
+    ResolveStaticEffect rho eff eff_res ->
     TraceCoveredByStaticEffect phi_summary eff_res ->
     static_heap_neutral eff ->
     heap_summary = heap /\ HeapNeutralTrace phi_summary.
@@ -1002,22 +1002,22 @@ Proof.
     as HTraceNeutral.
   split.
   - unfold SummaryEvaluation in HSummary.
-    eapply NSteps_heap_neutral_initial_heap; eauto.
+    eapply Steps_heap_neutral_initial_heap; eauto.
   - exact HTraceNeutral.
 Qed.
 
 Definition CountedComputationEvaluation (n : nat)
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (expr : NExpr) (phi : Trace) (heap' : Heap) (v : NVal) : Prop :=
-  NStepsN n
-    (NInitialState heap env rho expr)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (expr : Expr) (phi : Trace) (heap' : Heap) (v : Val) : Prop :=
+  StepsN n
+    (InitialState heap env rho expr)
     phi
     (StDone heap' v).
 
 Lemma counted_silent_initial_return_trace_nil :
   forall n heap env rho expr v0 phi heap_final v_final,
-    NStep
-      (NInitialState heap env rho expr)
+    Step
+      (InitialState heap env rho expr)
       LSilent
       (StReturn heap v0 KDone) ->
     CountedComputationEvaluation n heap env rho expr
@@ -1028,9 +1028,9 @@ Proof.
     HStep HComp.
   unfold CountedComputationEvaluation in HComp.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho expr)
+      (InitialState heap env rho expr)
       LSilent
       (StReturn heap v0 KDone)
       phi
@@ -1040,9 +1040,9 @@ Proof.
       HComp)
     as (n_tail & phi_tail & _ & HReturn & HTrace).
   destruct
-    (NSteps_return_done_inv
+    (Steps_return_done_inv
       heap v0 phi_tail heap_final v_final
-      (NStepsN_to_NSteps
+      (StepsN_to_Steps
         n_tail
         (StReturn heap v0 KDone)
         phi_tail
@@ -1056,8 +1056,8 @@ Qed.
 
 Lemma counted_silent_initial_return_covered :
   forall n heap env rho expr v0 phi heap_final v_final theta,
-    NStep
-      (NInitialState heap env rho expr)
+    Step
+      (InitialState heap env rho expr)
       LSilent
       (StReturn heap v0 KDone) ->
     CountedComputationEvaluation n heap env rho expr
@@ -1077,7 +1077,7 @@ Qed.
 Theorem checked_counted_computation_store_runtime_context :
   forall n gamma omega heap env rho expr ty eff phi heap' v,
     CheckedRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     CheckedStoreRuntimeContext gamma omega heap' env rho.
 Proof.
@@ -1085,14 +1085,14 @@ Proof.
     HContext HCheckedExpr HComp.
   eapply checked_computation_store_runtime_context; eauto.
   unfold ComputationEvaluation, CountedComputationEvaluation in *.
-  eapply NStepsN_to_NSteps.
+  eapply StepsN_to_Steps.
   exact HComp.
 Qed.
 
 Theorem checked_store_counted_computation_store_runtime_context :
   forall n gamma omega heap env rho expr ty eff phi heap' v,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     CheckedStoreRuntimeContext gamma omega heap' env rho.
 Proof.
@@ -1100,14 +1100,14 @@ Proof.
     HContext HCheckedExpr HComp.
   eapply checked_store_computation_store_runtime_context; eauto.
   unfold ComputationEvaluation, CountedComputationEvaluation in *.
-  eapply NStepsN_to_NSteps.
+  eapply StepsN_to_Steps.
   exact HComp.
 Qed.
 
 Theorem checked_bounded_store_counted_computation_context :
   forall n gamma omega heap env rho expr ty eff phi heap' v,
     CheckedBoundedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     CheckedBoundedStoreRuntimeContext gamma omega heap' env rho.
 Proof.
@@ -1119,9 +1119,9 @@ Proof.
       eauto.
   - unfold CountedComputationEvaluation in HComp.
     eapply
-      (NStepsN_preserves_heap_bounded_aligned
+      (StepsN_preserves_heap_bounded_aligned
         n
-        (NInitialState heap env rho expr)
+        (InitialState heap env rho expr)
         phi
         (StDone heap' v));
       simpl; eauto.
@@ -1130,9 +1130,9 @@ Qed.
 Lemma checked_counted_computation_trace_covered_by_static_effect :
   forall n gamma omega heap env rho expr ty eff phi heap' v eff_res,
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
-    NResolveStaticEffect rho eff eff_res ->
+    ResolveStaticEffect rho eff eff_res ->
     TraceCoveredByStaticEffect phi eff_res.
 Proof.
   intros n gamma omega heap env rho expr ty eff phi heap' v eff_res
@@ -1140,7 +1140,7 @@ Proof.
   unfold CheckedComputationTraceSoundnessFor in HSound.
   eapply HSound; eauto.
   unfold ComputationEvaluation, CountedComputationEvaluation in *.
-  eapply NStepsN_to_NSteps.
+  eapply StepsN_to_Steps.
   exact HComp.
 Qed.
 
@@ -1148,7 +1148,7 @@ Lemma checked_store_counted_computation_read_only :
   forall n gamma omega heap env rho expr ty eff phi heap' v,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     static_readonly eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     ReadOnlyTrace phi.
@@ -1156,11 +1156,11 @@ Proof.
   intros n gamma omega heap env rho expr ty eff phi heap' v
     HContext HSound HChecked HReadOnly HComp.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega expr ty eff HChecked)
     as HEffWF.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff
       (CheckedStoreRuntimeContext_to_rho_models
         gamma omega heap env rho HContext)
@@ -1169,14 +1169,14 @@ Proof.
   eapply TraceCoveredByStaticEffect_read_only.
   - eapply checked_counted_computation_trace_covered_by_static_effect;
       eauto.
-  - eapply NResolveStaticEffect_static_readonly; eauto.
+  - eapply ResolveStaticEffect_static_readonly; eauto.
 Qed.
 
 Lemma checked_store_counted_computation_heap_neutral :
   forall n gamma omega heap env rho expr ty eff phi heap' v,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     static_heap_neutral eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     heap' = heap /\ HeapNeutralTrace phi.
@@ -1184,11 +1184,11 @@ Proof.
   intros n gamma omega heap env rho expr ty eff phi heap' v
     HContext HSound HChecked HHeapNeutral HComp.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega expr ty eff HChecked)
     as HEffWF.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff
       (CheckedStoreRuntimeContext_to_rho_models
         gamma omega heap env rho HContext)
@@ -1204,29 +1204,29 @@ Proof.
       rho phi eff eff_res HResolve HCovered HHeapNeutral)
     as HTraceNeutral.
   split.
-  - eapply NSteps_heap_neutral_initial_heap.
+  - eapply Steps_heap_neutral_initial_heap.
     + unfold CountedComputationEvaluation in HComp.
-      eapply NStepsN_to_NSteps.
+      eapply StepsN_to_Steps.
       exact HComp.
     + exact HTraceNeutral.
   - exact HTraceNeutral.
 Qed.
 
 Definition StructuredSummaryEvaluation
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (summary_expr : NExpr) (view_summary : NTraceView)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (summary_expr : Expr) (view_summary : TraceView)
     (heap_summary : Heap) (theta : Summary) : Prop :=
-  NStepsView
-    (NInitialState heap env rho summary_expr)
+  StepsView
+    (InitialState heap env rho summary_expr)
     view_summary
     (StDone heap_summary (VSummary theta)).
 
 Definition StructuredComputationEvaluation
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (expr : NExpr) (view : NTraceView)
-    (heap' : Heap) (v : NVal) : Prop :=
-  NStepsView
-    (NInitialState heap env rho expr)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (expr : Expr) (view : TraceView)
+    (heap' : Heap) (v : Val) : Prop :=
+  StepsView
+    (InitialState heap env rho expr)
     view
     (StDone heap' v).
 
@@ -1237,7 +1237,7 @@ Theorem checked_summary_store_preservation :
     SummaryEvaluation heap env rho summary_expr
       phi_summary heap_summary theta ->
     exists store ty_res,
-      NStoreResolvedStateShape store
+      StoreResolvedStateShape store
         (StDone heap_summary (VSummary theta))
         ty_res.
 Proof.
@@ -1254,9 +1254,9 @@ Theorem checked_summary_store_value_shape :
     SummaryEvaluation heap env rho summary_expr
       phi_summary heap_summary theta ->
     exists store,
-      NStoreKeysBoundedByHeap heap_summary store /\
-      NStoreResolvedHeapShape heap_summary store /\
-      NStoreResolvedValShape store (VSummary theta) TyEffect.
+      StoreKeysBoundedByHeap heap_summary store /\
+      StoreResolvedHeapShape heap_summary store /\
+      StoreResolvedValShape store (VSummary theta) TyEffect.
 Proof.
   intros gamma omega heap env rho summary_expr
     phi_summary heap_summary theta HRuntime HSummary.
@@ -1266,13 +1266,13 @@ Proof.
       phi_summary heap_summary theta HRuntime HSummary)
     as (store & ty_res & HState).
   destruct
-    (NStoreResolvedStateShape_done_summary_inv
+    (StoreResolvedStateShape_done_summary_inv
       store heap_summary theta ty_res HState)
     as (_ & HBounded & HHeap).
   exists store.
   split; [exact HBounded |].
   split; [exact HHeap |].
-  exact (NSRVS_Summary store theta).
+  exact (SRVS_Summary store theta).
 Qed.
 
 Theorem checked_computation_store_preservation :
@@ -1280,7 +1280,7 @@ Theorem checked_computation_store_preservation :
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     exists store ty_res,
-      NStoreResolvedStateShape store (StDone heap' v) ty_res.
+      StoreResolvedStateShape store (StDone heap' v) ty_res.
 Proof.
   intros gamma omega heap env rho expr phi heap' v
     HRuntime HComp.
@@ -1293,9 +1293,9 @@ Theorem checked_computation_store_value_shape :
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     exists store ty_res,
-      NStoreKeysBoundedByHeap heap' store /\
-      NStoreResolvedHeapShape heap' store /\
-      NStoreResolvedValShape store v ty_res.
+      StoreKeysBoundedByHeap heap' store /\
+      StoreResolvedHeapShape heap' store /\
+      StoreResolvedValShape store v ty_res.
 Proof.
   intros gamma omega heap env rho expr phi heap' v
     HRuntime HComp.
@@ -1304,7 +1304,7 @@ Proof.
       gamma omega heap env rho expr phi heap' v HRuntime HComp)
     as (store & ty_res & HState).
   destruct
-    (NStoreResolvedStateShape_done_inv store heap' v ty_res HState)
+    (StoreResolvedStateShape_done_inv store heap' v ty_res HState)
     as (HBounded & HHeap & HVal).
   exists store, ty_res.
   split; [exact HBounded |].
@@ -1317,10 +1317,10 @@ Theorem checked_pair_computation_store_value_shape :
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     ComputationEvaluation heap env rho expr phi heap' (VPair v1 v2) ->
     exists store ty1 ty2,
-      NStoreKeysBoundedByHeap heap' store /\
-      NStoreResolvedHeapShape heap' store /\
-      NStoreResolvedValShape store v1 ty1 /\
-      NStoreResolvedValShape store v2 ty2.
+      StoreKeysBoundedByHeap heap' store /\
+      StoreResolvedHeapShape heap' store /\
+      StoreResolvedValShape store v1 ty1 /\
+      StoreResolvedValShape store v2 ty2.
 Proof.
   intros gamma omega heap env rho expr phi heap' v1 v2
     HRuntime HComp.
@@ -1330,7 +1330,7 @@ Proof.
       HRuntime HComp)
     as (store & ty_res & HState).
   destruct
-    (NStoreResolvedStateShape_done_pair_inv
+    (StoreResolvedStateShape_done_pair_inv
       store heap' v1 v2 ty_res HState)
     as (ty1 & ty2 & _ & HBounded & HHeap & HVal1 & HVal2).
   exists store, ty1, ty2.
@@ -1344,7 +1344,7 @@ Theorem checked_counted_computation_store_preservation :
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     exists store ty_res,
-      NStoreResolvedStateShape store (StDone heap' v) ty_res.
+      StoreResolvedStateShape store (StDone heap' v) ty_res.
 Proof.
   intros n gamma omega heap env rho expr phi heap' v
     HRuntime HComp.
@@ -1357,9 +1357,9 @@ Theorem checked_counted_computation_store_value_shape :
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     exists store ty_res,
-      NStoreKeysBoundedByHeap heap' store /\
-      NStoreResolvedHeapShape heap' store /\
-      NStoreResolvedValShape store v ty_res.
+      StoreKeysBoundedByHeap heap' store /\
+      StoreResolvedHeapShape heap' store /\
+      StoreResolvedValShape store v ty_res.
 Proof.
   intros n gamma omega heap env rho expr phi heap' v
     HRuntime HComp.
@@ -1368,7 +1368,7 @@ Proof.
       n gamma omega heap env rho expr phi heap' v HRuntime HComp)
     as (store & ty_res & HState).
   destruct
-    (NStoreResolvedStateShape_done_inv store heap' v ty_res HState)
+    (StoreResolvedStateShape_done_inv store heap' v ty_res HState)
     as (HBounded & HHeap & HVal).
   exists store, ty_res.
   split; [exact HBounded |].
@@ -1379,35 +1379,35 @@ Qed.
 Theorem checked_store_counted_computation_store_value_shape :
   forall n gamma omega heap env rho expr ty eff phi heap' v,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     exists store ty_res,
-      NStoreKeysBoundedByHeap heap' store /\
-      NStoreResolvedHeapShape heap' store /\
-      NStoreResolvedValShape store v ty_res.
+      StoreKeysBoundedByHeap heap' store /\
+      StoreResolvedHeapShape heap' store /\
+      StoreResolvedValShape store v ty_res.
 Proof.
   intros n gamma omega heap env rho expr ty eff phi heap' v
     HContext HChecked HComp.
   destruct HContext as ((store & HRuntime) & HRho).
   pose proof
-    (NCheckedTcExp_ty_wf gamma omega expr ty eff HChecked)
+    (CheckedTcExp_ty_wf gamma omega expr ty eff HChecked)
     as HTyWF.
   destruct
-    (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+    (ResolveTy_exists 0 omega rho ty HRho HTyWF)
     as (ty_res & HResolve).
   assert
     (HInitial :
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold CountedComputationEvaluation in HComp.
   destruct
-    (NStepsN_store_resolved_state_preservation
+    (StepsN_store_resolved_state_preservation
       n
-      (NInitialState heap env rho expr)
+      (InitialState heap env rho expr)
       phi
       (StDone heap' v)
       store
@@ -1416,7 +1416,7 @@ Proof.
       HInitial)
     as (store' & HFinal).
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store' heap' v ty_res HFinal)
     as (HBounded & HHeap & HVal).
   exists store', ty_res.
@@ -1428,36 +1428,36 @@ Qed.
 Theorem checked_store_counted_computation_store_value_shape_resolved :
   forall n gamma omega heap env rho expr ty eff phi heap' v,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CountedComputationEvaluation n heap env rho expr phi heap' v ->
     exists store ty_res,
-      NResolveTy rho ty ty_res /\
-      NStoreKeysBoundedByHeap heap' store /\
-      NStoreResolvedHeapShape heap' store /\
-      NStoreResolvedValShape store v ty_res.
+      ResolveTy rho ty ty_res /\
+      StoreKeysBoundedByHeap heap' store /\
+      StoreResolvedHeapShape heap' store /\
+      StoreResolvedValShape store v ty_res.
 Proof.
   intros n gamma omega heap env rho expr ty eff phi heap' v
     HContext HChecked HComp.
   destruct HContext as ((store & HRuntime) & HRho).
   pose proof
-    (NCheckedTcExp_ty_wf gamma omega expr ty eff HChecked)
+    (CheckedTcExp_ty_wf gamma omega expr ty eff HChecked)
     as HTyWF.
   destruct
-    (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+    (ResolveTy_exists 0 omega rho ty HRho HTyWF)
     as (ty_res & HResolve).
   assert
     (HInitial :
-      NStoreResolvedStateShape store
-        (NInitialState heap env rho expr)
+      StoreResolvedStateShape store
+        (InitialState heap env rho expr)
         ty_res).
   {
-    eapply NStoreResolvedStateShape_initial; eauto.
+    eapply StoreResolvedStateShape_initial; eauto.
   }
   unfold CountedComputationEvaluation in HComp.
   destruct
-    (NStepsN_store_resolved_state_preservation
+    (StepsN_store_resolved_state_preservation
       n
-      (NInitialState heap env rho expr)
+      (InitialState heap env rho expr)
       phi
       (StDone heap' v)
       store
@@ -1466,7 +1466,7 @@ Proof.
       HInitial)
     as (store' & HFinal).
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store' heap' v ty_res HFinal)
     as (HBounded & HHeap & HVal).
   exists store', ty_res.
@@ -1483,7 +1483,7 @@ Theorem checked_structured_summary_store_preservation :
     StructuredSummaryEvaluation heap env rho summary_expr
       view_summary heap_summary theta ->
     exists store ty_res,
-      NStoreResolvedStateShape store
+      StoreResolvedStateShape store
         (StDone heap_summary (VSummary theta))
         ty_res.
 Proof.
@@ -1500,9 +1500,9 @@ Theorem checked_structured_summary_store_value_shape :
     StructuredSummaryEvaluation heap env rho summary_expr
       view_summary heap_summary theta ->
     exists store,
-      NStoreKeysBoundedByHeap heap_summary store /\
-      NStoreResolvedHeapShape heap_summary store /\
-      NStoreResolvedValShape store (VSummary theta) TyEffect.
+      StoreKeysBoundedByHeap heap_summary store /\
+      StoreResolvedHeapShape heap_summary store /\
+      StoreResolvedValShape store (VSummary theta) TyEffect.
 Proof.
   intros gamma omega heap env rho summary_expr
     view_summary heap_summary theta HRuntime HSummary.
@@ -1512,13 +1512,13 @@ Proof.
       view_summary heap_summary theta HRuntime HSummary)
     as (store & ty_res & HState).
   destruct
-    (NStoreResolvedStateShape_done_summary_inv
+    (StoreResolvedStateShape_done_summary_inv
       store heap_summary theta ty_res HState)
     as (_ & HBounded & HHeap).
   exists store.
   split; [exact HBounded |].
   split; [exact HHeap |].
-  exact (NSRVS_Summary store theta).
+  exact (SRVS_Summary store theta).
 Qed.
 
 Theorem checked_structured_computation_store_preservation :
@@ -1526,7 +1526,7 @@ Theorem checked_structured_computation_store_preservation :
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     StructuredComputationEvaluation heap env rho expr view heap' v ->
     exists store ty_res,
-      NStoreResolvedStateShape store (StDone heap' v) ty_res.
+      StoreResolvedStateShape store (StDone heap' v) ty_res.
 Proof.
   intros gamma omega heap env rho expr view heap' v
     HRuntime HComp.
@@ -1539,9 +1539,9 @@ Theorem checked_structured_computation_store_value_shape :
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     StructuredComputationEvaluation heap env rho expr view heap' v ->
     exists store ty_res,
-      NStoreKeysBoundedByHeap heap' store /\
-      NStoreResolvedHeapShape heap' store /\
-      NStoreResolvedValShape store v ty_res.
+      StoreKeysBoundedByHeap heap' store /\
+      StoreResolvedHeapShape heap' store /\
+      StoreResolvedValShape store v ty_res.
 Proof.
   intros gamma omega heap env rho expr view heap' v
     HRuntime HComp.
@@ -1550,7 +1550,7 @@ Proof.
       gamma omega heap env rho expr view heap' v HRuntime HComp)
     as (store & ty_res & HState).
   destruct
-    (NStoreResolvedStateShape_done_inv store heap' v ty_res HState)
+    (StoreResolvedStateShape_done_inv store heap' v ty_res HState)
     as (HBounded & HHeap & HVal).
   exists store, ty_res.
   split; [exact HBounded |].
@@ -1561,7 +1561,7 @@ Qed.
 Definition CheckedTerminalCorrectnessGoal : Prop :=
   forall gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     CheckedInitialRuntimeTyping gamma omega heap env rho summary_expr ->
     ComputationEvaluation heap env rho expr phi heap' v ->
@@ -1572,7 +1572,7 @@ Definition CheckedTerminalCorrectnessGoal : Prop :=
 Definition CheckedStructuredTerminalCorrectnessGoal : Prop :=
   forall gamma omega heap env rho expr summary_expr view heap' v
     view_summary heap_summary theta,
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     CheckedInitialRuntimeTyping gamma omega heap env rho summary_expr ->
     StructuredComputationEvaluation heap env rho expr view heap' v ->
@@ -1584,7 +1584,7 @@ Definition CheckedSmallStepCorrectnessBelow (n : nat) : Prop :=
   forall n_child gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
     n_child < n ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     CheckedInitialRuntimeTyping gamma omega heap env rho summary_expr ->
     CountedComputationEvaluation n_child heap env rho expr phi heap' v ->
@@ -1595,7 +1595,7 @@ Definition CheckedSmallStepCorrectnessBelow (n : nat) : Prop :=
 Definition CheckedContextTerminalCorrectnessGoal : Prop :=
   forall gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedRuntimeContext gamma omega heap env rho ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     SummaryEvaluation heap env rho summary_expr
@@ -1605,7 +1605,7 @@ Definition CheckedContextTerminalCorrectnessGoal : Prop :=
 Definition CheckedContextStructuredTerminalCorrectnessGoal : Prop :=
   forall gamma omega heap env rho expr summary_expr view heap' v
     view_summary heap_summary theta,
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedRuntimeContext gamma omega heap env rho ->
     StructuredComputationEvaluation heap env rho expr view heap' v ->
     StructuredSummaryEvaluation heap env rho summary_expr
@@ -1616,7 +1616,7 @@ Definition CheckedContextSmallStepCorrectnessBelow (n : nat) : Prop :=
   forall n_child gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
     n_child < n ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n_child heap env rho expr phi heap' v ->
     SummaryEvaluation heap env rho summary_expr
@@ -1627,7 +1627,7 @@ Definition CheckedStoreContextSmallStepCorrectnessBelow (n : nat) : Prop :=
   forall n_child gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
     n_child < n ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n_child heap env rho expr phi heap' v ->
     SummaryEvaluation heap env rho summary_expr
@@ -1638,7 +1638,7 @@ Definition CheckedContextSummarySmallStepCorrectnessBelow (n : nat) : Prop :=
   forall n_child gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
     n_child < n ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
     CountedComputationEvaluation n_child heap env rho expr phi heap' v ->
@@ -1650,7 +1650,7 @@ Definition CheckedStoreSummarySmallStepCorrectnessBelow (n : nat) : Prop :=
   forall n_child gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
     n_child < n ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
     CountedComputationEvaluation n_child heap env rho expr phi heap' v ->
@@ -1662,8 +1662,8 @@ Definition CheckedStoreSummaryValueSoundnessBelow (n : nat) : Prop :=
   forall n_child gamma omega heap env rho expr summary_expr eff
     phi heap_summary theta,
     n_child < n ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
-    NCheckedTcExp gamma omega summary_expr TyEffect eff ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedTcExp gamma omega summary_expr TyEffect eff ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n_child heap env rho
       summary_expr phi heap_summary (VSummary theta) ->
@@ -1729,8 +1729,8 @@ Proof.
     phi_summary heap_summary theta HBack HRuntimeExpr HRuntimeSummary
     HComp HSummary.
   destruct
-    (NSteps_to_NStepsN
-      (NInitialState heap env rho expr)
+    (Steps_to_StepsN
+      (InitialState heap env rho expr)
       phi
       (StDone heap' v)
       HComp)
@@ -1751,7 +1751,7 @@ Proof.
   unfold StructuredSummaryEvaluation in HSummary.
   unfold TraceViewCoveredBySummary.
   eapply HTerminal; eauto;
-    eapply NStepsView_to_NSteps; eauto.
+    eapply StepsView_to_Steps; eauto.
 Qed.
 
 Theorem checked_structured_terminal_correctness_from_below :
@@ -1834,8 +1834,8 @@ Proof.
   intros HBelow gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta HBack HContext HComp HSummary.
   destruct
-    (NSteps_to_NStepsN
-      (NInitialState heap env rho expr)
+    (Steps_to_StepsN
+      (InitialState heap env rho expr)
       phi
       (StDone heap' v)
       HComp)
@@ -1851,8 +1851,8 @@ Proof.
   intros HBelow gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta HBack HContext HComp HSummary.
   destruct
-    (NSteps_to_NStepsN
-      (NInitialState heap env rho expr)
+    (Steps_to_StepsN
+      (InitialState heap env rho expr)
       phi
       (StDone heap' v)
       HComp)
@@ -1897,7 +1897,7 @@ Proof.
   unfold StructuredSummaryEvaluation in HSummary.
   unfold TraceViewCoveredBySummary.
   eapply HTerminal; eauto;
-    eapply NStepsView_to_NSteps; eauto.
+    eapply StepsView_to_Steps; eauto.
 Qed.
 
 Theorem checked_context_structured_terminal_correctness_from_below :

@@ -10,11 +10,11 @@ Require Import theories.SmallStep.Runtime.Trace.
 
 Import ListNotations.
 
-Fixpoint NStateHeapsAligned (state : NState) : Prop :=
+Fixpoint StateHeapsAligned (state : State) : Prop :=
   match state with
   | StPairParRun left_state right_state _ _ _ =>
-      NStateHeapsAligned left_state /\
-      NStateHeapsAligned right_state /\
+      StateHeapsAligned left_state /\
+      StateHeapsAligned right_state /\
       state_heap left_state = state_heap right_state
   | _ => True
   end.
@@ -56,8 +56,8 @@ Qed.
 
 Lemma with_state_heap_aligned :
   forall heap state,
-    NStateHeapsAligned state ->
-    NStateHeapsAligned (with_state_heap heap state) /\
+    StateHeapsAligned state ->
+    StateHeapsAligned (with_state_heap heap state) /\
     state_heap (with_state_heap heap state) = heap.
 Proof.
   intros heap state.
@@ -78,7 +78,7 @@ Qed.
 
 Lemma with_state_heap_state_heap_aligned :
   forall state,
-    NStateHeapsAligned state ->
+    StateHeapsAligned state ->
     with_state_heap (state_heap state) state = state.
 Proof.
   intros state.
@@ -96,7 +96,7 @@ Qed.
 
 Lemma with_state_heap_aligned_same :
   forall heap state,
-    NStateHeapsAligned state ->
+    StateHeapsAligned state ->
     state_heap state = heap ->
     with_state_heap heap state = state.
 Proof.
@@ -106,11 +106,11 @@ Proof.
   exact HAligned.
 Qed.
 
-Lemma NStep_preserves_alignment :
+Lemma Step_preserves_alignment :
   forall state label state',
-    NStep state label state' ->
-    NStateHeapsAligned state ->
-    NStateHeapsAligned state'.
+    Step state label state' ->
+    StateHeapsAligned state ->
+    StateHeapsAligned state'.
 Proof.
   intros state label state' HStep.
   induction HStep; intros HAligned; simpl in *;
@@ -135,12 +135,12 @@ Proof.
     repeat split; try assumption.
 Qed.
 
-Lemma NStep_preserves_heap_bounded_aligned :
+Lemma Step_preserves_heap_bounded_aligned :
   forall state label state',
-    NStep state label state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
-    NHeapKeysBounded (state_heap state').
+    Step state label state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
+    HeapKeysBounded (state_heap state').
 Proof.
   intros state label state' HStep.
   induction HStep; intros HAligned HBounded; simpl in *;
@@ -160,12 +160,12 @@ Proof.
   - eapply heap_update_preserves_bounded; eauto.
 Qed.
 
-Lemma NStepsN_preserves_heap_bounded_aligned :
+Lemma StepsN_preserves_heap_bounded_aligned :
   forall n state phi state',
-    NStepsN n state phi state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
-    NHeapKeysBounded (state_heap state').
+    StepsN n state phi state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
+    HeapKeysBounded (state_heap state').
 Proof.
   intros n state phi state' HSteps.
   induction HSteps as
@@ -173,15 +173,15 @@ Proof.
     intros HAligned HBounded.
   - exact HBounded.
   - eapply IH.
-    + eapply NStep_preserves_alignment; eauto.
-    + eapply NStep_preserves_heap_bounded_aligned; eauto.
+    + eapply Step_preserves_alignment; eauto.
+    + eapply Step_preserves_heap_bounded_aligned; eauto.
 Qed.
 
-Lemma NStep_lookup_preserved_without_write_aligned :
+Lemma Step_lookup_preserved_without_write_aligned :
   forall state label state' r_lookup l_lookup cell,
-    NStep state label state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Step state label state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     heap_lookup r_lookup l_lookup (state_heap state) = Some cell ->
     TraceDoesNotWrite r_lookup l_lookup (label_trace label) ->
     heap_lookup r_lookup l_lookup (state_heap state') = Some cell.
@@ -214,11 +214,11 @@ Proof.
       exact HLookup.
 Qed.
 
-Theorem NSteps_lookup_preserved_without_write_aligned :
+Theorem Steps_lookup_preserved_without_write_aligned :
   forall state phi state' r l cell,
-    NSteps state phi state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Steps state phi state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     heap_lookup r l (state_heap state) = Some cell ->
     TraceDoesNotWrite r l phi ->
     heap_lookup r l (state_heap state') = Some cell.
@@ -237,41 +237,41 @@ Proof.
         r l (label_trace label) phi HNoWrite)
       as HNoWriteTail.
     pose proof
-      (NStep_lookup_preserved_without_write_aligned
+      (Step_lookup_preserved_without_write_aligned
         state label state1 r l cell HStep
         HAligned HBounded HLookup HNoWriteLabel)
       as HLookup1.
     pose proof
-      (NStep_preserves_alignment
+      (Step_preserves_alignment
         state label state1 HStep HAligned)
       as HAligned1.
     pose proof
-      (NStep_preserves_heap_bounded_aligned
+      (Step_preserves_heap_bounded_aligned
         state label state1 HStep HAligned HBounded)
       as HBounded1.
     eapply IH; eauto.
 Qed.
 
-Corollary NStepsN_lookup_preserved_without_write_aligned :
+Corollary StepsN_lookup_preserved_without_write_aligned :
   forall n state phi state' r l cell,
-    NStepsN n state phi state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    StepsN n state phi state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     heap_lookup r l (state_heap state) = Some cell ->
     TraceDoesNotWrite r l phi ->
     heap_lookup r l (state_heap state') = Some cell.
 Proof.
   intros n state phi state' r l cell HSteps
     HAligned HBounded HLookup HNoWrite.
-  eapply NSteps_lookup_preserved_without_write_aligned; eauto.
-  eapply NStepsN_to_NSteps; eauto.
+  eapply Steps_lookup_preserved_without_write_aligned; eauto.
+  eapply StepsN_to_Steps; eauto.
 Qed.
 
-Corollary NSteps_lookup_preserved_for_disjoint_right_read :
+Corollary Steps_lookup_preserved_for_disjoint_right_read :
   forall state phi_left state' phi_right r l cell,
-    NSteps state phi_left state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Steps state phi_left state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     heap_lookup r l (state_heap state) = Some cell ->
     TraceDisjoint phi_left phi_right ->
     In (DRead r l) phi_right ->
@@ -279,15 +279,15 @@ Corollary NSteps_lookup_preserved_for_disjoint_right_read :
 Proof.
   intros state phi_left state' phi_right r l cell HSteps
     HAligned HBounded HLookup HDisjoint HRead.
-  eapply NSteps_lookup_preserved_without_write_aligned; eauto.
+  eapply Steps_lookup_preserved_without_write_aligned; eauto.
   eapply TraceDisjoint_right_read_no_left_write; eauto.
 Qed.
 
-Corollary NStepsN_lookup_preserved_for_disjoint_right_read :
+Corollary StepsN_lookup_preserved_for_disjoint_right_read :
   forall n state phi_left state' phi_right r l cell,
-    NStepsN n state phi_left state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    StepsN n state phi_left state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     heap_lookup r l (state_heap state) = Some cell ->
     TraceDisjoint phi_left phi_right ->
     In (DRead r l) phi_right ->
@@ -295,16 +295,16 @@ Corollary NStepsN_lookup_preserved_for_disjoint_right_read :
 Proof.
   intros n state phi_left state' phi_right r l cell HSteps
     HAligned HBounded HLookup HDisjoint HRead.
-  eapply NStepsN_lookup_preserved_without_write_aligned; eauto.
+  eapply StepsN_lookup_preserved_without_write_aligned; eauto.
   eapply TraceDisjoint_right_read_no_left_write; eauto.
 Qed.
 
-Corollary NSteps_lookup_preserved_for_summary_disjoint_right_read :
+Corollary Steps_lookup_preserved_for_summary_disjoint_right_read :
   forall state phi_left state' phi_right theta_left theta_right
     r l cell,
-    NSteps state phi_left state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Steps state phi_left state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     heap_lookup r l (state_heap state) = Some cell ->
     summary_disjointb theta_left theta_right = true ->
     TraceCoveredBySummary phi_left theta_left ->
@@ -315,16 +315,16 @@ Proof.
   intros state phi_left state' phi_right theta_left theta_right
     r l cell HSteps HAligned HBounded HLookup HSummaryDisjoint
     HCoveredLeft HCoveredRight HRead.
-  eapply NSteps_lookup_preserved_for_disjoint_right_read; eauto.
+  eapply Steps_lookup_preserved_for_disjoint_right_read; eauto.
   eapply summary_disjoint_covered_trace_disjoint; eauto.
 Qed.
 
-Corollary NStepsN_lookup_preserved_for_summary_disjoint_right_read :
+Corollary StepsN_lookup_preserved_for_summary_disjoint_right_read :
   forall n state phi_left state' phi_right theta_left theta_right
     r l cell,
-    NStepsN n state phi_left state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    StepsN n state phi_left state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     heap_lookup r l (state_heap state) = Some cell ->
     summary_disjointb theta_left theta_right = true ->
     TraceCoveredBySummary phi_left theta_left ->
@@ -335,15 +335,15 @@ Proof.
   intros n state phi_left state' phi_right theta_left theta_right
     r l cell HSteps HAligned HBounded HLookup HSummaryDisjoint
     HCoveredLeft HCoveredRight HRead.
-  eapply NStepsN_lookup_preserved_for_disjoint_right_read; eauto.
+  eapply StepsN_lookup_preserved_for_disjoint_right_read; eauto.
   eapply summary_disjoint_covered_trace_disjoint; eauto.
 Qed.
 
-Corollary NSteps_trace_read_heap_agreement_for_summary_disjoint :
+Corollary Steps_trace_read_heap_agreement_for_summary_disjoint :
   forall state phi_left state' phi_right theta_left theta_right,
-    NSteps state phi_left state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    Steps state phi_left state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     summary_disjointb theta_left theta_right = true ->
     TraceCoveredBySummary phi_left theta_left ->
     TraceCoveredBySummary phi_right theta_right ->
@@ -353,15 +353,15 @@ Proof.
   intros state phi_left state' phi_right theta_left theta_right
     HSteps HAligned HBounded HSummaryDisjoint
     HCoveredLeft HCoveredRight r l cell HRead HLookup.
-  eapply NSteps_lookup_preserved_for_summary_disjoint_right_read;
+  eapply Steps_lookup_preserved_for_summary_disjoint_right_read;
     eauto.
 Qed.
 
-Corollary NStepsN_trace_read_heap_agreement_for_summary_disjoint :
+Corollary StepsN_trace_read_heap_agreement_for_summary_disjoint :
   forall n state phi_left state' phi_right theta_left theta_right,
-    NStepsN n state phi_left state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    StepsN n state phi_left state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     summary_disjointb theta_left theta_right = true ->
     TraceCoveredBySummary phi_left theta_left ->
     TraceCoveredBySummary phi_right theta_right ->
@@ -371,32 +371,32 @@ Proof.
   intros n state phi_left state' phi_right theta_left theta_right
     HSteps HAligned HBounded HSummaryDisjoint
     HCoveredLeft HCoveredRight r l cell HRead HLookup.
-  eapply NStepsN_lookup_preserved_for_summary_disjoint_right_read;
+  eapply StepsN_lookup_preserved_for_summary_disjoint_right_read;
     eauto.
 Qed.
 
-Corollary NStepsN_trace_read_heap_agreement_for_read_only :
+Corollary StepsN_trace_read_heap_agreement_for_read_only :
   forall n state phi_left state' phi_right,
-    NStepsN n state phi_left state' ->
-    NStateHeapsAligned state ->
-    NHeapKeysBounded (state_heap state) ->
+    StepsN n state phi_left state' ->
+    StateHeapsAligned state ->
+    HeapKeysBounded (state_heap state) ->
     ReadOnlyTrace phi_left ->
     TraceReadHeapAgreement
       phi_right (state_heap state) (state_heap state').
 Proof.
   intros n state phi_left state' phi_right HSteps HAligned
     HBounded HReadOnly r l cell _HRead HLookup.
-  eapply NStepsN_lookup_preserved_without_write_aligned; eauto.
+  eapply StepsN_lookup_preserved_without_write_aligned; eauto.
   intros HWrite.
   eapply HReadOnly; eauto.
 Qed.
 
-Lemma NStep_heap_neutral_preserves_alignment :
+Lemma Step_heap_neutral_preserves_alignment :
   forall state label state',
-    NStep state label state' ->
-    NStateHeapsAligned state ->
+    Step state label state' ->
+    StateHeapsAligned state ->
     HeapNeutralTrace (label_trace label) ->
-    NStateHeapsAligned state' /\
+    StateHeapsAligned state' /\
     state_heap state' = state_heap state.
 Proof.
   intros state label state' HStep.
@@ -440,12 +440,12 @@ Proof.
     simpl. left. reflexivity.
 Qed.
 
-Theorem NSteps_heap_neutral_preserves_alignment :
+Theorem Steps_heap_neutral_preserves_alignment :
   forall state phi state',
-    NSteps state phi state' ->
-    NStateHeapsAligned state ->
+    Steps state phi state' ->
+    StateHeapsAligned state ->
     HeapNeutralTrace phi ->
-    NStateHeapsAligned state' /\
+    StateHeapsAligned state' /\
     state_heap state' = state_heap state.
 Proof.
   intros state phi state' HSteps.
@@ -462,7 +462,7 @@ Proof.
         (label_trace label) phi HNeutral)
       as HNeutralTail.
     destruct
-      (NStep_heap_neutral_preserves_alignment
+      (Step_heap_neutral_preserves_alignment
         state label state1 HStep HAligned HNeutralLabel)
       as (HAligned1 & HHeap1).
     destruct (IH HAligned1 HNeutralTail) as
@@ -472,10 +472,10 @@ Proof.
     reflexivity.
 Qed.
 
-Corollary NSteps_heap_neutral_initial_heap :
+Corollary Steps_heap_neutral_initial_heap :
   forall heap env rho e phi heap_final v,
-    NSteps
-      (NInitialState heap env rho e)
+    Steps
+      (InitialState heap env rho e)
       phi
       (StDone heap_final v) ->
     HeapNeutralTrace phi ->
@@ -483,8 +483,8 @@ Corollary NSteps_heap_neutral_initial_heap :
 Proof.
   intros heap env rho e phi heap_final v HSteps HNeutral.
   destruct
-    (NSteps_heap_neutral_preserves_alignment
-      (NInitialState heap env rho e)
+    (Steps_heap_neutral_preserves_alignment
+      (InitialState heap env rho e)
       phi
       (StDone heap_final v)
       HSteps I HNeutral)
@@ -493,13 +493,13 @@ Proof.
   exact HHeap.
 Qed.
 
-Lemma NStep_heap_neutral_read_agreement_replay :
+Lemma Step_heap_neutral_read_agreement_replay :
   forall state label state' heap',
-    NStep state label state' ->
-    NStateHeapsAligned state ->
+    Step state label state' ->
+    StateHeapsAligned state ->
     HeapNeutralTrace (label_trace label) ->
     TraceReadHeapAgreement (label_trace label) (state_heap state) heap' ->
-    NStep
+    Step
       (with_state_heap heap' state)
       label
       (with_state_heap heap' state').
@@ -567,13 +567,13 @@ Proof.
     simpl. left. reflexivity.
 Qed.
 
-Theorem NStepsN_heap_neutral_read_agreement_replay :
+Theorem StepsN_heap_neutral_read_agreement_replay :
   forall n state phi state' heap',
-    NStepsN n state phi state' ->
-    NStateHeapsAligned state ->
+    StepsN n state phi state' ->
+    StateHeapsAligned state ->
     HeapNeutralTrace phi ->
     TraceReadHeapAgreement phi (state_heap state) heap' ->
-    NStepsN n
+    StepsN n
       (with_state_heap heap' state)
       phi
       (with_state_heap heap' state').
@@ -592,7 +592,7 @@ Proof.
         (label_trace label) phi HNeutral)
       as HNeutralTail.
     pose proof
-      (NStep_heap_neutral_preserves_alignment
+      (Step_heap_neutral_preserves_alignment
         state label state1 HStep HAligned HNeutralLabel)
       as (HAligned1 & HHeap1).
     assert
@@ -618,6 +618,6 @@ Proof.
         exact HLookup.
     }
     eapply StepsNStep.
-    + eapply NStep_heap_neutral_read_agreement_replay; eauto.
+    + eapply Step_heap_neutral_read_agreement_replay; eauto.
     + eapply IH; eauto.
 Qed.

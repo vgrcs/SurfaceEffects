@@ -18,19 +18,19 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Lemma NCBT_Cond_components :
+Lemma CBT_Cond_components :
   forall gamma omega e et ef efft efff,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (ECond e et ef) (ECond e efft efff) ->
-    exists (eff_e : StaticEffect) (ty ty_t ty_f : NTy)
+    exists (eff_e : StaticEffect) (ty ty_t ty_f : Ty)
       (eff_et eff_ef : StaticEffect),
-      NCheckedTcExp gamma omega e TyBool eff_e /\
-      NCheckedTcExp gamma omega et ty_t eff_et /\
-      NCheckedTcExp gamma omega ef ty_f eff_ef /\
+      CheckedTcExp gamma omega e TyBool eff_e /\
+      CheckedTcExp gamma omega et ty_t eff_et /\
+      CheckedTcExp gamma omega ef ty_f eff_ef /\
       static_heap_neutral eff_e /\
-      NCheckedBackTriangle gamma omega e EEmpty /\
-      NCheckedBackTriangle gamma omega et efft /\
-      NCheckedBackTriangle gamma omega ef efff.
+      CheckedBackTriangle gamma omega e EEmpty /\
+      CheckedBackTriangle gamma omega et efft /\
+      CheckedBackTriangle gamma omega ef efff.
 Proof.
   intros gamma omega e et ef efft efff HBack.
   dependent destruction HBack.
@@ -45,26 +45,26 @@ Qed.
 
 Lemma ECond_terminal_first_step :
   forall heap env rho e et ef phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (ECond e et ef))
+    Steps
+      (InitialState heap env rho (ECond e et ef))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho e (KCond et ef env rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
       phi = phi_tail.
 Proof.
   intros heap env rho e et ef phi heap_final v_final HSteps.
-  remember (NInitialState heap env rho (ECond e et ef))
+  remember (InitialState heap env rho (ECond e et ef))
     as start eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
   destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StEval heap env rho (ECond e et ef) KDone)
         LSilent
         (StEval heap env rho e (KCond et ef env rho KDone))
@@ -79,13 +79,13 @@ Qed.
 
 Lemma ECond_terminal_first_step_N :
   forall n heap env rho e et ef phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (ECond e et ef))
+    StepsN n
+      (InitialState heap env rho (ECond e et ef))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho e (KCond et ef env rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
@@ -93,9 +93,9 @@ Lemma ECond_terminal_first_step_N :
 Proof.
   intros n heap env rho e et ef phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (ECond e et ef))
+      (InitialState heap env rho (ECond e et ef))
       LSilent
       (StEval heap env rho e (KCond et ef env rho KDone))
       phi heap_final v_final
@@ -109,7 +109,7 @@ Qed.
 
 Lemma KCond_terminal_value_is_bool :
   forall heap v et ef env rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KCond et ef env rho k))
       phi
       (StDone heap_final v_final) ->
@@ -129,12 +129,12 @@ Qed.
 
 Lemma KCond_bool_terminal_first_step :
   forall heap b et ef env rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VBool b) (KCond et ef env rho k))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho (if b then et else ef) k)
         phi_tail
         (StDone heap_final v_final) /\
@@ -150,7 +150,7 @@ Proof.
   - subst state state''.
     destruct b.
     + destruct
-        (NStep_deterministic
+        (Step_deterministic
           (StReturn heap (VBool true) (KCond et ef env rho k))
           LSilent
           (StEval heap env rho et k)
@@ -162,7 +162,7 @@ Proof.
       exists phi0.
       split; [assumption | reflexivity].
     + destruct
-        (NStep_deterministic
+        (Step_deterministic
           (StReturn heap (VBool false) (KCond et ef env rho k))
           LSilent
           (StEval heap env rho ef k)
@@ -177,13 +177,13 @@ Qed.
 
 Lemma KCond_bool_terminal_first_step_N :
   forall n heap b et ef env rho k phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StReturn heap (VBool b) (KCond et ef env rho k))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho (if b then et else ef) k)
         phi_tail
         (StDone heap_final v_final) /\
@@ -192,7 +192,7 @@ Proof.
   intros n heap b et ef env rho k phi heap_final v_final HSteps.
   destruct b.
   - destruct
-      (NStepsN_known_first_step_terminal_inv
+      (StepsN_known_first_step_terminal_inv
         n
         (StReturn heap (VBool true) (KCond et ef env rho k))
         LSilent
@@ -205,7 +205,7 @@ Proof.
     exists n_tail, phi_tail.
     repeat split; assumption.
   - destruct
-      (NStepsN_known_first_step_terminal_inv
+      (StepsN_known_first_step_terminal_inv
         n
         (StReturn heap (VBool false) (KCond et ef env rho k))
         LSilent
@@ -221,34 +221,34 @@ Qed.
 
 Definition ECondDecompositionGoal : Prop :=
   forall heap env rho e et ef phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (ECond e et ef))
+    Steps
+      (InitialState heap env rho (ECond e et ef))
       phi
       (StDone heap_final v_final) ->
     exists phi_cond b heap_cond phi_branch,
-      NSteps
-        (NInitialState heap env rho e)
+      Steps
+        (InitialState heap env rho e)
         phi_cond
         (StDone heap_cond (VBool b)) /\
-      NSteps
-        (NInitialState heap_cond env rho (if b then et else ef))
+      Steps
+        (InitialState heap_cond env rho (if b then et else ef))
         phi_branch
         (StDone heap_final v_final) /\
       phi = phi_cond ++ phi_branch.
 
 Definition ECondCountedDecompositionGoal : Prop :=
   forall n heap env rho e et ef phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (ECond e et ef))
+    StepsN n
+      (InitialState heap env rho (ECond e et ef))
       phi
       (StDone heap_final v_final) ->
     exists n_cond n_branch phi_cond b heap_cond phi_branch,
-      NStepsN n_cond
-        (NInitialState heap env rho e)
+      StepsN n_cond
+        (InitialState heap env rho e)
         phi_cond
         (StDone heap_cond (VBool b)) /\
-      NStepsN n_branch
-        (NInitialState heap_cond env rho (if b then et else ef))
+      StepsN n_branch
+        (InitialState heap_cond env rho (if b then et else ef))
         phi_branch
         (StDone heap_final v_final) /\
       phi = phi_cond ++ phi_branch /\
@@ -266,14 +266,14 @@ Proof.
     as (n_cond_tail & phi_cond_tail & HnStart &
       HCondWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_cond_tail
       (StEval heap env rho e (KCond et ef env rho KDone))
       phi_cond_tail
       heap_final
       v_final
       HCondWithKont
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KCond et ef env rho KDone)
       eq_refl)
     as (n_cond & n_after_cond & phi_cond & heap_cond & v_cond &
@@ -284,7 +284,7 @@ Proof.
       (KCond_terminal_value_is_bool
         heap_cond v_cond et ef env rho KDone
         phi_after_cond heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_cond
           (StReturn heap_cond v_cond (KCond et ef env rho KDone))
           phi_after_cond
@@ -316,21 +316,21 @@ Proof.
       heap env rho e et ef phi heap_final v_final HSteps)
     as (phi_tail & HCondWithKont & HTraceStart).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap env rho e (KCond et ef env rho KDone))
       phi_tail
       (StDone heap_final v_final)
       HCondWithKont)
     as (n_cond & HCondWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_cond
       (StEval heap env rho e (KCond et ef env rho KDone))
       phi_tail
       heap_final
       v_final
       HCondWithKontN
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KCond et ef env rho KDone)
       eq_refl)
     as (phi_cond & heap_cond & v_cond & phi_after_cond &
@@ -358,7 +358,7 @@ Theorem ECond_counted_checked_store_context_trace_covered_from_below :
     phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n_bound ->
     n_eval < n_bound ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (ECond e et ef) (ECond e efft efff) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n_eval heap env rho
@@ -372,7 +372,7 @@ Proof.
     phi_summary heap_summary theta
     HBelow HCountEval HBack HContext HComp HSummary.
   destruct
-    (NCBT_Cond_components
+    (CBT_Cond_components
       gamma omega e et ef efft efff HBack)
     as (eff_e & ty & ty_t & ty_f & eff_et & eff_ef &
       HCheckedCond & _ & _ & _ & HBackCond & HBackThen & HBackElse).
@@ -392,12 +392,12 @@ Proof.
       phi_branch_summary & HCondSummary & HBranchSummary &
       _HTraceSummary).
   destruct
-    (NSteps_terminal_trace_deterministic
-      (NInitialState heap env rho e)
+    (Steps_terminal_trace_deterministic
+      (InitialState heap env rho e)
       phi_cond heap_cond (VBool b)
       phi_cond_summary heap_cond_summary (VBool b_summary))
     as (HTraceCond & HHeapCond & HValCond).
-  - eapply NStepsN_to_NSteps; eauto.
+  - eapply StepsN_to_Steps; eauto.
   - exact HCondSummary.
   - inversion HValCond; subst b_summary.
     subst phi_cond_summary heap_cond_summary.
@@ -444,7 +444,7 @@ Theorem ECond_checked_store_context_case_from_below :
     e et ef efft efff phi heap_final v_final
     phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (ECond e et ef) (ECond e efft efff) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n heap env rho
@@ -458,7 +458,7 @@ Proof.
     phi_summary heap_summary theta
     HBelow HBack HContext HComp HSummary.
   destruct
-    (NCBT_Cond_components
+    (CBT_Cond_components
       gamma omega e et ef efft efff HBack)
     as (eff_e & ty & ty_t & ty_f & eff_et & eff_ef &
       HCheckedCond & _ & _ & _ & HBackCond & HBackThen & HBackElse).
@@ -478,12 +478,12 @@ Proof.
       phi_branch_summary & HCondSummary & HBranchSummary &
       _HTraceSummary).
   destruct
-    (NSteps_terminal_trace_deterministic
-      (NInitialState heap env rho e)
+    (Steps_terminal_trace_deterministic
+      (InitialState heap env rho e)
       phi_cond heap_cond (VBool b)
       phi_cond_summary heap_cond_summary (VBool b_summary))
     as (HTraceCond & HHeapCond & HValCond).
-  - eapply NStepsN_to_NSteps; eauto.
+  - eapply StepsN_to_Steps; eauto.
   - exact HCondSummary.
   - inversion HValCond; subst b_summary.
     subst phi_cond_summary heap_cond_summary.

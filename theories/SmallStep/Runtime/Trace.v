@@ -5,30 +5,30 @@ Require Import theories.SmallStep.Runtime.Machine.
 
 Import ListNotations.
 
-Inductive NSteps : NState -> Trace -> NState -> Prop :=
+Inductive Steps : State -> Trace -> State -> Prop :=
 | StepsRefl :
     forall state,
-      NSteps state [] state
+      Steps state [] state
 | StepsStep :
     forall state label state' phi state'',
-      NStep state label state' ->
-      NSteps state' phi state'' ->
-      NSteps state (label_trace label ++ phi) state''.
+      Step state label state' ->
+      Steps state' phi state'' ->
+      Steps state (label_trace label ++ phi) state''.
 
-Inductive NStepsN : nat -> NState -> Trace -> NState -> Prop :=
+Inductive StepsN : nat -> State -> Trace -> State -> Prop :=
 | StepsNRefl :
     forall state,
-      NStepsN 0 state [] state
+      StepsN 0 state [] state
 | StepsNStep :
     forall n state label state' phi state'',
-      NStep state label state' ->
-      NStepsN n state' phi state'' ->
-      NStepsN (S n) state (label_trace label ++ phi) state''.
+      Step state label state' ->
+      StepsN n state' phi state'' ->
+      StepsN (S n) state (label_trace label ++ phi) state''.
 
-Lemma NStepsN_to_NSteps :
+Lemma StepsN_to_Steps :
   forall n state phi state',
-    NStepsN n state phi state' ->
-    NSteps state phi state'.
+    StepsN n state phi state' ->
+    Steps state phi state'.
 Proof.
   intros n state phi state' HSteps.
   induction HSteps.
@@ -36,11 +36,11 @@ Proof.
   - eapply StepsStep; eauto.
 Qed.
 
-Lemma NSteps_to_NStepsN :
+Lemma Steps_to_StepsN :
   forall state phi state',
-    NSteps state phi state' ->
+    Steps state phi state' ->
     exists n,
-      NStepsN n state phi state'.
+      StepsN n state phi state'.
 Proof.
   intros state phi state' HSteps.
   induction HSteps as
@@ -51,11 +51,11 @@ Proof.
     eapply StepsNStep; eauto.
 Qed.
 
-Lemma NSteps_trans :
+Lemma Steps_trans :
   forall state1 phi12 state2 phi23 state3,
-    NSteps state1 phi12 state2 ->
-    NSteps state2 phi23 state3 ->
-    NSteps state1 (phi12 ++ phi23) state3.
+    Steps state1 phi12 state2 ->
+    Steps state2 phi23 state3 ->
+    Steps state1 (phi12 ++ phi23) state3.
 Proof.
   intros state1 phi12 state2 phi23 state3 H12 H23.
   induction H12 as
@@ -67,9 +67,9 @@ Proof.
     eapply StepsStep; eauto.
 Qed.
 
-Lemma NSteps_done_inv :
+Lemma Steps_done_inv :
   forall heap v phi state,
-    NSteps (StDone heap v) phi state ->
+    Steps (StDone heap v) phi state ->
     phi = [] /\ state = StDone heap v.
 Proof.
   intros heap v phi state HSteps.

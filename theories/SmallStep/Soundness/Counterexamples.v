@@ -18,104 +18,104 @@ Open Scope char_scope.
 
 Definition counter_x : VarId := "x"%char.
 
-Definition counter_gamma : NCtx :=
+Definition counter_gamma : Ctx :=
   [(counter_x, TyRef (region_const_type 0) TyNat)].
 
-Definition counter_env : NEnv :=
+Definition counter_env : Env :=
   EnvCons counter_x (VLoc 1 0) EnvNil.
 
 Definition counter_heap : Heap :=
   [(1, 0, VNat 7)].
 
-Definition counter_expr : NExpr :=
+Definition counter_expr : Expr :=
   EDeref (region_const_expr 0) (EVar counter_x).
 
-Definition counter_summary : NExpr :=
+Definition counter_summary : Expr :=
   EConcat EEmpty (EReadAbs (region_const_expr 0)).
 
-Definition counter_ty : NTy :=
+Definition counter_ty : Ty :=
   TyRef (region_const_type 0) TyNat.
 
 Lemma counter_var_typed :
-  NTcExp counter_gamma [] (EVar counter_x)
+  TcExp counter_gamma [] (EVar counter_x)
     counter_ty [].
 Proof.
-  apply NT_Var.
+  apply T_Var.
   reflexivity.
 Qed.
 
 Lemma counter_ty_wf :
-  NTyWF [] counter_ty.
+  TyWF [] counter_ty.
 Proof.
-  unfold counter_ty, NTyWF.
-  eapply NTyWF_Ref.
+  unfold counter_ty, TyWF.
+  eapply TyWF_Ref.
   - constructor.
   - constructor.
 Qed.
 
 Lemma counter_gamma_wf :
-  NCtxWF [] counter_gamma.
+  CtxWF [] counter_gamma.
 Proof.
-  unfold counter_gamma, counter_ty, NCtxWF.
+  unfold counter_gamma, counter_ty, CtxWF.
   constructor.
   - exact counter_ty_wf.
   - constructor.
 Qed.
 
 Lemma counter_var_checked :
-  NCheckedTcExp counter_gamma [] (EVar counter_x)
+  CheckedTcExp counter_gamma [] (EVar counter_x)
     counter_ty [].
 Proof.
-  eapply NCheckedTcExp_intro.
+  eapply CheckedTcExp_intro.
   - exact counter_var_typed.
-  - unfold NRgnCtxWF. constructor.
+  - unfold RgnCtxWF. constructor.
   - exact counter_gamma_wf.
   - exact counter_ty_wf.
-  - unfold NStaticEffectWF, NStaticEffectWFAt. constructor.
-  - apply NCTS_Var. reflexivity.
+  - unfold StaticEffectWF, StaticEffectWFAt. constructor.
+  - apply CTS_Var. reflexivity.
 Qed.
 
 Lemma counter_expr_typed :
-  NTcExp counter_gamma [] counter_expr TyNat
+  TcExp counter_gamma [] counter_expr TyNat
     [SRead (region_const_type 0)].
 Proof.
   unfold counter_expr.
-  apply NT_Deref.
+  apply T_Deref.
   - apply REWF_Const.
   - exact counter_var_typed.
 Qed.
 
 Lemma counter_expr_checked :
-  NCheckedTcExp counter_gamma [] counter_expr TyNat
+  CheckedTcExp counter_gamma [] counter_expr TyNat
     [SRead (region_const_type 0)].
 Proof.
-  eapply NCheckedTcExp_intro.
+  eapply CheckedTcExp_intro.
   - exact counter_expr_typed.
-  - unfold NRgnCtxWF. constructor.
+  - unfold RgnCtxWF. constructor.
   - exact counter_gamma_wf.
-  - unfold NTyWF. constructor.
-  - unfold NStaticEffectWF, NStaticEffectWFAt.
+  - unfold TyWF. constructor.
+  - unfold StaticEffectWF, StaticEffectWFAt.
     constructor.
     + constructor. constructor.
     + constructor.
   - unfold counter_expr.
-    apply NCTS_Deref.
+    apply CTS_Deref.
     + apply REWF_Const.
     + exact counter_var_checked.
 Qed.
 
 Lemma counter_backtriangle :
-  NCheckedBackTriangle counter_gamma [] counter_expr counter_summary.
+  CheckedBackTriangle counter_gamma [] counter_expr counter_summary.
 Proof.
   unfold counter_expr, counter_summary.
-  eapply NCBT_Deref with
+  eapply CBT_Deref with
     (ty := counter_ty)
     (static := [])
     (ty_deref := TyNat)
     (eff_deref := [SRead (region_const_type 0)]).
   - exact counter_var_checked.
   - exact counter_expr_checked.
-  - refine (NCBT_Var counter_gamma [] counter_x counter_ty _).
+  - refine (CBT_Var counter_gamma [] counter_x counter_ty _).
     exact counter_var_checked.
 Qed.
 
@@ -196,7 +196,7 @@ Qed.
 Definition UntypedTerminalCorrectnessGoal : Prop :=
   forall gamma omega heap env rho expr summary_expr phi heap' v
     phi_summary heap_summary theta,
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     ComputationEvaluation heap env rho expr phi heap' v ->
     SummaryEvaluation heap env rho summary_expr
       phi_summary heap_summary theta ->

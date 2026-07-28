@@ -11,121 +11,121 @@ Import ListNotations.
 
 Ltac solve_nstep_constructor :=
   match goal with
-  | |- NStep (StEval _ _ _ (EConst _) _) _ _ => apply StepConst
-  | |- NStep (StEval _ _ _ (EBool _) _) _ _ => apply StepBool
-  | |- NStep (StEval _ _ _ (EVar _) _) _ _ => eapply StepVar
-  | |- NStep (StEval _ _ _ (EMu _ _ _ _) _) _ _ => apply StepMu
-  | |- NStep (StEval _ _ _ (ELambdaRgn _ _) _) _ _ =>
+  | |- Step (StEval _ _ _ (EConst _) _) _ _ => apply StepConst
+  | |- Step (StEval _ _ _ (EBool _) _) _ _ => apply StepBool
+  | |- Step (StEval _ _ _ (EVar _) _) _ _ => eapply StepVar
+  | |- Step (StEval _ _ _ (EMu _ _ _ _) _) _ _ => apply StepMu
+  | |- Step (StEval _ _ _ (ELambdaRgn _ _) _) _ _ =>
       apply StepLambdaRgn
-  | |- NStep (StEval _ _ _ (EMuApp _ _) _) _ _ => apply StepMuApp
-  | |- NStep (StEval _ _ _ (ERgnApp _ _) _) _ _ => apply StepRgnApp
-  | |- NStep (StEval _ _ _ (EEffApp _ _) _) _ _ => apply StepEffApp
-  | |- NStep (StEval _ _ _ (EPairPar _ _) _) _ _ => apply StepPairPar
-  | |- NStep (StEval _ _ _ (ECond _ _ _) _) _ _ => apply StepCond
-  | |- NStep (StEval _ _ _ (ERef _ _) _) _ _ => eapply StepRef
-  | |- NStep (StEval _ _ _ (EDeref _ _) _) _ _ => apply StepDeref
-  | |- NStep (StEval _ _ _ (EAssign _ _ _) _) _ _ => apply StepAssign
-  | |- NStep (StEval _ _ _ (EPlus _ _) _) _ _ => apply StepPlus
-  | |- NStep (StEval _ _ _ (EMinus _ _) _) _ _ => apply StepMinus
-  | |- NStep (StEval _ _ _ (ETimes _ _) _) _ _ => apply StepTimes
-  | |- NStep (StEval _ _ _ (EEq _ _) _) _ _ => apply StepEq
-  | |- NStep (StEval _ _ _ (EAllocAbs _) _) _ _ => eapply StepAllocAbs
-  | |- NStep (StEval _ _ _ (EReadAbs _) _) _ _ => eapply StepReadAbs
-  | |- NStep (StEval _ _ _ (EWriteAbs _) _) _ _ => eapply StepWriteAbs
-  | |- NStep (StEval _ _ _ (EReadConc _) _) _ _ => apply StepReadConc
-  | |- NStep (StEval _ _ _ (EWriteConc _) _) _ _ => apply StepWriteConc
-  | |- NStep (StEval _ _ _ (EConcat _ _) _) _ _ => apply StepConcat
-  | |- NStep (StEval _ _ _ ETop _) _ _ => apply StepTop
-  | |- NStep (StEval _ _ _ EEmpty _) _ _ => apply StepEmpty
-  | |- NStep (StReturn _ (VClosure _ _ _ _ _ _)
+  | |- Step (StEval _ _ _ (EMuApp _ _) _) _ _ => apply StepMuApp
+  | |- Step (StEval _ _ _ (ERgnApp _ _) _) _ _ => apply StepRgnApp
+  | |- Step (StEval _ _ _ (EEffApp _ _) _) _ _ => apply StepEffApp
+  | |- Step (StEval _ _ _ (EPairPar _ _) _) _ _ => apply StepPairPar
+  | |- Step (StEval _ _ _ (ECond _ _ _) _) _ _ => apply StepCond
+  | |- Step (StEval _ _ _ (ERef _ _) _) _ _ => eapply StepRef
+  | |- Step (StEval _ _ _ (EDeref _ _) _) _ _ => apply StepDeref
+  | |- Step (StEval _ _ _ (EAssign _ _ _) _) _ _ => apply StepAssign
+  | |- Step (StEval _ _ _ (EPlus _ _) _) _ _ => apply StepPlus
+  | |- Step (StEval _ _ _ (EMinus _ _) _) _ _ => apply StepMinus
+  | |- Step (StEval _ _ _ (ETimes _ _) _) _ _ => apply StepTimes
+  | |- Step (StEval _ _ _ (EEq _ _) _) _ _ => apply StepEq
+  | |- Step (StEval _ _ _ (EAllocAbs _) _) _ _ => eapply StepAllocAbs
+  | |- Step (StEval _ _ _ (EReadAbs _) _) _ _ => eapply StepReadAbs
+  | |- Step (StEval _ _ _ (EWriteAbs _) _) _ _ => eapply StepWriteAbs
+  | |- Step (StEval _ _ _ (EReadConc _) _) _ _ => apply StepReadConc
+  | |- Step (StEval _ _ _ (EWriteConc _) _) _ _ => apply StepWriteConc
+  | |- Step (StEval _ _ _ (EConcat _ _) _) _ _ => apply StepConcat
+  | |- Step (StEval _ _ _ ETop _) _ _ => apply StepTop
+  | |- Step (StEval _ _ _ EEmpty _) _ _ => apply StepEmpty
+  | |- Step (StReturn _ (VClosure _ _ _ _ _ _)
         (KMuAppFun _ _ _ _)) _ _ =>
       apply StepMuAppFun
-  | |- NStep (StReturn _ _
+  | |- Step (StReturn _ _
         (KMuAppArg _ _ _ _ _ _ _)) _ _ =>
       apply StepMuAppArg
-  | |- NStep (StReturn _ (VClosure _ _ _ _ _ _)
+  | |- Step (StReturn _ (VClosure _ _ _ _ _ _)
         (KEffAppFun _ _ _ _)) _ _ =>
       apply StepEffAppFun
-  | |- NStep (StReturn _ _
+  | |- Step (StReturn _ _
         (KEffAppArg _ _ _ _ _ _ _)) _ _ =>
       apply StepEffAppArg
-  | |- NStep (StReturn _ (VSummary _)
+  | |- Step (StReturn _ (VSummary _)
         (KPairParEff1 _ _ _ _ _ _ _)) _ _ =>
       apply StepPairParEff1
   | HCheck : summary_disjointb _ _ = false
-      |- NStep (StReturn _ (VSummary _)
+      |- Step (StReturn _ (VSummary _)
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ _ =>
       eapply StepPairParCheckFail; exact HCheck
   | HCheck : summary_disjointb _ _ = true
-      |- NStep (StReturn _ (VSummary _)
+      |- Step (StReturn _ (VSummary _)
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ _ =>
       eapply StepPairParCheckPass; exact HCheck
-  | |- NStep (StReturn _ (VSummary _)
+  | |- Step (StReturn _ (VSummary _)
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ (StEval _ _ _ _ _) =>
       eapply StepPairParCheckPass
-  | |- NStep (StReturn _ (VSummary _)
+  | |- Step (StReturn _ (VSummary _)
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ (StError _) =>
       eapply StepPairParCheckFail
-  | |- NStep (StPairParRun (StError _) _ _ _ _) _ _ =>
+  | |- Step (StPairParRun (StError _) _ _ _ _) _ _ =>
       apply StepPairParRunLeftError
-  | |- NStep (StPairParRun (StDone _ _) (StError _) _ _ _) _ _ =>
+  | |- Step (StPairParRun (StDone _ _) (StError _) _ _ _) _ _ =>
       apply StepPairParRunRightError
-  | |- NStep (StPairParRun (StDone _ _) _ _ _ _) _ (StPairParRun _ _ _ _ _) =>
+  | |- Step (StPairParRun (StDone _ _) _ _ _ _) _ (StPairParRun _ _ _ _ _) =>
       eapply StepPairParRunRight
   | HCheck : trace_disjointb _ _ = true
-      |- NStep (StPairParRun (StDone _ _) (StDone _ _) _ _ _) _ _ =>
+      |- Step (StPairParRun (StDone _ _) (StDone _ _) _ _ _) _ _ =>
       eapply StepPairParRunDonePass; exact HCheck
   | HCheck : trace_disjointb _ _ = false
-      |- NStep (StPairParRun (StDone _ _) (StDone _ _) _ _ _) _ _ =>
+      |- Step (StPairParRun (StDone _ _) (StDone _ _) _ _ _) _ _ =>
       eapply StepPairParRunDoneFail; exact HCheck
-  | |- NStep (StPairParRun _ _ _ _ _) _ (StPairParRun _ _ _ _ _) =>
+  | |- Step (StPairParRun _ _ _ _ _) _ (StPairParRun _ _ _ _ _) =>
       econstructor
-  | |- NStep (StReturn _ (VRegionClosure _ _ _ _)
+  | |- Step (StReturn _ (VRegionClosure _ _ _ _)
         (KRgnApp _ _ _)) _ _ =>
       eapply StepRgnAppReturn
-  | |- NStep (StReturn _ (VBool true)
+  | |- Step (StReturn _ (VBool true)
         (KCond _ _ _ _ _)) _ _ =>
       apply StepCondTrue
-  | |- NStep (StReturn _ (VBool false)
+  | |- Step (StReturn _ (VBool false)
         (KCond _ _ _ _ _)) _ _ =>
       apply StepCondFalse
-  | |- NStep (StReturn _ _ (KRef _ _)) _ _ =>
+  | |- Step (StReturn _ _ (KRef _ _)) _ _ =>
       eapply StepRefReturn
-  | |- NStep (StReturn _ (VLoc _ _) (KDeref _ _)) _ _ =>
+  | |- Step (StReturn _ (VLoc _ _) (KDeref _ _)) _ _ =>
       eapply StepDerefReturn
-  | |- NStep (StReturn _ (VLoc _ _) (KAssignLoc _ _ _ _ _)) _ _ =>
+  | |- Step (StReturn _ (VLoc _ _) (KAssignLoc _ _ _ _ _)) _ _ =>
       apply StepAssignLoc
-  | |- NStep (StReturn _ _ (KAssignVal _ (VLoc _ _) _)) _ _ =>
+  | |- Step (StReturn _ _ (KAssignVal _ (VLoc _ _) _)) _ _ =>
       apply StepAssignVal
-  | |- NStep (StReturn _ (VNat _) (KPlusL _ _ _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KPlusL _ _ _ _)) _ _ =>
       apply StepPlusL
-  | |- NStep (StReturn _ (VNat _) (KPlusR _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KPlusR _ _)) _ _ =>
       apply StepPlusR
-  | |- NStep (StReturn _ (VNat _) (KMinusL _ _ _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KMinusL _ _ _ _)) _ _ =>
       apply StepMinusL
-  | |- NStep (StReturn _ (VNat _) (KMinusR _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KMinusR _ _)) _ _ =>
       apply StepMinusR
-  | |- NStep (StReturn _ (VNat _) (KTimesL _ _ _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KTimesL _ _ _ _)) _ _ =>
       apply StepTimesL
-  | |- NStep (StReturn _ (VNat _) (KTimesR _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KTimesR _ _)) _ _ =>
       apply StepTimesR
-  | |- NStep (StReturn _ (VNat _) (KEqL _ _ _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KEqL _ _ _ _)) _ _ =>
       apply StepEqL
-  | |- NStep (StReturn _ (VNat _) (KEqR _ _)) _ _ =>
+  | |- Step (StReturn _ (VNat _) (KEqR _ _)) _ _ =>
       apply StepEqR
-  | |- NStep (StReturn _ (VLoc _ _) (KReadConc _)) _ _ =>
+  | |- Step (StReturn _ (VLoc _ _) (KReadConc _)) _ _ =>
       apply StepReadConcReturn
-  | |- NStep (StReturn _ (VLoc _ _) (KWriteConc _)) _ _ =>
+  | |- Step (StReturn _ (VLoc _ _) (KWriteConc _)) _ _ =>
       apply StepWriteConcReturn
-  | |- NStep (StReturn _ (VSummary _) (KConcatL _ _ _ _)) _ _ =>
+  | |- Step (StReturn _ (VSummary _) (KConcatL _ _ _ _)) _ _ =>
       apply StepConcatL
-  | |- NStep (StReturn _ (VSummary _) (KConcatR _ _)) _ _ =>
+  | |- Step (StReturn _ (VSummary _) (KConcatR _ _)) _ _ =>
       apply StepConcatR
-  | |- NStep (StReturn _ _ KDone) _ _ => apply StepReturnDone
-  | |- NStep _ _ _ => econstructor
+  | |- Step (StReturn _ _ KDone) _ _ => apply StepReturnDone
+  | |- Step _ _ _ => econstructor
   end; eauto.
 
-Fixpoint kont_append (k tail : NKont) : NKont :=
+Fixpoint kont_append (k tail : Kont) : Kont :=
   match k with
   | KDone => tail
   | KMuAppFun ea env rho k' =>
@@ -181,7 +181,7 @@ Fixpoint kont_append (k tail : NKont) : NKont :=
       KConcatR theta (kont_append k' tail)
   end.
 
-Definition state_append_kont (state : NState) (tail : NKont) : NState :=
+Definition state_append_kont (state : State) (tail : Kont) : State :=
   match state with
   | StEval heap env rho e k =>
       StEval heap env rho e (kont_append k tail)
@@ -196,7 +196,7 @@ Definition state_append_kont (state : NState) (tail : NKont) : NState :=
       StError heap
   end.
 
-Definition append_active_state (state : NState) : Prop :=
+Definition append_active_state (state : State) : Prop :=
   match state with
   | StDone _ _ => False
   | StPairParRun _ _ _ _ _ => True
@@ -205,11 +205,11 @@ Definition append_active_state (state : NState) : Prop :=
   | _ => True
   end.
 
-Lemma NStep_append_kont_not_done :
+Lemma Step_append_kont_not_done :
   forall state label state' tail,
-    NStep state label state' ->
+    Step state label state' ->
     (forall heap v, state <> StReturn heap v KDone) ->
-    NStep
+    Step
       (state_append_kont state tail)
       label
       (state_append_kont state' tail).
@@ -219,10 +219,10 @@ Proof.
   exfalso. eapply HNotDone. reflexivity.
 Qed.
 
-Lemma NSteps_append_kont :
+Lemma Steps_append_kont :
   forall state phi state' tail,
-    NSteps state phi state' ->
-    NSteps
+    Steps state phi state' ->
+    Steps
       (state_append_kont state tail)
       phi
       (state_append_kont state' tail).
@@ -237,15 +237,15 @@ Proof.
           [ simpl; econstructor; eauto
           | exact IH ] ].
     destruct
-        (NSteps_done_inv heap v phi state2 HTail)
+        (Steps_done_inv heap v phi state2 HTail)
         as (HTrace & HState).
     subst phi state2.
     simpl. constructor.
 Qed.
 
-Lemma NSteps_return_done :
+Lemma Steps_return_done :
   forall heap v,
-    NSteps (StReturn heap v KDone) [] (StDone heap v).
+    Steps (StReturn heap v KDone) [] (StDone heap v).
 Proof.
   intros heap v.
   change ([] : Trace) with (label_trace LSilent ++ ([] : Trace)).
@@ -254,9 +254,9 @@ Proof.
   - constructor.
 Qed.
 
-Lemma NStepsN_return_done :
+Lemma StepsN_return_done :
   forall heap v,
-    NStepsN 1 (StReturn heap v KDone) [] (StDone heap v).
+    StepsN 1 (StReturn heap v KDone) [] (StDone heap v).
 Proof.
   intros heap v.
   change ([] : Trace) with (label_trace LSilent ++ ([] : Trace)).
@@ -265,9 +265,9 @@ Proof.
   - constructor.
 Qed.
 
-Lemma NSteps_return_done_inv :
+Lemma Steps_return_done_inv :
   forall heap v phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v KDone)
       phi
       (StDone heap_final v_final) ->
@@ -281,18 +281,18 @@ Proof.
   - subst state state''.
     inversion HStep; subst.
     destruct
-      (NSteps_done_inv heap v phi0 (StDone heap_final v_final) HTail)
+      (Steps_done_inv heap v phi0 (StDone heap_final v_final) HTail)
       as (HTrace & HFinalState).
     inversion HFinalState; subst.
     repeat split; assumption || reflexivity.
 Qed.
 
-Lemma NStep_append_kont_inv_active :
+Lemma Step_append_kont_inv_active :
   forall state tail label appended_state',
     append_active_state state ->
-    NStep (state_append_kont state tail) label appended_state' ->
+    Step (state_append_kont state tail) label appended_state' ->
     exists state',
-      NStep state label state' /\
+      Step state label state' /\
       appended_state' = state_append_kont state' tail.
 Proof.
   intros state tail label appended_state' HActive HStep.
@@ -334,14 +334,14 @@ Proof.
   - contradiction.
 Qed.
 
-Lemma NStepsN_append_kont_terminal_split :
+Lemma StepsN_append_kont_terminal_split :
   forall n appended_start phi heap_final v_final,
-    NStepsN n appended_start phi (StDone heap_final v_final) ->
+    StepsN n appended_start phi (StDone heap_final v_final) ->
     forall state tail,
       appended_start = state_append_kont state tail ->
       exists phi_expr heap_mid v_mid phi_tail,
-        NSteps state phi_expr (StDone heap_mid v_mid) /\
-        NSteps
+        Steps state phi_expr (StDone heap_mid v_mid) /\
+        Steps
           (StReturn heap_mid v_mid tail)
           phi_tail
           (StDone heap_final v_final) /\
@@ -366,7 +366,7 @@ Proof.
       | left_state right_state phi_left phi_right k | heap];
       simpl in HAppend; subst state0.
     + destruct
-        (NStep_append_kont_inv_active
+        (Step_append_kont_inv_active
           (StEval heap env rho e k) tail label state1
           I HStep)
         as (state1_unappended & HStepUnappended & HState1).
@@ -383,10 +383,10 @@ Proof.
     + destruct k eqn:Hk.
       { exists [], heap, v, (label_trace label ++ phi0).
         split.
-        - apply NSteps_return_done.
+        - apply Steps_return_done.
         - split.
           + eapply StepsStep; eauto.
-            eapply NStepsN_to_NSteps; eauto.
+            eapply StepsN_to_Steps; eauto.
           + reflexivity. }
       all:
           assert (HActive : append_active_state (StReturn heap v k))
@@ -394,10 +394,10 @@ Proof.
           subst k;
           match goal with
           | HStep :
-              NStep (StReturn ?heap0 ?v0 (kont_append ?k_active ?tail0))
+              Step (StReturn ?heap0 ?v0 (kont_append ?k_active ?tail0))
                 ?label0 ?state10 |- _ =>
               destruct
-                (NStep_append_kont_inv_active
+                (Step_append_kont_inv_active
                   (StReturn heap0 v0 k_active) tail0 label0 state10
                   HActive HStep)
                 as (state1_unappended & HStepUnappended & HState1);
@@ -418,10 +418,10 @@ Proof.
       * constructor.
       * split.
         -- eapply StepsStep; eauto.
-           eapply NStepsN_to_NSteps; eauto.
+           eapply StepsN_to_Steps; eauto.
         -- reflexivity.
     + destruct
-        (NStep_append_kont_inv_active
+        (Step_append_kont_inv_active
           (StPairParRun left_state right_state phi_left phi_right k)
           tail label state1
           I HStep)
@@ -439,15 +439,15 @@ Proof.
     + inversion HStep.
 Qed.
 
-Lemma NStepsN_append_kont_terminal_split_counted :
+Lemma StepsN_append_kont_terminal_split_counted :
   forall n appended_start phi heap_final v_final,
-    NStepsN n appended_start phi (StDone heap_final v_final) ->
+    StepsN n appended_start phi (StDone heap_final v_final) ->
     forall state tail,
       appended_start = state_append_kont state tail ->
       (forall heap v, state <> StDone heap v) ->
       exists n_expr n_tail phi_expr heap_mid v_mid phi_tail,
-        NStepsN n_expr state phi_expr (StDone heap_mid v_mid) /\
-        NStepsN n_tail
+        StepsN n_expr state phi_expr (StDone heap_mid v_mid) /\
+        StepsN n_tail
           (StReturn heap_mid v_mid tail)
           phi_tail
           (StDone heap_final v_final) /\
@@ -473,7 +473,7 @@ Proof.
       | left_state right_state phi_left phi_right k | heap];
       simpl in HAppend; subst state0.
     + destruct
-        (NStep_append_kont_inv_active
+        (Step_append_kont_inv_active
           (StEval heap env rho e k) tail label state1
           I HStep)
         as (state1_unappended & HStepUnappended & HState1).
@@ -499,7 +499,7 @@ Proof.
     + destruct k eqn:Hk.
       { exists 1, (S n), [], heap, v, (label_trace label ++ phi0).
         split.
-        - apply NStepsN_return_done.
+        - apply StepsN_return_done.
         - split.
           + eapply StepsNStep; eauto.
           + split; [lia | reflexivity]. }
@@ -509,10 +509,10 @@ Proof.
           subst k;
           match goal with
           | HStep :
-              NStep (StReturn ?heap0 ?v0 (kont_append ?k_active ?tail0))
+              Step (StReturn ?heap0 ?v0 (kont_append ?k_active ?tail0))
                 ?label0 ?state10 |- _ =>
               destruct
-                (NStep_append_kont_inv_active
+                (Step_append_kont_inv_active
                   (StReturn heap0 v0 k_active) tail0 label0 state10
                   HActive HStep)
                 as (state1_unappended & HStepUnappended & HState1);
@@ -540,7 +540,7 @@ Proof.
           end.
     + exfalso. eapply HNotDone. reflexivity.
     + destruct
-        (NStep_append_kont_inv_active
+        (Step_append_kont_inv_active
           (StPairParRun left_state right_state phi_left phi_right k)
           tail label state1
           I HStep)

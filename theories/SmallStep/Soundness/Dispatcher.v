@@ -30,7 +30,7 @@ Import ListNotations.
 Lemma counted_immediate_silent_initial_return_trace_nil :
   forall n heap env rho expr phi heap_final v_final,
     (forall label state',
-      NStep (NInitialState heap env rho expr) label state' ->
+      Step (InitialState heap env rho expr) label state' ->
       exists v0,
         label = LSilent /\
         state' = StReturn heap v0 KDone) ->
@@ -42,16 +42,16 @@ Proof.
   unfold CountedComputationEvaluation in HComp.
   inversion HComp; subst; try reflexivity.
   match goal with
-  | HStep : NStep (NInitialState heap env rho expr) ?label ?state',
-    HTail : NStepsN _ ?state' ?phi_tail
+  | HStep : Step (InitialState heap env rho expr) ?label ?state',
+    HTail : StepsN _ ?state' ?phi_tail
       (StDone heap_final v_final) |- _ =>
       destruct (HImmediate label state' HStep)
         as (v0 & HLabel & HState);
       subst label state';
       destruct
-        (NSteps_return_done_inv
+        (Steps_return_done_inv
           heap v0 phi_tail heap_final v_final
-          (NStepsN_to_NSteps
+          (StepsN_to_Steps
             _ _ _ _ HTail))
         as (_HHeap & _HVal & HTraceTail);
       subst phi_tail
@@ -62,7 +62,7 @@ Qed.
 Lemma counted_immediate_silent_initial_return_covered :
   forall n heap env rho expr phi heap_final v_final theta,
     (forall label state',
-      NStep (NInitialState heap env rho expr) label state' ->
+      Step (InitialState heap env rho expr) label state' ->
       exists v0,
         label = LSilent /\
         state' = StReturn heap v0 KDone) ->
@@ -92,7 +92,7 @@ Proof.
   destruct
     (EEmpty_terminal_summary
       heap env rho phi heap_final theta
-      (NStepsN_to_NSteps _ _ _ _ HComp))
+      (StepsN_to_Steps _ _ _ _ HComp))
     as (_ & _ & HTrace).
   subst phi.
   apply trace_covered_nil.
@@ -109,7 +109,7 @@ Proof.
   destruct
     (ETop_terminal_summary
       heap env rho phi heap_final theta
-      (NStepsN_to_NSteps _ _ _ _ HComp))
+      (StepsN_to_Steps _ _ _ _ HComp))
     as (_ & HTheta & _).
   subst theta.
   apply trace_covered_top.
@@ -126,7 +126,7 @@ Proof.
   destruct
     (EAllocAbs_terminal_summary
       heap env rho r phi heap_final theta
-      (NStepsN_to_NSteps _ _ _ _ HComp))
+      (StepsN_to_Steps _ _ _ _ HComp))
     as (_ & _ & _ & _ & HTrace).
   subst phi.
   apply trace_covered_nil.
@@ -143,7 +143,7 @@ Proof.
   destruct
     (EReadAbs_terminal_summary
       heap env rho r phi heap_final theta
-      (NStepsN_to_NSteps _ _ _ _ HComp))
+      (StepsN_to_Steps _ _ _ _ HComp))
     as (_ & _ & _ & _ & HTrace).
   subst phi.
   apply trace_covered_nil.
@@ -160,7 +160,7 @@ Proof.
   destruct
     (EWriteAbs_terminal_summary
       heap env rho r phi heap_final theta
-      (NStepsN_to_NSteps _ _ _ _ HComp))
+      (StepsN_to_Steps _ _ _ _ HComp))
     as (_ & _ & _ & _ & HTrace).
   subst phi.
   apply trace_covered_nil.
@@ -170,10 +170,10 @@ Lemma checked_store_summary_value_concat_from_below :
   forall n gamma omega heap env rho source1 source2 summary1 summary2
     eff_summary1 eff_summary2 phi heap_final theta,
     CheckedStoreSummaryValueSoundnessBelow n ->
-    NCheckedBackTriangle gamma omega source1 summary1 ->
-    NCheckedBackTriangle gamma omega source2 summary2 ->
-    NCheckedTcExp gamma omega summary1 TyEffect eff_summary1 ->
-    NCheckedTcExp gamma omega summary2 TyEffect eff_summary2 ->
+    CheckedBackTriangle gamma omega source1 summary1 ->
+    CheckedBackTriangle gamma omega source2 summary2 ->
+    CheckedTcExp gamma omega summary1 TyEffect eff_summary1 ->
+    CheckedTcExp gamma omega summary2 TyEffect eff_summary2 ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n heap env rho
       (EConcat summary1 summary2) phi heap_final (VSummary theta) ->
@@ -240,9 +240,9 @@ Lemma checked_store_arrow_body_context_from_prefixes :
     eff_body eff_summary eff_f eff_a n_fun n_arg phi_fun phi_arg
     heap_fun heap_arg closure_env closure_rho f x ec ee arg,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega ef
+    CheckedTcExp gamma omega ef
       (TyArrow ty_arg eff_body ty_body eff_summary) eff_f ->
-    NCheckedTcExp gamma omega ea ty_arg eff_a ->
+    CheckedTcExp gamma omega ea ty_arg eff_a ->
     CountedComputationEvaluation n_fun heap env rho ef
       phi_fun heap_fun
       (VClosure closure_env closure_rho f x ec ee) ->
@@ -262,28 +262,28 @@ Lemma checked_store_arrow_body_context_from_prefixes :
             (VClosure closure_env closure_rho f x ec ee)
             closure_env))
         closure_rho /\
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg_body) ::
           (f, TyArrow ty_arg_body eff_body_body
             ty_body_body eff_summary_body) ::
           gamma_body)
         omega_body ec ty_body_body eff_body_body /\
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg_body) ::
           (f, TyArrow ty_arg_body eff_body_body
             ty_body_body eff_summary_body) ::
           gamma_body)
         omega_body ee TyEffect eff_summary_body /\
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg_body) ::
           (f, TyArrow ty_arg_body eff_body_body
             ty_body_body eff_summary_body) ::
           gamma_body)
         omega_body ec ee /\
-      NResolveStaticEffect closure_rho eff_body_body eff_body_res /\
-      NResolveStaticEffect closure_rho eff_summary_body
+      ResolveStaticEffect closure_rho eff_body_body eff_body_res /\
+      ResolveStaticEffect closure_rho eff_summary_body
         eff_summary_res /\
-      NResolveTy rho
+      ResolveTy rho
         (TyArrow ty_arg eff_body ty_body eff_summary)
         (TyArrow ty_arg_res eff_body_res
           ty_body_res eff_summary_res).
@@ -297,13 +297,13 @@ Proof.
       (VClosure closure_env closure_rho f x ec ee)).
   {
     unfold ComputationEvaluation, CountedComputationEvaluation in *.
-    eapply NStepsN_to_NSteps. exact HFun.
+    eapply StepsN_to_Steps. exact HFun.
   }
   assert (HArgComp :
     ComputationEvaluation heap_fun env rho ea phi_arg heap_arg arg).
   {
     unfold ComputationEvaluation, CountedComputationEvaluation in *.
-    eapply NStepsN_to_NSteps. exact HArg.
+    eapply StepsN_to_Steps. exact HArg.
   }
   destruct
     (checked_store_sequential_computations_store_value_shapes
@@ -317,7 +317,7 @@ Proof.
       HResolveFun & HResolveArg & HBounded & HHeap &
       HValFun & HValArg).
   destruct
-    (NStoreResolvedValShape_closure_inv
+    (StoreResolvedValShape_closure_inv
       store closure_env closure_rho f x ec ee ty_fun_res HValFun)
     as
       (gamma_body & omega_body &
@@ -333,10 +333,10 @@ Proof.
   {
     rewrite HTyFun in HResolveFun.
     inversion HResolveFun; subst.
-    eapply NResolveTy_deterministic; eauto.
+    eapply ResolveTy_deterministic; eauto.
   }
   assert (HValFunArrow :
-    NStoreResolvedValShape store
+    StoreResolvedValShape store
       (VClosure closure_env closure_rho f x ec ee)
       (TyArrow ty_arg_body_res eff_body_res
         ty_body_res eff_summary_res)).
@@ -352,18 +352,18 @@ Proof.
   split.
   - split.
     + exists store.
-      unfold NStoreResolvedRuntimeShape.
+      unfold StoreResolvedRuntimeShape.
       split; [exact HBounded |].
       split; [exact HHeap |].
-      eapply NStoreResolvedEnvShape_extend with
+      eapply StoreResolvedEnvShape_extend with
         (ty_res := ty_arg_body_res).
       * exact HResolveClosureArg.
       * rewrite <- HArgResEq. exact HValArg.
-      * eapply NStoreResolvedEnvShape_extend with
+      * eapply StoreResolvedEnvShape_extend with
           (ty_res :=
             TyArrow ty_arg_body_res eff_body_res
               ty_body_res eff_summary_res).
-        -- eapply NResolve_Arrow; eauto.
+        -- eapply Resolve_Arrow; eauto.
         -- exact HValFunArrow.
         -- exact HEnvClosure.
     + exact HRhoClosure.
@@ -381,9 +381,9 @@ Lemma checked_store_region_body_context_from_prefix :
     eff_open_res n_fun phi_fun heap_fun closure_env closure_rho x e
     r_val,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega er (TyForallRgn eff_body ty) eff_f ->
+    CheckedTcExp gamma omega er (TyForallRgn eff_body ty) eff_f ->
     eval_region rho r = Some r_val ->
-    NResolveStaticEffect rho (open_static_effect r eff_body)
+    ResolveStaticEffect rho (open_static_effect r eff_body)
       eff_open_res ->
     CountedComputationEvaluation n_fun heap env rho er
       phi_fun heap_fun
@@ -392,9 +392,9 @@ Lemma checked_store_region_body_context_from_prefix :
       CheckedStoreRuntimeContext gamma_body (x :: omega_body)
         heap_fun closure_env
         (rho_extend x r_val closure_rho) /\
-      NCheckedTcExp gamma_body (x :: omega_body)
+      CheckedTcExp gamma_body (x :: omega_body)
         e ty_body eff_body_inner /\
-      NResolveStaticEffect (rho_extend x r_val closure_rho)
+      ResolveStaticEffect (rho_extend x r_val closure_rho)
         eff_body_inner eff_open_res.
 Proof.
   intros gamma omega heap env rho er r eff_body ty eff_f
@@ -410,7 +410,7 @@ Proof.
     as (store_fun & ty_fun_res & HResolveFun & HBoundedFun &
       HHeapFun & HValFun).
   destruct
-    (NStoreResolvedValShape_region_closure_inv
+    (StoreResolvedValShape_region_closure_inv
       store_fun closure_env closure_rho x e ty_fun_res HValFun)
     as (gamma_body & omega_body & ty_body_inner & ty_body_res &
       eff_body_inner & eff_body_res & HTyFun & HEnvBody &
@@ -422,11 +422,11 @@ Proof.
       HResolveForallEff HResolveForallTy];
     subst.
   pose proof
-    (NResolveStaticEffect_open_static_effect
+    (ResolveStaticEffect_open_static_effect
       rho r eff_body eff_body_res r_val HRgn HResolveForallEff)
     as HResolveOpenExpected.
   pose proof
-    (NResolveStaticEffect_deterministic
+    (ResolveStaticEffect_deterministic
       rho (open_static_effect r eff_body)
       eff_open_res
       (open_static_effect_type (region_const_type r_val)
@@ -435,38 +435,38 @@ Proof.
     as HOpenEq.
   subst eff_open_res.
   pose proof
-    (NCheckedRegionBody_checked
+    (CheckedRegionBody_checked
       x gamma_body omega_body e ty_body_inner eff_body_inner
       HBodyChecked)
     as HCheckedBody.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma_body (x :: omega_body) e ty_body_inner
       eff_body_inner HCheckedBody)
     as HBodyEffWF.
   assert (HResolveBody :
-    NResolveStaticEffect (rho_extend x r_val closure_rho)
+    ResolveStaticEffect (rho_extend x r_val closure_rho)
       eff_body_inner
       (open_static_effect_type (region_const_type r_val)
         eff_body_res)).
   {
-    unfold NStaticEffectWF in HBodyEffWF.
+    unfold StaticEffectWF in HBodyEffWF.
     unfold close_static_effect, open_static_effect_type in *.
-    eapply NResolveStaticEffect_rho_extend_close_static_effect_at;
+    eapply ResolveStaticEffect_rho_extend_close_static_effect_at;
       eauto.
   }
   exists gamma_body, omega_body, ty_body_inner, eff_body_inner.
   split.
   - split.
     + exists store_fun.
-      unfold NStoreResolvedRuntimeShape.
+      unfold StoreResolvedRuntimeShape.
       split; [exact HBoundedFun |].
       split; [exact HHeapFun |].
-      eapply NStoreResolvedEnvShape_extend_fresh;
+      eapply StoreResolvedEnvShape_extend_fresh;
         eauto using
-          NCheckedRegionBody_fresh,
-          NCheckedRegionBody_ctx_wf.
-    + eapply NRhoModels_extend; eauto.
+          CheckedRegionBody_fresh,
+          CheckedRegionBody_ctx_wf.
+    + eapply RhoModels_extend; eauto.
   - split; [exact HCheckedBody |].
     exact HResolveBody.
 Qed.
@@ -474,18 +474,18 @@ Qed.
 Lemma resolved_alloc_action_from_eval_region :
   forall rho r r_val action,
     eval_region rho r = Some r_val ->
-    NResolveStaticAction rho (SAlloc (region_expr_to_type r)) action ->
+    ResolveStaticAction rho (SAlloc (region_expr_to_type r)) action ->
     action = SAlloc (region_const_type r_val).
 Proof.
   intros rho r r_val action HRgn HResolve.
   pose proof
-    (NResolveStaticAction_deterministic
+    (ResolveStaticAction_deterministic
       rho (SAlloc (region_expr_to_type r)) action
       (SAlloc (region_const_type r_val))
       HResolve
-      (NResolve_SAlloc rho (region_expr_to_type r)
+      (Resolve_SAlloc rho (region_expr_to_type r)
         (region_const_type r_val)
-        (NResolveRegionType_region_expr_to_type rho r r_val HRgn)))
+        (ResolveRegionType_region_expr_to_type rho r r_val HRgn)))
     as HAction.
   exact HAction.
 Qed.
@@ -493,18 +493,18 @@ Qed.
 Lemma resolved_read_action_from_eval_region :
   forall rho r r_val action,
     eval_region rho r = Some r_val ->
-    NResolveStaticAction rho (SRead (region_expr_to_type r)) action ->
+    ResolveStaticAction rho (SRead (region_expr_to_type r)) action ->
     action = SRead (region_const_type r_val).
 Proof.
   intros rho r r_val action HRgn HResolve.
   pose proof
-    (NResolveStaticAction_deterministic
+    (ResolveStaticAction_deterministic
       rho (SRead (region_expr_to_type r)) action
       (SRead (region_const_type r_val))
       HResolve
-      (NResolve_SRead rho (region_expr_to_type r)
+      (Resolve_SRead rho (region_expr_to_type r)
         (region_const_type r_val)
-        (NResolveRegionType_region_expr_to_type rho r r_val HRgn)))
+        (ResolveRegionType_region_expr_to_type rho r r_val HRgn)))
     as HAction.
   exact HAction.
 Qed.
@@ -512,25 +512,25 @@ Qed.
 Lemma resolved_write_action_from_eval_region :
   forall rho r r_val action,
     eval_region rho r = Some r_val ->
-    NResolveStaticAction rho (SWrite (region_expr_to_type r)) action ->
+    ResolveStaticAction rho (SWrite (region_expr_to_type r)) action ->
     action = SWrite (region_const_type r_val).
 Proof.
   intros rho r r_val action HRgn HResolve.
   pose proof
-    (NResolveStaticAction_deterministic
+    (ResolveStaticAction_deterministic
       rho (SWrite (region_expr_to_type r)) action
       (SWrite (region_const_type r_val))
       HResolve
-      (NResolve_SWrite rho (region_expr_to_type r)
+      (Resolve_SWrite rho (region_expr_to_type r)
         (region_const_type r_val)
-        (NResolveRegionType_region_expr_to_type rho r r_val HRgn)))
+        (ResolveRegionType_region_expr_to_type rho r r_val HRgn)))
     as HAction.
   exact HAction.
 Qed.
 
 Lemma KReadConc_loc_terminal_trace_nil :
   forall heap r l phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VLoc r l) (KReadConc KDone))
       phi
       (StDone heap_final v_final) ->
@@ -547,7 +547,7 @@ Proof.
   - subst state state''.
     inversion HStep; subst.
     destruct
-      (NSteps_return_done_inv
+      (Steps_return_done_inv
         heap
         (VSummary (SummarySet [CReadConc r l]))
         phi_tail heap_final v_final HTail)
@@ -558,7 +558,7 @@ Qed.
 
 Lemma KWriteConc_loc_terminal_trace_nil :
   forall heap r l phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VLoc r l) (KWriteConc KDone))
       phi
       (StDone heap_final v_final) ->
@@ -575,7 +575,7 @@ Proof.
   - subst state state''.
     inversion HStep; subst.
     destruct
-      (NSteps_return_done_inv
+      (Steps_return_done_inv
         heap
         (VSummary (SummarySet [CWriteConc r l]))
         phi_tail heap_final v_final HTail)
@@ -598,9 +598,9 @@ Proof.
   intros n heap env rho e phi heap_final v_final HComp.
   unfold CountedComputationEvaluation in HComp.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (EReadConc e))
+      (InitialState heap env rho (EReadConc e))
       LSilent
       (StEval heap env rho e (KReadConc KDone))
       phi heap_final v_final
@@ -608,11 +608,11 @@ Proof.
       HComp)
     as (n_tail & phi_tail & _HStart & HExprWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_tail
       (StEval heap env rho e (KReadConc KDone))
       phi_tail heap_final v_final HExprWithKont
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KReadConc KDone)
       eq_refl)
     as (n_e & n_after & phi_e & heap_e & v_loc &
@@ -621,13 +621,13 @@ Proof.
   - destruct
       (KReadConc_terminal_value_is_loc
         heap_e v_loc KDone phi_after heap_final v_final
-        (NStepsN_to_NSteps _ _ _ _ HAfter))
+        (StepsN_to_Steps _ _ _ _ HAfter))
       as (r_loc & l & HLoc).
     subst v_loc.
     destruct
       (KReadConc_loc_terminal_trace_nil
         heap_e r_loc l phi_after heap_final v_final
-        (NStepsN_to_NSteps _ _ _ _ HAfter))
+        (StepsN_to_Steps _ _ _ _ HAfter))
       as (HHeapFinal & HTraceAfter).
     subst heap_final phi_after.
     assert (HAfterPositive : 0 < n_after).
@@ -655,9 +655,9 @@ Proof.
   intros n heap env rho e phi heap_final v_final HComp.
   unfold CountedComputationEvaluation in HComp.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (EWriteConc e))
+      (InitialState heap env rho (EWriteConc e))
       LSilent
       (StEval heap env rho e (KWriteConc KDone))
       phi heap_final v_final
@@ -665,11 +665,11 @@ Proof.
       HComp)
     as (n_tail & phi_tail & _HStart & HExprWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_tail
       (StEval heap env rho e (KWriteConc KDone))
       phi_tail heap_final v_final HExprWithKont
-      (NInitialState heap env rho e)
+      (InitialState heap env rho e)
       (KWriteConc KDone)
       eq_refl)
     as (n_e & n_after & phi_e & heap_e & v_loc &
@@ -678,13 +678,13 @@ Proof.
   - destruct
       (KWriteConc_terminal_value_is_loc
         heap_e v_loc KDone phi_after heap_final v_final
-        (NStepsN_to_NSteps _ _ _ _ HAfter))
+        (StepsN_to_Steps _ _ _ _ HAfter))
       as (r_loc & l & HLoc).
     subst v_loc.
     destruct
       (KWriteConc_loc_terminal_trace_nil
         heap_e r_loc l phi_after heap_final v_final
-        (NStepsN_to_NSteps _ _ _ _ HAfter))
+        (StepsN_to_Steps _ _ _ _ HAfter))
       as (HHeapFinal & HTraceAfter).
     subst heap_final phi_after.
     assert (HAfterPositive : 0 < n_after).
@@ -701,7 +701,7 @@ Qed.
 Lemma counted_immediate_silent_initial_return_static_covered :
   forall n heap env rho expr phi heap_final v_final eff,
     (forall label state',
-      NStep (NInitialState heap env rho expr) label state' ->
+      Step (InitialState heap env rho expr) label state' ->
       exists v0,
         label = LSilent /\
         state' = StReturn heap v0 KDone) ->
@@ -723,7 +723,7 @@ Qed.
 Lemma checked_store_counted_tyeffect_value_is_summary :
   forall n gamma omega heap env rho expr eff phi heap_final v_final,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr TyEffect eff ->
+    CheckedTcExp gamma omega expr TyEffect eff ->
     CountedComputationEvaluation n heap env rho expr
       phi heap_final v_final ->
     exists theta,
@@ -738,7 +738,7 @@ Proof.
     as (store & ty_res & HResolveTy & _HBounded & _HHeap & HVal).
   assert (HTyRes : ty_res = TyEffect).
   {
-    eapply NResolveTy_deterministic.
+    eapply ResolveTy_deterministic.
     - exact HResolveTy.
     - constructor.
   }
@@ -751,7 +751,7 @@ Qed.
 Lemma checked_store_counted_tynat_value_is_nat :
   forall n gamma omega heap env rho expr eff phi heap_final v_final,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr TyNat eff ->
+    CheckedTcExp gamma omega expr TyNat eff ->
     CountedComputationEvaluation n heap env rho expr
       phi heap_final v_final ->
     exists n_final,
@@ -766,7 +766,7 @@ Proof.
     as (store & ty_res & HResolveTy & _HBounded & _HHeap & HVal).
   assert (HTyRes : ty_res = TyNat).
   {
-    eapply NResolveTy_deterministic.
+    eapply ResolveTy_deterministic.
     - exact HResolveTy.
     - constructor.
   }
@@ -779,7 +779,7 @@ Qed.
 Lemma checked_store_counted_tybool_value_is_bool :
   forall n gamma omega heap env rho expr eff phi heap_final v_final,
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr TyBool eff ->
+    CheckedTcExp gamma omega expr TyBool eff ->
     CountedComputationEvaluation n heap env rho expr
       phi heap_final v_final ->
     exists b_final,
@@ -794,7 +794,7 @@ Proof.
     as (store & ty_res & HResolveTy & _HBounded & _HHeap & HVal).
   assert (HTyRes : ty_res = TyBool).
   {
-    eapply NResolveTy_deterministic.
+    eapply ResolveTy_deterministic.
     - exact HResolveTy.
     - constructor.
   }
@@ -809,10 +809,10 @@ Definition CheckedStoreComputationTraceSoundnessBelow (n : nat) : Prop :=
     phi heap_final v_final eff_res,
     n_eval < n ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NCheckedTcExp gamma omega expr ty eff ->
+    CheckedTcExp gamma omega expr ty eff ->
     CountedComputationEvaluation n_eval heap env rho expr
       phi heap_final v_final ->
-    NResolveStaticEffect rho eff eff_res ->
+    ResolveStaticEffect rho eff eff_res ->
     TraceCoveredByStaticEffect phi eff_res.
 
 Theorem checked_store_computation_trace_soundness_below :
@@ -824,7 +824,7 @@ Proof.
   intros n_eval gamma omega heap env rho expr ty eff
     phi heap_final v_final eff_res HCount HContext HChecked
     HComp HResolve.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HShape; subst; clear HShape.
   - eapply counted_immediate_silent_initial_return_static_covered; eauto.
     intros label state' HStep. inversion HStep; subst; eauto.
@@ -837,12 +837,12 @@ Proof.
   - eapply counted_immediate_silent_initial_return_static_covered; eauto.
     intros label state' HStep. inversion HStep; subst; eauto.
   - destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_f (static_union eff_a eff_body) eff_res HResolve)
       as (eff_f_res & eff_tail_res & HEffRes &
         HResolveFun & HResolveTail).
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_a eff_body eff_tail_res HResolveTail)
       as (eff_a_res & eff_body_res & HTailRes &
         HResolveArg & HResolveBody).
@@ -868,7 +868,7 @@ Proof.
       eapply checked_store_counted_computation_store_runtime_context.
       - exact HContext.
       - match goal with
-        | HFunChecked : NCheckedTcExp gamma omega ef
+        | HFunChecked : CheckedTcExp gamma omega ef
             (TyArrow ty_arg eff_body ty eff_summary) eff_f |- _ =>
             exact HFunChecked
         end.
@@ -886,12 +886,12 @@ Proof.
         closure_env closure_rho f x ec ee arg
         HContext
         ltac:(match goal with
-        | HFunChecked : NCheckedTcExp gamma omega ef
+        | HFunChecked : CheckedTcExp gamma omega ef
             (TyArrow ty_arg eff_body ty eff_summary) eff_f |- _ =>
             exact HFunChecked
         end)
         ltac:(match goal with
-        | HArgChecked : NCheckedTcExp gamma omega ea ty_arg eff_a |- _ =>
+        | HArgChecked : CheckedTcExp gamma omega ea ty_arg eff_a |- _ =>
             exact HArgChecked
         end)
         HFunComp HArgComp)
@@ -904,9 +904,9 @@ Proof.
         _HResolveSummaryClosure & HResolveFunArrow).
     inversion HResolveFunArrow; subst.
     match goal with
-    | HBodyResolved : NResolveStaticEffect rho eff_body eff_body_res_body |- _ =>
+    | HBodyResolved : ResolveStaticEffect rho eff_body eff_body_res_body |- _ =>
         pose proof
-          (NResolveStaticEffect_deterministic
+          (ResolveStaticEffect_deterministic
             rho eff_body eff_body_res eff_body_res_body
             HResolveBody HBodyResolved)
           as HBodyResEq
@@ -940,7 +940,7 @@ Proof.
       * exact HBodyComp.
       * exact HResolveBodyClosure.
   - destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_f (open_static_effect r eff_body) eff_res HResolve)
       as (eff_f_res & eff_open_res & HEffRes &
         HResolveFun & HResolveOpen).
@@ -958,7 +958,7 @@ Proof.
         (VRegionClosure closure_env closure_rho x e)).
     { unfold CountedComputationEvaluation. exact HFun. }
     match goal with
-    | HFunChecked : NCheckedTcExp gamma omega er
+    | HFunChecked : CheckedTcExp gamma omega er
         (TyForallRgn eff_body ?ty_body) eff_f |- _ =>
         destruct
           (checked_store_region_body_context_from_prefix
@@ -980,7 +980,7 @@ Proof.
       * exact HCountFun.
       * exact HContext.
       * match goal with
-        | HFunChecked : NCheckedTcExp gamma omega er
+        | HFunChecked : CheckedTcExp gamma omega er
             (TyForallRgn eff_body ?ty_body) eff_f |- _ =>
             exact HFunChecked
         end.
@@ -993,12 +993,12 @@ Proof.
       * exact HBodyComp.
       * exact HResolveBody.
   - destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_f (static_union eff_a eff_summary) eff_res HResolve)
       as (eff_f_res & eff_tail_res & HEffRes &
         HResolveFun & HResolveTail).
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_a eff_summary eff_tail_res HResolveTail)
       as (eff_a_res & eff_summary_res & HTailRes &
         HResolveArg & HResolveSummary).
@@ -1037,7 +1037,7 @@ Proof.
       eapply checked_store_counted_computation_store_runtime_context.
       - exact HContext.
       - match goal with
-        | HFunChecked : NCheckedTcExp gamma omega ef
+        | HFunChecked : CheckedTcExp gamma omega ef
             (TyArrow ty_arg eff_body ty_body eff_summary) eff_f |- _ =>
             exact HFunChecked
         end.
@@ -1051,12 +1051,12 @@ Proof.
         closure_env closure_rho f x ec ee arg
         HContext
         ltac:(match goal with
-        | HFunChecked : NCheckedTcExp gamma omega ef
+        | HFunChecked : CheckedTcExp gamma omega ef
             (TyArrow ty_arg eff_body ty_body eff_summary) eff_f |- _ =>
             exact HFunChecked
         end)
         ltac:(match goal with
-        | HArgChecked : NCheckedTcExp gamma omega ea ty_arg eff_a |- _ =>
+        | HArgChecked : CheckedTcExp gamma omega ea ty_arg eff_a |- _ =>
             exact HArgChecked
         end)
         HFunComp HArgComp)
@@ -1070,9 +1070,9 @@ Proof.
     inversion HResolveFunArrow; subst.
     match goal with
     | HSummaryResolved :
-        NResolveStaticEffect rho eff_summary eff_summary_res_body |- _ =>
+        ResolveStaticEffect rho eff_summary eff_summary_res_body |- _ =>
         pose proof
-          (NResolveStaticEffect_deterministic
+          (ResolveStaticEffect_deterministic
             rho eff_summary eff_summary_res eff_summary_res_body
             HResolveSummary HSummaryResolved)
           as HSummaryResEq
@@ -1091,7 +1091,7 @@ Proof.
       * exact HCountFun.
       * exact HContext.
       * match goal with
-        | HFunChecked : NCheckedTcExp gamma omega ef
+        | HFunChecked : CheckedTcExp gamma omega ef
             (TyArrow ty_arg eff_body ty_body eff_summary) eff_f |- _ =>
             exact HFunChecked
         end.
@@ -1101,7 +1101,7 @@ Proof.
       * exact HCountArg.
       * exact HContextArg.
       * match goal with
-        | HArgChecked : NCheckedTcExp gamma omega ea ty_arg eff_a |- _ =>
+        | HArgChecked : CheckedTcExp gamma omega ea ty_arg eff_a |- _ =>
             exact HArgChecked
         end.
       * exact HArgComp.
@@ -1113,19 +1113,19 @@ Proof.
       * exact HSummaryComp.
       * exact HResolveSummaryClosure.
   - destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho (static_union eff_summary1 eff_summary2)
         (static_union eff1 eff2) eff_res HResolve)
       as (eff_summaries_res & eff_bodies_res & HEffRes &
         HResolveSummaries & HResolveBodies).
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_summary1 eff_summary2 eff_summaries_res
         HResolveSummaries)
       as (eff_summary1_res & eff_summary2_res & HSummariesRes &
         HResolveSummary1 & HResolveSummary2).
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff1 eff2 eff_bodies_res HResolveBodies)
       as (eff1_res & eff2_res & HBodiesRes &
         HResolve1 & HResolve2).
@@ -1154,7 +1154,7 @@ Proof.
       - exact HContext.
       - match goal with
         | HSummary1Checked :
-            NCheckedTcExp gamma omega (EEffApp ef1 ea1)
+            CheckedTcExp gamma omega (EEffApp ef1 ea1)
               TyEffect eff_summary1 |- _ =>
             exact HSummary1Checked
         end.
@@ -1171,7 +1171,7 @@ Proof.
       - exact HContextSummary2.
       - match goal with
         | HSummary2Checked :
-            NCheckedTcExp gamma omega (EEffApp ef2 ea2)
+            CheckedTcExp gamma omega (EEffApp ef2 ea2)
               TyEffect eff_summary2 |- _ =>
             exact HSummary2Checked
         end.
@@ -1188,7 +1188,7 @@ Proof.
       - exact HContextLeft.
       - match goal with
         | HLeftChecked :
-            NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 |- _ =>
+            CheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 |- _ =>
             exact HLeftChecked
         end.
       - exact HLeftComp.
@@ -1204,7 +1204,7 @@ Proof.
       * exact HContext.
       * match goal with
         | HSummary1Checked :
-            NCheckedTcExp gamma omega (EEffApp ef1 ea1)
+            CheckedTcExp gamma omega (EEffApp ef1 ea1)
               TyEffect eff_summary1 |- _ =>
             exact HSummary1Checked
         end.
@@ -1215,7 +1215,7 @@ Proof.
       * exact HContextSummary2.
       * match goal with
         | HSummary2Checked :
-            NCheckedTcExp gamma omega (EEffApp ef2 ea2)
+            CheckedTcExp gamma omega (EEffApp ef2 ea2)
               TyEffect eff_summary2 |- _ =>
             exact HSummary2Checked
         end.
@@ -1226,7 +1226,7 @@ Proof.
       * exact HContextLeft.
       * match goal with
         | HLeftChecked :
-            NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 |- _ =>
+            CheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 |- _ =>
             exact HLeftChecked
         end.
       * exact HLeftComp.
@@ -1236,18 +1236,18 @@ Proof.
       * exact HContextRight.
       * match goal with
         | HRightChecked :
-            NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 |- _ =>
+            CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 |- _ =>
             exact HRightChecked
         end.
       * exact HRightComp.
       * exact HResolve2.
   - destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_e (static_union eff_t eff_f) eff_res HResolve)
       as (eff_e_res & eff_branch_res & HEffRes &
         HResolveCond & HResolveBranches).
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_t eff_f eff_branch_res HResolveBranches)
       as (eff_t_res & eff_f_res & HBranchRes &
         HResolveThen & HResolveElse).
@@ -1269,7 +1269,7 @@ Proof.
       eapply checked_store_counted_computation_store_runtime_context.
       - exact HContext.
       - match goal with
-        | HCondChecked : NCheckedTcExp gamma omega e TyBool eff_e |- _ =>
+        | HCondChecked : CheckedTcExp gamma omega e TyBool eff_e |- _ =>
             exact HCondChecked
         end.
       - exact HCondComp.
@@ -1287,7 +1287,7 @@ Proof.
            ++ exact HContext.
            ++ match goal with
               | HCondChecked :
-                  NCheckedTcExp gamma omega e TyBool eff_e |- _ =>
+                  CheckedTcExp gamma omega e TyBool eff_e |- _ =>
                   exact HCondChecked
               end.
            ++ exact HCondComp.
@@ -1297,7 +1297,7 @@ Proof.
            ++ exact HContextBranch.
            ++ match goal with
               | HThenChecked :
-                  NCheckedTcExp gamma omega et ty eff_t |- _ =>
+                  CheckedTcExp gamma omega et ty eff_t |- _ =>
                   exact HThenChecked
               end.
            ++ exact HBranchComp.
@@ -1312,7 +1312,7 @@ Proof.
            ++ exact HContext.
            ++ match goal with
               | HCondChecked :
-                  NCheckedTcExp gamma omega e TyBool eff_e |- _ =>
+                  CheckedTcExp gamma omega e TyBool eff_e |- _ =>
                   exact HCondChecked
               end.
            ++ exact HCondComp.
@@ -1322,7 +1322,7 @@ Proof.
            ++ exact HContextBranch.
            ++ match goal with
               | HElseChecked :
-                  NCheckedTcExp gamma omega ef ty eff_f |- _ =>
+                  CheckedTcExp gamma omega ef ty eff_f |- _ =>
                   exact HElseChecked
               end.
            ++ exact HBranchComp.
@@ -1355,7 +1355,7 @@ Proof.
         -- exact HCountExpr.
         -- exact HContext.
         -- match goal with
-           | HExprChecked : NCheckedTcExp gamma omega e ?ty_child ?eff_child_expr |- _ =>
+           | HExprChecked : CheckedTcExp gamma omega e ?ty_child ?eff_child_expr |- _ =>
                exact HExprChecked
            end.
         -- exact HExprComp.
@@ -1377,7 +1377,7 @@ Proof.
         phi_e heap_e (VLoc r_loc l)).
     { unfold CountedComputationEvaluation. exact HExpr. }
     match goal with
-    | HExprChecked : NCheckedTcExp gamma omega e
+    | HExprChecked : CheckedTcExp gamma omega e
         (TyRef (region_expr_to_type r) ?ty_cell) ?eff_child_expr |- _ =>
         destruct
           (checked_store_counted_computation_store_value_shape_resolved
@@ -1388,7 +1388,7 @@ Proof.
           as (store & ty_res & HResolveTy & _HBounded &
             _HHeap & HVal);
         pose proof
-          (NStoreResolvedValShape_loc_ref_region
+          (StoreResolvedValShape_loc_ref_region
             store rho r ty_cell ty_res r_loc l HResolveTy HVal)
           as HRgn
     end.
@@ -1403,7 +1403,7 @@ Proof.
         -- exact HCountExpr.
         -- exact HContext.
         -- match goal with
-           | HExprChecked : NCheckedTcExp gamma omega e
+           | HExprChecked : CheckedTcExp gamma omega e
                (TyRef (region_expr_to_type r) ?ty_cell) ?eff_child_expr |- _ =>
                exact HExprChecked
            end.
@@ -1416,7 +1416,7 @@ Proof.
          HResolveAction HResolveTail];
       subst.
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff_a eff_v eff_tail_res HResolveTail)
       as (eff_a_res & eff_v_res & HTailRes &
         HResolveAddr & HResolveVal).
@@ -1434,7 +1434,7 @@ Proof.
         phi_addr heap_addr (VLoc r_loc l)).
     { unfold CountedComputationEvaluation. exact HAddr. }
     match goal with
-    | HAddrChecked : NCheckedTcExp gamma omega ea
+    | HAddrChecked : CheckedTcExp gamma omega ea
         (TyRef (region_expr_to_type r) ?ty_cell) eff_a |- _ =>
         destruct
           (checked_store_counted_computation_store_value_shape_resolved
@@ -1445,7 +1445,7 @@ Proof.
           as (store & ty_res & HResolveTy & _HBounded &
             _HHeap & HLocVal);
         pose proof
-          (NStoreResolvedValShape_loc_ref_region
+          (StoreResolvedValShape_loc_ref_region
             store rho r ty_cell ty_res r_loc l HResolveTy HLocVal)
           as HRgn
     end.
@@ -1460,7 +1460,7 @@ Proof.
       eapply checked_store_counted_computation_store_runtime_context.
       - exact HContext.
       - match goal with
-        | HAddrChecked : NCheckedTcExp gamma omega ea
+        | HAddrChecked : CheckedTcExp gamma omega ea
             (TyRef (region_expr_to_type r) ?ty_cell) eff_a |- _ =>
             exact HAddrChecked
         end.
@@ -1476,7 +1476,7 @@ Proof.
         -- exact HCountAddr.
         -- exact HContext.
         -- match goal with
-           | HAddrChecked : NCheckedTcExp gamma omega ea
+           | HAddrChecked : CheckedTcExp gamma omega ea
                (TyRef (region_expr_to_type r) ?ty_cell) eff_a |- _ =>
                exact HAddrChecked
            end.
@@ -1486,7 +1486,7 @@ Proof.
         -- exact HCountVal.
         -- exact HContextVal.
         -- match goal with
-           | HValChecked : NCheckedTcExp gamma omega ev ?ty_cell eff_v |- _ =>
+           | HValChecked : CheckedTcExp gamma omega ev ?ty_cell eff_v |- _ =>
                exact HValChecked
            end.
         -- exact HValComp.
@@ -1501,7 +1501,7 @@ Proof.
       as (n_final & HFinalNat).
     subst v_final.
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff1 eff2 eff_res HResolve)
       as (eff1_res & eff2_res & HEffRes &
         HResolve1 & HResolve2).
@@ -1523,7 +1523,7 @@ Proof.
       eapply checked_store_counted_computation_store_runtime_context.
       - exact HContext.
       - match goal with
-        | HLeftChecked : NCheckedTcExp gamma omega e1 TyNat eff1 |- _ =>
+        | HLeftChecked : CheckedTcExp gamma omega e1 TyNat eff1 |- _ =>
             exact HLeftChecked
         end.
       - exact HLeftComp.
@@ -1554,7 +1554,7 @@ Proof.
       as (n_final & HFinalNat).
     subst v_final.
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff1 eff2 eff_res HResolve)
       as (eff1_res & eff2_res & HEffRes &
         HResolve1 & HResolve2).
@@ -1604,7 +1604,7 @@ Proof.
       as (n_final & HFinalNat).
     subst v_final.
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff1 eff2 eff_res HResolve)
       as (eff1_res & eff2_res & HEffRes &
         HResolve1 & HResolve2).
@@ -1654,7 +1654,7 @@ Proof.
       as (b_final & HFinalBool).
     subst v_final.
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff1 eff2 eff_res HResolve)
       as (eff1_res & eff2_res & HEffRes &
         HResolve1 & HResolve2).
@@ -1712,7 +1712,7 @@ Proof.
     + exact HCountExpr.
     + exact HContext.
     + match goal with
-      | HExprChecked : NCheckedTcExp gamma omega e ?ty_ref eff |- _ =>
+      | HExprChecked : CheckedTcExp gamma omega e ?ty_ref eff |- _ =>
           exact HExprChecked
       end.
     + exact HExprComp.
@@ -1727,7 +1727,7 @@ Proof.
     + exact HCountExpr.
     + exact HContext.
     + match goal with
-      | HExprChecked : NCheckedTcExp gamma omega e ?ty_ref eff |- _ =>
+      | HExprChecked : CheckedTcExp gamma omega e ?ty_ref eff |- _ =>
           exact HExprChecked
       end.
     + exact HExprComp.
@@ -1740,7 +1740,7 @@ Proof.
       as (theta & HFinalSummary).
     subst v_final.
     destruct
-      (NResolveStaticEffect_static_union_inv
+      (ResolveStaticEffect_static_union_inv
         rho eff1 eff2 eff_res HResolve)
       as (eff1_res & eff2_res & HEffRes &
         HResolve1 & HResolve2).
@@ -1797,8 +1797,8 @@ Proof.
     phi heap_final v_final eff_res HChecked HComp HResolve.
   unfold ComputationEvaluation in HComp.
   destruct
-    (NSteps_to_NStepsN
-      (NInitialState heap env rho expr)
+    (Steps_to_StepsN
+      (InitialState heap env rho expr)
       phi
       (StDone heap_final v_final)
       HComp)
@@ -1815,7 +1815,7 @@ Theorem checked_store_context_case_dispatch :
     CheckedStoreSummaryValueSoundnessBelow n ->
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
-    NCheckedBackTriangle gamma omega expr summary_expr ->
+    CheckedBackTriangle gamma omega expr summary_expr ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n heap env rho expr
       phi heap_final v_final ->
@@ -1915,7 +1915,7 @@ Proof.
     + eapply counted_EEmpty_summary_trace_covered; eauto.
     + eapply counted_EEmpty_summary_trace_covered; eauto.
     + destruct
-        (NCBT_App_components _ _ _ _ HBackCase)
+        (CBT_App_components _ _ _ _ HBackCase)
         as (_ty_mu & _eff_mu & eff_eff_app & _ty_ef & _ty_ea &
           _eff_ef & _eff_ea & _HCheckedApp & HCheckedEffApp &
           _HCheckedFun & _HCheckedArg & HStaticEff &
@@ -1939,7 +1939,7 @@ Proof.
       * exact HSummaryTraceSound.
       * exact HComp.
     + destruct
-        (NCBT_PairPar_components _ _ _ _ _ _ HBackCase)
+        (CBT_PairPar_components _ _ _ _ _ _ HBackCase)
         as (_ty1 & _ty2 & _eff1 & _eff2 &
           _eff_summary1 & _eff_summary2 &
           _HCheckedLeft & _HCheckedRight &
@@ -1948,11 +1948,11 @@ Proof.
           _HNoAllocLeft & _HNoAllocRight &
           HBackLeft & HBackRight).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBackLeft)
         as (eff_left_summary & HCheckedLeftSummary & _).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBackRight)
         as (eff_right_summary & HCheckedRightSummary & _).
       eapply
@@ -1971,7 +1971,7 @@ Proof.
       * exact HComp.
     + eapply counted_EEmpty_summary_trace_covered; eauto.
     + destruct
-        (NCBT_Cond_components _ _ _ _ _ _ _ HBackCase)
+        (CBT_Cond_components _ _ _ _ _ _ _ HBackCase)
         as (eff_e_cond & _ty & _ty_t & _ty_f & _eff_et & _eff_ef &
           _HCheckedCond & HCheckedCondition & _HCheckedThen &
           _HCheckedElse & HBackCondition & HBackThen & HBackElse).
@@ -2022,7 +2022,7 @@ Proof.
       simpl.
       destruct b.
       * destruct
-          (NCheckedBackTriangle_summary_checked_heap_neutral
+          (CheckedBackTriangle_summary_checked_heap_neutral
             _ _ _ _ HBackThen)
           as (eff_then_summary & HCheckedThenSummary & _).
         eapply HSummaryValueChild.
@@ -2034,7 +2034,7 @@ Proof.
            simpl in HBranch.
            exact HBranch.
       * destruct
-          (NCheckedBackTriangle_summary_checked_heap_neutral
+          (CheckedBackTriangle_summary_checked_heap_neutral
             _ _ _ _ HBackElse)
           as (eff_else_summary & HCheckedElseSummary & _).
         eapply HSummaryValueChild.
@@ -2046,11 +2046,11 @@ Proof.
            simpl in HBranch.
            exact HBranch.
     + destruct
-        (NCBT_Ref_components _ _ _ _ _ HBackCase)
+        (CBT_Ref_components _ _ _ _ _ HBackCase)
         as (_ty & _static & _ty_ref & _eff_ref &
           _HCheckedExpr & _HCheckedRef & HBackExpr).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBackExpr)
         as (eff_expr_summary & HCheckedExprSummary & _).
       unfold CountedComputationEvaluation in HComp.
@@ -2092,11 +2092,11 @@ Proof.
       }
       eapply trace_covered_app_summary_union; eauto.
     + destruct
-        (NCBT_Deref_components _ _ _ _ _ HBackCase)
+        (CBT_Deref_components _ _ _ _ _ HBackCase)
         as (_ty & _static & _ty_deref & _eff_deref &
           _HCheckedExpr & _HCheckedDeref & HBackExpr).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBackExpr)
         as (eff_expr_summary & HCheckedExprSummary & _).
       unfold CountedComputationEvaluation in HComp.
@@ -2138,16 +2138,16 @@ Proof.
       }
       eapply trace_covered_app_summary_union; eauto.
     + destruct
-        (NCBT_Assign_components _ _ _ _ _ _ _ HBackCase)
+        (CBT_Assign_components _ _ _ _ _ _ _ HBackCase)
         as (_ty_addr & _static_addr & _ty_assign & _eff_assign &
           _HCheckedAddr & _HCheckedAssign & _HNeutralAddr &
           HBackAddr & HBackVal).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBackAddr)
         as (eff_addr_summary & HCheckedAddrSummary & _).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBackVal)
         as (eff_val_summary & HCheckedValSummary & _).
       unfold CountedComputationEvaluation in HComp.
@@ -2230,11 +2230,11 @@ Proof.
       eapply trace_covered_app_summary_union; eauto.
       eapply trace_covered_app_summary_union; eauto.
     + destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack1)
         as (eff_left_summary & HCheckedLeftSummary & _).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack2)
         as (eff_right_summary & HCheckedRightSummary & _).
       eapply
@@ -2249,11 +2249,11 @@ Proof.
       * exact HContext.
       * exact HComp.
     + destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack1)
         as (eff_left_summary & HCheckedLeftSummary & _).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack2)
         as (eff_right_summary & HCheckedRightSummary & _).
       eapply
@@ -2268,11 +2268,11 @@ Proof.
       * exact HContext.
       * exact HComp.
     + destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack1)
         as (eff_left_summary & HCheckedLeftSummary & _).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack2)
         as (eff_right_summary & HCheckedRightSummary & _).
       eapply
@@ -2287,11 +2287,11 @@ Proof.
       * exact HContext.
       * exact HComp.
     + destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack1)
         as (eff_left_summary & HCheckedLeftSummary & _).
       destruct
-        (NCheckedBackTriangle_summary_checked_heap_neutral
+        (CheckedBackTriangle_summary_checked_heap_neutral
           _ _ _ _ HBack2)
         as (eff_right_summary & HCheckedRightSummary & _).
       eapply

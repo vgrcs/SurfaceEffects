@@ -18,401 +18,401 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Inductive NNoAllocKontShape :
-    NStoreTyping -> NKont -> NTy -> NTy -> Prop :=
-| NNAKS_Done :
+Inductive NoAllocKontShape :
+    StoreTyping -> Kont -> Ty -> Ty -> Prop :=
+| NAKS_Done :
     forall store ty,
-      NNoAllocKontShape store KDone ty ty
-| NNAKS_MuAppFun :
+      NoAllocKontShape store KDone ty ty
+| NAKS_MuAppFun :
     forall store ea env rho k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res
       eff_arg eff_arg_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty_arg ty_arg_res ->
-      NResolveStaticEffect rho eff_body eff_body_res ->
-      NResolveTy rho ty_body ty_body_res ->
-      NResolveStaticEffect rho eff_summary eff_summary_res ->
-      NCheckedTcExp gamma omega ea ty_arg eff_arg ->
-      NResolveStaticEffect rho eff_arg eff_arg_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty_arg ty_arg_res ->
+      ResolveStaticEffect rho eff_body eff_body_res ->
+      ResolveTy rho ty_body ty_body_res ->
+      ResolveStaticEffect rho eff_summary eff_summary_res ->
+      CheckedTcExp gamma omega ea ty_arg eff_arg ->
+      ResolveStaticEffect rho eff_arg eff_arg_res ->
       static_noalloc eff_arg_res ->
       static_noalloc eff_body_res ->
-      NNoAllocKontShape store k ty_body_res ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k ty_body_res ty_out ->
+      NoAllocKontShape store
         (KMuAppFun ea env rho k)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
-| NNAKS_MuAppArg :
+| NAKS_MuAppArg :
     forall store closure_env closure_rho f x ec ee k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res ty_out,
-      NStoreResolvedEnvShape store closure_rho closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      StoreResolvedEnvShape store closure_rho closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
       static_noalloc eff_body_res ->
-      NNoAllocKontShape store k ty_body_res ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k ty_body_res ty_out ->
+      NoAllocKontShape store
         (KMuAppArg closure_env closure_rho f x ec ee k)
         ty_arg_res
         ty_out
-| NNAKS_EffAppFun :
+| NAKS_EffAppFun :
     forall store ea env rho k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res
       eff_arg eff_arg_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty_arg ty_arg_res ->
-      NResolveStaticEffect rho eff_body eff_body_res ->
-      NResolveTy rho ty_body ty_body_res ->
-      NResolveStaticEffect rho eff_summary eff_summary_res ->
-      NCheckedTcExp gamma omega ea ty_arg eff_arg ->
-      NResolveStaticEffect rho eff_arg eff_arg_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty_arg ty_arg_res ->
+      ResolveStaticEffect rho eff_body eff_body_res ->
+      ResolveTy rho ty_body ty_body_res ->
+      ResolveStaticEffect rho eff_summary eff_summary_res ->
+      CheckedTcExp gamma omega ea ty_arg eff_arg ->
+      ResolveStaticEffect rho eff_arg eff_arg_res ->
       static_noalloc eff_arg_res ->
       static_noalloc eff_summary_res ->
-      NNoAllocKontShape store k TyEffect ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyEffect ty_out ->
+      NoAllocKontShape store
         (KEffAppFun ea env rho k)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
-| NNAKS_EffAppArg :
+| NAKS_EffAppArg :
     forall store closure_env closure_rho f x ec ee k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res ty_out,
-      NStoreResolvedEnvShape store closure_rho closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      StoreResolvedEnvShape store closure_rho closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
       static_noalloc eff_summary_res ->
-      NNoAllocKontShape store k TyEffect ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyEffect ty_out ->
+      NoAllocKontShape store
         (KEffAppArg closure_env closure_rho f x ec ee k)
         ty_arg_res
         ty_out
-| NNAKS_PairParEff1 :
+| NAKS_PairParEff1 :
     forall store ef1 ea1 ef2 ea2 env rho k gamma omega
       ty1 ty1_res ty2 ty2_res eff1 eff1_res eff2 eff2_res
       eff_summary2 eff_summary2_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty1 ty1_res ->
-      NResolveTy rho ty2 ty2_res ->
-      NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
-      NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
-      NCheckedTcExp gamma omega
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty1 ty1_res ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      CheckedTcExp gamma omega
         (EEffApp ef2 ea2) TyEffect eff_summary2 ->
-      NResolveStaticEffect rho eff1 eff1_res ->
-      NResolveStaticEffect rho eff2 eff2_res ->
-      NResolveStaticEffect rho eff_summary2 eff_summary2_res ->
+      ResolveStaticEffect rho eff1 eff1_res ->
+      ResolveStaticEffect rho eff2 eff2_res ->
+      ResolveStaticEffect rho eff_summary2 eff_summary2_res ->
       static_noalloc eff1_res ->
       static_noalloc eff2_res ->
       static_noalloc eff_summary2_res ->
-      NNoAllocKontShape store k (TyPair ty1_res ty2_res) ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k (TyPair ty1_res ty2_res) ty_out ->
+      NoAllocKontShape store
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k)
         TyEffect
         ty_out
-| NNAKS_PairParEff2 :
+| NAKS_PairParEff2 :
     forall store ef1 ea1 ef2 ea2 env rho theta1 k gamma omega
       ty1 ty1_res ty2 ty2_res eff1 eff1_res eff2 eff2_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty1 ty1_res ->
-      NResolveTy rho ty2 ty2_res ->
-      NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
-      NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
-      NResolveStaticEffect rho eff1 eff1_res ->
-      NResolveStaticEffect rho eff2 eff2_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty1 ty1_res ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 ->
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      ResolveStaticEffect rho eff1 eff1_res ->
+      ResolveStaticEffect rho eff2 eff2_res ->
       static_noalloc eff1_res ->
       static_noalloc eff2_res ->
-      NNoAllocKontShape store k (TyPair ty1_res ty2_res) ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k (TyPair ty1_res ty2_res) ty_out ->
+      NoAllocKontShape store
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
         ty_out
-| NNAKS_RgnApp :
+| NAKS_RgnApp :
     forall store r arg_rho r_val k eff ty ty_out,
       eval_region arg_rho r = Some r_val ->
       static_noalloc
         (open_static_effect_type (region_const_type r_val) eff) ->
-      NNoAllocKontShape store k
+      NoAllocKontShape store k
         (open_ty_type (region_const_type r_val) ty)
         ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store
         (KRgnApp r arg_rho k)
         (TyForallRgn eff ty)
         ty_out
-| NNAKS_Cond :
+| NAKS_Cond :
     forall store et ef env rho k gamma omega ty ty_res
       eff_t eff_t_res eff_f eff_f_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega et ty eff_t ->
-      NCheckedTcExp gamma omega ef ty eff_f ->
-      NResolveStaticEffect rho eff_t eff_t_res ->
-      NResolveStaticEffect rho eff_f eff_f_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega et ty eff_t ->
+      CheckedTcExp gamma omega ef ty eff_f ->
+      ResolveStaticEffect rho eff_t eff_t_res ->
+      ResolveStaticEffect rho eff_f eff_f_res ->
       static_noalloc eff_t_res ->
       static_noalloc eff_f_res ->
-      NNoAllocKontShape store k ty_res ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k ty_res ty_out ->
+      NoAllocKontShape store
         (KCond et ef env rho k)
         TyBool
         ty_out
-| NNAKS_Deref :
+| NAKS_Deref :
     forall store rgn r ty k ty_out,
-      NNoAllocKontShape store k ty ty_out ->
-      NNoAllocKontShape store (KDeref rgn k)
+      NoAllocKontShape store k ty ty_out ->
+      NoAllocKontShape store (KDeref rgn k)
         (TyRef (region_const_type r) ty) ty_out
-| NNAKS_AssignLoc :
+| NAKS_AssignLoc :
     forall store rgn ev env rho k gamma omega r ty ty_res
       eff_v eff_v_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
       eval_region rho rgn = Some r ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega ev ty eff_v ->
-      NResolveStaticEffect rho eff_v eff_v_res ->
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega ev ty eff_v ->
+      ResolveStaticEffect rho eff_v eff_v_res ->
       static_noalloc eff_v_res ->
-      NNoAllocKontShape store k TyUnit ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyUnit ty_out ->
+      NoAllocKontShape store
         (KAssignLoc rgn ev env rho k)
         (TyRef (region_const_type r) ty_res)
         ty_out
-| NNAKS_AssignVal :
+| NAKS_AssignVal :
     forall store rgn r ty loc k ty_out,
-      NStoreResolvedValShape store loc
+      StoreResolvedValShape store loc
         (TyRef (region_const_type r) ty) ->
-      NNoAllocKontShape store k TyUnit ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyUnit ty_out ->
+      NoAllocKontShape store
         (KAssignVal rgn loc k)
         ty
         ty_out
-| NNAKS_PlusL :
+| NAKS_PlusL :
     forall store e2 env rho k gamma omega eff eff_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NResolveStaticEffect rho eff eff_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      ResolveStaticEffect rho eff eff_res ->
       static_noalloc eff_res ->
-      NNoAllocKontShape store k TyNat ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyNat ty_out ->
+      NoAllocKontShape store
         (KPlusL e2 env rho k)
         TyNat
         ty_out
-| NNAKS_PlusR :
+| NAKS_PlusR :
     forall store n k ty_out,
-      NNoAllocKontShape store k TyNat ty_out ->
-      NNoAllocKontShape store (KPlusR n k) TyNat ty_out
-| NNAKS_MinusL :
+      NoAllocKontShape store k TyNat ty_out ->
+      NoAllocKontShape store (KPlusR n k) TyNat ty_out
+| NAKS_MinusL :
     forall store e2 env rho k gamma omega eff eff_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NResolveStaticEffect rho eff eff_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      ResolveStaticEffect rho eff eff_res ->
       static_noalloc eff_res ->
-      NNoAllocKontShape store k TyNat ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyNat ty_out ->
+      NoAllocKontShape store
         (KMinusL e2 env rho k)
         TyNat
         ty_out
-| NNAKS_MinusR :
+| NAKS_MinusR :
     forall store n k ty_out,
-      NNoAllocKontShape store k TyNat ty_out ->
-      NNoAllocKontShape store (KMinusR n k) TyNat ty_out
-| NNAKS_TimesL :
+      NoAllocKontShape store k TyNat ty_out ->
+      NoAllocKontShape store (KMinusR n k) TyNat ty_out
+| NAKS_TimesL :
     forall store e2 env rho k gamma omega eff eff_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NResolveStaticEffect rho eff eff_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      ResolveStaticEffect rho eff eff_res ->
       static_noalloc eff_res ->
-      NNoAllocKontShape store k TyNat ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyNat ty_out ->
+      NoAllocKontShape store
         (KTimesL e2 env rho k)
         TyNat
         ty_out
-| NNAKS_TimesR :
+| NAKS_TimesR :
     forall store n k ty_out,
-      NNoAllocKontShape store k TyNat ty_out ->
-      NNoAllocKontShape store (KTimesR n k) TyNat ty_out
-| NNAKS_EqL :
+      NoAllocKontShape store k TyNat ty_out ->
+      NoAllocKontShape store (KTimesR n k) TyNat ty_out
+| NAKS_EqL :
     forall store e2 env rho k gamma omega eff eff_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NResolveStaticEffect rho eff eff_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      ResolveStaticEffect rho eff eff_res ->
       static_noalloc eff_res ->
-      NNoAllocKontShape store k TyBool ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyBool ty_out ->
+      NoAllocKontShape store
         (KEqL e2 env rho k)
         TyNat
         ty_out
-| NNAKS_EqR :
+| NAKS_EqR :
     forall store n k ty_out,
-      NNoAllocKontShape store k TyBool ty_out ->
-      NNoAllocKontShape store (KEqR n k) TyNat ty_out
-| NNAKS_ReadConc :
+      NoAllocKontShape store k TyBool ty_out ->
+      NoAllocKontShape store (KEqR n k) TyNat ty_out
+| NAKS_ReadConc :
     forall store k r ty ty_out,
-      NNoAllocKontShape store k TyEffect ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyEffect ty_out ->
+      NoAllocKontShape store
         (KReadConc k)
         (TyRef (region_const_type r) ty)
         ty_out
-| NNAKS_WriteConc :
+| NAKS_WriteConc :
     forall store k r ty ty_out,
-      NNoAllocKontShape store k TyEffect ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyEffect ty_out ->
+      NoAllocKontShape store
         (KWriteConc k)
         (TyRef (region_const_type r) ty)
         ty_out
-| NNAKS_ConcatL :
+| NAKS_ConcatL :
     forall store e2 env rho k gamma omega eff eff_res ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyEffect eff ->
-      NResolveStaticEffect rho eff eff_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyEffect eff ->
+      ResolveStaticEffect rho eff eff_res ->
       static_noalloc eff_res ->
-      NNoAllocKontShape store k TyEffect ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyEffect ty_out ->
+      NoAllocKontShape store
         (KConcatL e2 env rho k)
         TyEffect
         ty_out
-| NNAKS_ConcatR :
+| NAKS_ConcatR :
     forall store theta k ty_out,
-      NNoAllocKontShape store k TyEffect ty_out ->
-      NNoAllocKontShape store
+      NoAllocKontShape store k TyEffect ty_out ->
+      NoAllocKontShape store
         (KConcatR theta k)
         TyEffect
         ty_out.
 
-Inductive NNoAllocStateShape :
-    NStoreTyping -> NState -> NTy -> Prop :=
-| NNAS_Eval :
+Inductive NoAllocStateShape :
+    StoreTyping -> State -> Ty -> Prop :=
+| NAS_Eval :
     forall store heap env rho e k gamma omega ty ty_res
       eff eff_res ty_out,
-      NStoreResolvedRuntimeShape heap store env rho gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega e ty eff ->
-      NResolveStaticEffect rho eff eff_res ->
+      StoreResolvedRuntimeShape heap store env rho gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega e ty eff ->
+      ResolveStaticEffect rho eff eff_res ->
       static_noalloc eff_res ->
-      NNoAllocKontShape store k ty_res ty_out ->
-      NNoAllocStateShape store (StEval heap env rho e k) ty_out
-| NNAS_Return :
+      NoAllocKontShape store k ty_res ty_out ->
+      NoAllocStateShape store (StEval heap env rho e k) ty_out
+| NAS_Return :
     forall store heap v k ty ty_out,
-      NStoreKeysBoundedByHeap heap store ->
-      NStoreResolvedHeapShape heap store ->
-      NStoreResolvedValShape store v ty ->
-      NNoAllocKontShape store k ty ty_out ->
-      NNoAllocStateShape store (StReturn heap v k) ty_out
-| NNAS_Done :
+      StoreKeysBoundedByHeap heap store ->
+      StoreResolvedHeapShape heap store ->
+      StoreResolvedValShape store v ty ->
+      NoAllocKontShape store k ty ty_out ->
+      NoAllocStateShape store (StReturn heap v k) ty_out
+| NAS_Done :
     forall store heap v ty,
-      NStoreKeysBoundedByHeap heap store ->
-      NStoreResolvedHeapShape heap store ->
-      NStoreResolvedValShape store v ty ->
-      NNoAllocStateShape store (StDone heap v) ty
-| NNAS_Error :
+      StoreKeysBoundedByHeap heap store ->
+      StoreResolvedHeapShape heap store ->
+      StoreResolvedValShape store v ty ->
+      NoAllocStateShape store (StDone heap v) ty
+| NAS_Error :
     forall store heap ty,
-      NStoreKeysBoundedByHeap heap store ->
-      NStoreResolvedHeapShape heap store ->
-      NNoAllocStateShape store (StError heap) ty
-| NNAS_PairParRun :
+      StoreKeysBoundedByHeap heap store ->
+      StoreResolvedHeapShape heap store ->
+      NoAllocStateShape store (StError heap) ty
+| NAS_PairParRun :
     forall store left_state right_state phi_left phi_right k
       heap ty1 ty2 ty_out,
       state_heap left_state = heap ->
       state_heap right_state = heap ->
-      NNoAllocStateShape store left_state ty1 ->
-      NNoAllocStateShape store right_state ty2 ->
-      NNoAllocKontShape store k (TyPair ty1 ty2) ty_out ->
-      NNoAllocStateShape store
+      NoAllocStateShape store left_state ty1 ->
+      NoAllocStateShape store right_state ty2 ->
+      NoAllocKontShape store k (TyPair ty1 ty2) ty_out ->
+      NoAllocStateShape store
         (StPairParRun left_state right_state phi_left phi_right k)
         ty_out.
 
-Lemma NNoAllocKontShape_to_store :
+Lemma NoAllocKontShape_to_store :
   forall store k ty_in ty_out,
-    NNoAllocKontShape store k ty_in ty_out ->
-    NStoreResolvedKontShape store k ty_in ty_out.
+    NoAllocKontShape store k ty_in ty_out ->
+    StoreResolvedKontShape store k ty_in ty_out.
 Proof.
   intros store k ty_in ty_out HKont.
-  induction HKont; eauto using NStoreResolvedKontShape.
+  induction HKont; eauto using StoreResolvedKontShape.
 Qed.
 
-Lemma NNoAllocStateShape_to_store :
+Lemma NoAllocStateShape_to_store :
   forall store state ty,
-    NNoAllocStateShape store state ty ->
-    NStoreResolvedStateShape store state ty.
+    NoAllocStateShape store state ty ->
+    StoreResolvedStateShape store state ty.
 Proof.
   intros store state ty HState.
   induction HState.
-  - eapply NSRSS_Eval; eauto using NNoAllocKontShape_to_store.
-  - eapply NSRSS_Return; eauto using NNoAllocKontShape_to_store.
-  - eapply NSRSS_Done; eauto.
-  - eapply NSRSS_Error; eauto.
-  - eapply NSRSS_PairParRun; eauto using NNoAllocKontShape_to_store.
+  - eapply SRSS_Eval; eauto using NoAllocKontShape_to_store.
+  - eapply SRSS_Return; eauto using NoAllocKontShape_to_store.
+  - eapply SRSS_Done; eauto.
+  - eapply SRSS_Error; eauto.
+  - eapply SRSS_PairParRun; eauto using NoAllocKontShape_to_store.
 Qed.
 
-Lemma NNoAllocStateShape_aligned :
+Lemma NoAllocStateShape_aligned :
   forall store state ty,
-    NNoAllocStateShape store state ty ->
-    NStateHeapsAligned state.
+    NoAllocStateShape store state ty ->
+    StateHeapsAligned state.
 Proof.
   intros store state ty HState.
-  eapply NStoreResolvedStateShape_aligned.
-  eapply NNoAllocStateShape_to_store; eauto.
+  eapply StoreResolvedStateShape_aligned.
+  eapply NoAllocStateShape_to_store; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_with_state_heap_same :
+Lemma NoAllocStateShape_with_state_heap_same :
   forall store state ty heap,
-    NNoAllocStateShape store state ty ->
+    NoAllocStateShape store state ty ->
     state_heap state = heap ->
-    NNoAllocStateShape store (with_state_heap heap state) ty.
+    NoAllocStateShape store (with_state_heap heap state) ty.
 Proof.
   intros store state ty heap HState HHeap.
   rewrite (with_state_heap_aligned_same heap state).
   - exact HState.
-  - eapply NNoAllocStateShape_aligned; eauto.
+  - eapply NoAllocStateShape_aligned; eauto.
   - exact HHeap.
 Qed.
 
-Lemma NNoAllocStateShape_heap_update :
+Lemma NoAllocStateShape_heap_update :
   forall store state ty heap r l old v ty_cell,
     state_heap state = heap ->
     heap_lookup r l heap = Some old ->
     store_ty_lookup r l store = Some ty_cell ->
-    NStoreResolvedValShape store v ty_cell ->
-    NNoAllocStateShape store state ty ->
-    NNoAllocStateShape store
+    StoreResolvedValShape store v ty_cell ->
+    NoAllocStateShape store state ty ->
+    NoAllocStateShape store
       (with_state_heap (heap_update r l v heap) state)
       ty.
 Proof.
@@ -426,29 +426,29 @@ Proof.
     simpl in HStateHeap.
   - subst heap_current.
     simpl.
-    eapply NNAS_Eval with
+    eapply NAS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty) (eff := eff);
       eauto.
-    eapply NStoreResolvedRuntimeShape_update; eauto.
+    eapply StoreResolvedRuntimeShape_update; eauto.
   - subst heap_current.
     simpl.
-    eapply NNAS_Return with (ty := ty);
+    eapply NAS_Return with (ty := ty);
       eauto using
-        NStoreKeysBoundedByHeap_update,
-        NStoreResolvedHeapShape_update.
+        StoreKeysBoundedByHeap_update,
+        StoreResolvedHeapShape_update.
   - subst heap_current.
     simpl.
-    eapply NNAS_Done with (ty := ty);
+    eapply NAS_Done with (ty := ty);
       eauto using
-        NStoreKeysBoundedByHeap_update,
-        NStoreResolvedHeapShape_update.
+        StoreKeysBoundedByHeap_update,
+        StoreResolvedHeapShape_update.
   - subst heap_current.
     simpl.
-    eapply NNAS_Error;
+    eapply NAS_Error;
       eauto using
-        NStoreKeysBoundedByHeap_update,
-        NStoreResolvedHeapShape_update.
+        StoreKeysBoundedByHeap_update,
+        StoreResolvedHeapShape_update.
   - simpl.
     assert (HLeftHeap : state_heap left_state = heap_current)
       by exact HStateHeap.
@@ -458,7 +458,7 @@ Proof.
       rewrite <- H.
       exact HLeftHeap.
     }
-    eapply NNAS_PairParRun with
+    eapply NAS_PairParRun with
       (heap := heap_update r_update l_update v_update heap_current)
       (ty1 := ty1) (ty2 := ty2).
     + rewrite state_heap_with_state_heap. reflexivity.
@@ -468,21 +468,21 @@ Proof.
     + exact H1.
 Qed.
 
-Definition NNoAllocStepTransport
-    (store : NStoreTyping) (state state' : NState) : Prop :=
+Definition NoAllocStepTransport
+    (store : StoreTyping) (state state' : State) : Prop :=
   forall sibling ty,
     state_heap sibling = state_heap state ->
-    NNoAllocStateShape store sibling ty ->
-    NNoAllocStateShape store
+    NoAllocStateShape store sibling ty ->
+    NoAllocStateShape store
       (with_state_heap (state_heap state') sibling) ty.
 
-Lemma NNoAllocStepTransport_same :
+Lemma NoAllocStepTransport_same :
   forall store state state',
     state_heap state' = state_heap state ->
-    NNoAllocStepTransport store state state'.
+    NoAllocStepTransport store state state'.
 Proof.
   intros store state state' HHeap sibling ty HSiblingHeap HSibling.
-  eapply NNoAllocStateShape_with_state_heap_same; eauto.
+  eapply NoAllocStateShape_with_state_heap_same; eauto.
   rewrite HHeap.
   exact HSiblingHeap.
 Qed.
@@ -513,20 +513,20 @@ Proof.
   destruct HIn as [HIn | HIn]; [inversion HIn | contradiction].
 Qed.
 
-Lemma NResolveStaticEffect_static_noalloc_union_inv :
+Lemma ResolveStaticEffect_static_noalloc_union_inv :
   forall rho eff1 eff2 eff',
-    NResolveStaticEffect rho (static_union eff1 eff2) eff' ->
+    ResolveStaticEffect rho (static_union eff1 eff2) eff' ->
     static_noalloc eff' ->
     exists eff1' eff2',
       eff' = static_union eff1' eff2' /\
-      NResolveStaticEffect rho eff1 eff1' /\
+      ResolveStaticEffect rho eff1 eff1' /\
       static_noalloc eff1' /\
-      NResolveStaticEffect rho eff2 eff2' /\
+      ResolveStaticEffect rho eff2 eff2' /\
       static_noalloc eff2'.
 Proof.
   intros rho eff1 eff2 eff' HResolve HNoAlloc.
   destruct
-    (NResolveStaticEffect_static_union_inv
+    (ResolveStaticEffect_static_union_inv
       rho eff1 eff2 eff' HResolve)
     as (eff1' & eff2' & HEq & HResolve1 & HResolve2).
   subst eff'.
@@ -560,7 +560,7 @@ Qed.
 
 Ltac normalize_resolved_effect HResolve :=
   match type of HResolve with
-  | NResolveStaticEffect _ ?eff_current _ =>
+  | ResolveStaticEffect _ ?eff_current _ =>
       match goal with
       | HEq : ?eff_shape = eff_current |- _ =>
           rewrite <- HEq in HResolve
@@ -569,12 +569,12 @@ Ltac normalize_resolved_effect HResolve :=
       end
   end.
 
-Lemma NNoAllocStateShape_const_preservation :
+Lemma NoAllocStateShape_const_preservation :
   forall store heap env rho n k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EConst n) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n) k)
       ty_out.
 Proof.
@@ -585,18 +585,18 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   inversion HResolve; subst.
-  eapply NNAS_Return; eauto using NSRVS_Nat.
+  eapply NAS_Return; eauto using SRVS_Nat.
 Qed.
 
-Lemma NNoAllocStateShape_bool_preservation :
+Lemma NoAllocStateShape_bool_preservation :
   forall store heap env rho b k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EBool b) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VBool b) k)
       ty_out.
 Proof.
@@ -607,19 +607,19 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   inversion HResolve; subst.
-  eapply NNAS_Return; eauto using NSRVS_Bool.
+  eapply NAS_Return; eauto using SRVS_Bool.
 Qed.
 
-Lemma NNoAllocStateShape_var_preservation :
+Lemma NoAllocStateShape_var_preservation :
   forall store heap env rho x v k ty_out,
     env_lookup x env = Some v ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EVar x) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap v k)
       ty_out.
 Proof.
@@ -630,26 +630,26 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   match goal with
   | HBind : ctx_binds x ty gamma |- _ =>
       destruct
-        (NStoreResolvedEnvShape_lookup
+        (StoreResolvedEnvShape_lookup
           store rho env gamma x ty ty_res HEnv HBind HResolve)
         as (v_typed & HLookupTyped & HV)
   end.
   rewrite HLookup in HLookupTyped.
   inversion HLookupTyped; subst.
-  eapply NNAS_Return; eauto.
+  eapply NAS_Return; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_mu_preservation :
+Lemma NoAllocStateShape_mu_preservation :
   forall store heap env rho f x ec ee k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EMu f x ec ee) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VClosure env rho f x ec ee) k)
       ty_out.
 Proof.
@@ -660,25 +660,25 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   inversion HResolve; subst.
   inversion HTyWF; subst.
-  eapply NNAS_Return; eauto.
-  eapply NSRVS_Closure with
+  eapply NAS_Return; eauto.
+  eapply SRVS_Closure with
     (gamma := gamma) (omega := omega)
     (ty_arg := ty_arg) (ty_body := ty_body); eauto.
 Qed.
 
-Lemma NNoAllocStateShape_lambda_rgn_preservation :
+Lemma NoAllocStateShape_lambda_rgn_preservation :
   forall store heap env rho x e k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (ELambdaRgn x e) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VRegionClosure env rho x e) k)
       ty_out.
 Proof.
@@ -689,16 +689,16 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_ctx_wf _ _ _ _ _ HChecked) as HCtxWF.
-  pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_ctx_wf _ _ _ _ _ HChecked) as HCtxWF.
+  pose proof (CheckedTcExp_ty_wf _ _ _ _ _ HChecked) as HTyWF.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   inversion HResolve; subst.
   inversion HTyWF; subst.
-  eapply NNAS_Return; eauto.
-  eapply NSRVS_RegionClosure with
+  eapply NAS_Return; eauto.
+  eapply SRVS_RegionClosure with
     (gamma := gamma) (omega := omega)
     (ty := ty) (eff := eff); eauto.
   - rewrite H1. exact H4.
@@ -706,12 +706,12 @@ Proof.
   - constructor; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_empty_preservation :
+Lemma NoAllocStateShape_empty_preservation :
   forall store heap env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho EEmpty k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary (SummarySet [])) k)
       ty_out.
 Proof.
@@ -722,18 +722,18 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   inversion HResolve; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_top_preservation :
+Lemma NoAllocStateShape_top_preservation :
   forall store heap env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho ETop k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary SummaryTop) k)
       ty_out.
 Proof.
@@ -744,19 +744,19 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   inversion HResolve; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_alloc_abs_preservation :
+Lemma NoAllocStateShape_alloc_abs_preservation :
   forall store heap env rho r r_val k ty_out,
     eval_region rho r = Some r_val ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EAllocAbs r) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary (SummarySet [CAllocAbs r_val])) k)
       ty_out.
 Proof.
@@ -767,19 +767,19 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   inversion HResolve; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_read_abs_preservation :
+Lemma NoAllocStateShape_read_abs_preservation :
   forall store heap env rho r r_val k ty_out,
     eval_region rho r = Some r_val ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EReadAbs r) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary (SummarySet [CReadAbs r_val])) k)
       ty_out.
 Proof.
@@ -790,19 +790,19 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   inversion HResolve; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_write_abs_preservation :
+Lemma NoAllocStateShape_write_abs_preservation :
   forall store heap env rho r r_val k ty_out,
     eval_region rho r = Some r_val ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EWriteAbs r) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary (SummarySet [CWriteAbs r_val])) k)
       ty_out.
 Proof.
@@ -813,18 +813,18 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
   inversion HTyped; subst.
   inversion HResolve; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_read_conc_preservation :
+Lemma NoAllocStateShape_read_conc_preservation :
   forall store heap r l k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VLoc r l) (KReadConc k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary (SummarySet [CReadConc r l])) k)
       ty_out.
 Proof.
@@ -834,15 +834,15 @@ Proof.
       HBounded HHeap HV HK | | |];
     subst; clear HState.
   inversion HK; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_write_conc_preservation :
+Lemma NoAllocStateShape_write_conc_preservation :
   forall store heap r l k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VLoc r l) (KWriteConc k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary (SummarySet [CWriteConc r l])) k)
       ty_out.
 Proof.
@@ -852,15 +852,15 @@ Proof.
       HBounded HHeap HV HK | | |];
     subst; clear HState.
   inversion HK; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_done_preservation :
+Lemma NoAllocStateShape_done_preservation :
   forall store heap v ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap v KDone)
       ty_out ->
-    NNoAllocStateShape store (StDone heap v) ty_out.
+    NoAllocStateShape store (StDone heap v) ty_out.
 Proof.
   intros store heap v ty_out HState.
   inversion HState as
@@ -868,15 +868,15 @@ Proof.
       HBounded HHeap HV HK | | |];
     subst; clear HState.
   inversion HK; subst.
-  eapply NNAS_Done; eauto.
+  eapply NAS_Done; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_cond_true_preservation :
+Lemma NoAllocStateShape_cond_true_preservation :
   forall store heap et ef env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VBool true) (KCond et ef env rho k))
       ty_out ->
-    NNoAllocStateShape store (StEval heap env rho et k) ty_out.
+    NoAllocStateShape store (StEval heap env rho et k) ty_out.
 Proof.
   intros store heap et ef env rho k ty_out HState.
   inversion HState as
@@ -885,20 +885,20 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval; eauto.
-  unfold NStoreResolvedRuntimeShape.
+  eapply NAS_Eval; eauto.
+  unfold StoreResolvedRuntimeShape.
   match goal with
-  | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+  | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
       split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
   end.
 Qed.
 
-Lemma NNoAllocStateShape_cond_false_preservation :
+Lemma NoAllocStateShape_cond_false_preservation :
   forall store heap et ef env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VBool false) (KCond et ef env rho k))
       ty_out ->
-    NNoAllocStateShape store (StEval heap env rho ef k) ty_out.
+    NoAllocStateShape store (StEval heap env rho ef k) ty_out.
 Proof.
   intros store heap et ef env rho k ty_out HState.
   inversion HState as
@@ -907,21 +907,21 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval; eauto.
-  unfold NStoreResolvedRuntimeShape.
+  eapply NAS_Eval; eauto.
+  unfold StoreResolvedRuntimeShape.
   match goal with
-  | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+  | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
       split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
   end.
 Qed.
 
-Lemma NNoAllocStateShape_deref_preservation :
+Lemma NoAllocStateShape_deref_preservation :
   forall store heap r_static r l v k ty_out,
     heap_lookup r l heap = Some v ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VLoc r l) (KDeref r_static k))
       ty_out ->
-    NNoAllocStateShape store (StReturn heap v k) ty_out.
+    NoAllocStateShape store (StReturn heap v k) ty_out.
 Proof.
   intros store heap r_static r l v k ty_out HLookup HState.
   inversion HState as
@@ -941,7 +941,7 @@ Proof.
           store rr ll ty_found ty_cell HStoreFound HStoreLookup)
         as HTyEq;
       subst ty_found;
-      eapply NNAS_Return with (ty := ty_cell);
+      eapply NAS_Return with (ty := ty_cell);
       [ exact HBounded
       | split; [exact HHeapToStore | exact HStoreToHeap]
       | exact HShapeFound
@@ -949,12 +949,12 @@ Proof.
   end.
 Qed.
 
-Lemma NNoAllocStateShape_assign_loc_preservation :
+Lemma NoAllocStateShape_assign_loc_preservation :
   forall store heap r_static ev env rho r l k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VLoc r l) (KAssignLoc r_static ev env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho ev (KAssignVal r_static (VLoc r l) k))
       ty_out.
 Proof.
@@ -965,24 +965,24 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval; eauto.
-  - unfold NStoreResolvedRuntimeShape.
+  eapply NAS_Eval; eauto.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
-  - eapply NNAKS_AssignVal; eauto.
+  - eapply NAKS_AssignVal; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_assign_val_preservation :
+Lemma NoAllocStateShape_assign_val_preservation :
   forall store heap r_static r l v k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap v (KAssignVal r_static (VLoc r l) k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn (heap_update r l v heap) VUnit k)
       ty_out /\
-    NNoAllocStepTransport store
+    NoAllocStepTransport store
       (StReturn heap v (KAssignVal r_static (VLoc r l) k))
       (StReturn (heap_update r l v heap) VUnit k).
 Proof.
@@ -993,7 +993,7 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   match goal with
-  | HLoc : NStoreResolvedValShape store (VLoc r l)
+  | HLoc : StoreResolvedValShape store (VLoc r l)
       (TyRef (region_const_type ?r0) ?ty_loc) |- _ =>
       inversion HLoc; subst
   end.
@@ -1003,24 +1003,24 @@ Proof.
       destruct (HStoreToHeap rr ll ty_loc HStoreLookup)
         as (old & HOldLookup & _);
       split;
-      [ eapply NNAS_Return with (ty := TyUnit);
-        [ eapply NStoreKeysBoundedByHeap_update; eauto
-        | eapply NStoreResolvedHeapShape_update; eauto;
+      [ eapply NAS_Return with (ty := TyUnit);
+        [ eapply StoreKeysBoundedByHeap_update; eauto
+        | eapply StoreResolvedHeapShape_update; eauto;
           split; [exact HHeapToStore | exact HStoreToHeap]
         | constructor
         | assumption ]
       | intros sibling ty_s HSiblingHeap HSibling;
-        eapply NNoAllocStateShape_heap_update; eauto;
+        eapply NoAllocStateShape_heap_update; eauto;
         simpl in HSiblingHeap; exact HSiblingHeap ]
   end.
 Qed.
 
-Lemma NNoAllocStateShape_plus_l_preservation :
+Lemma NoAllocStateShape_plus_l_preservation :
   forall store heap n e2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n) (KPlusL e2 env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e2 (KPlusR n k))
       ty_out.
 Proof.
@@ -1031,24 +1031,24 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat) (eff := eff);
-    eauto using NResolve_Nat.
-  - unfold NStoreResolvedRuntimeShape.
+    eauto using Resolve_Nat.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
-  - eapply NNAKS_PlusR; eauto.
+  - eapply NAKS_PlusR; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_plus_r_preservation :
+Lemma NoAllocStateShape_plus_r_preservation :
   forall store heap n1 n2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n2) (KPlusR n1 k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat (n1 + n2)) k)
       ty_out.
 Proof.
@@ -1059,15 +1059,15 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Return; eauto using NSRVS_Nat.
+  eapply NAS_Return; eauto using SRVS_Nat.
 Qed.
 
-Lemma NNoAllocStateShape_minus_l_preservation :
+Lemma NoAllocStateShape_minus_l_preservation :
   forall store heap n e2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n) (KMinusL e2 env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e2 (KMinusR n k))
       ty_out.
 Proof.
@@ -1078,24 +1078,24 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat) (eff := eff);
-    eauto using NResolve_Nat.
-  - unfold NStoreResolvedRuntimeShape.
+    eauto using Resolve_Nat.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
-  - eapply NNAKS_MinusR; eauto.
+  - eapply NAKS_MinusR; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_minus_r_preservation :
+Lemma NoAllocStateShape_minus_r_preservation :
   forall store heap n1 n2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n2) (KMinusR n1 k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat (n1 - n2)) k)
       ty_out.
 Proof.
@@ -1106,15 +1106,15 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Return; eauto using NSRVS_Nat.
+  eapply NAS_Return; eauto using SRVS_Nat.
 Qed.
 
-Lemma NNoAllocStateShape_times_l_preservation :
+Lemma NoAllocStateShape_times_l_preservation :
   forall store heap n e2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n) (KTimesL e2 env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e2 (KTimesR n k))
       ty_out.
 Proof.
@@ -1125,24 +1125,24 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat) (eff := eff);
-    eauto using NResolve_Nat.
-  - unfold NStoreResolvedRuntimeShape.
+    eauto using Resolve_Nat.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
-  - eapply NNAKS_TimesR; eauto.
+  - eapply NAKS_TimesR; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_times_r_preservation :
+Lemma NoAllocStateShape_times_r_preservation :
   forall store heap n1 n2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n2) (KTimesR n1 k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat (n1 * n2)) k)
       ty_out.
 Proof.
@@ -1153,15 +1153,15 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Return; eauto using NSRVS_Nat.
+  eapply NAS_Return; eauto using SRVS_Nat.
 Qed.
 
-Lemma NNoAllocStateShape_eq_l_preservation :
+Lemma NoAllocStateShape_eq_l_preservation :
   forall store heap n e2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n) (KEqL e2 env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e2 (KEqR n k))
       ty_out.
 Proof.
@@ -1172,24 +1172,24 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat) (eff := eff);
-    eauto using NResolve_Nat.
-  - unfold NStoreResolvedRuntimeShape.
+    eauto using Resolve_Nat.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
-  - eapply NNAKS_EqR; eauto.
+  - eapply NAKS_EqR; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_eq_r_preservation :
+Lemma NoAllocStateShape_eq_r_preservation :
   forall store heap n1 n2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VNat n2) (KEqR n1 k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VBool (Nat.eqb n1 n2)) k)
       ty_out.
 Proof.
@@ -1200,15 +1200,15 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Return; eauto using NSRVS_Bool.
+  eapply NAS_Return; eauto using SRVS_Bool.
 Qed.
 
-Lemma NNoAllocStateShape_concat_l_preservation :
+Lemma NoAllocStateShape_concat_l_preservation :
   forall store heap theta1 e2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary theta1) (KConcatL e2 env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e2 (KConcatR theta1 k))
       ty_out.
 Proof.
@@ -1219,24 +1219,24 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyEffect) (ty_res := TyEffect) (eff := eff);
-    eauto using NResolve_Effect.
-  - unfold NStoreResolvedRuntimeShape.
+    eauto using Resolve_Effect.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
-  - eapply NNAKS_ConcatR; eauto.
+  - eapply NAKS_ConcatR; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_concat_r_preservation :
+Lemma NoAllocStateShape_concat_r_preservation :
   forall store heap theta1 theta2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary theta2) (KConcatR theta1 k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary (summary_union theta1 theta2)) k)
       ty_out.
 Proof.
@@ -1247,17 +1247,17 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Return; eauto using NSRVS_Summary.
+  eapply NAS_Return; eauto using SRVS_Summary.
 Qed.
 
-Lemma NNoAllocStateShape_mu_app_eval_arg_preservation :
+Lemma NoAllocStateShape_mu_app_eval_arg_preservation :
   forall store heap env rho ea k closure_env closure_rho f x ec ee ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap
         (VClosure closure_env closure_rho f x ec ee)
         (KMuAppFun ea env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho ea
         (KMuAppArg closure_env closure_rho f x ec ee k))
       ty_out.
@@ -1270,13 +1270,13 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := ty_arg) (ty_res := ty_arg_res)
     (eff := eff_arg) (eff_res := eff_arg_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
   - assumption.
@@ -1284,21 +1284,21 @@ Proof.
   - assumption.
   - assumption.
   - assumption.
-  - eapply NNAKS_MuAppArg with
+  - eapply NAKS_MuAppArg with
       (gamma := gamma0) (omega := omega0)
       (ty_arg := ty_arg0) (ty_body := ty_body0)
       (eff_body := eff_body0) (eff_summary := eff_summary0);
     eauto.
 Qed.
 
-Lemma NNoAllocStateShape_eff_app_eval_arg_preservation :
+Lemma NoAllocStateShape_eff_app_eval_arg_preservation :
   forall store heap env rho ea k closure_env closure_rho f x ec ee ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap
         (VClosure closure_env closure_rho f x ec ee)
         (KEffAppFun ea env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho ea
         (KEffAppArg closure_env closure_rho f x ec ee k))
       ty_out.
@@ -1311,13 +1311,13 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := ty_arg) (ty_res := ty_arg_res)
     (eff := eff_arg) (eff_res := eff_arg_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
   - assumption.
@@ -1325,20 +1325,20 @@ Proof.
   - assumption.
   - assumption.
   - assumption.
-  - eapply NNAKS_EffAppArg with
+  - eapply NAKS_EffAppArg with
       (gamma := gamma0) (omega := omega0)
       (ty_arg := ty_arg0) (ty_body := ty_body0)
       (eff_body := eff_body0) (eff_summary := eff_summary0);
     eauto.
 Qed.
 
-Lemma NNoAllocStateShape_mu_app_body_preservation :
+Lemma NoAllocStateShape_mu_app_body_preservation :
   forall store heap v_arg closure_env closure_rho f x ec ee k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap v_arg
         (KMuAppArg closure_env closure_rho f x ec ee k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap
         (env_extend x v_arg
           (env_extend f
@@ -1356,23 +1356,23 @@ Proof.
       HBounded HHeap HV HK | | |];
     subst; clear HState.
   inversion HK; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma :=
       (x, ty_arg) ::
       (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
     (omega := omega)
     (ty := ty_body) (ty_res := ty_body_res)
     (eff := eff_body) (eff_res := eff_body_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | ]].
-    eapply NStoreResolvedEnvShape_extend with
+    eapply StoreResolvedEnvShape_extend with
       (ty_res := ty); eauto.
-    eapply NStoreResolvedEnvShape_extend with
+    eapply StoreResolvedEnvShape_extend with
       (ty_res := TyArrow
         ty eff_body_res ty_body_res eff_summary_res);
       eauto.
-    + eapply NResolve_Arrow; eauto.
-    + eapply NSRVS_Closure with
+    + eapply Resolve_Arrow; eauto.
+    + eapply SRVS_Closure with
         (gamma := gamma) (omega := omega)
         (ty_arg := ty_arg) (ty_body := ty_body); eauto.
   - assumption.
@@ -1383,13 +1383,13 @@ Proof.
   - assumption.
 Qed.
 
-Lemma NNoAllocStateShape_eff_app_body_preservation :
+Lemma NoAllocStateShape_eff_app_body_preservation :
   forall store heap v_arg closure_env closure_rho f x ec ee k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap v_arg
         (KEffAppArg closure_env closure_rho f x ec ee k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap
         (env_extend x v_arg
           (env_extend f
@@ -1407,23 +1407,23 @@ Proof.
       HBounded HHeap HV HK | | |];
     subst; clear HState.
   inversion HK; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma :=
       (x, ty_arg) ::
       (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
     (omega := omega)
     (ty := TyEffect) (ty_res := TyEffect)
     (eff := eff_summary) (eff_res := eff_summary_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | ]].
-    eapply NStoreResolvedEnvShape_extend with
+    eapply StoreResolvedEnvShape_extend with
       (ty_res := ty); eauto.
-    eapply NStoreResolvedEnvShape_extend with
+    eapply StoreResolvedEnvShape_extend with
       (ty_res := TyArrow
         ty eff_body_res ty_body_res eff_summary_res);
       eauto.
-    + eapply NResolve_Arrow; eauto.
-    + eapply NSRVS_Closure with
+    + eapply Resolve_Arrow; eauto.
+    + eapply SRVS_Closure with
         (gamma := gamma) (omega := omega)
         (ty_arg := ty_arg) (ty_body := ty_body); eauto.
   - assumption.
@@ -1434,13 +1434,13 @@ Proof.
   - assumption.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_eff1_preservation :
+Lemma NoAllocStateShape_pair_par_eff1_preservation :
   forall store heap theta1 ef1 ea1 ef2 ea2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary theta1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EEffApp ef2 ea2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       ty_out.
@@ -1452,13 +1452,13 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyEffect) (ty_res := TyEffect)
     (eff := eff_summary2) (eff_res := eff_summary2_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     match goal with
-    | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+    | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
         split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
     end.
   - assumption.
@@ -1466,20 +1466,20 @@ Proof.
   - assumption.
   - assumption.
   - assumption.
-  - eapply NNAKS_PairParEff2 with
+  - eapply NAKS_PairParEff2 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2);
     eauto.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_check_pass_preservation :
+Lemma NoAllocStateShape_pair_par_check_pass_preservation :
   forall store heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StPairParRun
         (StEval heap env rho (EMuApp ef1 ea1) KDone)
         (StEval heap env rho (EMuApp ef2 ea2) KDone)
@@ -1494,16 +1494,16 @@ Proof.
     subst; clear HState.
   inversion HK; subst.
   inversion HV; subst.
-  eapply NNAS_PairParRun with
+  eapply NAS_PairParRun with
     (heap := heap) (ty1 := ty1_res) (ty2 := ty2_res);
     simpl; eauto.
-  - eapply NNAS_Eval with
+  - eapply NAS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty1) (ty_res := ty1_res)
       (eff := eff1) (eff_res := eff1_res).
-    + unfold NStoreResolvedRuntimeShape.
+    + unfold StoreResolvedRuntimeShape.
       match goal with
-      | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+      | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
           split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
       end.
     + assumption.
@@ -1512,13 +1512,13 @@ Proof.
     + assumption.
     + assumption.
     + constructor.
-  - eapply NNAS_Eval with
+  - eapply NAS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty2) (ty_res := ty2_res)
       (eff := eff2) (eff_res := eff2_res).
-    + unfold NStoreResolvedRuntimeShape.
+    + unfold StoreResolvedRuntimeShape.
       match goal with
-      | HEnvShape : NStoreResolvedEnvShape store rho env gamma |- _ =>
+      | HEnvShape : StoreResolvedEnvShape store rho env gamma |- _ =>
           split; [exact HBounded | split; [exact HHeap | exact HEnvShape]]
       end.
     + assumption.
@@ -1529,13 +1529,13 @@ Proof.
     + constructor.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_check_fail_preservation :
+Lemma NoAllocStateShape_pair_par_check_fail_preservation :
   forall store heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       ty_out ->
-    NNoAllocStateShape store (StError heap) ty_out.
+    NoAllocStateShape store (StError heap) ty_out.
 Proof.
   intros store heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out
     HState.
@@ -1543,15 +1543,15 @@ Proof.
     [| store0 heap0 v0 k0 ty ty_out0
       HBounded HHeap HV HK | | |];
     subst; clear HState.
-  eapply NNAS_Error; eauto.
+  eapply NAS_Error; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_left_error_preservation :
+Lemma NoAllocStateShape_pair_par_left_error_preservation :
   forall store heap right_state phi_left phi_right k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StPairParRun (StError heap) right_state phi_left phi_right k)
       ty_out ->
-    NNoAllocStateShape store (StError heap) ty_out.
+    NoAllocStateShape store (StError heap) ty_out.
 Proof.
   intros store heap right_state phi_left phi_right k ty_out HState.
   inversion HState as
@@ -1563,18 +1563,18 @@ Proof.
   simpl in HHeapLeft.
   subst heap0.
   inversion HLeft; subst.
-  eapply NNAS_Error; eauto.
+  eapply NAS_Error; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_right_error_preservation :
+Lemma NoAllocStateShape_pair_par_right_error_preservation :
   forall store heap_left v1 heap_right phi_left phi_right k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StPairParRun
         (StDone heap_left v1)
         (StError heap_right)
         phi_left phi_right k)
       ty_out ->
-    NNoAllocStateShape store (StError heap_right) ty_out.
+    NoAllocStateShape store (StError heap_right) ty_out.
 Proof.
   intros store heap_left v1 heap_right phi_left phi_right k ty_out HState.
   inversion HState as
@@ -1586,18 +1586,18 @@ Proof.
   simpl in HHeapRight.
   subst heap.
   inversion HRight; subst.
-  eapply NNAS_Error; eauto.
+  eapply NAS_Error; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_done_pass_preservation :
+Lemma NoAllocStateShape_pair_par_done_pass_preservation :
   forall store heap v1 v2 phi_left phi_right k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StPairParRun
         (StDone heap v1)
         (StDone heap v2)
         phi_left phi_right k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap (VPair v1 v2) k)
       ty_out.
 Proof.
@@ -1613,19 +1613,19 @@ Proof.
   inversion HRight as
     [| | store2 heap2 v_right ty_right HBounded2 HHeap2 HV2 | |];
     subst; clear HRight.
-  eapply NNAS_Return; eauto.
-  eapply NSRVS_Pair; eauto.
+  eapply NAS_Return; eauto.
+  eapply SRVS_Pair; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_done_fail_preservation :
+Lemma NoAllocStateShape_pair_par_done_fail_preservation :
   forall store heap v1 v2 phi_left phi_right k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StPairParRun
         (StDone heap v1)
         (StDone heap v2)
         phi_left phi_right k)
       ty_out ->
-    NNoAllocStateShape store (StError heap) ty_out.
+    NoAllocStateShape store (StError heap) ty_out.
 Proof.
   intros store heap v1 v2 phi_left phi_right k ty_out HState.
   inversion HState as
@@ -1634,15 +1634,15 @@ Proof.
       ty1 ty2 ty_out0 HHeapLeft HHeapRight HLeft HRight HK];
     subst; clear HState; simpl in *; subst.
   inversion HLeft; subst.
-  eapply NNAS_Error; eauto.
+  eapply NAS_Error; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_cond_eval_preservation :
+Lemma NoAllocStateShape_cond_eval_preservation :
   forall store heap env rho e et ef k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (ECond e et ef) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e (KCond et ef env rho k))
       ty_out.
 Proof.
@@ -1653,47 +1653,47 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff_e0 (static_union eff_t0 eff_f0) eff_res
       HResolveEff HNoAlloc)
     as (eff_e_res & eff_tail_res & HEqEff & HResolveE &
       HNoAllocE & HResolveTail & HNoAllocTail).
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff_t0 eff_f0 eff_tail_res
       HResolveTail HNoAllocTail)
     as (eff_t_res & eff_f_res & _HEqTail & HResolveT &
       HNoAllocT & HResolveF & HNoAllocF).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyBool) (ty_res := TyBool)
     (eff := eff_e0) (eff_res := eff_e_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
   - constructor.
   - assumption.
   - exact HResolveE.
   - exact HNoAllocE.
-  - eapply NNAKS_Cond with
+  - eapply NAKS_Cond with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
       (eff_t := eff_t0) (eff_f := eff_f0);
     eauto.
 Qed.
 
-Lemma NNoAllocStateShape_plus_eval_preservation :
+Lemma NoAllocStateShape_plus_eval_preservation :
   forall store heap env rho e1 e2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EPlus e1 e2) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e1 (KPlusL e2 env rho k))
       ty_out.
 Proof.
@@ -1704,37 +1704,37 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolve; subst.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff0 eff3 eff_res HResolveEff HNoAlloc)
     as (eff1_res & eff2_res & _HEq & HResolve1 &
       HNoAlloc1 & HResolve2 & HNoAlloc2).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat)
     (eff := eff0) (eff_res := eff1_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
   - constructor.
   - assumption.
   - exact HResolve1.
   - exact HNoAlloc1.
-  - eapply NNAKS_PlusL; eauto.
+  - eapply NAKS_PlusL; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_minus_eval_preservation :
+Lemma NoAllocStateShape_minus_eval_preservation :
   forall store heap env rho e1 e2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EMinus e1 e2) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e1 (KMinusL e2 env rho k))
       ty_out.
 Proof.
@@ -1745,37 +1745,37 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolve; subst.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff0 eff3 eff_res HResolveEff HNoAlloc)
     as (eff1_res & eff2_res & _HEq & HResolve1 &
       HNoAlloc1 & HResolve2 & HNoAlloc2).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat)
     (eff := eff0) (eff_res := eff1_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
   - constructor.
   - assumption.
   - exact HResolve1.
   - exact HNoAlloc1.
-  - eapply NNAKS_MinusL; eauto.
+  - eapply NAKS_MinusL; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_times_eval_preservation :
+Lemma NoAllocStateShape_times_eval_preservation :
   forall store heap env rho e1 e2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (ETimes e1 e2) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e1 (KTimesL e2 env rho k))
       ty_out.
 Proof.
@@ -1786,37 +1786,37 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolve; subst.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff0 eff3 eff_res HResolveEff HNoAlloc)
     as (eff1_res & eff2_res & _HEq & HResolve1 &
       HNoAlloc1 & HResolve2 & HNoAlloc2).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat)
     (eff := eff0) (eff_res := eff1_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
   - constructor.
   - assumption.
   - exact HResolve1.
   - exact HNoAlloc1.
-  - eapply NNAKS_TimesL; eauto.
+  - eapply NAKS_TimesL; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_eq_eval_preservation :
+Lemma NoAllocStateShape_eq_eval_preservation :
   forall store heap env rho e1 e2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EEq e1 e2) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e1 (KEqL e2 env rho k))
       ty_out.
 Proof.
@@ -1827,37 +1827,37 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolve; subst.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff0 eff3 eff_res HResolveEff HNoAlloc)
     as (eff1_res & eff2_res & _HEq & HResolve1 &
       HNoAlloc1 & HResolve2 & HNoAlloc2).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyNat) (ty_res := TyNat)
     (eff := eff0) (eff_res := eff1_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
   - constructor.
   - assumption.
   - exact HResolve1.
   - exact HNoAlloc1.
-  - eapply NNAKS_EqL; eauto.
+  - eapply NAKS_EqL; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_concat_eval_preservation :
+Lemma NoAllocStateShape_concat_eval_preservation :
   forall store heap env rho e1 e2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EConcat e1 e2) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e1 (KConcatL e2 env rho k))
       ty_out.
 Proof.
@@ -1868,35 +1868,35 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolve; subst.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff0 eff3 eff_res HResolveEff HNoAlloc)
     as (eff1_res & eff2_res & _HEq & HResolve1 &
       HNoAlloc1 & HResolve2 & HNoAlloc2).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyEffect) (ty_res := TyEffect)
     (eff := eff0) (eff_res := eff1_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
   - constructor.
   - assumption.
   - exact HResolve1.
   - exact HNoAlloc1.
-  - eapply NNAKS_ConcatL; eauto.
+  - eapply NAKS_ConcatL; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_ref_eval_impossible :
+Lemma NoAllocStateShape_ref_eval_impossible :
   forall store heap env rho r e r_val k ty_out,
     eval_region rho r = Some r_val ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (ERef r e) k)
       ty_out ->
     False.
@@ -1907,7 +1907,7 @@ Proof.
       eff eff_res ty_out0 HRuntime HRho HResolve HChecked
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolveEff as
@@ -1918,9 +1918,9 @@ Proof.
   eapply static_noalloc_alloc_cons_false; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_ref_return_impossible :
+Lemma NoAllocStateShape_ref_return_impossible :
   forall store heap v r_val k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap v (KRef r_val k))
       ty_out ->
     False.
@@ -1933,12 +1933,12 @@ Proof.
   inversion HK.
 Qed.
 
-Lemma NNoAllocStateShape_deref_eval_preservation :
+Lemma NoAllocStateShape_deref_eval_preservation :
   forall store heap env rho r e k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EDeref r e) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e (KDeref r k))
       ty_out.
 Proof.
@@ -1949,8 +1949,8 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
@@ -1961,36 +1961,36 @@ Proof.
   inversion HResolveAction; subst.
   match goal with
   | HWF : region_expr_wf omega r |- _ =>
-      destruct (NRhoModels_eval_region omega rho r HRho HWF)
+      destruct (RhoModels_eval_region omega rho r HRho HWF)
         as (r_val & HRgn)
   end.
   assert (HNoAllocChild : static_noalloc eff_tail_res).
   {
     eapply static_noalloc_cons_tail; eauto.
   }
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyRef (region_expr_to_type r) ty)
     (ty_res := TyRef (region_const_type r_val) ty_res)
     (eff := eff0) (eff_res := eff_tail_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
-  - eapply NResolve_Ref; eauto.
-    eapply NResolveRegionType_region_expr_to_type.
+  - eapply Resolve_Ref; eauto.
+    eapply ResolveRegionType_region_expr_to_type.
     exact HRgn.
   - assumption.
   - assumption.
   - exact HNoAllocChild.
-  - eapply NNAKS_Deref; eauto.
+  - eapply NAKS_Deref; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_assign_eval_preservation :
+Lemma NoAllocStateShape_assign_eval_preservation :
   forall store heap env rho r ea ev k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EAssign r ea ev) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho ea (KAssignLoc r ev env rho k))
       ty_out.
 Proof.
@@ -2001,8 +2001,8 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   inversion HResolve; subst.
@@ -2014,16 +2014,16 @@ Proof.
   inversion HResolveAction; subst.
   match goal with
   | HWF : region_expr_wf omega r |- _ =>
-      destruct (NRhoModels_eval_region omega rho r HRho HWF)
+      destruct (RhoModels_eval_region omega rho r HRho HWF)
         as (r_val & HRgn)
   end.
   match goal with
-  | HCheckedVal : NCheckedTcExp gamma omega ev ty eff_v0 |- _ =>
-      pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ HCheckedVal)
+  | HCheckedVal : CheckedTcExp gamma omega ev ty eff_v0 |- _ =>
+      pose proof (CheckedTcExp_ty_wf _ _ _ _ _ HCheckedVal)
         as HTyCellWF
   end.
   destruct
-    (NResolveTy_exists 0 omega rho ty HRho HTyCellWF)
+    (ResolveTy_exists 0 omega rho ty HRho HTyCellWF)
     as (ty_cell_res & HTyResolve).
   assert (HNoAllocTail : static_noalloc eff_tail_res).
   {
@@ -2031,37 +2031,37 @@ Proof.
   }
   rewrite <- H5 in HResolveTail.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff_a0 eff_v0 eff_tail_res HResolveTail HNoAllocTail)
     as (eff_a_res & eff_v_res & _HEq & HResolveA &
       HNoAllocA & HResolveV & HNoAllocV).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyRef (region_expr_to_type r) ty)
     (ty_res := TyRef (region_const_type r_val) ty_cell_res)
     (eff := eff_a0) (eff_res := eff_a_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
-  - eapply NResolve_Ref; eauto.
-    eapply NResolveRegionType_region_expr_to_type.
+  - eapply Resolve_Ref; eauto.
+    eapply ResolveRegionType_region_expr_to_type.
     exact HRgn.
   - assumption.
   - exact HResolveA.
   - exact HNoAllocA.
-  - eapply NNAKS_AssignLoc with
+  - eapply NAKS_AssignLoc with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_cell_res)
       (eff_v := eff_v0);
     eauto.
 Qed.
 
-Lemma NNoAllocStateShape_read_conc_eval_preservation :
+Lemma NoAllocStateShape_read_conc_eval_preservation :
   forall store heap env rho e k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EReadConc e) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e (KReadConc k))
       ty_out.
 Proof.
@@ -2072,49 +2072,49 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolve; subst.
-  pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ H3) as HRefWF.
+  pose proof (CheckedTcExp_ty_wf _ _ _ _ _ H3) as HRefWF.
   inversion HRefWF; subst.
   match goal with
-  | HRgnWF : NRegionTypeWFAt 0 omega r0,
-    HTyWF : NTyWFAt 0 omega ty |- _ =>
+  | HRgnWF : RegionTypeWFAt 0 omega r0,
+    HTyWF : TyWFAt 0 omega ty |- _ =>
       destruct
-        (NResolveRegionType_exists 0 omega rho r0 HRho HRgnWF)
+        (ResolveRegionType_exists 0 omega rho r0 HRho HRgnWF)
         as (rgn_res & HRgnResolve);
-      destruct (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+      destruct (ResolveTy_exists 0 omega rho ty HRho HTyWF)
         as (ty_ref_res & HTyResolve);
       destruct
-        (NResolveRegionType_wf0_const
+        (ResolveRegionType_wf0_const
           omega rho r0 rgn_res HRgnWF HRgnResolve)
         as (r_val & HRgnResEq);
       subst rgn_res;
-      eapply NNAS_Eval with
+      eapply NAS_Eval with
         (gamma := gamma) (omega := omega)
         (ty := TyRef r0 ty)
         (ty_res := TyRef (region_const_type r_val) ty_ref_res)
         (eff := eff) (eff_res := eff_res);
-      [ unfold NStoreResolvedRuntimeShape;
+      [ unfold StoreResolvedRuntimeShape;
         split; [exact HBounded | split; [exact HHeap | exact HEnv]]
       | exact HRho
-      | eapply NResolve_Ref; eauto
+      | eapply Resolve_Ref; eauto
       | eauto
       | exact HResolveEff
       | exact HNoAlloc
-      | eapply NNAKS_ReadConc; eauto ]
+      | eapply NAKS_ReadConc; eauto ]
   end.
 Qed.
 
-Lemma NNoAllocStateShape_write_conc_eval_preservation :
+Lemma NoAllocStateShape_write_conc_eval_preservation :
   forall store heap env rho e k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EWriteConc e) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho e (KWriteConc k))
       ty_out.
 Proof.
@@ -2125,49 +2125,49 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   inversion HResolve; subst.
-  pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ H3) as HRefWF.
+  pose proof (CheckedTcExp_ty_wf _ _ _ _ _ H3) as HRefWF.
   inversion HRefWF; subst.
   match goal with
-  | HRgnWF : NRegionTypeWFAt 0 omega r0,
-    HTyWF : NTyWFAt 0 omega ty |- _ =>
+  | HRgnWF : RegionTypeWFAt 0 omega r0,
+    HTyWF : TyWFAt 0 omega ty |- _ =>
       destruct
-        (NResolveRegionType_exists 0 omega rho r0 HRho HRgnWF)
+        (ResolveRegionType_exists 0 omega rho r0 HRho HRgnWF)
         as (rgn_res & HRgnResolve);
-      destruct (NResolveTy_exists 0 omega rho ty HRho HTyWF)
+      destruct (ResolveTy_exists 0 omega rho ty HRho HTyWF)
         as (ty_ref_res & HTyResolve);
       destruct
-        (NResolveRegionType_wf0_const
+        (ResolveRegionType_wf0_const
           omega rho r0 rgn_res HRgnWF HRgnResolve)
         as (r_val & HRgnResEq);
       subst rgn_res;
-      eapply NNAS_Eval with
+      eapply NAS_Eval with
         (gamma := gamma) (omega := omega)
         (ty := TyRef r0 ty)
         (ty_res := TyRef (region_const_type r_val) ty_ref_res)
         (eff := eff) (eff_res := eff_res);
-      [ unfold NStoreResolvedRuntimeShape;
+      [ unfold StoreResolvedRuntimeShape;
         split; [exact HBounded | split; [exact HHeap | exact HEnv]]
       | exact HRho
-      | eapply NResolve_Ref; eauto
+      | eapply Resolve_Ref; eauto
       | eauto
       | exact HResolveEff
       | exact HNoAlloc
-      | eapply NNAKS_WriteConc; eauto ]
+      | eapply NAKS_WriteConc; eauto ]
   end.
 Qed.
 
-Lemma NNoAllocStateShape_mu_app_eval_preservation :
+Lemma NoAllocStateShape_mu_app_eval_preservation :
   forall store heap env rho ef ea k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EMuApp ef ea) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho ef (KMuAppFun ea env rho k))
       ty_out.
 Proof.
@@ -2178,64 +2178,64 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   match goal with
-  | HFunChecked : NCheckedTcExp gamma omega ef
+  | HFunChecked : CheckedTcExp gamma omega ef
       (TyArrow ?ty_arg0 ?eff_body0 ?ty_body0 ?eff_summary0) ?eff_f0 |- _ =>
-      pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ HFunChecked)
+      pose proof (CheckedTcExp_ty_wf _ _ _ _ _ HFunChecked)
         as HFunWF;
       inversion HFunWF; subst;
       match goal with
-      | HArgWF : NTyWFAt 0 omega ty_arg0,
-        HBodyEffWF : NStaticEffectWFAt 0 omega eff_body0,
-        HSummaryEffWF : NStaticEffectWFAt 0 omega eff_summary0 |- _ =>
-          destruct (NResolveTy_exists 0 omega rho ty_arg0 HRho HArgWF)
+      | HArgWF : TyWFAt 0 omega ty_arg0,
+        HBodyEffWF : StaticEffectWFAt 0 omega eff_body0,
+        HSummaryEffWF : StaticEffectWFAt 0 omega eff_summary0 |- _ =>
+          destruct (ResolveTy_exists 0 omega rho ty_arg0 HRho HArgWF)
             as (ty_arg_res & HArgResolve);
           destruct
-            (NResolveStaticEffect_exists
+            (ResolveStaticEffect_exists
               0 omega rho eff_body0 HRho HBodyEffWF)
             as (eff_body_res & HBodyEffResolve);
           destruct
-            (NResolveStaticEffect_exists
+            (ResolveStaticEffect_exists
               0 omega rho eff_summary0 HRho HSummaryEffWF)
             as (eff_summary_res & HSummaryEffResolve);
           destruct
-            (NResolveStaticEffect_static_noalloc_union_inv
+            (ResolveStaticEffect_static_noalloc_union_inv
               rho eff_f0 (static_union eff_a0 eff_body0)
               eff_res HResolveEff HNoAlloc)
             as (eff_f_res & eff_tail_res & _HEq &
               HResolveF & HNoAllocF & HResolveTail & HNoAllocTail);
           destruct
-            (NResolveStaticEffect_static_noalloc_union_inv
+            (ResolveStaticEffect_static_noalloc_union_inv
               rho eff_a0 eff_body0 eff_tail_res
               HResolveTail HNoAllocTail)
             as (eff_a_res & eff_body_res_noalloc & _HEqTail &
               HResolveA & HNoAllocA & HResolveBodyNoAlloc &
               HNoAllocBody);
           pose proof
-            (NResolveStaticEffect_deterministic
+            (ResolveStaticEffect_deterministic
               rho eff_body0 eff_body_res eff_body_res_noalloc
               HBodyEffResolve HResolveBodyNoAlloc)
             as HBodyEq;
           subst eff_body_res_noalloc;
-          eapply NNAS_Eval with
+          eapply NAS_Eval with
             (gamma := gamma) (omega := omega)
             (ty := TyArrow ty_arg0 eff_body0 ty_body0 eff_summary0)
             (ty_res := TyArrow
               ty_arg_res eff_body_res ty_res eff_summary_res)
             (eff := eff_f0) (eff_res := eff_f_res);
-          [ unfold NStoreResolvedRuntimeShape;
+          [ unfold StoreResolvedRuntimeShape;
             split; [exact HBounded | split; [exact HHeap | exact HEnv]]
           | exact HRho
-          | eapply NResolve_Arrow; eauto
+          | eapply Resolve_Arrow; eauto
           | exact HFunChecked
           | exact HResolveF
           | exact HNoAllocF
-          | eapply NNAKS_MuAppFun with
+          | eapply NAKS_MuAppFun with
               (gamma := gamma) (omega := omega)
               (ty_arg := ty_arg0) (ty_body := ty_body0)
               (eff_body := eff_body0)
@@ -2246,12 +2246,12 @@ Proof.
   end.
 Qed.
 
-Lemma NNoAllocStateShape_eff_app_eval_preservation :
+Lemma NoAllocStateShape_eff_app_eval_preservation :
   forall store heap env rho ef ea k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EEffApp ef ea) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho ef (KEffAppFun ea env rho k))
       ty_out.
 Proof.
@@ -2262,68 +2262,68 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   inversion HResolve; subst.
   try normalize_resolved_effect HResolveEff.
   match goal with
-  | HFunChecked : NCheckedTcExp gamma omega ef
+  | HFunChecked : CheckedTcExp gamma omega ef
       (TyArrow ?ty_arg0 ?eff_body0 ?ty_body0 ?eff_summary0) ?eff_f0 |- _ =>
-      pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ HFunChecked)
+      pose proof (CheckedTcExp_ty_wf _ _ _ _ _ HFunChecked)
         as HFunWF;
       inversion HFunWF; subst;
       match goal with
-      | HArgWF : NTyWFAt 0 omega ty_arg0,
-        HBodyEffWF : NStaticEffectWFAt 0 omega eff_body0,
-        HBodyWF : NTyWFAt 0 omega ty_body0,
-        HSummaryEffWF : NStaticEffectWFAt 0 omega eff_summary0 |- _ =>
-          destruct (NResolveTy_exists 0 omega rho ty_arg0 HRho HArgWF)
+      | HArgWF : TyWFAt 0 omega ty_arg0,
+        HBodyEffWF : StaticEffectWFAt 0 omega eff_body0,
+        HBodyWF : TyWFAt 0 omega ty_body0,
+        HSummaryEffWF : StaticEffectWFAt 0 omega eff_summary0 |- _ =>
+          destruct (ResolveTy_exists 0 omega rho ty_arg0 HRho HArgWF)
             as (ty_arg_res & HArgResolve);
           destruct
-            (NResolveStaticEffect_exists
+            (ResolveStaticEffect_exists
               0 omega rho eff_body0 HRho HBodyEffWF)
             as (eff_body_res & HBodyEffResolve);
-          destruct (NResolveTy_exists 0 omega rho ty_body0 HRho HBodyWF)
+          destruct (ResolveTy_exists 0 omega rho ty_body0 HRho HBodyWF)
             as (ty_body_res & HBodyResolve);
           destruct
-            (NResolveStaticEffect_exists
+            (ResolveStaticEffect_exists
               0 omega rho eff_summary0 HRho HSummaryEffWF)
             as (eff_summary_res & HSummaryEffResolve);
           destruct
-            (NResolveStaticEffect_static_noalloc_union_inv
+            (ResolveStaticEffect_static_noalloc_union_inv
               rho eff_f0 (static_union eff_a0 eff_summary0)
               eff_res HResolveEff HNoAlloc)
             as (eff_f_res & eff_tail_res & _HEq &
               HResolveF & HNoAllocF & HResolveTail & HNoAllocTail);
           destruct
-            (NResolveStaticEffect_static_noalloc_union_inv
+            (ResolveStaticEffect_static_noalloc_union_inv
               rho eff_a0 eff_summary0 eff_tail_res
               HResolveTail HNoAllocTail)
             as (eff_a_res & eff_summary_res_noalloc & _HEqTail &
               HResolveA & HNoAllocA & HResolveSummaryNoAlloc &
               HNoAllocSummary);
           pose proof
-            (NResolveStaticEffect_deterministic
+            (ResolveStaticEffect_deterministic
               rho eff_summary0 eff_summary_res eff_summary_res_noalloc
               HSummaryEffResolve HResolveSummaryNoAlloc)
             as HSummaryEq;
           subst eff_summary_res_noalloc;
-          eapply NNAS_Eval with
+          eapply NAS_Eval with
             (gamma := gamma) (omega := omega)
             (ty := TyArrow ty_arg0 eff_body0 ty_body0 eff_summary0)
             (ty_res := TyArrow
               ty_arg_res eff_body_res ty_body_res eff_summary_res)
             (eff := eff_f0) (eff_res := eff_f_res);
-          [ unfold NStoreResolvedRuntimeShape;
+          [ unfold StoreResolvedRuntimeShape;
             split; [exact HBounded | split; [exact HHeap | exact HEnv]]
           | exact HRho
-          | eapply NResolve_Arrow; eauto
+          | eapply Resolve_Arrow; eauto
           | exact HFunChecked
           | exact HResolveF
           | exact HNoAllocF
-          | eapply NNAKS_EffAppFun with
+          | eapply NAKS_EffAppFun with
               (gamma := gamma) (omega := omega)
               (ty_arg := ty_arg0) (ty_body := ty_body0)
               (eff_body := eff_body0)
@@ -2334,13 +2334,13 @@ Proof.
   end.
 Qed.
 
-Lemma NNoAllocStateShape_pair_par_eval_preservation :
+Lemma NoAllocStateShape_pair_par_eval_preservation :
   forall store heap env rho ef1 ea1 ef2 ea2 k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (EEffApp ef1 ea1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
       ty_out.
@@ -2352,33 +2352,33 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   try rewrite <- H11 in HResolveEff.
   destruct
-    (NResolveTy_exists
+    (ResolveTy_exists
       0 omega rho ty1 HRho
-      (NCheckedTcExp_ty_wf _ _ _ _ _ H12))
+      (CheckedTcExp_ty_wf _ _ _ _ _ H12))
     as (ty1_res & HResolveTy1).
   destruct
-    (NResolveTy_exists
+    (ResolveTy_exists
       0 omega rho ty2 HRho
-      (NCheckedTcExp_ty_wf _ _ _ _ _ H13))
+      (CheckedTcExp_ty_wf _ _ _ _ _ H13))
     as (ty2_res & HResolveTy2).
   pose proof
-    (NResolveTy_deterministic
+    (ResolveTy_deterministic
       rho (TyPair ty1 ty2) ty_res
       (TyPair ty1_res ty2_res)
       HResolve
-      (NResolve_Pair rho ty1 ty1_res ty2 ty2_res
+      (Resolve_Pair rho ty1 ty1_res ty2 ty2_res
         HResolveTy1 HResolveTy2))
     as HTyEq.
   subst ty_res.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho
       (static_union eff_summary0 eff_summary3)
       (static_union eff0 eff3)
@@ -2387,31 +2387,31 @@ Proof.
       HResolveSummary & HNoAllocSummary &
       HResolveRun & HNoAllocRun).
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff_summary0 eff_summary3
       eff_summary_res HResolveSummary HNoAllocSummary)
     as (eff_summary1_res & eff_summary2_res & _HEqSummary &
       HResolveSummary1 & HNoAllocSummary1 &
       HResolveSummary2 & HNoAllocSummary2).
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff0 eff3
       eff_run_res HResolveRun HNoAllocRun)
     as (eff1_res & eff2_res & _HEqRun &
       HResolveRun1 & HNoAllocRun1 &
       HResolveRun2 & HNoAllocRun2).
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyEffect) (ty_res := TyEffect)
     (eff := eff_summary0) (eff_res := eff_summary1_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
   - constructor.
   - exact H14.
   - exact HResolveSummary1.
   - exact HNoAllocSummary1.
-  - eapply NNAKS_PairParEff1 with
+  - eapply NAKS_PairParEff1 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff0) (eff2 := eff3)
@@ -2419,12 +2419,12 @@ Proof.
     eauto.
 Qed.
 
-Lemma NNoAllocStateShape_rgn_app_eval_preservation :
+Lemma NoAllocStateShape_rgn_app_eval_preservation :
   forall store heap env rho er r k ty_out,
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho (ERgnApp er r) k)
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap env rho er (KRgnApp r rho k))
       ty_out.
 Proof.
@@ -2435,46 +2435,46 @@ Proof.
       HResolveEff HNoAlloc HK | | | |];
     subst; clear HState.
   destruct HRuntime as (HBounded & HHeap & HEnv).
-  pose proof (NCheckedTcExp_to_NTcExp _ _ _ _ _ HChecked) as HTyped.
-  pose proof (NCheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
+  pose proof (CheckedTcExp_to_TcExp _ _ _ _ _ HChecked) as HTyped.
+  pose proof (CheckedTcExp_shape _ _ _ _ _ HChecked) as HShape.
   inversion HTyped; subst.
   inversion HShape; subst.
   try normalize_resolved_effect HResolveEff.
   try rewrite <- H5 in HResolveEff.
-  destruct (NRhoModels_eval_region omega rho r HRho H7)
+  destruct (RhoModels_eval_region omega rho r HRho H7)
     as (r_val & HRgn).
-  pose proof (NCheckedTcExp_ty_wf _ _ _ _ _ H8) as HFunWF.
+  pose proof (CheckedTcExp_ty_wf _ _ _ _ _ H8) as HFunWF.
   inversion HFunWF; subst.
   destruct
-    (NResolveStaticEffect_exists 1 omega rho eff_body0 HRho H9)
+    (ResolveStaticEffect_exists 1 omega rho eff_body0 HRho H9)
     as (eff_body_res & HEffResolve).
   destruct
-    (NResolveTy_exists 1 omega rho ty0 HRho H10)
+    (ResolveTy_exists 1 omega rho ty0 HRho H10)
     as (ty_body_res & HTyResolve).
   pose proof
-    (NResolveTy_open_ty
+    (ResolveTy_open_ty
       rho r ty0 ty_body_res r_val HRgn HTyResolve)
     as HOpenResolve.
   rewrite H4 in HOpenResolve.
   pose proof
-    (NResolveTy_deterministic
+    (ResolveTy_deterministic
       rho (open_ty r ty) ty_res
       (open_ty_type (region_const_type r_val) ty_body_res)
       HResolve HOpenResolve)
     as HTyResEq.
   subst ty_res.
   destruct
-    (NResolveStaticEffect_static_noalloc_union_inv
+    (ResolveStaticEffect_static_noalloc_union_inv
       rho eff_f0 (open_static_effect r eff_body0)
       eff_res HResolveEff HNoAlloc)
     as (eff_f_res & eff_open_res & _HEq &
       HResolveF & HNoAllocF & HResolveOpen & HNoAllocOpen).
   pose proof
-    (NResolveStaticEffect_open_static_effect
+    (ResolveStaticEffect_open_static_effect
       rho r eff_body0 eff_body_res r_val HRgn HEffResolve)
     as HOpenEffResolve.
   pose proof
-    (NResolveStaticEffect_deterministic
+    (ResolveStaticEffect_deterministic
       rho (open_static_effect r eff_body0)
       eff_open_res
       (open_static_effect_type
@@ -2482,30 +2482,30 @@ Proof.
       HResolveOpen HOpenEffResolve)
     as HOpenEffEq.
   subst eff_open_res.
-  eapply NNAS_Eval with
+  eapply NAS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := TyForallRgn eff_body0 ty0)
     (ty_res := TyForallRgn eff_body_res ty_body_res)
     (eff := eff_f0) (eff_res := eff_f_res).
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | exact HEnv]].
   - exact HRho.
-  - eapply NResolve_ForallRgn; eauto.
+  - eapply Resolve_ForallRgn; eauto.
   - exact H8.
   - exact HResolveF.
   - exact HNoAllocF.
-  - eapply NNAKS_RgnApp; eauto.
+  - eapply NAKS_RgnApp; eauto.
 Qed.
 
-Lemma NNoAllocStateShape_rgn_app_return_preservation :
+Lemma NoAllocStateShape_rgn_app_return_preservation :
   forall store heap closure_env closure_rho x e arg_rho r r_val k ty_out,
     eval_region arg_rho r = Some r_val ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StReturn heap
         (VRegionClosure closure_env closure_rho x e)
         (KRgnApp r arg_rho k))
       ty_out ->
-    NNoAllocStateShape store
+    NoAllocStateShape store
       (StEval heap closure_env
         (rho_extend x r_val closure_rho)
         e
@@ -2526,9 +2526,9 @@ Proof.
       inversion HRgnKont; subst; clear HRgnKont
   end.
   match goal with
-  | |- NNoAllocStateShape _
+  | |- NoAllocStateShape _
       (StEval _ _ (rho_extend _ ?r_open _) _ _) _ =>
-      eapply NNAS_Eval with
+      eapply NAS_Eval with
         (gamma := gamma) (omega := x :: omega)
         (ty := ty)
         (ty_res := open_ty_type (region_const_type r_open) ty_res)
@@ -2536,38 +2536,38 @@ Proof.
         (eff_res := open_static_effect_type
           (region_const_type r_open) eff_res)
   end.
-  - unfold NStoreResolvedRuntimeShape.
+  - unfold StoreResolvedRuntimeShape.
     split; [exact HBounded | split; [exact HHeap | ]].
-    eapply NStoreResolvedEnvShape_extend_fresh;
+    eapply StoreResolvedEnvShape_extend_fresh;
       eauto using
-        NCheckedRegionBody_fresh,
-        NCheckedRegionBody_ctx_wf.
-  - eapply NRhoModels_extend; eauto.
-  - eapply NResolveTy_rho_extend_close_ty.
+        CheckedRegionBody_fresh,
+        CheckedRegionBody_ctx_wf.
+  - eapply RhoModels_extend; eauto.
+  - eapply ResolveTy_rho_extend_close_ty.
     + exact
-        (NCheckedTcExp_ty_wf
+        (CheckedTcExp_ty_wf
           _ _ _ _ _
-          (NCheckedRegionBody_checked _ _ _ _ _ _ H9)).
+          (CheckedRegionBody_checked _ _ _ _ _ _ H9)).
     + eauto.
-  - exact (NCheckedRegionBody_checked _ _ _ _ _ _ H9).
+  - exact (CheckedRegionBody_checked _ _ _ _ _ _ H9).
   - unfold close_static_effect, open_static_effect_type.
-    eapply NResolveStaticEffect_rho_extend_close_static_effect_at.
+    eapply ResolveStaticEffect_rho_extend_close_static_effect_at.
     + exact
-        (NCheckedTcExp_eff_wf
+        (CheckedTcExp_eff_wf
           _ _ _ _ _
-          (NCheckedRegionBody_checked _ _ _ _ _ _ H9)).
+          (CheckedRegionBody_checked _ _ _ _ _ _ H9)).
     + exact H7.
   - assumption.
   - assumption.
 Qed.
 
-Lemma NNoAllocStateShape_step_preservation :
+Lemma NoAllocStateShape_step_preservation :
   forall state label state' store ty,
-    NStep state label state' ->
-    NNoAllocStateShape store state ty ->
+    Step state label state' ->
+    NoAllocStateShape store state ty ->
     NoAllocTrace (label_trace label) /\
-    NNoAllocStateShape store state' ty /\
-    NNoAllocStepTransport store state state'.
+    NoAllocStateShape store state' ty /\
+    NoAllocStepTransport store state state'.
 Proof.
   intros state label state' store ty HStep.
   revert store ty.
@@ -2576,76 +2576,76 @@ Proof.
       [ split; [apply NoAllocTrace_label_silent |];
         split;
         [ eauto using
-            NNoAllocStateShape_const_preservation,
-            NNoAllocStateShape_bool_preservation,
-            NNoAllocStateShape_var_preservation,
-            NNoAllocStateShape_mu_preservation,
-            NNoAllocStateShape_lambda_rgn_preservation,
-            NNoAllocStateShape_empty_preservation,
-            NNoAllocStateShape_top_preservation,
-            NNoAllocStateShape_alloc_abs_preservation,
-            NNoAllocStateShape_read_abs_preservation,
-            NNoAllocStateShape_write_abs_preservation,
-            NNoAllocStateShape_read_conc_preservation,
-            NNoAllocStateShape_write_conc_preservation,
-            NNoAllocStateShape_done_preservation,
-            NNoAllocStateShape_cond_true_preservation,
-            NNoAllocStateShape_cond_false_preservation,
-            NNoAllocStateShape_deref_preservation,
-            NNoAllocStateShape_assign_loc_preservation,
-            NNoAllocStateShape_plus_l_preservation,
-            NNoAllocStateShape_plus_r_preservation,
-            NNoAllocStateShape_minus_l_preservation,
-            NNoAllocStateShape_minus_r_preservation,
-            NNoAllocStateShape_times_l_preservation,
-            NNoAllocStateShape_times_r_preservation,
-            NNoAllocStateShape_eq_l_preservation,
-            NNoAllocStateShape_eq_r_preservation,
-            NNoAllocStateShape_concat_l_preservation,
-            NNoAllocStateShape_concat_r_preservation,
-            NNoAllocStateShape_mu_app_eval_arg_preservation,
-            NNoAllocStateShape_eff_app_eval_arg_preservation,
-            NNoAllocStateShape_mu_app_body_preservation,
-            NNoAllocStateShape_eff_app_body_preservation,
-            NNoAllocStateShape_pair_par_eff1_preservation,
-            NNoAllocStateShape_pair_par_check_pass_preservation,
-            NNoAllocStateShape_pair_par_check_fail_preservation,
-            NNoAllocStateShape_pair_par_left_error_preservation,
-            NNoAllocStateShape_pair_par_right_error_preservation,
-            NNoAllocStateShape_pair_par_done_pass_preservation,
-            NNoAllocStateShape_pair_par_done_fail_preservation,
-            NNoAllocStateShape_cond_eval_preservation,
-            NNoAllocStateShape_plus_eval_preservation,
-            NNoAllocStateShape_minus_eval_preservation,
-            NNoAllocStateShape_times_eval_preservation,
-            NNoAllocStateShape_eq_eval_preservation,
-            NNoAllocStateShape_concat_eval_preservation,
-            NNoAllocStateShape_deref_eval_preservation,
-            NNoAllocStateShape_assign_eval_preservation,
-            NNoAllocStateShape_read_conc_eval_preservation,
-            NNoAllocStateShape_write_conc_eval_preservation,
-            NNoAllocStateShape_mu_app_eval_preservation,
-            NNoAllocStateShape_eff_app_eval_preservation,
-            NNoAllocStateShape_pair_par_eval_preservation,
-            NNoAllocStateShape_rgn_app_eval_preservation,
-            NNoAllocStateShape_rgn_app_return_preservation
-        | apply NNoAllocStepTransport_same; reflexivity ] ];
+            NoAllocStateShape_const_preservation,
+            NoAllocStateShape_bool_preservation,
+            NoAllocStateShape_var_preservation,
+            NoAllocStateShape_mu_preservation,
+            NoAllocStateShape_lambda_rgn_preservation,
+            NoAllocStateShape_empty_preservation,
+            NoAllocStateShape_top_preservation,
+            NoAllocStateShape_alloc_abs_preservation,
+            NoAllocStateShape_read_abs_preservation,
+            NoAllocStateShape_write_abs_preservation,
+            NoAllocStateShape_read_conc_preservation,
+            NoAllocStateShape_write_conc_preservation,
+            NoAllocStateShape_done_preservation,
+            NoAllocStateShape_cond_true_preservation,
+            NoAllocStateShape_cond_false_preservation,
+            NoAllocStateShape_deref_preservation,
+            NoAllocStateShape_assign_loc_preservation,
+            NoAllocStateShape_plus_l_preservation,
+            NoAllocStateShape_plus_r_preservation,
+            NoAllocStateShape_minus_l_preservation,
+            NoAllocStateShape_minus_r_preservation,
+            NoAllocStateShape_times_l_preservation,
+            NoAllocStateShape_times_r_preservation,
+            NoAllocStateShape_eq_l_preservation,
+            NoAllocStateShape_eq_r_preservation,
+            NoAllocStateShape_concat_l_preservation,
+            NoAllocStateShape_concat_r_preservation,
+            NoAllocStateShape_mu_app_eval_arg_preservation,
+            NoAllocStateShape_eff_app_eval_arg_preservation,
+            NoAllocStateShape_mu_app_body_preservation,
+            NoAllocStateShape_eff_app_body_preservation,
+            NoAllocStateShape_pair_par_eff1_preservation,
+            NoAllocStateShape_pair_par_check_pass_preservation,
+            NoAllocStateShape_pair_par_check_fail_preservation,
+            NoAllocStateShape_pair_par_left_error_preservation,
+            NoAllocStateShape_pair_par_right_error_preservation,
+            NoAllocStateShape_pair_par_done_pass_preservation,
+            NoAllocStateShape_pair_par_done_fail_preservation,
+            NoAllocStateShape_cond_eval_preservation,
+            NoAllocStateShape_plus_eval_preservation,
+            NoAllocStateShape_minus_eval_preservation,
+            NoAllocStateShape_times_eval_preservation,
+            NoAllocStateShape_eq_eval_preservation,
+            NoAllocStateShape_concat_eval_preservation,
+            NoAllocStateShape_deref_eval_preservation,
+            NoAllocStateShape_assign_eval_preservation,
+            NoAllocStateShape_read_conc_eval_preservation,
+            NoAllocStateShape_write_conc_eval_preservation,
+            NoAllocStateShape_mu_app_eval_preservation,
+            NoAllocStateShape_eff_app_eval_preservation,
+            NoAllocStateShape_pair_par_eval_preservation,
+            NoAllocStateShape_rgn_app_eval_preservation,
+            NoAllocStateShape_rgn_app_return_preservation
+        | apply NoAllocStepTransport_same; reflexivity ] ];
     try solve
       [ split; [apply NoAllocTrace_label_read |];
         split;
-        [ eauto using NNoAllocStateShape_deref_preservation
-        | apply NNoAllocStepTransport_same; reflexivity ] ];
+        [ eauto using NoAllocStateShape_deref_preservation
+        | apply NoAllocStepTransport_same; reflexivity ] ];
     try solve
       [ split; [apply NoAllocTrace_label_write |];
         destruct
-          (NNoAllocStateShape_assign_val_preservation
+          (NoAllocStateShape_assign_val_preservation
             _ _ _ _ _ _ _ _ HState)
           as (HState' & HTransport);
         split; [exact HState' | exact HTransport] ];
     try solve
       [ exfalso; eauto using
-          NNoAllocStateShape_ref_eval_impossible,
-          NNoAllocStateShape_ref_return_impossible ].
+          NoAllocStateShape_ref_eval_impossible,
+          NoAllocStateShape_ref_return_impossible ].
   - inversion HState as
       [| | | |
         store0 left_state0 right_state0 phi_left0 phi_right0 k0 heap
@@ -2655,7 +2655,7 @@ Proof.
       (HNoAlloc & HLeft' & HTransport).
     split; [exact HNoAlloc |].
     split.
-    + eapply NNAS_PairParRun with
+    + eapply NAS_PairParRun with
         (heap := state_heap left_state') (ty1 := ty1) (ty2 := ty2).
       * reflexivity.
       * rewrite state_heap_with_state_heap. reflexivity.
@@ -2677,7 +2677,7 @@ Proof.
       (HNoAlloc & HRight' & HTransport).
     split; [exact HNoAlloc |].
     split.
-    + eapply NNAS_PairParRun with
+    + eapply NAS_PairParRun with
         (heap := state_heap right_state') (ty1 := ty1) (ty2 := ty2).
       * rewrite state_heap_with_state_heap. reflexivity.
       * reflexivity.
@@ -2693,9 +2693,9 @@ Proof.
       * exact HSibling.
   - split; [apply NoAllocTrace_label_silent |].
     split.
-    + eapply NNoAllocStateShape_pair_par_right_error_preservation;
+    + eapply NoAllocStateShape_pair_par_right_error_preservation;
         eauto.
     + intros sibling ty_s HSiblingHeap HSibling.
-      eapply NNoAllocStateShape_with_state_heap_same; eauto.
+      eapply NoAllocStateShape_with_state_heap_same; eauto.
       inversion HState; subst; simpl in *; congruence.
 Qed.

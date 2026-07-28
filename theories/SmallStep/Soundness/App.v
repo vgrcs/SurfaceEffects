@@ -21,20 +21,20 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Lemma NCBT_App_components :
+Lemma CBT_App_components :
   forall gamma omega ef ea,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     exists ty_mu eff_mu eff_eff ty_ef ty_ea eff_ef eff_ea,
-      NCheckedTcExp gamma omega (EMuApp ef ea) ty_mu eff_mu /\
-      NCheckedTcExp gamma omega (EEffApp ef ea) TyEffect eff_eff /\
-      NCheckedTcExp gamma omega ef ty_ef eff_ef /\
-      NCheckedTcExp gamma omega ea ty_ea eff_ea /\
+      CheckedTcExp gamma omega (EMuApp ef ea) ty_mu eff_mu /\
+      CheckedTcExp gamma omega (EEffApp ef ea) TyEffect eff_eff /\
+      CheckedTcExp gamma omega ef ty_ef eff_ef /\
+      CheckedTcExp gamma omega ea ty_ea eff_ea /\
       static_heap_neutral eff_eff /\
       static_heap_neutral eff_ef /\
       static_heap_neutral eff_ea /\
-      NCheckedBackTriangle gamma omega ef (EEffApp ef ea) /\
-      NCheckedBackTriangle gamma omega ea (EEffApp ef ea).
+      CheckedBackTriangle gamma omega ef (EEffApp ef ea) /\
+      CheckedBackTriangle gamma omega ea (EEffApp ef ea).
 Proof.
   intros gamma omega ef ea HBack.
   inversion HBack; subst; try discriminate.
@@ -49,13 +49,13 @@ Proof.
   split; [exact H10 | exact H11].
 Qed.
 
-Lemma NCheckedTcExp_EEffApp_inv :
+Lemma CheckedTcExp_EEffApp_inv :
   forall gamma omega ef ea eff,
-    NCheckedTcExp gamma omega (EEffApp ef ea) TyEffect eff ->
+    CheckedTcExp gamma omega (EEffApp ef ea) TyEffect eff ->
     exists ty_arg ty_body eff_body eff_summary eff_f eff_a,
-      NCheckedTcExp gamma omega ef
+      CheckedTcExp gamma omega ef
         (TyArrow ty_arg eff_body ty_body eff_summary) eff_f /\
-      NCheckedTcExp gamma omega ea ty_arg eff_a /\
+      CheckedTcExp gamma omega ea ty_arg eff_a /\
       eff = static_union eff_f (static_union eff_a eff_summary).
 Proof.
   intros gamma omega ef ea eff HChecked.
@@ -72,26 +72,26 @@ Qed.
 
 Lemma EMuApp_terminal_first_step :
   forall heap env rho ef ea phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (EMuApp ef ea))
+    Steps
+      (InitialState heap env rho (EMuApp ef ea))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho ef (KMuAppFun ea env rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
       phi = phi_tail.
 Proof.
   intros heap env rho ef ea phi heap_final v_final HSteps.
-  remember (NInitialState heap env rho (EMuApp ef ea)) as start
+  remember (InitialState heap env rho (EMuApp ef ea)) as start
     eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
   destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StEval heap env rho (EMuApp ef ea) KDone)
         LSilent
         (StEval heap env rho ef (KMuAppFun ea env rho KDone))
@@ -106,13 +106,13 @@ Qed.
 
 Lemma EMuApp_terminal_first_step_N :
   forall n heap env rho ef ea phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (EMuApp ef ea))
+    StepsN n
+      (InitialState heap env rho (EMuApp ef ea))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho ef (KMuAppFun ea env rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
@@ -120,9 +120,9 @@ Lemma EMuApp_terminal_first_step_N :
 Proof.
   intros n heap env rho ef ea phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (EMuApp ef ea))
+      (InitialState heap env rho (EMuApp ef ea))
       LSilent
       (StEval heap env rho ef (KMuAppFun ea env rho KDone))
       phi heap_final v_final
@@ -136,26 +136,26 @@ Qed.
 
 Lemma EEffApp_terminal_first_step :
   forall heap env rho ef ea phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (EEffApp ef ea))
+    Steps
+      (InitialState heap env rho (EEffApp ef ea))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho ef (KEffAppFun ea env rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
       phi = phi_tail.
 Proof.
   intros heap env rho ef ea phi heap_final v_final HSteps.
-  remember (NInitialState heap env rho (EEffApp ef ea)) as start
+  remember (InitialState heap env rho (EEffApp ef ea)) as start
     eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
   destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StEval heap env rho (EEffApp ef ea) KDone)
         LSilent
         (StEval heap env rho ef (KEffAppFun ea env rho KDone))
@@ -170,13 +170,13 @@ Qed.
 
 Lemma EEffApp_terminal_first_step_N :
   forall n heap env rho ef ea phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (EEffApp ef ea))
+    StepsN n
+      (InitialState heap env rho (EEffApp ef ea))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho ef (KEffAppFun ea env rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
@@ -184,9 +184,9 @@ Lemma EEffApp_terminal_first_step_N :
 Proof.
   intros n heap env rho ef ea phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (EEffApp ef ea))
+      (InitialState heap env rho (EEffApp ef ea))
       LSilent
       (StEval heap env rho ef (KEffAppFun ea env rho KDone))
       phi heap_final v_final
@@ -201,13 +201,13 @@ Qed.
 Lemma KMuAppFun_closure_terminal_first_step :
   forall heap env rho ea k closure_env closure_rho f x ec ee
     phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VClosure closure_env closure_rho f x ec ee)
         (KMuAppFun ea env rho k))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho ea
           (KMuAppArg closure_env closure_rho f x ec ee k))
         phi_tail
@@ -224,7 +224,7 @@ Proof.
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StReturn heap (VClosure closure_env closure_rho f x ec ee)
           (KMuAppFun ea env rho k))
         LSilent
@@ -242,14 +242,14 @@ Qed.
 Lemma KMuAppFun_closure_terminal_first_step_N :
   forall n heap env rho ea k closure_env closure_rho f x ec ee
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StReturn heap (VClosure closure_env closure_rho f x ec ee)
         (KMuAppFun ea env rho k))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho ea
           (KMuAppArg closure_env closure_rho f x ec ee k))
         phi_tail
@@ -259,7 +259,7 @@ Proof.
   intros n heap env rho ea k closure_env closure_rho f x ec ee
     phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
       (StReturn heap (VClosure closure_env closure_rho f x ec ee)
         (KMuAppFun ea env rho k))
@@ -278,13 +278,13 @@ Qed.
 Lemma KEffAppFun_closure_terminal_first_step :
   forall heap env rho ea k closure_env closure_rho f x ec ee
     phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VClosure closure_env closure_rho f x ec ee)
         (KEffAppFun ea env rho k))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho ea
           (KEffAppArg closure_env closure_rho f x ec ee k))
         phi_tail
@@ -301,7 +301,7 @@ Proof.
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StReturn heap (VClosure closure_env closure_rho f x ec ee)
           (KEffAppFun ea env rho k))
         LSilent
@@ -319,14 +319,14 @@ Qed.
 Lemma KEffAppFun_closure_terminal_first_step_N :
   forall n heap env rho ea k closure_env closure_rho f x ec ee
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StReturn heap (VClosure closure_env closure_rho f x ec ee)
         (KEffAppFun ea env rho k))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho ea
           (KEffAppArg closure_env closure_rho f x ec ee k))
         phi_tail
@@ -336,7 +336,7 @@ Proof.
   intros n heap env rho ea k closure_env closure_rho f x ec ee
     phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
       (StReturn heap (VClosure closure_env closure_rho f x ec ee)
         (KEffAppFun ea env rho k))
@@ -355,13 +355,13 @@ Qed.
 Lemma KMuAppArg_terminal_first_step :
   forall heap v_arg closure_env closure_rho f x ec ee k
     phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v_arg
         (KMuAppArg closure_env closure_rho f x ec ee k))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap
           (env_extend x v_arg
             (env_extend f
@@ -383,7 +383,7 @@ Proof.
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StReturn heap v_arg
           (KMuAppArg closure_env closure_rho f x ec ee k))
         LSilent
@@ -405,14 +405,14 @@ Qed.
 Lemma KMuAppArg_terminal_first_step_N :
   forall n heap v_arg closure_env closure_rho f x ec ee k
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StReturn heap v_arg
         (KMuAppArg closure_env closure_rho f x ec ee k))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap
           (env_extend x v_arg
             (env_extend f
@@ -426,7 +426,7 @@ Proof.
   intros n heap v_arg closure_env closure_rho f x ec ee k
     phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
       (StReturn heap v_arg
         (KMuAppArg closure_env closure_rho f x ec ee k))
@@ -449,13 +449,13 @@ Qed.
 Lemma KEffAppArg_terminal_first_step :
   forall heap v_arg closure_env closure_rho f x ec ee k
     phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v_arg
         (KEffAppArg closure_env closure_rho f x ec ee k))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap
           (env_extend x v_arg
             (env_extend f
@@ -477,7 +477,7 @@ Proof.
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StReturn heap v_arg
           (KEffAppArg closure_env closure_rho f x ec ee k))
         LSilent
@@ -499,14 +499,14 @@ Qed.
 Lemma KEffAppArg_terminal_first_step_N :
   forall n heap v_arg closure_env closure_rho f x ec ee k
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StReturn heap v_arg
         (KEffAppArg closure_env closure_rho f x ec ee k))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap
           (env_extend x v_arg
             (env_extend f
@@ -520,7 +520,7 @@ Proof.
   intros n heap v_arg closure_env closure_rho f x ec ee k
     phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
       (StReturn heap v_arg
         (KEffAppArg closure_env closure_rho f x ec ee k))
@@ -542,7 +542,7 @@ Qed.
 
 Lemma KMuAppFun_terminal_value_is_closure :
   forall heap v ea env rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KMuAppFun ea env rho k))
       phi
       (StDone heap_final v_final) ->
@@ -563,7 +563,7 @@ Qed.
 
 Lemma KEffAppFun_terminal_value_is_closure :
   forall heap v ea env rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KEffAppFun ea env rho k))
       phi
       (StDone heap_final v_final) ->
@@ -584,23 +584,23 @@ Qed.
 
 Definition EMuAppDecompositionGoal : Prop :=
   forall heap env rho ef ea phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho (EMuApp ef ea))
+    Steps
+      (InitialState heap env rho (EMuApp ef ea))
       phi
       (StDone heap_final v_final) ->
     exists phi_fun phi_arg phi_body
       closure_env closure_rho f x ec ee arg heap_arg,
     exists heap_fun,
-      NSteps
-        (NInitialState heap env rho ef)
+      Steps
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap_fun (VClosure closure_env closure_rho f x ec ee)) /\
-      NSteps
-        (NInitialState heap_fun env rho ea)
+      Steps
+        (InitialState heap_fun env rho ea)
         phi_arg
         (StDone heap_arg arg) /\
-      NSteps
-        (NInitialState heap_arg
+      Steps
+        (InitialState heap_arg
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -620,20 +620,20 @@ Proof.
       heap env rho ef ea phi heap_final v_final HSteps)
     as (phi_fun_tail & HFunWithKont & HTraceStart).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap env rho ef (KMuAppFun ea env rho KDone))
       phi_fun_tail
       (StDone heap_final v_final)
       HFunWithKont)
     as (n_fun & HFunWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_fun
       (StEval heap env rho ef (KMuAppFun ea env rho KDone))
       phi_fun_tail
       heap_final v_final
       HFunWithKontN
-      (NInitialState heap env rho ef)
+      (InitialState heap env rho ef)
       (KMuAppFun ea env rho KDone)
       eq_refl)
     as (phi_fun & heap_fun & v_fun & phi_after_fun &
@@ -650,7 +650,7 @@ Proof.
       phi_after_fun heap_final v_final HAfterFun)
     as (phi_arg_tail & HArgWithKont & HTraceAfterFun).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap_fun env rho ea
         (KMuAppArg closure_env closure_rho f x ec ee KDone))
       phi_arg_tail
@@ -658,14 +658,14 @@ Proof.
       HArgWithKont)
     as (n_arg & HArgWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_arg
       (StEval heap_fun env rho ea
         (KMuAppArg closure_env closure_rho f x ec ee KDone))
       phi_arg_tail
       heap_final v_final
       HArgWithKontN
-      (NInitialState heap_fun env rho ea)
+      (InitialState heap_fun env rho ea)
       (KMuAppArg closure_env closure_rho f x ec ee KDone)
       eq_refl)
     as (phi_arg & heap_arg & arg & phi_after_arg &
@@ -685,24 +685,24 @@ Qed.
 
 Definition EMuAppCountedDecompositionGoal : Prop :=
   forall n heap env rho ef ea phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (EMuApp ef ea))
+    StepsN n
+      (InitialState heap env rho (EMuApp ef ea))
       phi
       (StDone heap_final v_final) ->
     exists n_fun n_arg n_body
       phi_fun phi_arg phi_body
       closure_env closure_rho f x ec ee arg heap_arg,
     exists heap_fun,
-      NStepsN n_fun
-        (NInitialState heap env rho ef)
+      StepsN n_fun
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap_fun (VClosure closure_env closure_rho f x ec ee)) /\
-      NStepsN n_arg
-        (NInitialState heap_fun env rho ea)
+      StepsN n_arg
+        (InitialState heap_fun env rho ea)
         phi_arg
         (StDone heap_arg arg) /\
-      NStepsN n_body
-        (NInitialState heap_arg
+      StepsN n_body
+        (InitialState heap_arg
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -726,13 +726,13 @@ Proof.
     as (n_fun_tail & phi_fun_tail & HnStart &
       HFunWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_fun_tail
       (StEval heap env rho ef (KMuAppFun ea env rho KDone))
       phi_fun_tail
       heap_final v_final
       HFunWithKont
-      (NInitialState heap env rho ef)
+      (InitialState heap env rho ef)
       (KMuAppFun ea env rho KDone)
       eq_refl)
     as (n_fun & n_after_fun & phi_fun & heap_fun & v_fun &
@@ -742,7 +742,7 @@ Proof.
       (KMuAppFun_terminal_value_is_closure
         heap_fun v_fun ea env rho KDone
         phi_after_fun heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_fun
           (StReturn heap_fun v_fun (KMuAppFun ea env rho KDone))
           phi_after_fun
@@ -758,14 +758,14 @@ Proof.
       as (n_arg_tail & phi_arg_tail & HCountAfterFun &
         HArgWithKont & HTraceAfterFun).
     destruct
-      (NStepsN_append_kont_terminal_split_counted
+      (StepsN_append_kont_terminal_split_counted
         n_arg_tail
         (StEval heap_fun env rho ea
           (KMuAppArg closure_env closure_rho f x ec ee KDone))
         phi_arg_tail
         heap_final v_final
         HArgWithKont
-        (NInitialState heap_fun env rho ea)
+        (InitialState heap_fun env rho ea)
         (KMuAppArg closure_env closure_rho f x ec ee KDone)
         eq_refl)
       as (n_arg & n_after_arg & phi_arg & heap_arg & arg &
@@ -789,13 +789,13 @@ Proof.
         reflexivity.
 Qed.
 
-Lemma NCBT_RgnApp_components :
+Lemma CBT_RgnApp_components :
   forall gamma omega er r,
-    NCheckedBackTriangle gamma omega (ERgnApp er r) EEmpty ->
+    CheckedBackTriangle gamma omega (ERgnApp er r) EEmpty ->
     exists ty_er eff_er ty_app eff_app,
-      NCheckedTcExp gamma omega er ty_er eff_er /\
-      NCheckedTcExp gamma omega (ERgnApp er r) ty_app eff_app /\
-      NCheckedBackTriangle gamma omega er EEmpty.
+      CheckedTcExp gamma omega er ty_er eff_er /\
+      CheckedTcExp gamma omega (ERgnApp er r) ty_app eff_app /\
+      CheckedBackTriangle gamma omega er EEmpty.
 Proof.
   intros gamma omega er r HBack.
   dependent destruction HBack.
@@ -806,13 +806,13 @@ Qed.
 
 Lemma ERgnApp_terminal_first_step_N :
   forall n heap env rho er r phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (ERgnApp er r))
+    StepsN n
+      (InitialState heap env rho (ERgnApp er r))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho er (KRgnApp r rho KDone))
         phi_tail
         (StDone heap_final v_final) /\
@@ -820,9 +820,9 @@ Lemma ERgnApp_terminal_first_step_N :
 Proof.
   intros n heap env rho er r phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho (ERgnApp er r))
+      (InitialState heap env rho (ERgnApp er r))
       LSilent
       (StEval heap env rho er (KRgnApp r rho KDone))
       phi heap_final v_final
@@ -836,7 +836,7 @@ Qed.
 
 Lemma KRgnApp_terminal_value_is_region_closure :
   forall heap v r arg_rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KRgnApp r arg_rho k))
       phi
       (StDone heap_final v_final) ->
@@ -858,7 +858,7 @@ Qed.
 Lemma KRgnApp_region_closure_terminal_region :
   forall heap closure_env closure_rho x e r arg_rho k
     phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap
         (VRegionClosure closure_env closure_rho x e)
         (KRgnApp r arg_rho k))
@@ -886,7 +886,7 @@ Lemma KRgnApp_region_closure_terminal_first_step_N :
   forall n heap closure_env closure_rho x e r arg_rho r_val k
     phi heap_final v_final,
     eval_region arg_rho r = Some r_val ->
-    NStepsN n
+    StepsN n
       (StReturn heap
         (VRegionClosure closure_env closure_rho x e)
         (KRgnApp r arg_rho k))
@@ -894,7 +894,7 @@ Lemma KRgnApp_region_closure_terminal_first_step_N :
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap closure_env
           (rho_extend x r_val closure_rho)
           e k)
@@ -905,7 +905,7 @@ Proof.
   intros n heap closure_env closure_rho x e r arg_rho r_val k
     phi heap_final v_final HRgn HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
       (StReturn heap
         (VRegionClosure closure_env closure_rho x e)
@@ -926,20 +926,20 @@ Qed.
 
 Definition ERgnAppCountedDecompositionGoal : Prop :=
   forall n heap env rho er r phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho (ERgnApp er r))
+    StepsN n
+      (InitialState heap env rho (ERgnApp er r))
       phi
       (StDone heap_final v_final) ->
     exists n_fun n_body phi_fun phi_body
       closure_env closure_rho x e heap_fun r_val,
       eval_region rho r = Some r_val /\
-      NStepsN n_fun
-        (NInitialState heap env rho er)
+      StepsN n_fun
+        (InitialState heap env rho er)
         phi_fun
         (StDone heap_fun
           (VRegionClosure closure_env closure_rho x e)) /\
-      NStepsN n_body
-        (NInitialState heap_fun closure_env
+      StepsN n_body
+        (InitialState heap_fun closure_env
           (rho_extend x r_val closure_rho)
           e)
         phi_body
@@ -959,13 +959,13 @@ Proof.
     as (n_fun_tail & phi_fun_tail & HnStart &
       HFunWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_fun_tail
       (StEval heap env rho er (KRgnApp r rho KDone))
       phi_fun_tail
       heap_final v_final
       HFunWithKont
-      (NInitialState heap env rho er)
+      (InitialState heap env rho er)
       (KRgnApp r rho KDone)
       eq_refl)
     as (n_fun & n_after_fun & phi_fun & heap_fun & v_fun &
@@ -975,7 +975,7 @@ Proof.
       (KRgnApp_terminal_value_is_region_closure
         heap_fun v_fun r rho KDone
         phi_after_fun heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_fun
           (StReturn heap_fun v_fun (KRgnApp r rho KDone))
           phi_after_fun
@@ -987,7 +987,7 @@ Proof.
       (KRgnApp_region_closure_terminal_region
         heap_fun closure_env closure_rho x e r rho KDone
         phi_after_fun heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_fun
           (StReturn heap_fun
             (VRegionClosure closure_env closure_rho x e)
@@ -1018,7 +1018,7 @@ Lemma App_EEmpty_summary_evaluation :
       ([] : Trace) heap (SummarySet ([] : list ComputedAction)).
 Proof.
   intros heap env rho.
-  unfold SummaryEvaluation, NInitialState.
+  unfold SummaryEvaluation, InitialState.
   eapply StepsStep
     with
       (label := LSilent)
@@ -1038,7 +1038,7 @@ Theorem ERgnApp_checked_store_context_case_from_below :
   forall n gamma omega heap env rho er r
     phi heap_final v_final phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega (ERgnApp er r) EEmpty ->
+    CheckedBackTriangle gamma omega (ERgnApp er r) EEmpty ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CountedComputationEvaluation n heap env rho
       (ERgnApp er r) phi heap_final v_final ->
@@ -1050,7 +1050,7 @@ Proof.
     phi heap_final v_final phi_summary heap_summary theta
     HBelow HBack HContext HComp _HSummary.
   destruct
-    (NCBT_RgnApp_components gamma omega er r HBack)
+    (CBT_RgnApp_components gamma omega er r HBack)
     as (ty_er & eff_er & _ty_app & _eff_app &
       HCheckedEr & _HCheckedApp & HBackEr).
   unfold CountedComputationEvaluation in HComp.
@@ -1097,7 +1097,7 @@ Proof.
       HContext HCheckedEr HFunComp)
     as (store_fun & ty_fun_res & HBoundedFun & HHeapFun & HValFun).
   destruct
-    (NStoreResolvedValShape_region_closure_inv
+    (StoreResolvedValShape_region_closure_inv
       store_fun closure_env closure_rho x e ty_fun_res HValFun)
     as (gamma_body & omega_body & ty_body & _ty_body_res &
       eff_body & _eff_body_res & _HTyFun & HEnvBody &
@@ -1110,14 +1110,14 @@ Proof.
   {
     split.
     - exists store_fun.
-      unfold NStoreResolvedRuntimeShape.
+      unfold StoreResolvedRuntimeShape.
       split; [exact HBoundedFun |].
       split; [exact HHeapFun |].
-      eapply NStoreResolvedEnvShape_extend_fresh;
+      eapply StoreResolvedEnvShape_extend_fresh;
         eauto using
-          NCheckedRegionBody_fresh,
-          NCheckedRegionBody_ctx_wf.
-    - eapply NRhoModels_extend; eauto.
+          CheckedRegionBody_fresh,
+          CheckedRegionBody_ctx_wf.
+    - eapply RhoModels_extend; eauto.
   }
   assert
     (HBodyCovered :
@@ -1133,7 +1133,7 @@ Proof.
         (SummarySet ([] : list ComputedAction))).
     - exact HCountBody.
     - exact
-        (NCheckedRegionBody_backtriangle
+        (CheckedRegionBody_backtriangle
           x gamma_body omega_body e ty_body eff_body HBodyChecked).
     - exact HBodyContext.
     - unfold CountedComputationEvaluation. exact HBody.
@@ -1150,23 +1150,23 @@ Qed.
 
 Definition EEffAppDecompositionGoal : Prop :=
   forall heap env rho ef ea phi heap_final theta,
-    NSteps
-      (NInitialState heap env rho (EEffApp ef ea))
+    Steps
+      (InitialState heap env rho (EEffApp ef ea))
       phi
       (StDone heap_final (VSummary theta)) ->
     exists phi_fun phi_arg phi_summary
       closure_env closure_rho f x ec ee arg heap_arg,
     exists heap_fun,
-      NSteps
-        (NInitialState heap env rho ef)
+      Steps
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap_fun (VClosure closure_env closure_rho f x ec ee)) /\
-      NSteps
-        (NInitialState heap_fun env rho ea)
+      Steps
+        (InitialState heap_fun env rho ea)
         phi_arg
         (StDone heap_arg arg) /\
-      NSteps
-        (NInitialState heap_arg
+      Steps
+        (InitialState heap_arg
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -1186,20 +1186,20 @@ Proof.
       heap env rho ef ea phi heap_final (VSummary theta) HSteps)
     as (phi_fun_tail & HFunWithKont & HTraceStart).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap env rho ef (KEffAppFun ea env rho KDone))
       phi_fun_tail
       (StDone heap_final (VSummary theta))
       HFunWithKont)
     as (n_fun & HFunWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_fun
       (StEval heap env rho ef (KEffAppFun ea env rho KDone))
       phi_fun_tail
       heap_final (VSummary theta)
       HFunWithKontN
-      (NInitialState heap env rho ef)
+      (InitialState heap env rho ef)
       (KEffAppFun ea env rho KDone)
       eq_refl)
     as (phi_fun & heap_fun & v_fun & phi_after_fun &
@@ -1216,7 +1216,7 @@ Proof.
       phi_after_fun heap_final (VSummary theta) HAfterFun)
     as (phi_arg_tail & HArgWithKont & HTraceAfterFun).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap_fun env rho ea
         (KEffAppArg closure_env closure_rho f x ec ee KDone))
       phi_arg_tail
@@ -1224,14 +1224,14 @@ Proof.
       HArgWithKont)
     as (n_arg & HArgWithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_arg
       (StEval heap_fun env rho ea
         (KEffAppArg closure_env closure_rho f x ec ee KDone))
       phi_arg_tail
       heap_final (VSummary theta)
       HArgWithKontN
-      (NInitialState heap_fun env rho ea)
+      (InitialState heap_fun env rho ea)
       (KEffAppArg closure_env closure_rho f x ec ee KDone)
       eq_refl)
     as (phi_arg & heap_arg & arg & phi_after_arg &
@@ -1251,33 +1251,33 @@ Qed.
 
 Theorem EEffApp_summary_trace_covered_from_components :
   forall heap env rho ef ea phi heap_final theta,
-    NSteps
-      (NInitialState heap env rho (EEffApp ef ea))
+    Steps
+      (InitialState heap env rho (EEffApp ef ea))
       phi
       (StDone heap_final (VSummary theta)) ->
     (forall phi_fun heap_fun
-      (closure_env : NEnv) (closure_rho : Rho)
-      (f x : VarId) (ec ee : NExpr),
-      NSteps
-        (NInitialState heap env rho ef)
+      (closure_env : Env) (closure_rho : Rho)
+      (f x : VarId) (ec ee : Expr),
+      Steps
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap_fun
           (VClosure closure_env closure_rho f x ec ee)) ->
       TraceCoveredBySummary phi_fun theta) ->
     (forall phi_arg heap_fun
-      (closure_env : NEnv) (closure_rho : Rho)
-      (f x : VarId) (ec ee : NExpr)
-      (arg : NVal) heap_arg,
-      NSteps
-        (NInitialState heap_fun env rho ea)
+      (closure_env : Env) (closure_rho : Rho)
+      (f x : VarId) (ec ee : Expr)
+      (arg : Val) heap_arg,
+      Steps
+        (InitialState heap_fun env rho ea)
         phi_arg
         (StDone heap_arg arg) ->
       TraceCoveredBySummary phi_arg theta) ->
     (forall phi_summary heap_arg
-      (closure_env : NEnv) (closure_rho : Rho)
-      (f x : VarId) (ec ee : NExpr) (arg : NVal),
-      NSteps
-        (NInitialState heap_arg
+      (closure_env : Env) (closure_rho : Rho)
+      (f x : VarId) (ec ee : Expr) (arg : Val),
+      Steps
+        (InitialState heap_arg
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -1306,24 +1306,24 @@ Qed.
 
 Definition EEffAppCountedDecompositionGoal : Prop :=
   forall n heap env rho ef ea phi heap_final theta,
-    NStepsN n
-      (NInitialState heap env rho (EEffApp ef ea))
+    StepsN n
+      (InitialState heap env rho (EEffApp ef ea))
       phi
       (StDone heap_final (VSummary theta)) ->
     exists n_fun n_arg n_summary
       phi_fun phi_arg phi_summary
       closure_env closure_rho f x ec ee arg heap_arg,
     exists heap_fun,
-      NStepsN n_fun
-        (NInitialState heap env rho ef)
+      StepsN n_fun
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap_fun (VClosure closure_env closure_rho f x ec ee)) /\
-      NStepsN n_arg
-        (NInitialState heap_fun env rho ea)
+      StepsN n_arg
+        (InitialState heap_fun env rho ea)
         phi_arg
         (StDone heap_arg arg) /\
-      NStepsN n_summary
-        (NInitialState heap_arg
+      StepsN n_summary
+        (InitialState heap_arg
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -1347,13 +1347,13 @@ Proof.
     as (n_fun_tail & phi_fun_tail & HnStart &
       HFunWithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_fun_tail
       (StEval heap env rho ef (KEffAppFun ea env rho KDone))
       phi_fun_tail
       heap_final (VSummary theta)
       HFunWithKont
-      (NInitialState heap env rho ef)
+      (InitialState heap env rho ef)
       (KEffAppFun ea env rho KDone)
       eq_refl)
     as (n_fun & n_after_fun & phi_fun & heap_fun & v_fun &
@@ -1363,7 +1363,7 @@ Proof.
       (KEffAppFun_terminal_value_is_closure
         heap_fun v_fun ea env rho KDone
         phi_after_fun heap_final (VSummary theta)
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_fun
           (StReturn heap_fun v_fun (KEffAppFun ea env rho KDone))
           phi_after_fun
@@ -1379,14 +1379,14 @@ Proof.
       as (n_arg_tail & phi_arg_tail & HCountAfterFun &
         HArgWithKont & HTraceAfterFun).
     destruct
-      (NStepsN_append_kont_terminal_split_counted
+      (StepsN_append_kont_terminal_split_counted
         n_arg_tail
         (StEval heap_fun env rho ea
           (KEffAppArg closure_env closure_rho f x ec ee KDone))
         phi_arg_tail
         heap_final (VSummary theta)
         HArgWithKont
-        (NInitialState heap_fun env rho ea)
+        (InitialState heap_fun env rho ea)
         (KEffAppArg closure_env closure_rho f x ec ee KDone)
         eq_refl)
       as (n_arg & n_after_arg & phi_arg & heap_arg & arg &
@@ -1412,7 +1412,7 @@ Qed.
 
 Theorem EEffApp_counted_checked_summary_heap_neutral_decomposition :
   forall n gamma omega heap env rho ef ea phi heap_final theta,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -1421,16 +1421,16 @@ Theorem EEffApp_counted_checked_summary_heap_neutral_decomposition :
     exists n_fun n_arg n_summary
       phi_fun phi_arg phi_summary
       closure_env closure_rho f x ec ee arg,
-      NStepsN n_fun
-        (NInitialState heap env rho ef)
+      StepsN n_fun
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap (VClosure closure_env closure_rho f x ec ee)) /\
-      NStepsN n_arg
-        (NInitialState heap env rho ea)
+      StepsN n_arg
+        (InitialState heap env rho ea)
         phi_arg
         (StDone heap arg) /\
-      NStepsN n_summary
-        (NInitialState heap
+      StepsN n_summary
+        (InitialState heap
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -1456,7 +1456,7 @@ Proof.
       heap_fun & HFun & HArg & HBody & HCountFun & HCountArg &
       HCountSummary & HTrace).
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (_ & _ & eff_eff & _ & _ & _ & _ &
       _ & HCheckedEffApp & _ & _ & HStaticEff & _ & _ & _ & _).
   pose proof
@@ -1466,11 +1466,11 @@ Proof.
         gamma omega heap env rho HContext))
     as HRho.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef ea) TyEffect eff_eff HCheckedEffApp)
     as HEffWF.
   destruct
-    (NResolveStaticEffect_exists 0 omega rho eff_eff HRho HEffWF)
+    (ResolveStaticEffect_exists 0 omega rho eff_eff HRho HEffWF)
     as (eff_eff_res & HResolveEff).
   assert
     (HSummary :
@@ -1478,7 +1478,7 @@ Proof.
         phi heap_final theta).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HComp.
   }
   pose proof
@@ -1508,8 +1508,8 @@ Proof.
   assert
     (HHeapFun : heap_fun = heap).
   {
-    eapply NSteps_heap_neutral_initial_heap.
-    - eapply NStepsN_to_NSteps.
+    eapply Steps_heap_neutral_initial_heap.
+    - eapply StepsN_to_Steps.
       exact HFun.
     - exact HNeutralFun.
   }
@@ -1529,8 +1529,8 @@ Proof.
   assert
     (HHeapArg : heap_arg = heap).
   {
-    eapply NSteps_heap_neutral_initial_heap.
-    - eapply NStepsN_to_NSteps.
+    eapply Steps_heap_neutral_initial_heap.
+    - eapply StepsN_to_Steps.
       exact HArg.
     - exact HNeutralArg.
   }
@@ -1551,7 +1551,7 @@ Qed.
 
 Theorem EEffApp_counted_checked_store_summary_heap_neutral_decomposition :
   forall n gamma omega heap env rho ef ea phi heap_final theta,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -1560,16 +1560,16 @@ Theorem EEffApp_counted_checked_store_summary_heap_neutral_decomposition :
     exists n_fun n_arg n_summary
       phi_fun phi_arg phi_summary
       closure_env closure_rho f x ec ee arg,
-      NStepsN n_fun
-        (NInitialState heap env rho ef)
+      StepsN n_fun
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap (VClosure closure_env closure_rho f x ec ee)) /\
-      NStepsN n_arg
-        (NInitialState heap env rho ea)
+      StepsN n_arg
+        (InitialState heap env rho ea)
         phi_arg
         (StDone heap arg) /\
-      NStepsN n_summary
-        (NInitialState heap
+      StepsN n_summary
+        (InitialState heap
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -1595,7 +1595,7 @@ Proof.
       heap_fun & HFun & HArg & HBody & HCountFun & HCountArg &
       HCountSummary & HTrace).
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (_ & _ & eff_eff & _ & _ & _ & _ &
       _ & HCheckedEffApp & _ & _ & HStaticEff & _ & _ & _ & _).
   pose proof
@@ -1603,11 +1603,11 @@ Proof.
       gamma omega heap env rho HContext)
     as HRho.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef ea) TyEffect eff_eff HCheckedEffApp)
     as HEffWF.
   destruct
-    (NResolveStaticEffect_exists 0 omega rho eff_eff HRho HEffWF)
+    (ResolveStaticEffect_exists 0 omega rho eff_eff HRho HEffWF)
     as (eff_eff_res & HResolveEff).
   assert
     (HSummary :
@@ -1615,7 +1615,7 @@ Proof.
         phi heap_final theta).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HComp.
   }
   pose proof
@@ -1645,8 +1645,8 @@ Proof.
   assert
     (HHeapFun : heap_fun = heap).
   {
-    eapply NSteps_heap_neutral_initial_heap.
-    - eapply NStepsN_to_NSteps.
+    eapply Steps_heap_neutral_initial_heap.
+    - eapply StepsN_to_Steps.
       exact HFun.
     - exact HNeutralFun.
   }
@@ -1666,8 +1666,8 @@ Proof.
   assert
     (HHeapArg : heap_arg = heap).
   {
-    eapply NSteps_heap_neutral_initial_heap.
-    - eapply NStepsN_to_NSteps.
+    eapply Steps_heap_neutral_initial_heap.
+    - eapply StepsN_to_Steps.
       exact HArg.
     - exact HNeutralArg.
   }
@@ -1689,15 +1689,15 @@ Qed.
 Theorem EEffApp_checked_summary_body_store_context_from_prefixes :
   forall gamma omega heap env rho ef ea
     n_fun n_arg phi_fun phi_arg closure_env closure_rho f x ec ee arg,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
-    NStepsN n_fun
-      (NInitialState heap env rho ef)
+    StepsN n_fun
+      (InitialState heap env rho ef)
       phi_fun
       (StDone heap (VClosure closure_env closure_rho f x ec ee)) ->
-    NStepsN n_arg
-      (NInitialState heap env rho ea)
+    StepsN n_arg
+      (InitialState heap env rho ea)
       phi_arg
       (StDone heap arg) ->
     exists gamma_closure omega_closure
@@ -1713,17 +1713,17 @@ Theorem EEffApp_checked_summary_body_store_context_from_prefixes :
             (VClosure closure_env closure_rho f x ec ee)
             closure_env))
         closure_rho /\
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) ::
           gamma_closure)
         omega_closure ec ty_body eff_body /\
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) ::
           gamma_closure)
         omega_closure ee TyEffect eff_summary /\
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) ::
           gamma_closure)
@@ -1733,11 +1733,11 @@ Proof.
     n_fun n_arg phi_fun phi_arg closure_env closure_rho f x ec ee arg
     HBack HContext HFun HArg.
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (_ & _ & eff_eff & _ & _ & _ & _ &
       _ & HCheckedEffApp & _ & _ & _ & _ & _ & _ & _).
   destruct
-    (NCheckedTcExp_EEffApp_inv
+    (CheckedTcExp_EEffApp_inv
       gamma omega ef ea eff_eff HCheckedEffApp)
     as (ty_arg_app & ty_body_app & eff_body_app &
       eff_summary_app & eff_f & eff_a &
@@ -1748,7 +1748,7 @@ Proof.
         (VClosure closure_env closure_rho f x ec ee)).
   {
     unfold ComputationEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HFun.
   }
   assert
@@ -1756,7 +1756,7 @@ Proof.
       ComputationEvaluation heap env rho ea phi_arg heap arg).
   {
     unfold ComputationEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HArg.
   }
   destruct
@@ -1771,7 +1771,7 @@ Proof.
       HResolveFun & HResolveArg & HBounded & HHeap &
       HValFun & HValArg).
   destruct
-    (NStoreResolvedValShape_closure_inv
+    (StoreResolvedValShape_closure_inv
       store closure_env closure_rho f x ec ee ty_fun_res HValFun)
     as
       (gamma_closure & omega_closure &
@@ -1788,11 +1788,11 @@ Proof.
   {
     rewrite HTyFun in HResolveFun.
     inversion HResolveFun; subst.
-    eapply NResolveTy_deterministic; eauto.
+    eapply ResolveTy_deterministic; eauto.
   }
   assert
     (HValFunArrow :
-      NStoreResolvedValShape store
+      StoreResolvedValShape store
         (VClosure closure_env closure_rho f x ec ee)
         (TyArrow ty_arg_closure_res eff_body_closure_res
           ty_body_closure_res eff_summary_closure_res)).
@@ -1806,18 +1806,18 @@ Proof.
   split.
   - split.
     + exists store.
-      unfold NStoreResolvedRuntimeShape.
+      unfold StoreResolvedRuntimeShape.
       split; [exact HBounded |].
       split; [exact HHeap |].
-      eapply NStoreResolvedEnvShape_extend with
+      eapply StoreResolvedEnvShape_extend with
         (ty_res := ty_arg_closure_res).
       * exact HResolveClosureArg.
       * rewrite <- HArgResEq. exact HValArg.
-      * eapply NStoreResolvedEnvShape_extend with
+      * eapply StoreResolvedEnvShape_extend with
           (ty_res :=
             TyArrow ty_arg_closure_res eff_body_closure_res
               ty_body_closure_res eff_summary_closure_res).
-        -- eapply NResolve_Arrow; eauto.
+        -- eapply Resolve_Arrow; eauto.
         -- exact HValFunArrow.
         -- exact HEnvClosure.
     + exact HRhoClosure.
@@ -1830,7 +1830,7 @@ Theorem EMuApp_checked_store_context_case_from_below :
   forall n gamma omega heap env rho ef ea
     phi heap_final v_final phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega (EMuApp ef ea) (EEffApp ef ea) ->
+    CheckedBackTriangle gamma omega (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedComputationTraceSoundnessFor gamma omega heap env rho ->
     CountedComputationEvaluation n heap env rho
@@ -1843,7 +1843,7 @@ Proof.
     phi heap_final v_final phi_summary heap_summary theta
     HBelow HBack HContext HComputationTraceSound HComp HSummary.
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (ty_mu & eff_mu & eff_eff & ty_ef & ty_ea & eff_ef &
       eff_ea & HCheckedApp & HCheckedEffApp & HCheckedFun &
       HCheckedArg & _HStaticEff & HStaticFun & HStaticArg &
@@ -1895,14 +1895,14 @@ Proof.
       arg_summary & heap_arg_summary & heap_fun_summary &
       HFunSummary & HArgSummary & HBodySummary & _HSummaryTrace).
   destruct
-    (NSteps_terminal_trace_deterministic
-      (NInitialState heap env rho ef)
+    (Steps_terminal_trace_deterministic
+      (InitialState heap env rho ef)
       phi_fun heap (VClosure closure_env closure_rho f x ec ee)
       phi_fun_summary heap_fun_summary
       (VClosure closure_env_summary closure_rho_summary
         f_summary x_summary ec_summary ee_summary))
     as (_HTraceFunEq & HHeapFunSummaryEq & HClosureEq).
-  - eapply NStepsN_to_NSteps.
+  - eapply StepsN_to_Steps.
     exact HFun.
   - exact HFunSummary.
   - subst heap_fun_summary.
@@ -1910,12 +1910,12 @@ Proof.
       closure_env_summary closure_rho_summary
       f_summary x_summary ec_summary ee_summary.
     destruct
-      (NSteps_terminal_trace_deterministic
-        (NInitialState heap env rho ea)
+      (Steps_terminal_trace_deterministic
+        (InitialState heap env rho ea)
         phi_arg heap arg
         phi_arg_summary heap_arg_summary arg_summary)
       as (_HTraceArgEq & HHeapArgSummaryEq & HArgEq).
-    + eapply NStepsN_to_NSteps.
+    + eapply StepsN_to_Steps.
       exact HArg.
     + exact HArgSummary.
     + subst heap_arg_summary arg_summary.
@@ -2003,7 +2003,7 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_below_body :
   forall n_bound n_eval gamma omega heap env rho ef ea phi theta,
     CheckedStoreContextSmallStepCorrectnessBelow n_bound ->
     n_eval < n_bound ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -2012,8 +2012,8 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_below_body :
     (forall n_summary phi_summary
       closure_env closure_rho f x ec ee arg,
       n_summary < n_bound ->
-      NStepsN n_summary
-        (NInitialState heap
+      StepsN n_summary
+        (InitialState heap
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -2037,7 +2037,7 @@ Proof.
       HFun & HArg & HBody & HCountFun & HCountArg &
       HCountSummary & _ & HTrace).
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (_ & _ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & HBackFun & HBackArg).
   assert
@@ -2046,7 +2046,7 @@ Proof.
         phi heap theta).
   {
     unfold SummaryEvaluation, CountedComputationEvaluation in *.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HComp.
   }
   assert
@@ -2110,7 +2110,7 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_below_body_cont
   forall n_bound n_eval gamma omega heap env rho ef ea phi theta,
     CheckedStoreContextSmallStepCorrectnessBelow n_bound ->
     n_eval < n_bound ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -2127,11 +2127,11 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_below_body_cont
             (VClosure closure_env closure_rho f x ec ee)
             closure_env))
         closure_rho ->
-      NCheckedTcExp gamma_body omega_body ec ty_body eff_body ->
-      NCheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
-	      NCheckedBackTriangle gamma_body omega_body ec ee ->
-      NStepsN n_summary
-        (NInitialState heap
+      CheckedTcExp gamma_body omega_body ec ty_body eff_body ->
+      CheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
+	      CheckedBackTriangle gamma_body omega_body ec ee ->
+      StepsN n_summary
+        (InitialState heap
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -2155,7 +2155,7 @@ Proof.
       HFun & HArg & HBody & HCountFun & HCountArg &
       HCountSummary & _ & HTrace).
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (_ & _ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & HBackFun & HBackArg).
   assert
@@ -2164,7 +2164,7 @@ Proof.
         phi heap theta).
   {
     unfold SummaryEvaluation, CountedComputationEvaluation in *.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HComp.
   }
   assert
@@ -2232,7 +2232,7 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_entry_below_bod
   forall n_bound n_eval gamma omega heap env rho ef ea phi theta,
     CheckedStoreContextSmallStepCorrectnessBelow n_bound ->
     n_eval < n_bound ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -2249,11 +2249,11 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_entry_below_bod
             (VClosure closure_env closure_rho f x ec ee)
             closure_env))
         closure_rho ->
-      NCheckedTcExp gamma_body omega_body ec ty_body eff_body ->
-      NCheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
-	      NCheckedBackTriangle gamma_body omega_body ec ee ->
-      NStepsN n_summary
-        (NInitialState heap
+      CheckedTcExp gamma_body omega_body ec ty_body eff_body ->
+      CheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
+	      CheckedBackTriangle gamma_body omega_body ec ee ->
+      StepsN n_summary
+        (InitialState heap
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -2277,7 +2277,7 @@ Proof.
       HFun & HArg & HBody & HCountFun & HCountArg &
       HCountSummary & _ & HTrace).
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (_ & _ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & HBackFun & HBackArg).
   assert
@@ -2286,7 +2286,7 @@ Proof.
         phi heap theta).
   {
     unfold SummaryEvaluation, CountedComputationEvaluation in *.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HComp.
   }
   destruct
@@ -2349,7 +2349,7 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_below_summary_v
     CheckedStoreContextSmallStepCorrectnessBelow n_bound ->
     CheckedStoreSummaryValueSoundnessBelow n_bound ->
     n_eval < n_bound ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -2364,9 +2364,9 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_below_summary_v
             (VClosure closure_env closure_rho f x ec ee)
             closure_env))
         closure_rho ->
-      NCheckedTcExp gamma_body omega_body ec ty_body eff_body ->
-      NCheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
-      NCheckedBackTriangle gamma_body omega_body ec ee) ->
+      CheckedTcExp gamma_body omega_body ec ty_body eff_body ->
+      CheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
+      CheckedBackTriangle gamma_body omega_body ec ee) ->
     TraceCoveredBySummary phi theta.
 Proof.
   intros n_bound n_eval gamma omega heap env rho ef ea phi theta
@@ -2411,7 +2411,7 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_entry_below_sum
     CheckedStoreContextSmallStepCorrectnessBelow n_bound ->
     CheckedStoreSummaryValueSoundnessBelow n_bound ->
     n_eval < n_bound ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -2455,7 +2455,7 @@ Theorem EEffApp_counted_checked_summary_trace_covered_from_store_entry_at :
   forall n_eval gamma omega heap env rho ef ea phi theta,
     CheckedStoreContextSmallStepCorrectnessBelow n_eval ->
     CheckedStoreSummaryValueSoundnessBelow n_eval ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef ea) (EEffApp ef ea) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
     CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
@@ -2476,7 +2476,7 @@ Proof.
       HFun & HArg & HBody & HCountFun & HCountArg &
       HCountSummary & _ & HTrace).
   destruct
-    (NCBT_App_components gamma omega ef ea HBack)
+    (CBT_App_components gamma omega ef ea HBack)
     as (_ & _ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & HBackFun & HBackArg).
   destruct
@@ -2503,7 +2503,7 @@ Proof.
     - exact HContext.
     - unfold CountedComputationEvaluation. exact HFun.
     - unfold SummaryEvaluation, CountedComputationEvaluation in *.
-      eapply NStepsN_to_NSteps. exact HComp.
+      eapply StepsN_to_Steps. exact HComp.
   }
   assert (HCoveredArg : TraceCoveredBySummary phi_arg theta).
   {
@@ -2518,7 +2518,7 @@ Proof.
     - exact HContext.
     - unfold CountedComputationEvaluation. exact HArg.
     - unfold SummaryEvaluation, CountedComputationEvaluation in *.
-      eapply NStepsN_to_NSteps. exact HComp.
+      eapply StepsN_to_Steps. exact HComp.
   }
   assert (HCoveredSummary : TraceCoveredBySummary phi_summary theta).
   {
@@ -2550,36 +2550,36 @@ Qed.
 
 Theorem EEffApp_counted_summary_trace_covered_from_components :
   forall n heap env rho ef ea phi heap_final theta,
-    NStepsN n
-      (NInitialState heap env rho (EEffApp ef ea))
+    StepsN n
+      (InitialState heap env rho (EEffApp ef ea))
       phi
       (StDone heap_final (VSummary theta)) ->
     (forall n_fun phi_fun heap_fun
-      (closure_env : NEnv) (closure_rho : Rho)
-      (f x : VarId) (ec ee : NExpr),
+      (closure_env : Env) (closure_rho : Rho)
+      (f x : VarId) (ec ee : Expr),
       n_fun < n ->
-      NStepsN n_fun
-        (NInitialState heap env rho ef)
+      StepsN n_fun
+        (InitialState heap env rho ef)
         phi_fun
         (StDone heap_fun
           (VClosure closure_env closure_rho f x ec ee)) ->
       TraceCoveredBySummary phi_fun theta) ->
     (forall n_arg phi_arg heap_fun
-      (closure_env : NEnv) (closure_rho : Rho)
-      (f x : VarId) (ec ee : NExpr)
-      (arg : NVal) heap_arg,
+      (closure_env : Env) (closure_rho : Rho)
+      (f x : VarId) (ec ee : Expr)
+      (arg : Val) heap_arg,
       n_arg < n ->
-      NStepsN n_arg
-        (NInitialState heap_fun env rho ea)
+      StepsN n_arg
+        (InitialState heap_fun env rho ea)
         phi_arg
         (StDone heap_arg arg) ->
       TraceCoveredBySummary phi_arg theta) ->
     (forall n_summary phi_summary heap_arg
-      (closure_env : NEnv) (closure_rho : Rho)
-      (f x : VarId) (ec ee : NExpr) (arg : NVal),
+      (closure_env : Env) (closure_rho : Rho)
+      (f x : VarId) (ec ee : Expr) (arg : Val),
       n_summary < n ->
-      NStepsN n_summary
-        (NInitialState heap_arg
+      StepsN n_summary
+        (InitialState heap_arg
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)

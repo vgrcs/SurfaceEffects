@@ -22,7 +22,7 @@ Import ListNotations.
 
 Lemma StError_no_done :
   forall heap_error phi heap v,
-    ~ NSteps (StError heap_error) phi (StDone heap v).
+    ~ Steps (StError heap_error) phi (StDone heap v).
 Proof.
   intros heap_error phi heap v HSteps.
   remember (StError heap_error) as start eqn:HStart.
@@ -35,11 +35,11 @@ Qed.
 
 Lemma StError_no_done_N :
   forall n heap_error phi heap v,
-    ~ NStepsN n (StError heap_error) phi (StDone heap v).
+    ~ StepsN n (StError heap_error) phi (StDone heap v).
 Proof.
   intros n heap_error phi heap v HSteps.
   eapply StError_no_done.
-  eapply NStepsN_to_NSteps; eauto.
+  eapply StepsN_to_Steps; eauto.
 Qed.
 
 Lemma with_state_heap_idempotent :
@@ -57,17 +57,17 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma NCBT_PairPar_summary_static_heap_neutral :
+Lemma CBT_PairPar_summary_static_heap_neutral :
   forall gamma omega ef1 ea1 ef2 ea2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     exists ty1 ty2 eff1 eff2 eff_summary1 eff_summary2,
-      NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 /\
-      NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 /\
-      NCheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
+      CheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 /\
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 /\
+      CheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
         eff_summary1 /\
-      NCheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
+      CheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
         eff_summary2 /\
       static_heap_neutral eff_summary1 /\
       static_heap_neutral eff_summary2.
@@ -82,22 +82,22 @@ Proof.
   split; assumption.
 Qed.
 
-Corollary NCBT_PairPar_summary_static_noalloc :
+Corollary CBT_PairPar_summary_static_noalloc :
   forall gamma omega ef1 ea1 ef2 ea2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     exists eff_summary1 eff_summary2,
-      NCheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
+      CheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
         eff_summary1 /\
-      NCheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
+      CheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
         eff_summary2 /\
       static_noalloc eff_summary1 /\
       static_noalloc eff_summary2.
 Proof.
   intros gamma omega ef1 ea1 ef2 ea2 HBack.
   destruct
-    (NCBT_PairPar_summary_static_heap_neutral
+    (CBT_PairPar_summary_static_heap_neutral
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & eff_summary1 & eff_summary2 &
       _ & _ & HCheckedSummary1 & HCheckedSummary2 &
@@ -112,22 +112,22 @@ Proof.
     exact HNoAlloc2.
 Qed.
 
-Corollary NCBT_PairPar_summary_static_readonly :
+Corollary CBT_PairPar_summary_static_readonly :
   forall gamma omega ef1 ea1 ef2 ea2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     exists eff_summary1 eff_summary2,
-      NCheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
+      CheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
         eff_summary1 /\
-      NCheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
+      CheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
         eff_summary2 /\
       static_readonly eff_summary1 /\
       static_readonly eff_summary2.
 Proof.
   intros gamma omega ef1 ea1 ef2 ea2 HBack.
   destruct
-    (NCBT_PairPar_summary_static_heap_neutral
+    (CBT_PairPar_summary_static_heap_neutral
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & eff_summary1 & eff_summary2 &
       _ & _ & HCheckedSummary1 & HCheckedSummary2 &
@@ -142,25 +142,25 @@ Proof.
     exact HReadOnly2.
 Qed.
 
-Lemma NCBT_PairPar_components :
+Lemma CBT_PairPar_components :
   forall gamma omega ef1 ea1 ef2 ea2,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     exists ty1 ty2 eff1 eff2 eff_summary1 eff_summary2,
-      NCheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 /\
-      NCheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 /\
-      NCheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
+      CheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 /\
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 /\
+      CheckedTcExp gamma omega (EEffApp ef1 ea1) TyEffect
         eff_summary1 /\
-      NCheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
+      CheckedTcExp gamma omega (EEffApp ef2 ea2) TyEffect
         eff_summary2 /\
       static_heap_neutral eff_summary1 /\
       static_heap_neutral eff_summary2 /\
       static_noalloc eff1 /\
       static_noalloc eff2 /\
-      NCheckedBackTriangle gamma omega
+      CheckedBackTriangle gamma omega
         (EMuApp ef1 ea1) (EEffApp ef1 ea1) /\
-      NCheckedBackTriangle gamma omega
+      CheckedBackTriangle gamma omega
         (EMuApp ef2 ea2) (EEffApp ef2 ea2).
 Proof.
   intros gamma omega ef1 ea1 ef2 ea2 HBack.
@@ -176,12 +176,12 @@ Proof.
   split; [assumption |].
   split.
   - match goal with
-    | H : NCheckedBackTriangle _ _
+    | H : CheckedBackTriangle _ _
         (EMuApp ef1 ea1) (EEffApp ef1 ea1) |- _ =>
         exact H
     end.
   - match goal with
-    | H : NCheckedBackTriangle _ _
+    | H : CheckedBackTriangle _ _
         (EMuApp ef2 ea2) (EEffApp ef2 ea2) |- _ =>
         exact H
     end.
@@ -189,13 +189,13 @@ Qed.
 
 Lemma EPairPar_terminal_first_step :
   forall heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho
+    Steps
+      (InitialState heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho (EEffApp ef1 ea1)
           (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
         phi_tail
@@ -204,7 +204,7 @@ Lemma EPairPar_terminal_first_step :
 Proof.
   intros heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps.
   remember
-    (NInitialState heap env rho
+    (InitialState heap env rho
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
     as start eqn:HStart.
   remember (StDone heap_final v_final) as final eqn:HFinal.
@@ -212,7 +212,7 @@ Proof.
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StEval heap env rho
           (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)) KDone)
         LSilent
@@ -229,14 +229,14 @@ Qed.
 
 Lemma EPairPar_terminal_first_step_N :
   forall n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho
+    StepsN n
+      (InitialState heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho (EEffApp ef1 ea1)
           (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
         phi_tail
@@ -245,9 +245,9 @@ Lemma EPairPar_terminal_first_step_N :
 Proof.
   intros n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
-      (NInitialState heap env rho
+      (InitialState heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
       LSilent
       (StEval heap env rho (EEffApp ef1 ea1)
@@ -263,7 +263,7 @@ Qed.
 
 Lemma KPairParEff1_terminal_value_is_summary :
   forall heap v ef1 ea1 ef2 ea2 env rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
       phi
       (StDone heap_final v_final) ->
@@ -285,14 +285,14 @@ Qed.
 Lemma KPairParEff1_summary_terminal_first_step_N :
   forall n heap theta1 ef1 ea1 ef2 ea2 env rho k phi heap_final
     v_final,
-    NStepsN n
+    StepsN n
       (StReturn heap (VSummary theta1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
       phi
       (StDone heap_final v_final) ->
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StEval heap env rho (EEffApp ef2 ea2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
         phi_tail
@@ -302,7 +302,7 @@ Proof.
   intros n heap theta1 ef1 ea1 ef2 ea2 env rho k phi heap_final
     v_final HSteps.
   destruct
-    (NStepsN_known_first_step_terminal_inv
+    (StepsN_known_first_step_terminal_inv
       n
       (StReturn heap (VSummary theta1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
@@ -320,13 +320,13 @@ Qed.
 
 Lemma KPairParEff1_summary_terminal_first_step :
   forall heap theta1 ef1 ea1 ef2 ea2 env rho k phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VSummary theta1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
       phi
       (StDone heap_final v_final) ->
     exists phi_tail,
-      NSteps
+      Steps
         (StEval heap env rho (EEffApp ef2 ea2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
         phi_tail
@@ -344,7 +344,7 @@ Proof.
   - rewrite HStart in HFinal. inversion HFinal.
   - subst state state''.
     destruct
-      (NStep_deterministic
+      (Step_deterministic
         (StReturn heap (VSummary theta1)
           (KPairParEff1 ef1 ea1 ef2 ea2 env rho k))
         LSilent
@@ -362,7 +362,7 @@ Qed.
 Lemma KPairParEff2_terminal_value_is_summary :
   forall heap v ef1 ea1 ef2 ea2 env rho theta1 k
     phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap v
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       phi
@@ -386,14 +386,14 @@ Qed.
 Lemma KPairParEff2_summary_terminal_check_pass :
   forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k
     phi heap_final v_final,
-    NSteps
+    Steps
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       phi
       (StDone heap_final v_final) ->
     summary_disjointb theta1 theta2 = true /\
     exists phi_tail,
-      NSteps
+      Steps
         (StPairParRun
           (StEval heap env rho (EMuApp ef1 ea1) KDone)
           (StEval heap env rho (EMuApp ef2 ea2) KDone)
@@ -414,7 +414,7 @@ Proof.
     + rewrite HStart in HFinal. inversion HFinal.
     + subst state state''.
       destruct
-        (NStep_deterministic
+        (Step_deterministic
           (StReturn heap (VSummary theta2)
             (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
           LSilent
@@ -440,7 +440,7 @@ Proof.
     + rewrite HStart in HFinal. inversion HFinal.
     + subst state state''.
       destruct
-        (NStep_deterministic
+        (Step_deterministic
           (StReturn heap (VSummary theta2)
             (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
           LSilent
@@ -458,7 +458,7 @@ Qed.
 Lemma KPairParEff2_summary_terminal_check_pass_N :
   forall n heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       phi
@@ -466,7 +466,7 @@ Lemma KPairParEff2_summary_terminal_check_pass_N :
     summary_disjointb theta1 theta2 = true /\
     exists n_tail phi_tail,
       n = S n_tail /\
-      NStepsN n_tail
+      StepsN n_tail
         (StPairParRun
           (StEval heap env rho (EMuApp ef1 ea1) KDone)
           (StEval heap env rho (EMuApp ef2 ea2) KDone)
@@ -479,7 +479,7 @@ Proof.
     phi heap_final v_final HSteps.
   destruct (summary_disjointb theta1 theta2) eqn:HCheck.
   - destruct
-      (NStepsN_known_first_step_terminal_inv
+      (StepsN_known_first_step_terminal_inv
         n
         (StReturn heap (VSummary theta2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
@@ -498,7 +498,7 @@ Proof.
     exists n_tail, phi_tail.
     repeat split; assumption.
   - destruct
-      (NStepsN_known_first_step_terminal_inv
+      (StepsN_known_first_step_terminal_inv
         n
         (StReturn heap (VSummary theta2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
@@ -516,7 +516,7 @@ Qed.
 Lemma StPairParRun_right_phase_decomposition_N :
   forall n heap_left v_left right_state phi_left_acc phi_right_acc
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StPairParRun
         (StDone heap_left v_left)
         right_state
@@ -526,7 +526,7 @@ Lemma StPairParRun_right_phase_decomposition_N :
       phi
       (StDone heap_final v_final) ->
     exists phi_right heap_right v_right,
-      NSteps right_state phi_right (StDone heap_right v_right) /\
+      Steps right_state phi_right (StDone heap_right v_right) /\
       trace_disjointb phi_left_acc (phi_right_acc ++ phi_right) = true /\
       heap_final = heap_right /\
       v_final = VPair v_left v_right /\
@@ -541,14 +541,14 @@ Proof.
       subst; clear HRun.
     inversion HStep0; subst.
     all: try match goal with
-    | H : NStep (StDone _ _) _ _ |- _ => inversion H
+    | H : Step (StDone _ _) _ _ |- _ => inversion H
     end.
     all: try match goal with
-    | H : NStepsN _ (StError _) _ (StDone _ _) |- _ =>
+    | H : StepsN _ (StError _) _ (StDone _ _) |- _ =>
         exfalso; eapply StError_no_done_N; exact H
     end.
     all: try match goal with
-    | HRightStep : NStep ?right_state0 ?label ?right_state' |- _ =>
+    | HRightStep : Step ?right_state0 ?label ?right_state' |- _ =>
         destruct
           (IH (state_heap right_state') v_left right_state'
             phi_left_acc (phi_right_acc ++ label_trace label)
@@ -564,16 +564,16 @@ Proof.
             subst phi0; reflexivity ] ]
     end.
     all: try match goal with
-    | HTail : NStepsN _ (StReturn ?heap (VPair ?v_left0 ?v2) KDone)
+    | HTail : StepsN _ (StReturn ?heap (VPair ?v_left0 ?v2) KDone)
         ?phi_tail (StDone ?heap_final0 ?v_final0) |- _ =>
         destruct
-          (NSteps_return_done_inv
+          (Steps_return_done_inv
             heap
             (VPair v_left0 v2)
             phi_tail
             heap_final0
             v_final0
-            (NStepsN_to_NSteps _ _ _ _ HTail))
+            (StepsN_to_Steps _ _ _ _ HTail))
           as (HHeap & HVal & HTrace);
         subst heap_final0 v_final0 phi_tail;
         exists [], heap, v2;
@@ -588,7 +588,7 @@ Qed.
 Lemma StPairParRun_right_phase_counted_decomposition_N :
   forall n heap_left v_left right_state phi_left_acc phi_right_acc
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StPairParRun
         (StDone heap_left v_left)
         right_state
@@ -598,7 +598,7 @@ Lemma StPairParRun_right_phase_counted_decomposition_N :
       phi
       (StDone heap_final v_final) ->
     exists n_right phi_right heap_right v_right,
-      NStepsN n_right right_state phi_right (StDone heap_right v_right) /\
+      StepsN n_right right_state phi_right (StDone heap_right v_right) /\
       n_right < n /\
       trace_disjointb phi_left_acc (phi_right_acc ++ phi_right) = true /\
       heap_final = heap_right /\
@@ -614,14 +614,14 @@ Proof.
       subst; clear HRun.
     inversion HStep0; subst.
     all: try match goal with
-    | H : NStep (StDone _ _) _ _ |- _ => inversion H
+    | H : Step (StDone _ _) _ _ |- _ => inversion H
     end.
     all: try match goal with
-    | H : NStepsN _ (StError _) _ (StDone _ _) |- _ =>
+    | H : StepsN _ (StError _) _ (StDone _ _) |- _ =>
         exfalso; eapply StError_no_done_N; exact H
     end.
     all: try match goal with
-    | HRightStep : NStep ?right_state0 ?label ?right_state' |- _ =>
+    | HRightStep : Step ?right_state0 ?label ?right_state' |- _ =>
         destruct
           (IH (state_heap right_state') v_left right_state'
             phi_left_acc (phi_right_acc ++ label_trace label)
@@ -641,16 +641,16 @@ Proof.
               subst phi0; reflexivity ] ] ]
     end.
     all: try match goal with
-    | HTail : NStepsN _ (StReturn ?heap (VPair ?v_left0 ?v2) KDone)
+    | HTail : StepsN _ (StReturn ?heap (VPair ?v_left0 ?v2) KDone)
         ?phi_tail (StDone ?heap_final0 ?v_final0) |- _ =>
         destruct
-          (NSteps_return_done_inv
+          (Steps_return_done_inv
             heap
             (VPair v_left0 v2)
             phi_tail
             heap_final0
             v_final0
-            (NStepsN_to_NSteps _ _ _ _ HTail))
+            (StepsN_to_Steps _ _ _ _ HTail))
           as (HHeap & HVal & HTrace);
         subst heap_final0 v_final0 phi_tail;
         exists 0, [], heap, v2;
@@ -667,21 +667,21 @@ Qed.
 Lemma StPairParRun_left_phase_decomposition_N :
   forall n left_state env rho e_right phi_left_acc phi_right_acc
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StPairParRun
         left_state
-        (NInitialState (state_heap left_state) env rho e_right)
+        (InitialState (state_heap left_state) env rho e_right)
         phi_left_acc
         phi_right_acc
         KDone)
       phi
       (StDone heap_final v_final) ->
     exists phi_left heap_left v_left phi_after_left,
-      NSteps left_state phi_left (StDone heap_left v_left) /\
-      NSteps
+      Steps left_state phi_left (StDone heap_left v_left) /\
+      Steps
         (StPairParRun
           (StDone heap_left v_left)
-          (NInitialState heap_left env rho e_right)
+          (InitialState heap_left env rho e_right)
           (phi_left_acc ++ phi_left)
           phi_right_acc
           KDone)
@@ -724,19 +724,19 @@ Proof.
         -- rewrite app_nil_r.
            eapply StepsStep.
            ++ exact HStep0.
-           ++ eapply NStepsN_to_NSteps. exact HTail0.
+           ++ eapply StepsN_to_Steps. exact HTail0.
         -- reflexivity.
     + exfalso.
       eapply StError_no_done_N. exact HTail0.
     all: try solve
       [ match goal with
-        | H : NStep (StDone _ _) _ _ |- _ => inversion H
+        | H : Step (StDone _ _) _ _ |- _ => inversion H
         end
       | match goal with
-        | H : NStep (StError _) _ _ |- _ => inversion H
+        | H : Step (StError _) _ _ |- _ => inversion H
         end
       | match goal with
-        | H : NStepsN _ (StError _) _ (StDone _ _) |- _ =>
+        | H : StepsN _ (StError _) _ (StDone _ _) |- _ =>
             exfalso; eapply StError_no_done_N; exact H
         end
       | congruence ].
@@ -746,10 +746,10 @@ Proof.
       | constructor
       | reflexivity
       | match goal with
-        | H : NStep (StDone _ _) _ _ |- _ => inversion H
+        | H : Step (StDone _ _) _ _ |- _ => inversion H
         end
       | match goal with
-        | H : NStepsN _ (StError _) _ (StDone _ _) |- _ =>
+        | H : StepsN _ (StError _) _ (StDone _ _) |- _ =>
             exfalso; eapply StError_no_done_N; exact H
         end ].
 Qed.
@@ -757,21 +757,21 @@ Qed.
 Lemma StPairParRun_left_phase_counted_decomposition_N :
   forall n left_state env rho e_right phi_left_acc phi_right_acc
     phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StPairParRun
         left_state
-        (NInitialState (state_heap left_state) env rho e_right)
+        (InitialState (state_heap left_state) env rho e_right)
         phi_left_acc
         phi_right_acc
         KDone)
       phi
       (StDone heap_final v_final) ->
     exists n_left n_after_left phi_left heap_left v_left phi_after_left,
-      NStepsN n_left left_state phi_left (StDone heap_left v_left) /\
-      NStepsN n_after_left
+      StepsN n_left left_state phi_left (StDone heap_left v_left) /\
+      StepsN n_after_left
         (StPairParRun
           (StDone heap_left v_left)
-          (NInitialState heap_left env rho e_right)
+          (InitialState heap_left env rho e_right)
           (phi_left_acc ++ phi_left)
           phi_right_acc
           KDone)
@@ -825,13 +825,13 @@ Proof.
       eapply StError_no_done_N. exact HTail0.
     all: try solve
       [ match goal with
-        | H : NStep (StDone _ _) _ _ |- _ => inversion H
+        | H : Step (StDone _ _) _ _ |- _ => inversion H
         end
       | match goal with
-        | H : NStep (StError _) _ _ |- _ => inversion H
+        | H : Step (StError _) _ _ |- _ => inversion H
         end
       | match goal with
-        | H : NStepsN _ (StError _) _ (StDone _ _) |- _ =>
+        | H : StepsN _ (StError _) _ (StDone _ _) |- _ =>
             exfalso; eapply StError_no_done_N; exact H
         end
       | congruence ].
@@ -841,30 +841,30 @@ Proof.
       | constructor
       | reflexivity
       | match goal with
-        | H : NStep (StDone _ _) _ _ |- _ => inversion H
+        | H : Step (StDone _ _) _ _ |- _ => inversion H
         end
       | match goal with
-        | H : NStepsN _ (StError _) _ (StDone _ _) |- _ =>
+        | H : StepsN _ (StError _) _ (StDone _ _) |- _ =>
             exfalso; eapply StError_no_done_N; exact H
         end ].
 Qed.
 
 Lemma StPairParRun_initial_decomposition_N :
   forall n heap env rho e_left e_right phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StPairParRun
-        (NInitialState heap env rho e_left)
-        (NInitialState heap env rho e_right)
+        (InitialState heap env rho e_left)
+        (InitialState heap env rho e_right)
         [] [] KDone)
       phi
       (StDone heap_final v_final) ->
     exists phi_left phi_right heap_left v_left heap_right v_right,
-      NSteps
-        (NInitialState heap env rho e_left)
+      Steps
+        (InitialState heap env rho e_left)
         phi_left
         (StDone heap_left v_left) /\
-      NSteps
-        (NInitialState heap_left env rho e_right)
+      Steps
+        (InitialState heap_left env rho e_right)
         phi_right
         (StDone heap_right v_right) /\
       trace_disjointb phi_left phi_right = true /\
@@ -876,15 +876,15 @@ Proof.
   destruct
     (StPairParRun_left_phase_decomposition_N
       n
-      (NInitialState heap env rho e_left)
+      (InitialState heap env rho e_left)
       env rho e_right [] [] phi heap_final v_final HRun)
     as (phi_left & heap_left & v_left & phi_after_left &
       HLeft & HAfterLeft & HTraceLeft).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StPairParRun
         (StDone heap_left v_left)
-        (NInitialState heap_left env rho e_right)
+        (InitialState heap_left env rho e_right)
         ([] ++ phi_left)
         []
         KDone)
@@ -896,7 +896,7 @@ Proof.
   destruct
     (StPairParRun_right_phase_decomposition_N
       n_right heap_left v_left
-      (NInitialState heap_left env rho e_right)
+      (InitialState heap_left env rho e_right)
       phi_left [] phi_after_left heap_final v_final HAfterLeftN)
     as (phi_right & heap_right & v_right &
       HRight & HCheck & HHeap & HVal & HTraceRight).
@@ -912,21 +912,21 @@ Qed.
 
 Lemma StPairParRun_initial_counted_decomposition_N :
   forall n heap env rho e_left e_right phi heap_final v_final,
-    NStepsN n
+    StepsN n
       (StPairParRun
-        (NInitialState heap env rho e_left)
-        (NInitialState heap env rho e_right)
+        (InitialState heap env rho e_left)
+        (InitialState heap env rho e_right)
         [] [] KDone)
       phi
       (StDone heap_final v_final) ->
     exists n_left n_right
       phi_left phi_right heap_left v_left heap_right v_right,
-      NStepsN n_left
-        (NInitialState heap env rho e_left)
+      StepsN n_left
+        (InitialState heap env rho e_left)
         phi_left
         (StDone heap_left v_left) /\
-      NStepsN n_right
-        (NInitialState heap_left env rho e_right)
+      StepsN n_right
+        (InitialState heap_left env rho e_right)
         phi_right
         (StDone heap_right v_right) /\
       n_left < n /\
@@ -940,7 +940,7 @@ Proof.
   destruct
     (StPairParRun_left_phase_counted_decomposition_N
       n
-      (NInitialState heap env rho e_left)
+      (InitialState heap env rho e_left)
       env rho e_right [] [] phi heap_final v_final HRun)
     as (n_left & n_after_left & phi_left & heap_left & v_left &
       phi_after_left &
@@ -949,7 +949,7 @@ Proof.
   destruct
     (StPairParRun_right_phase_counted_decomposition_N
       n_after_left heap_left v_left
-      (NInitialState heap_left env rho e_right)
+      (InitialState heap_left env rho e_right)
       phi_left [] phi_after_left heap_final v_final HAfterLeft)
     as (n_right & phi_right & heap_right & v_right &
       HRight & HRightCount & HCheck & HHeap & HVal & HTraceRight).
@@ -968,8 +968,8 @@ Qed.
 
 Definition EPairParCountedDecompositionGoal : Prop :=
   forall n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
-    NStepsN n
-      (NInitialState heap env rho
+    StepsN n
+      (InitialState heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
       phi
       (StDone heap_final v_final) ->
@@ -977,20 +977,20 @@ Definition EPairParCountedDecompositionGoal : Prop :=
       phi_eff1 phi_eff2 phi_left phi_right
       theta1 theta2 heap_eff1 heap_eff2 heap_left heap_right
       v_left v_right,
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap_eff1 (VSummary theta1)) /\
-      NStepsN n_eff2
-        (NInitialState heap_eff1 env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap_eff1 env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap_eff2 (VSummary theta2)) /\
-      NStepsN n_left
-        (NInitialState heap_eff2 env rho (EMuApp ef1 ea1))
+      StepsN n_left
+        (InitialState heap_eff2 env rho (EMuApp ef1 ea1))
         phi_left
         (StDone heap_left v_left) /\
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) /\
       n_eff1 < n /\
@@ -1014,14 +1014,14 @@ Proof.
     as (n_eff1_tail & phi_tail & HnStart &
       HSummary1WithKont & HTraceStart).
   destruct
-    (NStepsN_append_kont_terminal_split_counted
+    (StepsN_append_kont_terminal_split_counted
       n_eff1_tail
       (StEval heap env rho (EEffApp ef1 ea1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
       phi_tail
       heap_final v_final
       HSummary1WithKont
-      (NInitialState heap env rho (EEffApp ef1 ea1))
+      (InitialState heap env rho (EEffApp ef1 ea1))
       (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone)
       eq_refl)
     as (n_eff1 & n_after_eff1 & phi_eff1 & heap_eff1 & v_eff1 &
@@ -1032,7 +1032,7 @@ Proof.
       (KPairParEff1_terminal_value_is_summary
         heap_eff1 v_eff1 ef1 ea1 ef2 ea2 env rho KDone
         phi_after_eff1 heap_final v_final
-        (NStepsN_to_NSteps
+        (StepsN_to_Steps
           n_after_eff1
           (StReturn heap_eff1 v_eff1
             (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
@@ -1048,14 +1048,14 @@ Proof.
       as (n_eff2_tail & phi_eff2_tail & HCountAfterEff1 &
         HSummary2WithKont & HTraceAfterEff1).
     destruct
-      (NStepsN_append_kont_terminal_split_counted
+      (StepsN_append_kont_terminal_split_counted
         n_eff2_tail
         (StEval heap_eff1 env rho (EEffApp ef2 ea2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
         phi_eff2_tail
         heap_final v_final
         HSummary2WithKont
-        (NInitialState heap_eff1 env rho (EEffApp ef2 ea2))
+        (InitialState heap_eff1 env rho (EEffApp ef2 ea2))
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone)
         eq_refl)
       as (n_eff2 & n_after_eff2 & phi_eff2 & heap_eff2 & v_eff2 &
@@ -1066,7 +1066,7 @@ Proof.
         (KPairParEff2_terminal_value_is_summary
           heap_eff2 v_eff2 ef1 ea1 ef2 ea2 env rho theta1 KDone
           phi_after_eff2 heap_final v_final
-          (NStepsN_to_NSteps
+          (StepsN_to_Steps
             n_after_eff2
             (StReturn heap_eff2 v_eff2
               (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
@@ -1104,8 +1104,8 @@ Qed.
 
 Definition EPairParDecompositionGoal : Prop :=
   forall heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
-    NSteps
-      (NInitialState heap env rho
+    Steps
+      (InitialState heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
       phi
       (StDone heap_final v_final) ->
@@ -1140,7 +1140,7 @@ Proof.
       heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps)
     as (phi_tail & HSummary1WithKont & HTraceStart).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap env rho (EEffApp ef1 ea1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
       phi_tail
@@ -1148,7 +1148,7 @@ Proof.
       HSummary1WithKont)
     as (n_eff1 & HSummary1WithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_eff1
       (StEval heap env rho (EEffApp ef1 ea1)
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
@@ -1156,7 +1156,7 @@ Proof.
       heap_final
       v_final
       HSummary1WithKontN
-      (NInitialState heap env rho (EEffApp ef1 ea1))
+      (InitialState heap env rho (EEffApp ef1 ea1))
       (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone)
       eq_refl)
     as (phi_eff1 & heap_eff1 & v_eff1 & phi_after_eff1 &
@@ -1173,7 +1173,7 @@ Proof.
       phi_after_eff1 heap_final v_final HAfterEff1)
     as (phi_eff2_tail & HSummary2WithKont & HTraceAfterEff1).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StEval heap_eff1 env rho (EEffApp ef2 ea2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
       phi_eff2_tail
@@ -1181,7 +1181,7 @@ Proof.
       HSummary2WithKont)
     as (n_eff2 & HSummary2WithKontN).
   destruct
-    (NStepsN_append_kont_terminal_split
+    (StepsN_append_kont_terminal_split
       n_eff2
       (StEval heap_eff1 env rho (EEffApp ef2 ea2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
@@ -1189,7 +1189,7 @@ Proof.
       heap_final
       v_final
       HSummary2WithKontN
-      (NInitialState heap_eff1 env rho (EEffApp ef2 ea2))
+      (InitialState heap_eff1 env rho (EEffApp ef2 ea2))
       (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone)
       eq_refl)
     as (phi_eff2 & heap_eff2 & v_eff2 & phi_after_eff2 &
@@ -1206,7 +1206,7 @@ Proof.
       phi_after_eff2 heap_final v_final HAfterEff2)
     as (HCheckSummary & phi_pair & HPairRun & HTraceAfterEff2).
   destruct
-    (NSteps_to_NStepsN
+    (Steps_to_StepsN
       (StPairParRun
         (StEval heap_eff2 env rho (EMuApp ef1 ea1) KDone)
         (StEval heap_eff2 env rho (EMuApp ef2 ea2) KDone)
@@ -1246,8 +1246,8 @@ Definition EPairParHeapNeutralSummaryDecompositionGoal : Prop :=
   forall heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
     SummaryHeapNeutral (EEffApp ef1 ea1) ->
     SummaryHeapNeutral (EEffApp ef2 ea2) ->
-    NSteps
-      (NInitialState heap env rho
+    Steps
+      (InitialState heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
       phi
       (StDone heap_final v_final) ->
@@ -1312,7 +1312,7 @@ Qed.
 Definition CheckedEPairParHeapNeutralStoreDecompositionGoal : Prop :=
   forall gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -1339,10 +1339,10 @@ Definition CheckedEPairParHeapNeutralStoreDecompositionGoal : Prop :=
       summary_disjointb theta1 theta2 = true /\
       trace_disjointb phi_left phi_right = true /\
       heap_final = heap_right /\
-      NStoreKeysBoundedByHeap heap_final store /\
-      NStoreResolvedHeapShape heap_final store /\
-      NStoreResolvedValShape store v_left ty_left /\
-      NStoreResolvedValShape store v_right ty_right /\
+      StoreKeysBoundedByHeap heap_final store /\
+      StoreResolvedHeapShape heap_final store /\
+      StoreResolvedValShape store v_left ty_left /\
+      StoreResolvedValShape store v_right ty_right /\
       phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
 
 Theorem EPairPar_checked_decomposition_with_heap_neutral_store :
@@ -1365,7 +1365,7 @@ Proof.
       HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
-    (NCBT_PairPar_summary_static_heap_neutral
+    (CBT_PairPar_summary_static_heap_neutral
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & ty2 & eff1 & eff2 & _ & _ &
       HCheckedLeft & HCheckedRight & _ & _ & _ & _).
@@ -1399,7 +1399,7 @@ Qed.
 Definition CheckedEPairParStaticTraceStoreDecompositionGoal : Prop :=
   forall gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -1425,10 +1425,10 @@ Definition CheckedEPairParStaticTraceStoreDecompositionGoal : Prop :=
       summary_disjointb theta1 theta2 = true /\
       trace_disjointb phi_left phi_right = true /\
       heap_final = heap_right /\
-      NStoreKeysBoundedByHeap heap_final store /\
-      NStoreResolvedHeapShape heap_final store /\
-      NStoreResolvedValShape store v_left ty_left /\
-      NStoreResolvedValShape store v_right ty_right /\
+      StoreKeysBoundedByHeap heap_final store /\
+      StoreResolvedHeapShape heap_final store /\
+      StoreResolvedValShape store v_left ty_left /\
+      StoreResolvedValShape store v_right ty_right /\
       phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
 
 Theorem EPairPar_checked_decomposition_with_static_trace_store :
@@ -1451,7 +1451,7 @@ Proof.
       HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
-    (NCBT_PairPar_summary_static_heap_neutral
+    (CBT_PairPar_summary_static_heap_neutral
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & ty2 & eff1 & eff2 & eff_summary1 & eff_summary2 &
       HCheckedLeft & HCheckedRight &
@@ -1460,12 +1460,12 @@ Proof.
   destruct HContext as
     (_ & _ & _ & _ & _ & HRho & _).
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef1 ea1) TyEffect eff_summary1
       HCheckedSummary1)
     as HSummaryWF1.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_summary1 HRho HSummaryWF1)
     as (eff_summary1_res & HResolveSummary1).
   pose proof
@@ -1483,12 +1483,12 @@ Proof.
     as (HHeapEff1 & HNeutralTrace1).
   subst heap_eff1.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2
       HCheckedSummary2)
     as HSummaryWF2.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_summary2 HRho HSummaryWF2)
     as (eff_summary2_res & HResolveSummary2).
   pose proof
@@ -1536,7 +1536,7 @@ Qed.
 Definition CheckedEPairParCountedStaticTraceStoreDecompositionGoal : Prop :=
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -1547,20 +1547,20 @@ Definition CheckedEPairParCountedStaticTraceStoreDecompositionGoal : Prop :=
     exists n_eff1 n_eff2 n_left n_right
       phi_eff1 phi_eff2 phi_left phi_right
       theta1 theta2 heap_left heap_right store ty_left ty_right,
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap (VSummary theta1)) /\
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) /\
-      NStepsN n_left
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+      StepsN n_left
+        (InitialState heap env rho (EMuApp ef1 ea1))
         phi_left
         (StDone heap_left v_left) /\
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) /\
       n_eff1 < n /\
@@ -1571,10 +1571,10 @@ Definition CheckedEPairParCountedStaticTraceStoreDecompositionGoal : Prop :=
       summary_disjointb theta1 theta2 = true /\
       trace_disjointb phi_left phi_right = true /\
       heap_final = heap_right /\
-      NStoreKeysBoundedByHeap heap_final store /\
-      NStoreResolvedHeapShape heap_final store /\
-      NStoreResolvedValShape store v_left ty_left /\
-      NStoreResolvedValShape store v_right ty_right /\
+      StoreKeysBoundedByHeap heap_final store /\
+      StoreResolvedHeapShape heap_final store /\
+      StoreResolvedValShape store v_left ty_left /\
+      StoreResolvedValShape store v_right ty_right /\
       phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
 
 Theorem EPairPar_counted_checked_decomposition_with_static_trace_store :
@@ -1599,7 +1599,7 @@ Proof.
       HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
-    (NCBT_PairPar_summary_static_heap_neutral
+    (CBT_PairPar_summary_static_heap_neutral
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & ty2 & eff1 & eff2 & eff_summary1 & eff_summary2 &
       HCheckedLeft & HCheckedRight &
@@ -1608,12 +1608,12 @@ Proof.
   destruct HContext as
     (_ & _ & _ & _ & _ & HRho & _).
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef1 ea1) TyEffect eff_summary1
       HCheckedSummary1)
     as HSummaryWF1.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_summary1 HRho HSummaryWF1)
     as (eff_summary1_res & HResolveSummary1).
   assert
@@ -1622,7 +1622,7 @@ Proof.
         phi_eff1 heap_eff1 theta1).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary1N.
   }
   pose proof
@@ -1640,12 +1640,12 @@ Proof.
     as (HHeapEff1 & HNeutralTrace1).
   subst heap_eff1.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2
       HCheckedSummary2)
     as HSummaryWF2.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_summary2 HRho HSummaryWF2)
     as (eff_summary2_res & HResolveSummary2).
   assert
@@ -1654,7 +1654,7 @@ Proof.
         phi_eff2 heap_eff2 theta2).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary2N.
   }
   pose proof
@@ -1678,8 +1678,8 @@ Proof.
       (EMuApp ef1 ea1) ty1 eff1 phi_left heap_left v_left
       (EMuApp ef2 ea2) ty2 eff2 phi_right heap_right v_right
       HContextOriginal HCheckedLeft HCheckedRight
-      (NStepsN_to_NSteps _ _ _ _ HLeftN)
-      (NStepsN_to_NSteps _ _ _ _ HRightN))
+      (StepsN_to_Steps _ _ _ _ HLeftN)
+      (StepsN_to_Steps _ _ _ _ HRightN))
     as (store & ty_left & ty_right &
       _HResolveLeft & _HResolveRight &
       HStoreBounded & HStoreHeap & HValLeft & HValRight).
@@ -1710,7 +1710,7 @@ Definition CheckedStoreEPairParCountedStaticTraceStoreDecompositionGoal :
     Prop :=
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
@@ -1721,20 +1721,20 @@ Definition CheckedStoreEPairParCountedStaticTraceStoreDecompositionGoal :
     exists n_eff1 n_eff2 n_left n_right
       phi_eff1 phi_eff2 phi_left phi_right
       theta1 theta2 heap_left heap_right store ty_left ty_right,
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap (VSummary theta1)) /\
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) /\
-      NStepsN n_left
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+      StepsN n_left
+        (InitialState heap env rho (EMuApp ef1 ea1))
         phi_left
         (StDone heap_left v_left) /\
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) /\
       n_eff1 < n /\
@@ -1745,10 +1745,10 @@ Definition CheckedStoreEPairParCountedStaticTraceStoreDecompositionGoal :
       summary_disjointb theta1 theta2 = true /\
       trace_disjointb phi_left phi_right = true /\
       heap_final = heap_right /\
-      NStoreKeysBoundedByHeap heap_final store /\
-      NStoreResolvedHeapShape heap_final store /\
-      NStoreResolvedValShape store v_left ty_left /\
-      NStoreResolvedValShape store v_right ty_right /\
+      StoreKeysBoundedByHeap heap_final store /\
+      StoreResolvedHeapShape heap_final store /\
+      StoreResolvedValShape store v_left ty_left /\
+      StoreResolvedValShape store v_right ty_right /\
       phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
 
 Theorem EPairPar_counted_checked_store_decomposition_with_static_trace_store :
@@ -1773,7 +1773,7 @@ Proof.
       HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
-    (NCBT_PairPar_summary_static_heap_neutral
+    (CBT_PairPar_summary_static_heap_neutral
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & ty2 & eff1 & eff2 & eff_summary1 & eff_summary2 &
       HCheckedLeft & HCheckedRight &
@@ -1781,12 +1781,12 @@ Proof.
       HStaticNeutral1 & HStaticNeutral2).
   destruct HContext as (_ & HRho).
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef1 ea1) TyEffect eff_summary1
       HCheckedSummary1)
     as HSummaryWF1.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_summary1 HRho HSummaryWF1)
     as (eff_summary1_res & HResolveSummary1).
   assert
@@ -1795,7 +1795,7 @@ Proof.
         phi_eff1 heap_eff1 theta1).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary1N.
   }
   pose proof
@@ -1813,12 +1813,12 @@ Proof.
     as (HHeapEff1 & HNeutralTrace1).
   subst heap_eff1.
   pose proof
-    (NCheckedTcExp_eff_wf
+    (CheckedTcExp_eff_wf
       gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2
       HCheckedSummary2)
     as HSummaryWF2.
   destruct
-    (NResolveStaticEffect_exists
+    (ResolveStaticEffect_exists
       0 omega rho eff_summary2 HRho HSummaryWF2)
     as (eff_summary2_res & HResolveSummary2).
   assert
@@ -1827,7 +1827,7 @@ Proof.
         phi_eff2 heap_eff2 theta2).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary2N.
   }
   pose proof
@@ -1851,8 +1851,8 @@ Proof.
       (EMuApp ef1 ea1) ty1 eff1 phi_left heap_left v_left
       (EMuApp ef2 ea2) ty2 eff2 phi_right heap_right v_right
       HContextOriginal HCheckedLeft HCheckedRight
-      (NStepsN_to_NSteps _ _ _ _ HLeftN)
-      (NStepsN_to_NSteps _ _ _ _ HRightN))
+      (StepsN_to_Steps _ _ _ _ HLeftN)
+      (StepsN_to_Steps _ _ _ _ HRightN))
     as (store & ty_left & ty_right &
       _HResolveLeft & _HResolveRight &
       HStoreBounded & HStoreHeap & HValLeft & HValRight).
@@ -1882,7 +1882,7 @@ Qed.
 Theorem EPairPar_counted_checked_left_store_context :
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -1912,7 +1912,7 @@ Proof.
       _ & _ & HCountLeft & _ &
       _ & _ & _ & _ & _ & _ & _ & _ & _).
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
       HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & _ & _).
@@ -1964,8 +1964,8 @@ Theorem EPairPar_terminal_trace_covered_from_components :
   forall heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final
     phi_eff1 phi_eff2 phi_left phi_right theta1 theta2
     heap_eff1 heap_eff2 heap_left heap_right v_left v_right,
-    NSteps
-      (NInitialState heap env rho
+    Steps
+      (InitialState heap env rho
         (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
       phi
       (StDone heap_final v_final) ->
@@ -2085,29 +2085,29 @@ Theorem EPairPar_counted_terminal_trace_covered_from_component_coverages :
       phi_summary heap_summary theta ->
     (forall n_eff1 phi_eff1 heap_eff1 theta1,
       n_eff1 < n ->
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap_eff1 (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
     (forall n_eff2 heap_eff1 phi_eff2 heap_eff2 theta2,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap_eff1 env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap_eff1 env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap_eff2 (VSummary theta2)) ->
       TraceCoveredBySummary phi_eff2 theta2) ->
     (forall n_left heap_eff2 phi_left heap_left v_left theta1,
       n_left < n ->
-      NStepsN n_left
-        (NInitialState heap_eff2 env rho (EMuApp ef1 ea1))
+      StepsN n_left
+        (InitialState heap_eff2 env rho (EMuApp ef1 ea1))
         phi_left
         (StDone heap_left v_left) ->
       TraceCoveredBySummary phi_left theta1) ->
     (forall n_right heap_left phi_right heap_right v_right theta2,
       n_right < n ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2) ->
@@ -2135,9 +2135,9 @@ Proof.
       phi_eff1 phi_eff2 phi_left phi_right theta1 theta2
       heap_eff1 heap_eff2).
   - unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps; exact HSummary1.
+    eapply StepsN_to_Steps; exact HSummary1.
   - unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps; exact HSummary2.
+    eapply StepsN_to_Steps; exact HSummary2.
   - exact HSummaryConcat.
   - exact HTrace.
   - eapply (HCoveredEff1 n_eff1 phi_eff1 heap_eff1 theta1);
@@ -2156,7 +2156,7 @@ Theorem EPairPar_checked_context_counted_trace_covered_from_below_left :
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -2170,22 +2170,22 @@ Theorem EPairPar_checked_context_counted_trace_covered_from_below_left :
       phi_summary heap_summary theta ->
     (forall n_eff1 phi_eff1 theta1,
       n_eff1 < n ->
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
     (forall n_eff2 phi_eff2 theta2,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       TraceCoveredBySummary phi_eff2 theta2) ->
     (forall n_right heap_left phi_right heap_right v_right theta2,
       n_right < n ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2) ->
@@ -2208,7 +2208,7 @@ Proof.
       HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
       _ & _ & _ & _ & _ & _ & _ & _ & HTrace).
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & _).
@@ -2218,7 +2218,7 @@ Proof.
         phi_eff1 heap theta1).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary1N.
   }
   assert
@@ -2227,7 +2227,7 @@ Proof.
         phi_eff2 heap theta2).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary2N.
   }
   assert
@@ -2266,7 +2266,7 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_left :
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -2280,29 +2280,29 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_left :
       phi_summary heap_summary theta ->
     (forall n_eff1 phi_eff1 theta1,
       n_eff1 < n ->
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
     (forall n_eff2 phi_eff2 theta2,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       TraceCoveredBySummary phi_eff2 theta2) ->
     (forall n_eff2 phi_eff2 theta2
       n_right heap_left phi_right heap_right v_right,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       n_right < n ->
       CheckedStoreRuntimeContext gamma omega heap_left env rho ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2) ->
@@ -2325,7 +2325,7 @@ Proof.
       HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
       _ & _ & _ & _ & _ & _ & _ & _ & HTrace).
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
       HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & _).
@@ -2335,7 +2335,7 @@ Proof.
         phi_eff1 heap theta1).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary1N.
   }
   assert
@@ -2344,7 +2344,7 @@ Proof.
         phi_eff2 heap theta2).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary2N.
   }
   assert
@@ -2402,7 +2402,7 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_left :
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
@@ -2416,29 +2416,29 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_left :
       phi_summary heap_summary theta ->
     (forall n_eff1 phi_eff1 theta1,
       n_eff1 < n ->
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
     (forall n_eff2 phi_eff2 theta2,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       TraceCoveredBySummary phi_eff2 theta2) ->
     (forall n_eff2 phi_eff2 theta2
       n_right heap_left phi_right heap_right v_right,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       n_right < n ->
       CheckedStoreRuntimeContext gamma omega heap_left env rho ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2) ->
@@ -2461,7 +2461,7 @@ Proof.
       HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
       _ & _ & _ & _ & _ & _ & _ & _ & HTrace).
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
       HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & _).
@@ -2471,7 +2471,7 @@ Proof.
         phi_eff1 heap theta1).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary1N.
   }
   assert
@@ -2480,7 +2480,7 @@ Proof.
         phi_eff2 heap theta2).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary2N.
   }
   assert
@@ -2534,13 +2534,13 @@ Proof.
 Qed.
 
 Definition EPairParRightSummaryReplayBelow
-    (n : nat) (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (ef2 ea2 : NExpr) : Prop :=
+    (n : nat) (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (ef2 ea2 : Expr) : Prop :=
   forall n_eff2 phi_eff2 theta2 heap_left,
     n_eff2 < n ->
-    NStepsN n_eff2
-      (NInitialState heap env rho (EEffApp ef2 ea2))
+    StepsN n_eff2
+      (InitialState heap env rho (EEffApp ef2 ea2))
       phi_eff2
       (StDone heap (VSummary theta2)) ->
     CheckedStoreRuntimeContext gamma omega heap_left env rho ->
@@ -2549,19 +2549,19 @@ Definition EPairParRightSummaryReplayBelow
         phi_summary heap_summary theta2.
 
 Definition EPairParRightSummaryReplayAfterLeftBelow
-    (n : nat) (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (ef1 ea1 ef2 ea2 : NExpr) : Prop :=
+    (n : nat) (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (ef1 ea1 ef2 ea2 : Expr) : Prop :=
   forall n_eff2 n_left phi_eff2 phi_left theta1 theta2
     heap_left v_left,
     n_eff2 < n ->
-    NStepsN n_eff2
-      (NInitialState heap env rho (EEffApp ef2 ea2))
+    StepsN n_eff2
+      (InitialState heap env rho (EEffApp ef2 ea2))
       phi_eff2
       (StDone heap (VSummary theta2)) ->
     n_left < n ->
-    NStepsN n_left
-      (NInitialState heap env rho (EMuApp ef1 ea1))
+    StepsN n_left
+      (InitialState heap env rho (EMuApp ef1 ea1))
       phi_left
       (StDone heap_left v_left) ->
     summary_disjointb theta1 theta2 = true ->
@@ -2574,13 +2574,13 @@ Definition EPairParRightSummaryReplayAfterLeftBelow
         phi_summary heap_summary theta2.
 
 Definition SummaryReplayUnderReadAgreementBelow
-    (n : nat) (gamma : NCtx) (omega : NRgnCtx)
-    (heap : Heap) (env : NEnv) (rho : Rho)
-    (summary_expr : NExpr) : Prop :=
+    (n : nat) (gamma : Ctx) (omega : RgnCtx)
+    (heap : Heap) (env : Env) (rho : Rho)
+    (summary_expr : Expr) : Prop :=
   forall n_summary phi_summary theta heap_left,
     n_summary < n ->
-    NStepsN n_summary
-      (NInitialState heap env rho summary_expr)
+    StepsN n_summary
+      (InitialState heap env rho summary_expr)
       phi_summary
       (StDone heap (VSummary theta)) ->
     HeapNeutralTrace phi_summary ->
@@ -2604,13 +2604,13 @@ Proof.
   replace (StDone heap_left (VSummary theta))
     with (with_state_heap heap_left (StDone heap (VSummary theta)))
     by reflexivity.
-  change (NSteps
+  change (Steps
     (with_state_heap heap_left
-      (NInitialState heap env rho summary_expr))
+      (InitialState heap env rho summary_expr))
     phi_summary
     (with_state_heap heap_left (StDone heap (VSummary theta)))).
-  eapply NStepsN_to_NSteps.
-  eapply NStepsN_heap_neutral_read_agreement_replay;
+  eapply StepsN_to_Steps.
+  eapply StepsN_heap_neutral_read_agreement_replay;
     simpl; eauto.
 Qed.
 
@@ -2635,9 +2635,9 @@ Proof.
   - exact HSummary2N.
   - exact HNeutralSummary2.
   - eapply
-      (NStepsN_trace_read_heap_agreement_for_summary_disjoint
+      (StepsN_trace_read_heap_agreement_for_summary_disjoint
         n_left
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef1 ea1))
         phi_left
         (StDone heap_left v_left)
         phi_eff2 theta1 theta2);
@@ -2665,9 +2665,9 @@ Proof.
   - exact HSummary2N.
   - exact HNeutralSummary2.
   - eapply
-      (NStepsN_trace_read_heap_agreement_for_summary_disjoint
+      (StepsN_trace_read_heap_agreement_for_summary_disjoint
         n_left
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+        (InitialState heap env rho (EMuApp ef1 ea1))
         phi_left
         (StDone heap_left v_left)
         phi_eff2 theta1 theta2);
@@ -2678,21 +2678,21 @@ Qed.
 Theorem EPairPar_right_coverage_from_store_below_replayed_summary :
   forall n gamma omega heap env rho ef2 ea2,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef2 ea2) (EEffApp ef2 ea2) ->
     EPairParRightSummaryReplayBelow
       n gamma omega heap env rho ef2 ea2 ->
     forall n_eff2 phi_eff2 theta2
       n_right heap_left phi_right heap_right v_right,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       n_right < n ->
       CheckedStoreRuntimeContext gamma omega heap_left env rho ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2.
@@ -2718,20 +2718,20 @@ Qed.
 Theorem EPairPar_right_coverage_from_store_below_replayed_after_left_summary :
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EMuApp ef2 ea2) (EEffApp ef2 ea2) ->
     EPairParRightSummaryReplayAfterLeftBelow
       n gamma omega heap env rho ef1 ea1 ef2 ea2 ->
     forall n_eff2 n_left phi_eff2 phi_left theta1 theta2
       heap_left v_left n_right phi_right heap_right v_right,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       n_left < n ->
-      NStepsN n_left
-        (NInitialState heap env rho (EMuApp ef1 ea1))
+      StepsN n_left
+        (InitialState heap env rho (EMuApp ef1 ea1))
         phi_left
         (StDone heap_left v_left) ->
       summary_disjointb theta1 theta2 = true ->
@@ -2740,8 +2740,8 @@ Theorem EPairPar_right_coverage_from_store_below_replayed_after_left_summary :
       TraceCoveredBySummary phi_left theta1 ->
       n_right < n ->
       CheckedStoreRuntimeContext gamma omega heap_left env rho ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2.
@@ -2773,7 +2773,7 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_left_rep
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -2787,15 +2787,15 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_left_rep
       phi_summary heap_summary theta ->
     (forall n_eff1 phi_eff1 theta1,
       n_eff1 < n ->
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
     (forall n_eff2 phi_eff2 theta2,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       TraceCoveredBySummary phi_eff2 theta2) ->
@@ -2822,7 +2822,7 @@ Proof.
       _HHeap & _HStoreBounded & _HStoreHeap & _HValLeft &
       _HValRight & HTrace).
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
       HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
@@ -2832,7 +2832,7 @@ Proof.
         phi_eff1 heap theta1).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary1N.
   }
   assert
@@ -2841,7 +2841,7 @@ Proof.
         phi_eff2 heap theta2).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary2N.
   }
   assert
@@ -2928,7 +2928,7 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_left_repla
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
@@ -2942,15 +2942,15 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_left_repla
       phi_summary heap_summary theta ->
     (forall n_eff1 phi_eff1 theta1,
       n_eff1 < n ->
-      NStepsN n_eff1
-        (NInitialState heap env rho (EEffApp ef1 ea1))
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
         phi_eff1
         (StDone heap (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
     (forall n_eff2 phi_eff2 theta2,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       TraceCoveredBySummary phi_eff2 theta2) ->
@@ -2977,7 +2977,7 @@ Proof.
       _HHeap & _HStoreBounded & _HStoreHeap & _HValLeft &
       _HValRight & HTrace).
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (ty1 & _ & eff1 & _ & _ & _ &
       HCheckedLeft & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
@@ -2987,7 +2987,7 @@ Proof.
         phi_eff1 heap theta1).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary1N.
   }
   assert
@@ -2996,7 +2996,7 @@ Proof.
         phi_eff2 heap theta2).
   {
     unfold SummaryEvaluation.
-    eapply NStepsN_to_NSteps.
+    eapply StepsN_to_Steps.
     exact HSummary2N.
   }
   assert
@@ -3082,7 +3082,7 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_bodies :
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -3097,8 +3097,8 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_bodies :
     (forall n_summary phi_body
       closure_env closure_rho f x ec ee arg theta_body,
       n_summary < n ->
-      NStepsN n_summary
-        (NInitialState heap
+      StepsN n_summary
+        (InitialState heap
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -3110,14 +3110,14 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_bodies :
     (forall n_eff2 phi_eff2 theta2
       n_right heap_left phi_right heap_right v_right,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       n_right < n ->
       CheckedStoreRuntimeContext gamma omega heap_left env rho ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2) ->
@@ -3128,7 +3128,7 @@ Proof.
     HBelow HBack HContext HSummaryTraceSound HComp HSummaryConcat
     HCoveredSummaryBody HCoveredRight.
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
@@ -3185,7 +3185,7 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_body_con
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -3208,11 +3208,11 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_body_con
             (VClosure closure_env closure_rho f x ec ee)
             closure_env))
         closure_rho ->
-      NCheckedTcExp gamma_body omega_body ec ty_body eff_body ->
-      NCheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
-      NCheckedBackTriangle gamma_body omega_body ec ee ->
-      NStepsN n_summary
-        (NInitialState heap
+      CheckedTcExp gamma_body omega_body ec ty_body eff_body ->
+      CheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
+      CheckedBackTriangle gamma_body omega_body ec ee ->
+      StepsN n_summary
+        (InitialState heap
           (env_extend x arg
             (env_extend f
               (VClosure closure_env closure_rho f x ec ee)
@@ -3224,14 +3224,14 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_body_con
     (forall n_eff2 phi_eff2 theta2
       n_right heap_left phi_right heap_right v_right,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       n_right < n ->
       CheckedStoreRuntimeContext gamma omega heap_left env rho ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2) ->
@@ -3242,7 +3242,7 @@ Proof.
     HBelow HBack HContext HSummaryTraceSound HComp HSummaryConcat
     HCoveredSummaryBody HCoveredRight.
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
@@ -3304,7 +3304,7 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_summary_
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
     CheckedStoreSummaryValueSoundnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->
@@ -3325,20 +3325,20 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_summary_
             (VClosure closure_env closure_rho f x ec ee)
             closure_env))
         closure_rho ->
-      NCheckedTcExp gamma_body omega_body ec ty_body eff_body ->
-      NCheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
-      NCheckedBackTriangle gamma_body omega_body ec ee) ->
+      CheckedTcExp gamma_body omega_body ec ty_body eff_body ->
+      CheckedTcExp gamma_body omega_body ee TyEffect eff_summary ->
+      CheckedBackTriangle gamma_body omega_body ec ee) ->
     (forall n_eff2 phi_eff2 theta2
       n_right heap_left phi_right heap_right v_right,
       n_eff2 < n ->
-      NStepsN n_eff2
-        (NInitialState heap env rho (EEffApp ef2 ea2))
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
         phi_eff2
         (StDone heap (VSummary theta2)) ->
       n_right < n ->
       CheckedStoreRuntimeContext gamma omega heap_left env rho ->
-      NStepsN n_right
-        (NInitialState heap_left env rho (EMuApp ef2 ea2))
+      StepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) ->
       TraceCoveredBySummary phi_right theta2) ->
@@ -3389,7 +3389,7 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_summary_va
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
     CheckedStoreSummaryValueSoundnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
@@ -3410,7 +3410,7 @@ Proof.
     HBelow HSummaryValueBelow HBack HContext HSummaryTraceSound
     HComp HSummaryConcat HReplay.
   destruct
-    (NCBT_PairPar_components
+    (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
     as (_ & _ & _ & _ & _ & _ &
       _ & _ & _ & _ & _ & _ & _ & _ & HBackLeft & HBackRight).
@@ -3458,7 +3458,7 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_summary_va
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
     CheckedStoreSummaryValueSoundnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
@@ -3492,7 +3492,7 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_summary_va
     phi heap_final v_left v_right phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
     CheckedStoreSummaryValueSoundnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
@@ -3523,7 +3523,7 @@ Theorem EPairPar_checked_store_context_case_from_below :
     phi heap_final v_final phi_summary heap_summary theta,
     CheckedStoreContextSmallStepCorrectnessBelow n ->
     CheckedStoreSummaryValueSoundnessBelow n ->
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedStoreRuntimeContext gamma omega heap env rho ->
@@ -3563,7 +3563,7 @@ Qed.
 Theorem EPairPar_checked_terminal_trace_covered_from_component_coverages :
   forall gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta,
-    NCheckedBackTriangle gamma omega
+    CheckedBackTriangle gamma omega
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
     CheckedRuntimeContext gamma omega heap env rho ->

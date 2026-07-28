@@ -8,25 +8,25 @@ Require Import theories.SmallStep.Core.Syntax.
 
 Import ListNotations.
 
-Inductive NVal :=
-| VNat : nat -> NVal
-| VBool : bool -> NVal
-| VUnit : NVal
-| VPair : NVal -> NVal -> NVal
-| VLoc : RegionId -> Location -> NVal
-| VClosure : NEnv -> Rho -> VarId -> VarId -> NExpr -> NExpr -> NVal
-| VRegionClosure : NEnv -> Rho -> VarId -> NExpr -> NVal
-| VSummary : Summary -> NVal
-with NEnv :=
-| EnvNil : NEnv
-| EnvCons : VarId -> NVal -> NEnv -> NEnv.
+Inductive Val :=
+| VNat : nat -> Val
+| VBool : bool -> Val
+| VUnit : Val
+| VPair : Val -> Val -> Val
+| VLoc : RegionId -> Location -> Val
+| VClosure : Env -> Rho -> VarId -> VarId -> Expr -> Expr -> Val
+| VRegionClosure : Env -> Rho -> VarId -> Expr -> Val
+| VSummary : Summary -> Val
+with Env :=
+| EnvNil : Env
+| EnvCons : VarId -> Val -> Env -> Env.
 
-Scheme NVal_ind' := Induction for NVal Sort Prop
-with NEnv_ind' := Induction for NEnv Sort Prop.
+Scheme Val_ind' := Induction for Val Sort Prop
+with Env_ind' := Induction for Env Sort Prop.
 
-Combined Scheme NVal_NEnv_ind from NVal_ind', NEnv_ind'.
+Combined Scheme Val_Env_ind from Val_ind', Env_ind'.
 
-Definition Heap := list (RegionId * Location * NVal).
+Definition Heap := list (RegionId * Location * Val).
 
 Definition rho_lookup (x : VarId) (rho : Rho) : option RegionId :=
   find_R (region_var_expr x) rho.
@@ -67,6 +67,6 @@ Proof.
   apply eval_region_any_region_to_type.
 Qed.
 
-Definition empty_env : NEnv := EnvNil.
+Definition empty_env : Env := EnvNil.
 Definition empty_rho : Rho :=
   list_to_map ([] : list (RgnName * RgnVal)).

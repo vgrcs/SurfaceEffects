@@ -2,29 +2,29 @@ From Stdlib Require Import String.
 
 Require Export theories.SmallStep.Core.Effects.
 
-Inductive NExpr :=
-| EConst : nat -> NExpr
-| EBool : bool -> NExpr
-| EVar : VarId -> NExpr
-| EMu : VarId -> VarId -> NExpr -> NExpr -> NExpr
-| ELambdaRgn : VarId -> NExpr -> NExpr
-| EMuApp : NExpr -> NExpr -> NExpr
-| ERgnApp : NExpr -> RegionExpr -> NExpr
-| EEffApp : NExpr -> NExpr -> NExpr
-| EPairPar : NExpr -> NExpr -> NExpr
-| ECond : NExpr -> NExpr -> NExpr -> NExpr
-| ERef : RegionExpr -> NExpr -> NExpr
-| EDeref : RegionExpr -> NExpr -> NExpr
-| EAssign : RegionExpr -> NExpr -> NExpr -> NExpr
-| EPlus : NExpr -> NExpr -> NExpr
-| EMinus : NExpr -> NExpr -> NExpr
-| ETimes : NExpr -> NExpr -> NExpr
-| EEq : NExpr -> NExpr -> NExpr
-| EAllocAbs : RegionExpr -> NExpr
-| EReadAbs : RegionExpr -> NExpr
-| EWriteAbs : RegionExpr -> NExpr
-| EReadConc : NExpr -> NExpr
-| EWriteConc : NExpr -> NExpr
-| EConcat : NExpr -> NExpr -> NExpr
-| ETop : NExpr
-| EEmpty : NExpr.
+Inductive Expr :=
+| EConst : nat -> Expr
+| EBool : bool -> Expr
+| EVar : VarId -> Expr
+| EMu : VarId -> VarId -> Expr -> Expr -> Expr
+| ELambdaRgn : VarId -> Expr -> Expr
+| EMuApp : Expr -> Expr -> Expr
+| ERgnApp : Expr -> RegionExpr -> Expr
+| EEffApp : Expr -> Expr -> Expr
+| EPairPar : Expr -> Expr -> Expr
+| ECond : Expr -> Expr -> Expr -> Expr
+| ERef : RegionExpr -> Expr -> Expr
+| EDeref : RegionExpr -> Expr -> Expr
+| EAssign : RegionExpr -> Expr -> Expr -> Expr
+| EPlus : Expr -> Expr -> Expr
+| EMinus : Expr -> Expr -> Expr
+| ETimes : Expr -> Expr -> Expr
+| EEq : Expr -> Expr -> Expr
+| EAllocAbs : RegionExpr -> Expr
+| EReadAbs : RegionExpr -> Expr
+| EWriteAbs : RegionExpr -> Expr
+| EReadConc : Expr -> Expr
+| EWriteConc : Expr -> Expr
+| EConcat : Expr -> Expr -> Expr
+| ETop : Expr
+| EEmpty : Expr.

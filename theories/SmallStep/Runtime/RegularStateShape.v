@@ -20,93 +20,93 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Inductive NRegularResolvedValShape : Heap -> NVal -> NTy -> Prop :=
-| NRRVS_Nat :
+Inductive RegularResolvedValShape : Heap -> Val -> Ty -> Prop :=
+| RRVS_Nat :
     forall heap n,
-      NRegularResolvedValShape heap (VNat n) TyNat
-| NRRVS_Bool :
+      RegularResolvedValShape heap (VNat n) TyNat
+| RRVS_Bool :
     forall heap b,
-      NRegularResolvedValShape heap (VBool b) TyBool
-| NRRVS_Unit :
+      RegularResolvedValShape heap (VBool b) TyBool
+| RRVS_Unit :
     forall heap,
-      NRegularResolvedValShape heap VUnit TyUnit
-| NRRVS_Summary :
+      RegularResolvedValShape heap VUnit TyUnit
+| RRVS_Summary :
     forall heap theta,
-      NRegularResolvedValShape heap (VSummary theta) TyEffect
-| NRRVS_Pair :
+      RegularResolvedValShape heap (VSummary theta) TyEffect
+| RRVS_Pair :
     forall heap v1 v2 ty1 ty2,
-      NRegularResolvedValShape heap v1 ty1 ->
-      NRegularResolvedValShape heap v2 ty2 ->
-      NRegularResolvedValShape heap (VPair v1 v2) (TyPair ty1 ty2)
-| NRRVS_Loc :
+      RegularResolvedValShape heap v1 ty1 ->
+      RegularResolvedValShape heap v2 ty2 ->
+      RegularResolvedValShape heap (VPair v1 v2) (TyPair ty1 ty2)
+| RRVS_Loc :
     forall heap r l cell ty,
       heap_lookup r l heap = Some cell ->
-      NRegularResolvedValShape heap cell ty ->
-      NRegularResolvedValShape heap
+      RegularResolvedValShape heap cell ty ->
+      RegularResolvedValShape heap
         (VLoc r l)
         (TyRef (region_const_type r) ty)
-| NRRVS_Closure :
+| RRVS_Closure :
     forall heap closure_env closure_rho f x ec ee
       gamma omega ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res,
-      NRegularResolvedEnvShape closure_rho heap closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      RegularResolvedEnvShape closure_rho heap closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
-      NRegularResolvedValShape heap
+      RegularResolvedValShape heap
         (VClosure closure_env closure_rho f x ec ee)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
-| NRRVS_RegionClosure :
+| RRVS_RegionClosure :
     forall heap closure_env closure_rho x e gamma omega ty ty_res eff eff_res,
-      NRegularResolvedEnvShape closure_rho heap closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveStaticEffect closure_rho (close_static_effect x eff) eff_res ->
-      NResolveTy closure_rho (close_ty x ty) ty_res ->
-      NCheckedRegionBody x gamma omega e ty eff ->
-      NRegularResolvedValShape heap
+      RegularResolvedEnvShape closure_rho heap closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveStaticEffect closure_rho (close_static_effect x eff) eff_res ->
+      ResolveTy closure_rho (close_ty x ty) ty_res ->
+      CheckedRegionBody x gamma omega e ty eff ->
+      RegularResolvedValShape heap
         (VRegionClosure closure_env closure_rho x e)
         (TyForallRgn eff_res ty_res)
-with NRegularResolvedEnvShape : Rho -> Heap -> NEnv -> NCtx -> Prop :=
-| NRRES_EnvNil :
+with RegularResolvedEnvShape : Rho -> Heap -> Env -> Ctx -> Prop :=
+| RRES_EnvNil :
     forall rho heap,
-      NRegularResolvedEnvShape rho heap EnvNil []
-| NRRES_EnvCons :
+      RegularResolvedEnvShape rho heap EnvNil []
+| RRES_EnvCons :
     forall rho heap x v env ty ty_res gamma,
-      NResolveTy rho ty ty_res ->
-      NRegularResolvedValShape heap v ty_res ->
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRegularResolvedEnvShape rho heap (EnvCons x v env) ((x, ty) :: gamma).
+      ResolveTy rho ty ty_res ->
+      RegularResolvedValShape heap v ty_res ->
+      RegularResolvedEnvShape rho heap env gamma ->
+      RegularResolvedEnvShape rho heap (EnvCons x v env) ((x, ty) :: gamma).
 
-Scheme NRegularResolvedValShape_ind' :=
-  Induction for NRegularResolvedValShape Sort Prop
-with NRegularResolvedEnvShape_ind' :=
-  Induction for NRegularResolvedEnvShape Sort Prop.
+Scheme RegularResolvedValShape_ind' :=
+  Induction for RegularResolvedValShape Sort Prop
+with RegularResolvedEnvShape_ind' :=
+  Induction for RegularResolvedEnvShape Sort Prop.
 
-Combined Scheme NRegularResolvedValShape_NRegularResolvedEnvShape_ind
-  from NRegularResolvedValShape_ind', NRegularResolvedEnvShape_ind'.
+Combined Scheme RegularResolvedValShape_RegularResolvedEnvShape_ind
+  from RegularResolvedValShape_ind', RegularResolvedEnvShape_ind'.
 
-Lemma NRegularResolvedEnvShape_lookup :
+Lemma RegularResolvedEnvShape_lookup :
   forall rho heap env gamma x ty ty_res,
-    NRegularResolvedEnvShape rho heap env gamma ->
+    RegularResolvedEnvShape rho heap env gamma ->
     ctx_binds x ty gamma ->
-    NResolveTy rho ty ty_res ->
+    ResolveTy rho ty ty_res ->
     exists v,
       env_lookup x env = Some v /\
-      NRegularResolvedValShape heap v ty_res.
+      RegularResolvedValShape heap v ty_res.
 Proof.
   intros rho heap env gamma x ty ty_res HEnv.
   induction HEnv as
@@ -121,11 +121,11 @@ Proof.
     destruct (ascii_dec x y) as [HEq | HNe].
     + inversion HBind; subst.
       match goal with
-      | HStored : NResolveTy rho ?ty ?ty_stored,
-        HGoal : NResolveTy rho ?ty ?ty_goal,
-        HVStored : NRegularResolvedValShape heap v ?ty_stored |- _ =>
+      | HStored : ResolveTy rho ?ty ?ty_stored,
+        HGoal : ResolveTy rho ?ty ?ty_goal,
+        HVStored : RegularResolvedValShape heap v ?ty_stored |- _ =>
           pose proof
-            (NResolveTy_deterministic
+            (ResolveTy_deterministic
               rho ty ty_stored ty_goal HStored HGoal)
             as HResolvedEq;
           subst ty_goal;
@@ -134,25 +134,25 @@ Proof.
     + apply IH; assumption.
 Qed.
 
-Lemma NRegularResolvedEnvShape_extend :
+Lemma RegularResolvedEnvShape_extend :
   forall rho heap env gamma x v ty ty_res,
-    NResolveTy rho ty ty_res ->
-    NRegularResolvedValShape heap v ty_res ->
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NRegularResolvedEnvShape rho heap
+    ResolveTy rho ty ty_res ->
+    RegularResolvedValShape heap v ty_res ->
+    RegularResolvedEnvShape rho heap env gamma ->
+    RegularResolvedEnvShape rho heap
       (env_extend x v env)
       ((x, ty) :: gamma).
 Proof.
   intros rho heap env gamma x v ty ty_res HResolve HVal HEnv.
-  eapply NRRES_EnvCons; eauto.
+  eapply RRES_EnvCons; eauto.
 Qed.
 
-Lemma NRegularResolvedEnvShape_extend_fresh :
+Lemma RegularResolvedEnvShape_extend_fresh :
   forall rho heap env gamma omega x r_val,
     ~ In x omega ->
-    NCtxWF omega gamma ->
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NRegularResolvedEnvShape (rho_extend x r_val rho) heap env gamma.
+    CtxWF omega gamma ->
+    RegularResolvedEnvShape rho heap env gamma ->
+    RegularResolvedEnvShape (rho_extend x r_val rho) heap env gamma.
 Proof.
   intros rho heap env gamma omega x r_val HFresh HCtxWF HEnv.
   induction HEnv as
@@ -162,338 +162,338 @@ Proof.
   - inversion HCtxWF as [| binding gamma_tail HBindingWF HCtxTailWF];
       subst; simpl in HBindingWF.
     econstructor; eauto.
-    eapply NResolveTy_extend_fresh; eauto.
+    eapply ResolveTy_extend_fresh; eauto.
 Qed.
 
-Definition NRegularResolvedHeapShape (heap : Heap) : Prop :=
+Definition RegularResolvedHeapShape (heap : Heap) : Prop :=
   forall r l v,
     heap_lookup r l heap = Some v ->
     exists ty,
-      NRegularResolvedValShape heap v ty.
+      RegularResolvedValShape heap v ty.
 
-Lemma NRegularResolvedHeapShape_lookup :
+Lemma RegularResolvedHeapShape_lookup :
   forall heap r l v,
-    NRegularResolvedHeapShape heap ->
+    RegularResolvedHeapShape heap ->
     heap_lookup r l heap = Some v ->
     exists ty,
-      NRegularResolvedValShape heap v ty.
+      RegularResolvedValShape heap v ty.
 Proof.
   intros heap r l v HHeap HLookup.
   exact (HHeap r l v HLookup).
 Qed.
 
-Inductive NRegularResolvedKontShape :
-    Heap -> NKont -> NTy -> NTy -> Prop :=
-| NRRKS_Done :
+Inductive RegularResolvedKontShape :
+    Heap -> Kont -> Ty -> Ty -> Prop :=
+| RRKS_Done :
     forall heap ty,
-      NRegularResolvedKontShape heap KDone ty ty
-| NRRKS_MuAppFun :
+      RegularResolvedKontShape heap KDone ty ty
+| RRKS_MuAppFun :
     forall heap ea env rho k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res eff_arg ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty_arg ty_arg_res ->
-      NResolveStaticEffect rho eff_body eff_body_res ->
-      NResolveTy rho ty_body ty_body_res ->
-      NResolveStaticEffect rho eff_summary eff_summary_res ->
-      NCheckedTcExp gamma omega ea ty_arg eff_arg ->
-      NRegularResolvedKontShape heap k ty_body_res ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty_arg ty_arg_res ->
+      ResolveStaticEffect rho eff_body eff_body_res ->
+      ResolveTy rho ty_body ty_body_res ->
+      ResolveStaticEffect rho eff_summary eff_summary_res ->
+      CheckedTcExp gamma omega ea ty_arg eff_arg ->
+      RegularResolvedKontShape heap k ty_body_res ty_out ->
+      RegularResolvedKontShape heap
         (KMuAppFun ea env rho k)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
-| NRRKS_MuAppArg :
+| RRKS_MuAppArg :
     forall heap closure_env closure_rho f x ec ee k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res ty_out,
-      NRegularResolvedEnvShape closure_rho heap closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      RegularResolvedEnvShape closure_rho heap closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
-      NRegularResolvedKontShape heap k ty_body_res ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k ty_body_res ty_out ->
+      RegularResolvedKontShape heap
         (KMuAppArg closure_env closure_rho f x ec ee k)
         ty_arg_res
         ty_out
-| NRRKS_EffAppFun :
+| RRKS_EffAppFun :
     forall heap ea env rho k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res eff_arg ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty_arg ty_arg_res ->
-      NResolveStaticEffect rho eff_body eff_body_res ->
-      NResolveTy rho ty_body ty_body_res ->
-      NResolveStaticEffect rho eff_summary eff_summary_res ->
-      NCheckedTcExp gamma omega ea ty_arg eff_arg ->
-      NRegularResolvedKontShape heap k TyEffect ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty_arg ty_arg_res ->
+      ResolveStaticEffect rho eff_body eff_body_res ->
+      ResolveTy rho ty_body ty_body_res ->
+      ResolveStaticEffect rho eff_summary eff_summary_res ->
+      CheckedTcExp gamma omega ea ty_arg eff_arg ->
+      RegularResolvedKontShape heap k TyEffect ty_out ->
+      RegularResolvedKontShape heap
         (KEffAppFun ea env rho k)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
-| NRRKS_EffAppArg :
+| RRKS_EffAppArg :
     forall heap closure_env closure_rho f x ec ee k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res ty_out,
-      NRegularResolvedEnvShape closure_rho heap closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      RegularResolvedEnvShape closure_rho heap closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
-      NRegularResolvedKontShape heap k TyEffect ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k TyEffect ty_out ->
+      RegularResolvedKontShape heap
         (KEffAppArg closure_env closure_rho f x ec ee k)
         ty_arg_res
         ty_out
-| NRRKS_PairParEff1 :
+| RRKS_PairParEff1 :
     forall heap ef1 ea1 ef2 ea2 env rho k gamma omega
       ty1 ty1_res ty2 ty2_res eff1 eff2 eff_summary2 ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty1 ty1_res ->
-      NResolveTy rho ty2 ty2_res ->
-      NCheckedTcExp gamma omega
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty1 ty1_res ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega
         (EMuApp ef1 ea1) ty1 eff1 ->
-      NCheckedTcExp gamma omega
+      CheckedTcExp gamma omega
         (EMuApp ef2 ea2) ty2 eff2 ->
-      NCheckedTcExp gamma omega
+      CheckedTcExp gamma omega
         (EEffApp ef2 ea2) TyEffect eff_summary2 ->
-      NRegularResolvedKontShape heap k (TyPair ty1_res ty2_res) ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k (TyPair ty1_res ty2_res) ty_out ->
+      RegularResolvedKontShape heap
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k)
         TyEffect
         ty_out
-| NRRKS_PairParEff2 :
+| RRKS_PairParEff2 :
     forall heap ef1 ea1 ef2 ea2 env rho theta1 k gamma omega
       ty1 ty1_res ty2 ty2_res eff1 eff2 ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty1 ty1_res ->
-      NResolveTy rho ty2 ty2_res ->
-      NCheckedTcExp gamma omega
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty1 ty1_res ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega
         (EMuApp ef1 ea1) ty1 eff1 ->
-      NCheckedTcExp gamma omega
+      CheckedTcExp gamma omega
         (EMuApp ef2 ea2) ty2 eff2 ->
-      NRegularResolvedKontShape heap k (TyPair ty1_res ty2_res) ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k (TyPair ty1_res ty2_res) ty_out ->
+      RegularResolvedKontShape heap
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
         ty_out
-| NRRKS_RgnApp :
+| RRKS_RgnApp :
     forall heap r arg_rho r_val k eff ty ty_out,
       eval_region arg_rho r = Some r_val ->
-      NRegularResolvedKontShape heap k
+      RegularResolvedKontShape heap k
         (open_ty_type (region_const_type r_val) ty)
         ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap
         (KRgnApp r arg_rho k)
         (TyForallRgn eff ty)
         ty_out
-| NRRKS_Cond :
+| RRKS_Cond :
     forall heap et ef env rho k gamma omega ty ty_res eff_t eff_f ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega et ty eff_t ->
-      NCheckedTcExp gamma omega ef ty eff_f ->
-      NRegularResolvedKontShape heap k ty_res ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega et ty eff_t ->
+      CheckedTcExp gamma omega ef ty eff_f ->
+      RegularResolvedKontShape heap k ty_res ty_out ->
+      RegularResolvedKontShape heap
         (KCond et ef env rho k)
         TyBool
         ty_out
-| NRRKS_Ref :
+| RRKS_Ref :
     forall heap r ty k ty_out,
-      NRegularResolvedKontShape heap k
+      RegularResolvedKontShape heap k
         (TyRef (region_const_type r) ty)
         ty_out ->
-      NRegularResolvedKontShape heap (KRef r k) ty ty_out
-| NRRKS_Deref :
+      RegularResolvedKontShape heap (KRef r k) ty ty_out
+| RRKS_Deref :
     forall heap rgn r ty k ty_out,
-      NRegularResolvedKontShape heap k ty ty_out ->
-      NRegularResolvedKontShape heap (KDeref rgn k)
+      RegularResolvedKontShape heap k ty ty_out ->
+      RegularResolvedKontShape heap (KDeref rgn k)
         (TyRef (region_const_type r) ty) ty_out
-| NRRKS_AssignLoc :
+| RRKS_AssignLoc :
     forall heap rgn ev env rho k gamma omega r ty ty_res eff_v ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
       eval_region rho rgn = Some r ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega ev ty eff_v ->
-      NRegularResolvedKontShape heap k TyUnit ty_out ->
-      NRegularResolvedKontShape heap
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega ev ty eff_v ->
+      RegularResolvedKontShape heap k TyUnit ty_out ->
+      RegularResolvedKontShape heap
         (KAssignLoc rgn ev env rho k)
         (TyRef (region_const_type r) ty_res)
         ty_out
-| NRRKS_AssignVal :
+| RRKS_AssignVal :
     forall heap rgn r ty loc k ty_out,
-      NRegularResolvedValShape heap loc
+      RegularResolvedValShape heap loc
         (TyRef (region_const_type r) ty) ->
-      NRegularResolvedKontShape heap k TyUnit ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k TyUnit ty_out ->
+      RegularResolvedKontShape heap
         (KAssignVal rgn loc k)
         ty
         ty_out
-| NRRKS_PlusL :
+| RRKS_PlusL :
     forall heap e2 env rho k gamma omega eff ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NRegularResolvedKontShape heap k TyNat ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      RegularResolvedKontShape heap k TyNat ty_out ->
+      RegularResolvedKontShape heap
         (KPlusL e2 env rho k)
         TyNat
         ty_out
-| NRRKS_PlusR :
+| RRKS_PlusR :
     forall heap n k ty_out,
-      NRegularResolvedKontShape heap k TyNat ty_out ->
-      NRegularResolvedKontShape heap (KPlusR n k) TyNat ty_out
-| NRRKS_MinusL :
+      RegularResolvedKontShape heap k TyNat ty_out ->
+      RegularResolvedKontShape heap (KPlusR n k) TyNat ty_out
+| RRKS_MinusL :
     forall heap e2 env rho k gamma omega eff ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NRegularResolvedKontShape heap k TyNat ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      RegularResolvedKontShape heap k TyNat ty_out ->
+      RegularResolvedKontShape heap
         (KMinusL e2 env rho k)
         TyNat
         ty_out
-| NRRKS_MinusR :
+| RRKS_MinusR :
     forall heap n k ty_out,
-      NRegularResolvedKontShape heap k TyNat ty_out ->
-      NRegularResolvedKontShape heap (KMinusR n k) TyNat ty_out
-| NRRKS_TimesL :
+      RegularResolvedKontShape heap k TyNat ty_out ->
+      RegularResolvedKontShape heap (KMinusR n k) TyNat ty_out
+| RRKS_TimesL :
     forall heap e2 env rho k gamma omega eff ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NRegularResolvedKontShape heap k TyNat ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      RegularResolvedKontShape heap k TyNat ty_out ->
+      RegularResolvedKontShape heap
         (KTimesL e2 env rho k)
         TyNat
         ty_out
-| NRRKS_TimesR :
+| RRKS_TimesR :
     forall heap n k ty_out,
-      NRegularResolvedKontShape heap k TyNat ty_out ->
-      NRegularResolvedKontShape heap (KTimesR n k) TyNat ty_out
-| NRRKS_EqL :
+      RegularResolvedKontShape heap k TyNat ty_out ->
+      RegularResolvedKontShape heap (KTimesR n k) TyNat ty_out
+| RRKS_EqL :
     forall heap e2 env rho k gamma omega eff ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NRegularResolvedKontShape heap k TyBool ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      RegularResolvedKontShape heap k TyBool ty_out ->
+      RegularResolvedKontShape heap
         (KEqL e2 env rho k)
         TyNat
         ty_out
-| NRRKS_EqR :
+| RRKS_EqR :
     forall heap n k ty_out,
-      NRegularResolvedKontShape heap k TyBool ty_out ->
-      NRegularResolvedKontShape heap (KEqR n k) TyNat ty_out
-| NRRKS_ReadConc :
+      RegularResolvedKontShape heap k TyBool ty_out ->
+      RegularResolvedKontShape heap (KEqR n k) TyNat ty_out
+| RRKS_ReadConc :
     forall heap k r ty ty_out,
-      NRegularResolvedKontShape heap k TyEffect ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k TyEffect ty_out ->
+      RegularResolvedKontShape heap
         (KReadConc k)
         (TyRef (region_const_type r) ty)
         ty_out
-| NRRKS_WriteConc :
+| RRKS_WriteConc :
     forall heap k r ty ty_out,
-      NRegularResolvedKontShape heap k TyEffect ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k TyEffect ty_out ->
+      RegularResolvedKontShape heap
         (KWriteConc k)
         (TyRef (region_const_type r) ty)
         ty_out
-| NRRKS_ConcatL :
+| RRKS_ConcatL :
     forall heap e2 env rho k gamma omega eff ty_out,
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyEffect eff ->
-      NRegularResolvedKontShape heap k TyEffect ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyEffect eff ->
+      RegularResolvedKontShape heap k TyEffect ty_out ->
+      RegularResolvedKontShape heap
         (KConcatL e2 env rho k)
         TyEffect
         ty_out
-| NRRKS_ConcatR :
+| RRKS_ConcatR :
     forall heap theta k ty_out,
-      NRegularResolvedKontShape heap k TyEffect ty_out ->
-      NRegularResolvedKontShape heap
+      RegularResolvedKontShape heap k TyEffect ty_out ->
+      RegularResolvedKontShape heap
         (KConcatR theta k)
         TyEffect
         ty_out.
 
-Inductive NRegularResolvedStateShape : NState -> NTy -> Prop :=
-| NRRSS_Eval :
+Inductive RegularResolvedStateShape : State -> Ty -> Prop :=
+| RRSS_Eval :
     forall heap env rho e k gamma omega ty ty_res eff ty_out,
-      NRegularResolvedHeapShape heap ->
-      NRegularResolvedEnvShape rho heap env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega e ty eff ->
-      NRegularResolvedKontShape heap k ty_res ty_out ->
-      NRegularResolvedStateShape (StEval heap env rho e k) ty_out
-| NRRSS_Return :
+      RegularResolvedHeapShape heap ->
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega e ty eff ->
+      RegularResolvedKontShape heap k ty_res ty_out ->
+      RegularResolvedStateShape (StEval heap env rho e k) ty_out
+| RRSS_Return :
     forall heap v k ty ty_out,
-      NRegularResolvedHeapShape heap ->
-      NRegularResolvedValShape heap v ty ->
-      NRegularResolvedKontShape heap k ty ty_out ->
-      NRegularResolvedStateShape (StReturn heap v k) ty_out
-| NRRSS_Done :
+      RegularResolvedHeapShape heap ->
+      RegularResolvedValShape heap v ty ->
+      RegularResolvedKontShape heap k ty ty_out ->
+      RegularResolvedStateShape (StReturn heap v k) ty_out
+| RRSS_Done :
     forall heap v ty,
-      NRegularResolvedHeapShape heap ->
-      NRegularResolvedValShape heap v ty ->
-      NRegularResolvedStateShape (StDone heap v) ty
-| NRRSS_Error :
+      RegularResolvedHeapShape heap ->
+      RegularResolvedValShape heap v ty ->
+      RegularResolvedStateShape (StDone heap v) ty
+| RRSS_Error :
     forall heap ty,
-      NRegularResolvedHeapShape heap ->
-      NRegularResolvedStateShape (StError heap) ty
-| NRRSS_PairParRun :
+      RegularResolvedHeapShape heap ->
+      RegularResolvedStateShape (StError heap) ty
+| RRSS_PairParRun :
     forall left_state right_state phi_left phi_right k
       heap ty1 ty2 ty_out,
       state_heap left_state = heap ->
       state_heap right_state = heap ->
-      NRegularResolvedStateShape left_state ty1 ->
-      NRegularResolvedStateShape right_state ty2 ->
-      NRegularResolvedKontShape heap k (TyPair ty1 ty2) ty_out ->
-      NRegularResolvedStateShape
+      RegularResolvedStateShape left_state ty1 ->
+      RegularResolvedStateShape right_state ty2 ->
+      RegularResolvedKontShape heap k (TyPair ty1 ty2) ty_out ->
+      RegularResolvedStateShape
         (StPairParRun left_state right_state phi_left phi_right k)
         ty_out.
 
-Lemma NRegularResolvedValShape_to_resolved :
+Lemma RegularResolvedValShape_to_resolved :
   forall heap v ty,
-    NRegularResolvedValShape heap v ty ->
-    NResolvedValShape heap v ty
-with NRegularResolvedEnvShape_to_resolved :
+    RegularResolvedValShape heap v ty ->
+    ResolvedValShape heap v ty
+with RegularResolvedEnvShape_to_resolved :
   forall rho heap env gamma,
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NResolvedEnvShape rho heap env gamma.
+    RegularResolvedEnvShape rho heap env gamma ->
+    ResolvedEnvShape rho heap env gamma.
 Proof.
   - intros heap v ty HVal.
     induction HVal.
@@ -501,232 +501,232 @@ Proof.
     + constructor.
     + constructor.
     + constructor.
-    + eapply NRVS_Pair; eauto.
-    + eapply NRVS_Loc; eauto.
-    + eapply NRVS_Closure; eauto using NCheckedTcExp_to_NTcExp.
-    + eapply NRVS_RegionClosure; eauto.
-      eapply NCheckedRegionBody_to_NTcExp; eauto.
+    + eapply RVS_Pair; eauto.
+    + eapply RVS_Loc; eauto.
+    + eapply RVS_Closure; eauto using CheckedTcExp_to_TcExp.
+    + eapply RVS_RegionClosure; eauto.
+      eapply CheckedRegionBody_to_TcExp; eauto.
   - intros rho heap env gamma HEnv.
     induction HEnv.
     + constructor.
     + econstructor; eauto.
 Qed.
 
-Lemma NRegularResolvedHeapShape_to_resolved :
+Lemma RegularResolvedHeapShape_to_resolved :
   forall heap,
-    NRegularResolvedHeapShape heap ->
-    NResolvedHeapShape heap.
+    RegularResolvedHeapShape heap ->
+    ResolvedHeapShape heap.
 Proof.
-  unfold NRegularResolvedHeapShape, NResolvedHeapShape.
+  unfold RegularResolvedHeapShape, ResolvedHeapShape.
   intros heap HHeap r l v HLookup.
   destruct (HHeap r l v HLookup) as (ty & HVal).
   exists ty.
-  eapply NRegularResolvedValShape_to_resolved; eauto.
+  eapply RegularResolvedValShape_to_resolved; eauto.
 Qed.
 
-Lemma NRegularResolvedKontShape_to_resolved :
+Lemma RegularResolvedKontShape_to_resolved :
   forall heap k ty_in ty_out,
-    NRegularResolvedKontShape heap k ty_in ty_out ->
-    NResolvedKontShape heap k ty_in ty_out.
+    RegularResolvedKontShape heap k ty_in ty_out ->
+    ResolvedKontShape heap k ty_in ty_out.
 Proof.
   intros heap k ty_in ty_out HK.
   induction HK.
   - constructor.
-  - eapply NRKS_MuAppFun with
+  - eapply RKS_MuAppFun with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary)
       (eff_arg := eff_arg);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_MuAppArg with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_MuAppArg with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_EffAppFun with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_EffAppFun with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary)
       (eff_arg := eff_arg);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_EffAppArg with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_EffAppArg with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_PairParEff1 with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_PairParEff1 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2)
       (eff_summary2 := eff_summary2);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_PairParEff2 with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_PairParEff2 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_RgnApp; eauto.
-  - eapply NRKS_Cond with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_RgnApp; eauto.
+  - eapply RKS_Cond with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
       (eff_t := eff_t) (eff_f := eff_f);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_Ref; eauto.
-  - eapply NRKS_Deref; eauto.
-  - eapply NRKS_AssignLoc with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_Ref; eauto.
+  - eapply RKS_Deref; eauto.
+  - eapply RKS_AssignLoc with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
       (eff_v := eff_v);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_AssignVal; eauto using
-      NRegularResolvedValShape_to_resolved.
-  - eapply NRKS_PlusL with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_AssignVal; eauto using
+      RegularResolvedValShape_to_resolved.
+  - eapply RKS_PlusL with
       (gamma := gamma) (omega := omega) (eff := eff);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_PlusR; eauto.
-  - eapply NRKS_MinusL with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_PlusR; eauto.
+  - eapply RKS_MinusL with
       (gamma := gamma) (omega := omega) (eff := eff);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_MinusR; eauto.
-  - eapply NRKS_TimesL with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_MinusR; eauto.
+  - eapply RKS_TimesL with
       (gamma := gamma) (omega := omega) (eff := eff);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_TimesR; eauto.
-  - eapply NRKS_EqL with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_TimesR; eauto.
+  - eapply RKS_EqL with
       (gamma := gamma) (omega := omega) (eff := eff);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_EqR; eauto.
-  - eapply NRKS_ReadConc; eauto.
-  - eapply NRKS_WriteConc; eauto.
-  - eapply NRKS_ConcatL with
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_EqR; eauto.
+  - eapply RKS_ReadConc; eauto.
+  - eapply RKS_WriteConc; eauto.
+  - eapply RKS_ConcatL with
       (gamma := gamma) (omega := omega) (eff := eff);
       eauto using
-        NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp.
-  - eapply NRKS_ConcatR; eauto.
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_ConcatR; eauto.
 Qed.
 
-Lemma NRegularResolvedStateShape_to_resolved :
+Lemma RegularResolvedStateShape_to_resolved :
   forall state ty,
-    NRegularResolvedStateShape state ty ->
-    NResolvedStateShape state ty.
+    RegularResolvedStateShape state ty ->
+    ResolvedStateShape state ty.
 Proof.
   intros state ty HState.
   induction HState.
-  - eapply NRSS_Eval; eauto using
-      NRegularResolvedHeapShape_to_resolved,
-      NRegularResolvedEnvShape_to_resolved,
-        NCheckedTcExp_to_NTcExp,
-      NRegularResolvedKontShape_to_resolved.
-  - eapply NRSS_Return; eauto using
-      NRegularResolvedHeapShape_to_resolved,
-      NRegularResolvedValShape_to_resolved,
-      NRegularResolvedKontShape_to_resolved.
-  - eapply NRSS_Done; eauto using
-      NRegularResolvedHeapShape_to_resolved,
-      NRegularResolvedValShape_to_resolved.
-  - eapply NRSS_Error; eauto using
-      NRegularResolvedHeapShape_to_resolved.
-  - eapply NRSS_PairParRun; eauto using
-      NRegularResolvedKontShape_to_resolved.
+  - eapply RSS_Eval; eauto using
+      RegularResolvedHeapShape_to_resolved,
+      RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp,
+      RegularResolvedKontShape_to_resolved.
+  - eapply RSS_Return; eauto using
+      RegularResolvedHeapShape_to_resolved,
+      RegularResolvedValShape_to_resolved,
+      RegularResolvedKontShape_to_resolved.
+  - eapply RSS_Done; eauto using
+      RegularResolvedHeapShape_to_resolved,
+      RegularResolvedValShape_to_resolved.
+  - eapply RSS_Error; eauto using
+      RegularResolvedHeapShape_to_resolved.
+  - eapply RSS_PairParRun; eauto using
+      RegularResolvedKontShape_to_resolved.
 Qed.
 
-Lemma NRegularResolvedStateShape_initial :
+Lemma RegularResolvedStateShape_initial :
   forall heap env rho e gamma omega ty ty_res eff,
-    NRegularResolvedHeapShape heap ->
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NRhoModels omega rho ->
-    NResolveTy rho ty ty_res ->
-    NCheckedTcExp gamma omega e ty eff ->
-    NRegularResolvedStateShape (NInitialState heap env rho e) ty_res.
+    RegularResolvedHeapShape heap ->
+    RegularResolvedEnvShape rho heap env gamma ->
+    RhoModels omega rho ->
+    ResolveTy rho ty ty_res ->
+    CheckedTcExp gamma omega e ty eff ->
+    RegularResolvedStateShape (InitialState heap env rho e) ty_res.
 Proof.
   intros heap env rho e gamma omega ty ty_res eff
     HHeap HEnv HRho HResolve HTyped.
-  unfold NInitialState.
-  eapply NRRSS_Eval with
+  unfold InitialState.
+  eapply RRSS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := ty) (eff := eff);
     eauto.
   constructor.
 Qed.
 
-Corollary NRegularResolvedStateShape_initial_effect :
+Corollary RegularResolvedStateShape_initial_effect :
   forall heap env rho e gamma omega eff,
-    NRegularResolvedHeapShape heap ->
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NRhoModels omega rho ->
-    NCheckedTcExp gamma omega e TyEffect eff ->
-    NRegularResolvedStateShape (NInitialState heap env rho e) TyEffect.
+    RegularResolvedHeapShape heap ->
+    RegularResolvedEnvShape rho heap env gamma ->
+    RhoModels omega rho ->
+    CheckedTcExp gamma omega e TyEffect eff ->
+    RegularResolvedStateShape (InitialState heap env rho e) TyEffect.
 Proof.
   intros heap env rho e gamma omega eff HHeap HEnv HRho HTyped.
-  eapply NRegularResolvedStateShape_initial; eauto using NResolve_Effect.
+  eapply RegularResolvedStateShape_initial; eauto using Resolve_Effect.
 Qed.
 
-Lemma NCheckedResolvedStateShape_initial :
+Lemma CheckedResolvedStateShape_initial :
   forall heap env rho e gamma omega ty ty_res eff,
-    NRegularResolvedHeapShape heap ->
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NRhoModels omega rho ->
-    NResolveTy rho ty ty_res ->
-    NCheckedTcExp gamma omega e ty eff ->
-    NRegularResolvedStateShape (NInitialState heap env rho e) ty_res.
+    RegularResolvedHeapShape heap ->
+    RegularResolvedEnvShape rho heap env gamma ->
+    RhoModels omega rho ->
+    ResolveTy rho ty ty_res ->
+    CheckedTcExp gamma omega e ty eff ->
+    RegularResolvedStateShape (InitialState heap env rho e) ty_res.
 Proof.
   intros heap env rho e gamma omega ty ty_res eff
     HHeap HEnv HRho HResolve HChecked.
-  eapply NRegularResolvedStateShape_initial; eauto.
+  eapply RegularResolvedStateShape_initial; eauto.
 Qed.
 
-Corollary NCheckedResolvedStateShape_initial_effect :
+Corollary CheckedResolvedStateShape_initial_effect :
   forall heap env rho e gamma omega eff,
-    NRegularResolvedHeapShape heap ->
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NRhoModels omega rho ->
-    NCheckedTcExp gamma omega e TyEffect eff ->
-    NRegularResolvedStateShape (NInitialState heap env rho e) TyEffect.
+    RegularResolvedHeapShape heap ->
+    RegularResolvedEnvShape rho heap env gamma ->
+    RhoModels omega rho ->
+    CheckedTcExp gamma omega e TyEffect eff ->
+    RegularResolvedStateShape (InitialState heap env rho e) TyEffect.
 Proof.
   intros heap env rho e gamma omega eff HHeap HEnv HRho HChecked.
-  eapply NCheckedResolvedStateShape_initial; eauto using NResolve_Effect.
+  eapply CheckedResolvedStateShape_initial; eauto using Resolve_Effect.
 Qed.
 
-Lemma NRegularResolvedStateShape_aligned :
+Lemma RegularResolvedStateShape_aligned :
   forall state ty,
-    NRegularResolvedStateShape state ty ->
-    NStateHeapsAligned state.
+    RegularResolvedStateShape state ty ->
+    StateHeapsAligned state.
 Proof.
   intros state ty HState.
   induction HState; simpl; try exact I.
   repeat split; assumption || congruence.
 Qed.
 
-Definition NStoreTyping := list (RegionId * Location * NTy).
+Definition StoreTyping := list (RegionId * Location * Ty).
 
 Fixpoint store_ty_lookup
     (r : RegionId) (l : Location)
-    (store : NStoreTyping) : option NTy :=
+    (store : StoreTyping) : option Ty :=
   match store with
   | [] => None
   | (r', l', ty) :: store' =>
@@ -735,8 +735,8 @@ Fixpoint store_ty_lookup
       else store_ty_lookup r l store'
   end.
 
-Definition NStoreKeysBoundedByHeap
-    (heap : Heap) (store : NStoreTyping) : Prop :=
+Definition StoreKeysBoundedByHeap
+    (heap : Heap) (store : StoreTyping) : Prop :=
   forall r l ty,
     In (r, l, ty) store ->
     l < length heap.
@@ -782,7 +782,7 @@ Qed.
 
 Lemma store_ty_lookup_extend_old :
   forall heap store r_new l_new ty_new r l ty,
-    NStoreKeysBoundedByHeap heap store ->
+    StoreKeysBoundedByHeap heap store ->
     l_new = length heap ->
     store_ty_lookup r l store = Some ty ->
     store_ty_lookup r l ((r_new, l_new, ty_new) :: store) = Some ty.
@@ -803,92 +803,92 @@ Proof.
   lia.
 Qed.
 
-Inductive NStoreResolvedValShape : NStoreTyping -> NVal -> NTy -> Prop :=
-| NSRVS_Nat :
+Inductive StoreResolvedValShape : StoreTyping -> Val -> Ty -> Prop :=
+| SRVS_Nat :
     forall store n,
-      NStoreResolvedValShape store (VNat n) TyNat
-| NSRVS_Bool :
+      StoreResolvedValShape store (VNat n) TyNat
+| SRVS_Bool :
     forall store b,
-      NStoreResolvedValShape store (VBool b) TyBool
-| NSRVS_Unit :
+      StoreResolvedValShape store (VBool b) TyBool
+| SRVS_Unit :
     forall store,
-      NStoreResolvedValShape store VUnit TyUnit
-| NSRVS_Summary :
+      StoreResolvedValShape store VUnit TyUnit
+| SRVS_Summary :
     forall store theta,
-      NStoreResolvedValShape store (VSummary theta) TyEffect
-| NSRVS_Pair :
+      StoreResolvedValShape store (VSummary theta) TyEffect
+| SRVS_Pair :
     forall store v1 v2 ty1 ty2,
-      NStoreResolvedValShape store v1 ty1 ->
-      NStoreResolvedValShape store v2 ty2 ->
-      NStoreResolvedValShape store (VPair v1 v2) (TyPair ty1 ty2)
-| NSRVS_Loc :
+      StoreResolvedValShape store v1 ty1 ->
+      StoreResolvedValShape store v2 ty2 ->
+      StoreResolvedValShape store (VPair v1 v2) (TyPair ty1 ty2)
+| SRVS_Loc :
     forall store r l ty,
       store_ty_lookup r l store = Some ty ->
-      NStoreResolvedValShape store
+      StoreResolvedValShape store
         (VLoc r l)
         (TyRef (region_const_type r) ty)
-| NSRVS_Closure :
+| SRVS_Closure :
     forall store closure_env closure_rho f x ec ee
       gamma omega ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res,
-      NStoreResolvedEnvShape store closure_rho closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      StoreResolvedEnvShape store closure_rho closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
-      NStoreResolvedValShape store
+      StoreResolvedValShape store
         (VClosure closure_env closure_rho f x ec ee)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
-| NSRVS_RegionClosure :
+| SRVS_RegionClosure :
     forall store closure_env closure_rho x e gamma omega ty ty_res eff eff_res,
-      NStoreResolvedEnvShape store closure_rho closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveStaticEffect closure_rho (close_static_effect x eff) eff_res ->
-      NResolveTy closure_rho (close_ty x ty) ty_res ->
-      NCheckedRegionBody x gamma omega e ty eff ->
-      NStoreResolvedValShape store
+      StoreResolvedEnvShape store closure_rho closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveStaticEffect closure_rho (close_static_effect x eff) eff_res ->
+      ResolveTy closure_rho (close_ty x ty) ty_res ->
+      CheckedRegionBody x gamma omega e ty eff ->
+      StoreResolvedValShape store
         (VRegionClosure closure_env closure_rho x e)
         (TyForallRgn eff_res ty_res)
-with NStoreResolvedEnvShape : NStoreTyping -> Rho -> NEnv -> NCtx -> Prop :=
-| NSRES_EnvNil :
+with StoreResolvedEnvShape : StoreTyping -> Rho -> Env -> Ctx -> Prop :=
+| SRES_EnvNil :
     forall store rho,
-      NStoreResolvedEnvShape store rho EnvNil []
-| NSRES_EnvCons :
+      StoreResolvedEnvShape store rho EnvNil []
+| SRES_EnvCons :
     forall store rho x v env ty ty_res gamma,
-      NResolveTy rho ty ty_res ->
-      NStoreResolvedValShape store v ty_res ->
-      NStoreResolvedEnvShape store rho env gamma ->
-      NStoreResolvedEnvShape store rho (EnvCons x v env) ((x, ty) :: gamma).
+      ResolveTy rho ty ty_res ->
+      StoreResolvedValShape store v ty_res ->
+      StoreResolvedEnvShape store rho env gamma ->
+      StoreResolvedEnvShape store rho (EnvCons x v env) ((x, ty) :: gamma).
 
-Scheme NStoreResolvedValShape_ind' :=
-  Induction for NStoreResolvedValShape Sort Prop
-with NStoreResolvedEnvShape_ind' :=
-  Induction for NStoreResolvedEnvShape Sort Prop.
+Scheme StoreResolvedValShape_ind' :=
+  Induction for StoreResolvedValShape Sort Prop
+with StoreResolvedEnvShape_ind' :=
+  Induction for StoreResolvedEnvShape Sort Prop.
 
-Combined Scheme NStoreResolvedValShape_NStoreResolvedEnvShape_ind
-  from NStoreResolvedValShape_ind', NStoreResolvedEnvShape_ind'.
+Combined Scheme StoreResolvedValShape_StoreResolvedEnvShape_ind
+  from StoreResolvedValShape_ind', StoreResolvedEnvShape_ind'.
 
-Lemma NStoreResolvedEnvShape_lookup :
+Lemma StoreResolvedEnvShape_lookup :
   forall store rho env gamma x ty ty_res,
-    NStoreResolvedEnvShape store rho env gamma ->
+    StoreResolvedEnvShape store rho env gamma ->
     ctx_binds x ty gamma ->
-    NResolveTy rho ty ty_res ->
+    ResolveTy rho ty ty_res ->
     exists v,
       env_lookup x env = Some v /\
-      NStoreResolvedValShape store v ty_res.
+      StoreResolvedValShape store v ty_res.
 Proof.
   intros store rho env gamma x ty ty_res HEnv.
   induction HEnv as
@@ -903,11 +903,11 @@ Proof.
     destruct (ascii_dec x y) as [HEq | HNe].
     + inversion HBind; subst.
       match goal with
-      | HStored : NResolveTy rho ?ty ?ty_stored,
-        HGoal : NResolveTy rho ?ty ?ty_goal,
-        HVStored : NStoreResolvedValShape store v ?ty_stored |- _ =>
+      | HStored : ResolveTy rho ?ty ?ty_stored,
+        HGoal : ResolveTy rho ?ty ?ty_goal,
+        HVStored : StoreResolvedValShape store v ?ty_stored |- _ =>
           pose proof
-            (NResolveTy_deterministic
+            (ResolveTy_deterministic
               rho ty ty_stored ty_goal HStored HGoal)
             as HResolvedEq;
           subst ty_goal;
@@ -916,25 +916,25 @@ Proof.
     + apply IH; assumption.
 Qed.
 
-Lemma NStoreResolvedEnvShape_extend :
+Lemma StoreResolvedEnvShape_extend :
   forall store rho env gamma x v ty ty_res,
-    NResolveTy rho ty ty_res ->
-    NStoreResolvedValShape store v ty_res ->
-    NStoreResolvedEnvShape store rho env gamma ->
-    NStoreResolvedEnvShape store rho
+    ResolveTy rho ty ty_res ->
+    StoreResolvedValShape store v ty_res ->
+    StoreResolvedEnvShape store rho env gamma ->
+    StoreResolvedEnvShape store rho
       (env_extend x v env)
       ((x, ty) :: gamma).
 Proof.
   intros store rho env gamma x v ty ty_res HResolve HVal HEnv.
-  eapply NSRES_EnvCons; eauto.
+  eapply SRES_EnvCons; eauto.
 Qed.
 
-Lemma NStoreResolvedEnvShape_extend_fresh :
+Lemma StoreResolvedEnvShape_extend_fresh :
   forall store rho env gamma omega x r_val,
     ~ In x omega ->
-    NCtxWF omega gamma ->
-    NStoreResolvedEnvShape store rho env gamma ->
-    NStoreResolvedEnvShape store (rho_extend x r_val rho) env gamma.
+    CtxWF omega gamma ->
+    StoreResolvedEnvShape store rho env gamma ->
+    StoreResolvedEnvShape store (rho_extend x r_val rho) env gamma.
 Proof.
   intros store rho env gamma omega x r_val HFresh HCtxWF HEnv.
   induction HEnv as
@@ -944,343 +944,343 @@ Proof.
   - inversion HCtxWF as [| binding gamma_tail HBindingWF HCtxTailWF];
       subst; simpl in HBindingWF.
     econstructor; eauto.
-    eapply NResolveTy_extend_fresh; eauto.
+    eapply ResolveTy_extend_fresh; eauto.
 Qed.
 
-Definition NStoreResolvedHeapShape
-    (heap : Heap) (store : NStoreTyping) : Prop :=
+Definition StoreResolvedHeapShape
+    (heap : Heap) (store : StoreTyping) : Prop :=
   (forall r l v,
     heap_lookup r l heap = Some v ->
     exists ty,
       store_ty_lookup r l store = Some ty /\
-      NStoreResolvedValShape store v ty) /\
+      StoreResolvedValShape store v ty) /\
   (forall r l ty,
     store_ty_lookup r l store = Some ty ->
     exists v,
       heap_lookup r l heap = Some v /\
-      NStoreResolvedValShape store v ty).
+      StoreResolvedValShape store v ty).
 
-Definition NStoreResolvedRuntimeShape
-    (heap : Heap) (store : NStoreTyping)
-    (env : NEnv) (rho : Rho) (gamma : NCtx) : Prop :=
-  NStoreKeysBoundedByHeap heap store /\
-  NStoreResolvedHeapShape heap store /\
-  NStoreResolvedEnvShape store rho env gamma.
+Definition StoreResolvedRuntimeShape
+    (heap : Heap) (store : StoreTyping)
+    (env : Env) (rho : Rho) (gamma : Ctx) : Prop :=
+  StoreKeysBoundedByHeap heap store /\
+  StoreResolvedHeapShape heap store /\
+  StoreResolvedEnvShape store rho env gamma.
 
-Inductive NStoreResolvedKontShape :
-    NStoreTyping -> NKont -> NTy -> NTy -> Prop :=
-| NSRKS_Done :
+Inductive StoreResolvedKontShape :
+    StoreTyping -> Kont -> Ty -> Ty -> Prop :=
+| SRKS_Done :
     forall store ty,
-      NStoreResolvedKontShape store KDone ty ty
-| NSRKS_MuAppFun :
+      StoreResolvedKontShape store KDone ty ty
+| SRKS_MuAppFun :
     forall store ea env rho k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res eff_arg ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty_arg ty_arg_res ->
-      NResolveStaticEffect rho eff_body eff_body_res ->
-      NResolveTy rho ty_body ty_body_res ->
-      NResolveStaticEffect rho eff_summary eff_summary_res ->
-      NCheckedTcExp gamma omega ea ty_arg eff_arg ->
-      NStoreResolvedKontShape store k ty_body_res ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty_arg ty_arg_res ->
+      ResolveStaticEffect rho eff_body eff_body_res ->
+      ResolveTy rho ty_body ty_body_res ->
+      ResolveStaticEffect rho eff_summary eff_summary_res ->
+      CheckedTcExp gamma omega ea ty_arg eff_arg ->
+      StoreResolvedKontShape store k ty_body_res ty_out ->
+      StoreResolvedKontShape store
         (KMuAppFun ea env rho k)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
-| NSRKS_MuAppArg :
+| SRKS_MuAppArg :
     forall store closure_env closure_rho f x ec ee k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res ty_out,
-      NStoreResolvedEnvShape store closure_rho closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      StoreResolvedEnvShape store closure_rho closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
-      NStoreResolvedKontShape store k ty_body_res ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k ty_body_res ty_out ->
+      StoreResolvedKontShape store
         (KMuAppArg closure_env closure_rho f x ec ee k)
         ty_arg_res
         ty_out
-| NSRKS_EffAppFun :
+| SRKS_EffAppFun :
     forall store ea env rho k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res eff_arg ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty_arg ty_arg_res ->
-      NResolveStaticEffect rho eff_body eff_body_res ->
-      NResolveTy rho ty_body ty_body_res ->
-      NResolveStaticEffect rho eff_summary eff_summary_res ->
-      NCheckedTcExp gamma omega ea ty_arg eff_arg ->
-      NStoreResolvedKontShape store k TyEffect ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty_arg ty_arg_res ->
+      ResolveStaticEffect rho eff_body eff_body_res ->
+      ResolveTy rho ty_body ty_body_res ->
+      ResolveStaticEffect rho eff_summary eff_summary_res ->
+      CheckedTcExp gamma omega ea ty_arg eff_arg ->
+      StoreResolvedKontShape store k TyEffect ty_out ->
+      StoreResolvedKontShape store
         (KEffAppFun ea env rho k)
         (TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res)
         ty_out
-| NSRKS_EffAppArg :
+| SRKS_EffAppArg :
     forall store closure_env closure_rho f x ec ee k gamma omega
       ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res ty_out,
-      NStoreResolvedEnvShape store closure_rho closure_env gamma ->
-      NRhoModels omega closure_rho ->
-      NResolveTy closure_rho ty_arg ty_arg_res ->
-      NResolveStaticEffect closure_rho eff_body eff_body_res ->
-      NResolveTy closure_rho ty_body ty_body_res ->
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res ->
-      NCheckedTcExp
+      StoreResolvedEnvShape store closure_rho closure_env gamma ->
+      RhoModels omega closure_rho ->
+      ResolveTy closure_rho ty_arg ty_arg_res ->
+      ResolveStaticEffect closure_rho eff_body eff_body_res ->
+      ResolveTy closure_rho ty_body ty_body_res ->
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res ->
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body ->
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary ->
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee ->
-      NStoreResolvedKontShape store k TyEffect ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k TyEffect ty_out ->
+      StoreResolvedKontShape store
         (KEffAppArg closure_env closure_rho f x ec ee k)
         ty_arg_res
         ty_out
-| NSRKS_PairParEff1 :
+| SRKS_PairParEff1 :
     forall store ef1 ea1 ef2 ea2 env rho k gamma omega
       ty1 ty1_res ty2 ty2_res eff1 eff2 eff_summary2 ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty1 ty1_res ->
-      NResolveTy rho ty2 ty2_res ->
-      NCheckedTcExp gamma omega
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty1 ty1_res ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega
         (EMuApp ef1 ea1) ty1 eff1 ->
-      NCheckedTcExp gamma omega
+      CheckedTcExp gamma omega
         (EMuApp ef2 ea2) ty2 eff2 ->
-      NCheckedTcExp gamma omega
+      CheckedTcExp gamma omega
         (EEffApp ef2 ea2) TyEffect eff_summary2 ->
-      NStoreResolvedKontShape store k (TyPair ty1_res ty2_res) ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k (TyPair ty1_res ty2_res) ty_out ->
+      StoreResolvedKontShape store
         (KPairParEff1 ef1 ea1 ef2 ea2 env rho k)
         TyEffect
         ty_out
-| NSRKS_PairParEff2 :
+| SRKS_PairParEff2 :
     forall store ef1 ea1 ef2 ea2 env rho theta1 k gamma omega
       ty1 ty1_res ty2 ty2_res eff1 eff2 ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty1 ty1_res ->
-      NResolveTy rho ty2 ty2_res ->
-      NCheckedTcExp gamma omega
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty1 ty1_res ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega
         (EMuApp ef1 ea1) ty1 eff1 ->
-      NCheckedTcExp gamma omega
+      CheckedTcExp gamma omega
         (EMuApp ef2 ea2) ty2 eff2 ->
-      NStoreResolvedKontShape store k (TyPair ty1_res ty2_res) ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k (TyPair ty1_res ty2_res) ty_out ->
+      StoreResolvedKontShape store
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
         ty_out
-| NSRKS_RgnApp :
+| SRKS_RgnApp :
     forall store r arg_rho r_val k eff ty ty_out,
       eval_region arg_rho r = Some r_val ->
-      NStoreResolvedKontShape store k
+      StoreResolvedKontShape store k
         (open_ty_type (region_const_type r_val) ty)
         ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store
         (KRgnApp r arg_rho k)
         (TyForallRgn eff ty)
         ty_out
-| NSRKS_Cond :
+| SRKS_Cond :
     forall store et ef env rho k gamma omega ty ty_res eff_t eff_f ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega et ty eff_t ->
-      NCheckedTcExp gamma omega ef ty eff_f ->
-      NStoreResolvedKontShape store k ty_res ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega et ty eff_t ->
+      CheckedTcExp gamma omega ef ty eff_f ->
+      StoreResolvedKontShape store k ty_res ty_out ->
+      StoreResolvedKontShape store
         (KCond et ef env rho k)
         TyBool
         ty_out
-| NSRKS_Ref :
+| SRKS_Ref :
     forall store r ty k ty_out,
-      NStoreResolvedKontShape store k
+      StoreResolvedKontShape store k
         (TyRef (region_const_type r) ty)
         ty_out ->
-      NStoreResolvedKontShape store (KRef r k) ty ty_out
-| NSRKS_Deref :
+      StoreResolvedKontShape store (KRef r k) ty ty_out
+| SRKS_Deref :
     forall store rgn r ty k ty_out,
-      NStoreResolvedKontShape store k ty ty_out ->
-      NStoreResolvedKontShape store (KDeref rgn k)
+      StoreResolvedKontShape store k ty ty_out ->
+      StoreResolvedKontShape store (KDeref rgn k)
         (TyRef (region_const_type r) ty) ty_out
-| NSRKS_AssignLoc :
+| SRKS_AssignLoc :
     forall store rgn ev env rho k gamma omega r ty ty_res eff_v ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
       eval_region rho rgn = Some r ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega ev ty eff_v ->
-      NStoreResolvedKontShape store k TyUnit ty_out ->
-      NStoreResolvedKontShape store
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega ev ty eff_v ->
+      StoreResolvedKontShape store k TyUnit ty_out ->
+      StoreResolvedKontShape store
         (KAssignLoc rgn ev env rho k)
         (TyRef (region_const_type r) ty_res)
         ty_out
-| NSRKS_AssignVal :
+| SRKS_AssignVal :
     forall store rgn r ty loc k ty_out,
-      NStoreResolvedValShape store loc
+      StoreResolvedValShape store loc
         (TyRef (region_const_type r) ty) ->
-      NStoreResolvedKontShape store k TyUnit ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k TyUnit ty_out ->
+      StoreResolvedKontShape store
         (KAssignVal rgn loc k)
         ty
         ty_out
-| NSRKS_PlusL :
+| SRKS_PlusL :
     forall store e2 env rho k gamma omega eff ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NStoreResolvedKontShape store k TyNat ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      StoreResolvedKontShape store k TyNat ty_out ->
+      StoreResolvedKontShape store
         (KPlusL e2 env rho k)
         TyNat
         ty_out
-| NSRKS_PlusR :
+| SRKS_PlusR :
     forall store n k ty_out,
-      NStoreResolvedKontShape store k TyNat ty_out ->
-      NStoreResolvedKontShape store (KPlusR n k) TyNat ty_out
-| NSRKS_MinusL :
+      StoreResolvedKontShape store k TyNat ty_out ->
+      StoreResolvedKontShape store (KPlusR n k) TyNat ty_out
+| SRKS_MinusL :
     forall store e2 env rho k gamma omega eff ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NStoreResolvedKontShape store k TyNat ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      StoreResolvedKontShape store k TyNat ty_out ->
+      StoreResolvedKontShape store
         (KMinusL e2 env rho k)
         TyNat
         ty_out
-| NSRKS_MinusR :
+| SRKS_MinusR :
     forall store n k ty_out,
-      NStoreResolvedKontShape store k TyNat ty_out ->
-      NStoreResolvedKontShape store (KMinusR n k) TyNat ty_out
-| NSRKS_TimesL :
+      StoreResolvedKontShape store k TyNat ty_out ->
+      StoreResolvedKontShape store (KMinusR n k) TyNat ty_out
+| SRKS_TimesL :
     forall store e2 env rho k gamma omega eff ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NStoreResolvedKontShape store k TyNat ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      StoreResolvedKontShape store k TyNat ty_out ->
+      StoreResolvedKontShape store
         (KTimesL e2 env rho k)
         TyNat
         ty_out
-| NSRKS_TimesR :
+| SRKS_TimesR :
     forall store n k ty_out,
-      NStoreResolvedKontShape store k TyNat ty_out ->
-      NStoreResolvedKontShape store (KTimesR n k) TyNat ty_out
-| NSRKS_EqL :
+      StoreResolvedKontShape store k TyNat ty_out ->
+      StoreResolvedKontShape store (KTimesR n k) TyNat ty_out
+| SRKS_EqL :
     forall store e2 env rho k gamma omega eff ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyNat eff ->
-      NStoreResolvedKontShape store k TyBool ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyNat eff ->
+      StoreResolvedKontShape store k TyBool ty_out ->
+      StoreResolvedKontShape store
         (KEqL e2 env rho k)
         TyNat
         ty_out
-| NSRKS_EqR :
+| SRKS_EqR :
     forall store n k ty_out,
-      NStoreResolvedKontShape store k TyBool ty_out ->
-      NStoreResolvedKontShape store (KEqR n k) TyNat ty_out
-| NSRKS_ReadConc :
+      StoreResolvedKontShape store k TyBool ty_out ->
+      StoreResolvedKontShape store (KEqR n k) TyNat ty_out
+| SRKS_ReadConc :
     forall store k r ty ty_out,
-      NStoreResolvedKontShape store k TyEffect ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k TyEffect ty_out ->
+      StoreResolvedKontShape store
         (KReadConc k)
         (TyRef (region_const_type r) ty)
         ty_out
-| NSRKS_WriteConc :
+| SRKS_WriteConc :
     forall store k r ty ty_out,
-      NStoreResolvedKontShape store k TyEffect ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k TyEffect ty_out ->
+      StoreResolvedKontShape store
         (KWriteConc k)
         (TyRef (region_const_type r) ty)
         ty_out
-| NSRKS_ConcatL :
+| SRKS_ConcatL :
     forall store e2 env rho k gamma omega eff ty_out,
-      NStoreResolvedEnvShape store rho env gamma ->
-      NRhoModels omega rho ->
-      NCheckedTcExp gamma omega e2 TyEffect eff ->
-      NStoreResolvedKontShape store k TyEffect ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      CheckedTcExp gamma omega e2 TyEffect eff ->
+      StoreResolvedKontShape store k TyEffect ty_out ->
+      StoreResolvedKontShape store
         (KConcatL e2 env rho k)
         TyEffect
         ty_out
-| NSRKS_ConcatR :
+| SRKS_ConcatR :
     forall store theta k ty_out,
-      NStoreResolvedKontShape store k TyEffect ty_out ->
-      NStoreResolvedKontShape store
+      StoreResolvedKontShape store k TyEffect ty_out ->
+      StoreResolvedKontShape store
         (KConcatR theta k)
         TyEffect
         ty_out.
 
-Inductive NStoreResolvedStateShape :
-    NStoreTyping -> NState -> NTy -> Prop :=
-| NSRSS_Eval :
+Inductive StoreResolvedStateShape :
+    StoreTyping -> State -> Ty -> Prop :=
+| SRSS_Eval :
     forall store heap env rho e k gamma omega ty ty_res eff ty_out,
-      NStoreResolvedRuntimeShape heap store env rho gamma ->
-      NRhoModels omega rho ->
-      NResolveTy rho ty ty_res ->
-      NCheckedTcExp gamma omega e ty eff ->
-      NStoreResolvedKontShape store k ty_res ty_out ->
-      NStoreResolvedStateShape store (StEval heap env rho e k) ty_out
-| NSRSS_Return :
+      StoreResolvedRuntimeShape heap store env rho gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty ty_res ->
+      CheckedTcExp gamma omega e ty eff ->
+      StoreResolvedKontShape store k ty_res ty_out ->
+      StoreResolvedStateShape store (StEval heap env rho e k) ty_out
+| SRSS_Return :
     forall store heap v k ty ty_out,
-      NStoreKeysBoundedByHeap heap store ->
-      NStoreResolvedHeapShape heap store ->
-      NStoreResolvedValShape store v ty ->
-      NStoreResolvedKontShape store k ty ty_out ->
-      NStoreResolvedStateShape store (StReturn heap v k) ty_out
-| NSRSS_Done :
+      StoreKeysBoundedByHeap heap store ->
+      StoreResolvedHeapShape heap store ->
+      StoreResolvedValShape store v ty ->
+      StoreResolvedKontShape store k ty ty_out ->
+      StoreResolvedStateShape store (StReturn heap v k) ty_out
+| SRSS_Done :
     forall store heap v ty,
-      NStoreKeysBoundedByHeap heap store ->
-      NStoreResolvedHeapShape heap store ->
-      NStoreResolvedValShape store v ty ->
-      NStoreResolvedStateShape store (StDone heap v) ty
-| NSRSS_Error :
+      StoreKeysBoundedByHeap heap store ->
+      StoreResolvedHeapShape heap store ->
+      StoreResolvedValShape store v ty ->
+      StoreResolvedStateShape store (StDone heap v) ty
+| SRSS_Error :
     forall store heap ty,
-      NStoreKeysBoundedByHeap heap store ->
-      NStoreResolvedHeapShape heap store ->
-      NStoreResolvedStateShape store (StError heap) ty
-| NSRSS_PairParRun :
+      StoreKeysBoundedByHeap heap store ->
+      StoreResolvedHeapShape heap store ->
+      StoreResolvedStateShape store (StError heap) ty
+| SRSS_PairParRun :
     forall store left_state right_state phi_left phi_right k
       heap ty1 ty2 ty_out,
       state_heap left_state = heap ->
       state_heap right_state = heap ->
-      NStoreResolvedStateShape store left_state ty1 ->
-      NStoreResolvedStateShape store right_state ty2 ->
-      NStoreResolvedKontShape store k (TyPair ty1 ty2) ty_out ->
-      NStoreResolvedStateShape store
+      StoreResolvedStateShape store left_state ty1 ->
+      StoreResolvedStateShape store right_state ty2 ->
+      StoreResolvedKontShape store k (TyPair ty1 ty2) ty_out ->
+      StoreResolvedStateShape store
         (StPairParRun left_state right_state phi_left phi_right k)
         ty_out.
 
-Lemma NStoreResolvedValShape_pair_inv :
+Lemma StoreResolvedValShape_pair_inv :
   forall store v1 v2 ty,
-    NStoreResolvedValShape store (VPair v1 v2) ty ->
+    StoreResolvedValShape store (VPair v1 v2) ty ->
     exists ty1 ty2,
       ty = TyPair ty1 ty2 /\
-      NStoreResolvedValShape store v1 ty1 /\
-      NStoreResolvedValShape store v2 ty2.
+      StoreResolvedValShape store v1 ty1 /\
+      StoreResolvedValShape store v2 ty2.
 Proof.
   intros store v1 v2 ty HVal.
   inversion HVal; subst.
@@ -1288,12 +1288,12 @@ Proof.
   repeat split; assumption || reflexivity.
 Qed.
 
-Lemma NStoreResolvedStateShape_done_inv :
+Lemma StoreResolvedStateShape_done_inv :
   forall store heap v ty,
-    NStoreResolvedStateShape store (StDone heap v) ty ->
-    NStoreKeysBoundedByHeap heap store /\
-    NStoreResolvedHeapShape heap store /\
-    NStoreResolvedValShape store v ty.
+    StoreResolvedStateShape store (StDone heap v) ty ->
+    StoreKeysBoundedByHeap heap store /\
+    StoreResolvedHeapShape heap store /\
+    StoreResolvedValShape store v ty.
 Proof.
   intros store heap v ty HState.
   remember (StDone heap v) as state eqn:HStateEq.
@@ -1305,16 +1305,16 @@ Proof.
     + assumption.
 Qed.
 
-Lemma NStoreResolvedStateShape_done_summary_inv :
+Lemma StoreResolvedStateShape_done_summary_inv :
   forall store heap theta ty,
-    NStoreResolvedStateShape store (StDone heap (VSummary theta)) ty ->
+    StoreResolvedStateShape store (StDone heap (VSummary theta)) ty ->
     ty = TyEffect /\
-    NStoreKeysBoundedByHeap heap store /\
-    NStoreResolvedHeapShape heap store.
+    StoreKeysBoundedByHeap heap store /\
+    StoreResolvedHeapShape heap store.
 Proof.
   intros store heap theta ty HState.
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store heap (VSummary theta) ty HState)
     as (HBounded & HHeap & HVal).
   dependent destruction HVal.
@@ -1322,23 +1322,23 @@ Proof.
   split; assumption.
 Qed.
 
-Lemma NStoreResolvedStateShape_done_pair_inv :
+Lemma StoreResolvedStateShape_done_pair_inv :
   forall store heap v1 v2 ty,
-    NStoreResolvedStateShape store (StDone heap (VPair v1 v2)) ty ->
+    StoreResolvedStateShape store (StDone heap (VPair v1 v2)) ty ->
     exists ty1 ty2,
       ty = TyPair ty1 ty2 /\
-      NStoreKeysBoundedByHeap heap store /\
-      NStoreResolvedHeapShape heap store /\
-      NStoreResolvedValShape store v1 ty1 /\
-      NStoreResolvedValShape store v2 ty2.
+      StoreKeysBoundedByHeap heap store /\
+      StoreResolvedHeapShape heap store /\
+      StoreResolvedValShape store v1 ty1 /\
+      StoreResolvedValShape store v2 ty2.
 Proof.
   intros store heap v1 v2 ty HState.
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store heap (VPair v1 v2) ty HState)
     as (HBounded & HHeap & HVal).
   destruct
-    (NStoreResolvedValShape_pair_inv store v1 v2 ty HVal)
+    (StoreResolvedValShape_pair_inv store v1 v2 ty HVal)
     as (ty1 & ty2 & HTy & HVal1 & HVal2).
   exists ty1, ty2.
   split; [exact HTy |].
@@ -1347,30 +1347,30 @@ Proof.
   split; assumption.
 Qed.
 
-Lemma NStoreResolvedValShape_closure_inv :
+Lemma StoreResolvedValShape_closure_inv :
   forall store closure_env closure_rho f x ec ee ty,
-    NStoreResolvedValShape store
+    StoreResolvedValShape store
       (VClosure closure_env closure_rho f x ec ee)
       ty ->
     exists gamma omega ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res,
       ty =
         TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res /\
-      NStoreResolvedEnvShape store closure_rho closure_env gamma /\
-      NRhoModels omega closure_rho /\
-      NResolveTy closure_rho ty_arg ty_arg_res /\
-      NResolveStaticEffect closure_rho eff_body eff_body_res /\
-      NResolveTy closure_rho ty_body ty_body_res /\
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res /\
-      NCheckedTcExp
+      StoreResolvedEnvShape store closure_rho closure_env gamma /\
+      RhoModels omega closure_rho /\
+      ResolveTy closure_rho ty_arg ty_arg_res /\
+      ResolveStaticEffect closure_rho eff_body eff_body_res /\
+      ResolveTy closure_rho ty_body ty_body_res /\
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res /\
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body /\
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary /\
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
       omega ec ee.
@@ -1391,19 +1391,19 @@ Proof.
   eassumption.
 Qed.
 
-Lemma NStoreResolvedValShape_region_closure_inv :
+Lemma StoreResolvedValShape_region_closure_inv :
   forall store closure_env closure_rho x e ty_final,
-    NStoreResolvedValShape store
+    StoreResolvedValShape store
       (VRegionClosure closure_env closure_rho x e)
       ty_final ->
     exists gamma omega ty_body ty_res eff eff_res,
       ty_final = TyForallRgn eff_res ty_res /\
-      NStoreResolvedEnvShape store closure_rho closure_env gamma /\
-      NRhoModels omega closure_rho /\
-      NResolveStaticEffect closure_rho
+      StoreResolvedEnvShape store closure_rho closure_env gamma /\
+      RhoModels omega closure_rho /\
+      ResolveStaticEffect closure_rho
         (close_static_effect x eff) eff_res /\
-      NResolveTy closure_rho (close_ty x ty_body) ty_res /\
-      NCheckedRegionBody x gamma omega e ty_body eff.
+      ResolveTy closure_rho (close_ty x ty_body) ty_res /\
+      CheckedRegionBody x gamma omega e ty_body eff.
 Proof.
   intros store closure_env closure_rho x e ty_final HVal.
   dependent destruction HVal.
@@ -1416,46 +1416,46 @@ Proof.
   eassumption.
 Qed.
 
-Lemma NStoreResolvedStateShape_done_closure_inv :
+Lemma StoreResolvedStateShape_done_closure_inv :
   forall store heap closure_env closure_rho f x ec ee ty,
-    NStoreResolvedStateShape store
+    StoreResolvedStateShape store
       (StDone heap (VClosure closure_env closure_rho f x ec ee))
       ty ->
     exists gamma omega ty_arg ty_arg_res ty_body ty_body_res
       eff_body eff_body_res eff_summary eff_summary_res,
-      NStoreKeysBoundedByHeap heap store /\
-      NStoreResolvedHeapShape heap store /\
+      StoreKeysBoundedByHeap heap store /\
+      StoreResolvedHeapShape heap store /\
       ty =
         TyArrow ty_arg_res eff_body_res ty_body_res eff_summary_res /\
-      NStoreResolvedEnvShape store closure_rho closure_env gamma /\
-      NRhoModels omega closure_rho /\
-      NResolveTy closure_rho ty_arg ty_arg_res /\
-      NResolveStaticEffect closure_rho eff_body eff_body_res /\
-      NResolveTy closure_rho ty_body ty_body_res /\
-      NResolveStaticEffect closure_rho eff_summary eff_summary_res /\
-      NCheckedTcExp
+      StoreResolvedEnvShape store closure_rho closure_env gamma /\
+      RhoModels omega closure_rho /\
+      ResolveTy closure_rho ty_arg ty_arg_res /\
+      ResolveStaticEffect closure_rho eff_body eff_body_res /\
+      ResolveTy closure_rho ty_body ty_body_res /\
+      ResolveStaticEffect closure_rho eff_summary eff_summary_res /\
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ty_body eff_body /\
-      NCheckedTcExp
+      CheckedTcExp
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ee TyEffect eff_summary /\
-      NCheckedBackTriangle
+      CheckedBackTriangle
         ((x, ty_arg) ::
           (f, TyArrow ty_arg eff_body ty_body eff_summary) :: gamma)
         omega ec ee.
 Proof.
   intros store heap closure_env closure_rho f x ec ee ty HState.
   destruct
-    (NStoreResolvedStateShape_done_inv
+    (StoreResolvedStateShape_done_inv
       store heap
       (VClosure closure_env closure_rho f x ec ee)
       ty
       HState)
     as (HBounded & HHeap & HVal).
   destruct
-    (NStoreResolvedValShape_closure_inv
+    (StoreResolvedValShape_closure_inv
       store closure_env closure_rho f x ec ee ty HVal)
     as
       (gamma & omega & ty_arg & ty_arg_res & ty_body & ty_body_res &
@@ -1479,64 +1479,64 @@ Proof.
   exact HBodyBack.
 Qed.
 
-Lemma NStoreResolvedStateShape_aligned :
+Lemma StoreResolvedStateShape_aligned :
   forall store state ty,
-    NStoreResolvedStateShape store state ty ->
-    NStateHeapsAligned state.
+    StoreResolvedStateShape store state ty ->
+    StateHeapsAligned state.
 Proof.
   intros store state ty HState.
   induction HState; simpl; try exact I.
   repeat split; assumption || congruence.
 Qed.
 
-Lemma NStoreResolvedStateShape_with_state_heap_same :
+Lemma StoreResolvedStateShape_with_state_heap_same :
   forall store state ty heap,
-    NStoreResolvedStateShape store state ty ->
+    StoreResolvedStateShape store state ty ->
     state_heap state = heap ->
-    NStoreResolvedStateShape store (with_state_heap heap state) ty.
+    StoreResolvedStateShape store (with_state_heap heap state) ty.
 Proof.
   intros store state ty heap HState HHeap.
   rewrite (with_state_heap_aligned_same heap state).
   - exact HState.
-  - eapply NStoreResolvedStateShape_aligned; eauto.
+  - eapply StoreResolvedStateShape_aligned; eauto.
   - exact HHeap.
 Qed.
 
-Lemma NStoreResolvedStateShape_initial :
+Lemma StoreResolvedStateShape_initial :
   forall heap store env rho e gamma omega ty ty_res eff,
-    NStoreResolvedRuntimeShape heap store env rho gamma ->
-    NRhoModels omega rho ->
-    NResolveTy rho ty ty_res ->
-    NCheckedTcExp gamma omega e ty eff ->
-    NStoreResolvedStateShape store (NInitialState heap env rho e) ty_res.
+    StoreResolvedRuntimeShape heap store env rho gamma ->
+    RhoModels omega rho ->
+    ResolveTy rho ty ty_res ->
+    CheckedTcExp gamma omega e ty eff ->
+    StoreResolvedStateShape store (InitialState heap env rho e) ty_res.
 Proof.
   intros heap store env rho e gamma omega ty ty_res eff
     HRuntime HRho HResolve HChecked.
-  unfold NInitialState.
-  eapply NSRSS_Eval with
+  unfold InitialState.
+  eapply SRSS_Eval with
     (gamma := gamma) (omega := omega)
     (ty := ty) (eff := eff);
     eauto.
   constructor.
 Qed.
 
-Lemma NStoreKeysBoundedByHeap_update :
+Lemma StoreKeysBoundedByHeap_update :
   forall heap store r l v,
-    NStoreKeysBoundedByHeap heap store ->
-    NStoreKeysBoundedByHeap (heap_update r l v heap) store.
+    StoreKeysBoundedByHeap heap store ->
+    StoreKeysBoundedByHeap (heap_update r l v heap) store.
 Proof.
   intros heap store r l v HBounded r' l' ty HIn.
   rewrite heap_update_length.
   eapply HBounded; eauto.
 Qed.
 
-Lemma NStoreResolvedHeapShape_update :
+Lemma StoreResolvedHeapShape_update :
   forall heap store r l old v ty,
-    NStoreResolvedHeapShape heap store ->
+    StoreResolvedHeapShape heap store ->
     heap_lookup r l heap = Some old ->
     store_ty_lookup r l store = Some ty ->
-    NStoreResolvedValShape store v ty ->
-    NStoreResolvedHeapShape (heap_update r l v heap) store.
+    StoreResolvedValShape store v ty ->
+    StoreResolvedHeapShape (heap_update r l v heap) store.
 Proof.
   intros heap store r l old v ty
     [HHeapToStore HStoreToHeap] HOldLookup HStoreLookup HVal.
@@ -1587,37 +1587,37 @@ Proof.
       exact HOldLookup'.
 Qed.
 
-Lemma NStoreResolvedRuntimeShape_update :
+Lemma StoreResolvedRuntimeShape_update :
   forall heap store env rho gamma r l old v ty,
-    NStoreResolvedRuntimeShape heap store env rho gamma ->
+    StoreResolvedRuntimeShape heap store env rho gamma ->
     heap_lookup r l heap = Some old ->
     store_ty_lookup r l store = Some ty ->
-    NStoreResolvedValShape store v ty ->
-    NStoreResolvedRuntimeShape
+    StoreResolvedValShape store v ty ->
+    StoreResolvedRuntimeShape
       (heap_update r l v heap)
       store env rho gamma.
 Proof.
   intros heap store env rho gamma r l old v ty
     (HBounded & HHeap & HEnv) HOldLookup HStoreLookup HVal.
   split.
-  - eapply NStoreKeysBoundedByHeap_update; eauto.
+  - eapply StoreKeysBoundedByHeap_update; eauto.
   - split.
-    + eapply NStoreResolvedHeapShape_update; eauto.
+    + eapply StoreResolvedHeapShape_update; eauto.
     + exact HEnv.
 Qed.
 
-Lemma NStoreResolvedValShape_store_extend :
+Lemma StoreResolvedValShape_store_extend :
   forall heap store r_new l_new ty_new v ty,
-    NStoreKeysBoundedByHeap heap store ->
+    StoreKeysBoundedByHeap heap store ->
     l_new = length heap ->
-    NStoreResolvedValShape store v ty ->
-    NStoreResolvedValShape ((r_new, l_new, ty_new) :: store) v ty
-with NStoreResolvedEnvShape_store_extend :
+    StoreResolvedValShape store v ty ->
+    StoreResolvedValShape ((r_new, l_new, ty_new) :: store) v ty
+with StoreResolvedEnvShape_store_extend :
   forall heap store r_new l_new ty_new rho env gamma,
-    NStoreKeysBoundedByHeap heap store ->
+    StoreKeysBoundedByHeap heap store ->
     l_new = length heap ->
-    NStoreResolvedEnvShape store rho env gamma ->
-    NStoreResolvedEnvShape ((r_new, l_new, ty_new) :: store) rho env gamma.
+    StoreResolvedEnvShape store rho env gamma ->
+    StoreResolvedEnvShape ((r_new, l_new, ty_new) :: store) rho env gamma.
 Proof.
   - intros heap store r_new l_new ty_new v ty
       HBounded HFresh HVal.
@@ -1626,14 +1626,14 @@ Proof.
     + constructor.
     + constructor.
     + constructor.
-    + eapply NSRVS_Pair; eauto.
-    + eapply NSRVS_Loc.
+    + eapply SRVS_Pair; eauto.
+    + eapply SRVS_Loc.
       eapply store_ty_lookup_extend_old; eauto.
-    + eapply NSRVS_Closure with
+    + eapply SRVS_Closure with
         (gamma := gamma) (omega := omega)
         (ty_arg := ty_arg) (ty_body := ty_body);
         eauto.
-    + eapply NSRVS_RegionClosure with
+    + eapply SRVS_RegionClosure with
         (gamma := gamma) (omega := omega);
         eauto.
   - intros heap store r_new l_new ty_new rho env gamma
@@ -1643,84 +1643,84 @@ Proof.
     + econstructor; eauto.
 Qed.
 
-Lemma NStoreResolvedKontShape_store_extend :
+Lemma StoreResolvedKontShape_store_extend :
   forall heap store r_new l_new ty_new k ty_in ty_out,
-    NStoreKeysBoundedByHeap heap store ->
+    StoreKeysBoundedByHeap heap store ->
     l_new = length heap ->
-    NStoreResolvedKontShape store k ty_in ty_out ->
-    NStoreResolvedKontShape
+    StoreResolvedKontShape store k ty_in ty_out ->
+    StoreResolvedKontShape
       ((r_new, l_new, ty_new) :: store) k ty_in ty_out.
 Proof.
   intros heap store r_new l_new ty_new k ty_in ty_out
     HBounded HFresh HK.
   induction HK; try solve [econstructor; eauto].
-  - eapply NSRKS_MuAppFun with
+  - eapply SRKS_MuAppFun with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary)
       (eff_arg := eff_arg);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_MuAppArg with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_MuAppArg with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_EffAppFun with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_EffAppFun with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary)
       (eff_arg := eff_arg);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_EffAppArg with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_EffAppArg with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_PairParEff1 with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_PairParEff1 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2)
       (eff_summary2 := eff_summary2);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_PairParEff2 with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_PairParEff2 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_Cond with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_Cond with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
       (eff_t := eff_t) (eff_f := eff_f);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_AssignLoc with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_AssignLoc with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
       (eff_v := eff_v);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_AssignVal; eauto.
-    eapply NStoreResolvedValShape_store_extend; eauto.
-  - eapply NSRKS_PlusL with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_AssignVal; eauto.
+    eapply StoreResolvedValShape_store_extend; eauto.
+  - eapply SRKS_PlusL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_MinusL with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_MinusL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_TimesL with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_TimesL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_EqL with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_EqL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NStoreResolvedEnvShape_store_extend.
-  - eapply NSRKS_ConcatL with
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_ConcatL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NStoreResolvedEnvShape_store_extend.
+      eauto using StoreResolvedEnvShape_store_extend.
 Qed.
 
-Lemma NStoreKeysBoundedByHeap_alloc :
+Lemma StoreKeysBoundedByHeap_alloc :
   forall heap store r_new l_new v_new ty_new heap',
-    NStoreKeysBoundedByHeap heap store ->
+    StoreKeysBoundedByHeap heap store ->
     heap_alloc r_new v_new heap = (l_new, heap') ->
-    NStoreKeysBoundedByHeap
+    StoreKeysBoundedByHeap
       heap' ((r_new, l_new, ty_new) :: store).
 Proof.
   intros heap store r_new l_new v_new ty_new heap'
@@ -1734,13 +1734,13 @@ Proof.
   - simpl. specialize (HBounded r l ty HIn). lia.
 Qed.
 
-Lemma NStoreResolvedHeapShape_alloc :
+Lemma StoreResolvedHeapShape_alloc :
   forall heap store r_new v_new ty_new l_new heap',
-    NStoreKeysBoundedByHeap heap store ->
-    NStoreResolvedHeapShape heap store ->
-    NStoreResolvedValShape store v_new ty_new ->
+    StoreKeysBoundedByHeap heap store ->
+    StoreResolvedHeapShape heap store ->
+    StoreResolvedValShape store v_new ty_new ->
     heap_alloc r_new v_new heap = (l_new, heap') ->
-    NStoreResolvedHeapShape
+    StoreResolvedHeapShape
       heap' ((r_new, l_new, ty_new) :: store).
 Proof.
   intros heap store r_new v_new ty_new l_new heap'
@@ -1760,13 +1760,13 @@ Proof.
       exists ty_new.
       split.
       * apply store_ty_lookup_extend_same.
-      * eapply NStoreResolvedValShape_store_extend; eauto.
+      * eapply StoreResolvedValShape_store_extend; eauto.
     + destruct (HHeapToStore r l v HLookup) as
         (ty & HStoreLookup & HShape).
       exists ty.
       split.
       * eapply store_ty_lookup_extend_old; eauto.
-      * eapply NStoreResolvedValShape_store_extend; eauto.
+      * eapply StoreResolvedValShape_store_extend; eauto.
   - intros r l ty HStoreLookup.
     simpl in HStoreLookup.
     destruct (Nat.eqb r r_new && Nat.eqb l (length heap)) eqn:HEq.
@@ -1778,42 +1778,42 @@ Proof.
       exists v_new.
       split.
       * simpl. rewrite Nat.eqb_refl, Nat.eqb_refl. reflexivity.
-      * eapply NStoreResolvedValShape_store_extend; eauto.
+      * eapply StoreResolvedValShape_store_extend; eauto.
     + destruct (HStoreToHeap r l ty HStoreLookup) as
         (v & HHeapLookup & HShape).
       exists v.
       split.
       * simpl. rewrite HEq. exact HHeapLookup.
-      * eapply NStoreResolvedValShape_store_extend; eauto.
+      * eapply StoreResolvedValShape_store_extend; eauto.
 Qed.
 
-Lemma NStoreResolvedRuntimeShape_alloc :
+Lemma StoreResolvedRuntimeShape_alloc :
   forall heap store env rho gamma r_new v_new ty_new l_new heap',
-    NStoreResolvedRuntimeShape heap store env rho gamma ->
-    NStoreResolvedValShape store v_new ty_new ->
+    StoreResolvedRuntimeShape heap store env rho gamma ->
+    StoreResolvedValShape store v_new ty_new ->
     heap_alloc r_new v_new heap = (l_new, heap') ->
-    NStoreResolvedRuntimeShape
+    StoreResolvedRuntimeShape
       heap' ((r_new, l_new, ty_new) :: store) env rho gamma.
 Proof.
   intros heap store env rho gamma r_new v_new ty_new l_new heap'
     (HBounded & HHeap & HEnv) HValNew HAlloc.
   split.
-  - eapply NStoreKeysBoundedByHeap_alloc; eauto.
+  - eapply StoreKeysBoundedByHeap_alloc; eauto.
   - split.
-    + eapply NStoreResolvedHeapShape_alloc; eauto.
+    + eapply StoreResolvedHeapShape_alloc; eauto.
     + destruct (heap_alloc_result heap r_new v_new l_new heap')
         as [HFresh _]; [exact HAlloc |].
-      eapply NStoreResolvedEnvShape_store_extend; eauto.
+      eapply StoreResolvedEnvShape_store_extend; eauto.
 Qed.
 
-Lemma NStoreResolvedStateShape_heap_update :
+Lemma StoreResolvedStateShape_heap_update :
   forall state store ty heap r l old v ty_cell,
     state_heap state = heap ->
     heap_lookup r l heap = Some old ->
     store_ty_lookup r l store = Some ty_cell ->
-    NStoreResolvedValShape store v ty_cell ->
-    NStoreResolvedStateShape store state ty ->
-    NStoreResolvedStateShape store
+    StoreResolvedValShape store v ty_cell ->
+    StoreResolvedStateShape store state ty ->
+    StoreResolvedStateShape store
       (with_state_heap (heap_update r l v heap) state) ty.
 Proof.
   intros state store ty heap r l old v ty_cell
@@ -1826,35 +1826,35 @@ Proof.
     simpl in HStateHeap.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Eval with
+    eapply SRSS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty) (eff := eff);
       eauto.
-    eapply NStoreResolvedRuntimeShape_update; eauto.
+    eapply StoreResolvedRuntimeShape_update; eauto.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Return with (ty := ty);
+    eapply SRSS_Return with (ty := ty);
       eauto using
-        NStoreKeysBoundedByHeap_update,
-        NStoreResolvedHeapShape_update.
+        StoreKeysBoundedByHeap_update,
+        StoreResolvedHeapShape_update.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Done with (ty := ty);
+    eapply SRSS_Done with (ty := ty);
       eauto using
-        NStoreKeysBoundedByHeap_update,
-        NStoreResolvedHeapShape_update.
+        StoreKeysBoundedByHeap_update,
+        StoreResolvedHeapShape_update.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Error;
+    eapply SRSS_Error;
       eauto using
-        NStoreKeysBoundedByHeap_update,
-        NStoreResolvedHeapShape_update.
+        StoreKeysBoundedByHeap_update,
+        StoreResolvedHeapShape_update.
   - simpl.
     pose proof
-      (NStoreResolvedStateShape_aligned _ _ _ HState1)
+      (StoreResolvedStateShape_aligned _ _ _ HState1)
       as HAlignedLeft.
     pose proof
-      (NStoreResolvedStateShape_aligned _ _ _ HState2)
+      (StoreResolvedStateShape_aligned _ _ _ HState2)
       as HAlignedRight.
     destruct
       (with_state_heap_aligned
@@ -1874,7 +1874,7 @@ Proof.
       rewrite <- H.
       exact HStateHeap.
     }
-    eapply NSRSS_PairParRun with
+    eapply SRSS_PairParRun with
       (heap := heap_update r_update l_update v_update heap_current)
       (ty1 := ty1) (ty2 := ty2).
     + exact HLeftHeap'.
@@ -1884,14 +1884,14 @@ Proof.
     + eauto.
 Qed.
 
-Lemma NStoreResolvedStateShape_heap_alloc :
+Lemma StoreResolvedStateShape_heap_alloc :
   forall state store ty heap r_alloc v_alloc ty_alloc l_alloc heap',
-    NStoreKeysBoundedByHeap heap store ->
+    StoreKeysBoundedByHeap heap store ->
     state_heap state = heap ->
-    NStoreResolvedValShape store v_alloc ty_alloc ->
+    StoreResolvedValShape store v_alloc ty_alloc ->
     heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
-    NStoreResolvedStateShape store state ty ->
-    NStoreResolvedStateShape
+    StoreResolvedStateShape store state ty ->
+    StoreResolvedStateShape
       ((r_alloc, l_alloc, ty_alloc) :: store)
       (with_state_heap heap' state)
       ty.
@@ -1906,46 +1906,46 @@ Proof.
     simpl in HStateHeap.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Eval with
+    eapply SRSS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty) (eff := eff).
-    + eapply NStoreResolvedRuntimeShape_alloc; eauto.
+    + eapply StoreResolvedRuntimeShape_alloc; eauto.
     + eauto.
     + eauto.
     + eauto.
     + destruct (heap_alloc_result heap r_alloc v_alloc l_alloc heap')
         as [HFresh _]; [exact HAlloc |].
-      eapply NStoreResolvedKontShape_store_extend; eauto.
+      eapply StoreResolvedKontShape_store_extend; eauto.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Return with (ty := ty).
-    + eapply NStoreKeysBoundedByHeap_alloc; eauto.
-    + eapply NStoreResolvedHeapShape_alloc; eauto.
+    eapply SRSS_Return with (ty := ty).
+    + eapply StoreKeysBoundedByHeap_alloc; eauto.
+    + eapply StoreResolvedHeapShape_alloc; eauto.
     + destruct (heap_alloc_result heap r_alloc v_alloc l_alloc heap')
         as [HFresh _]; [exact HAlloc |].
-      eapply NStoreResolvedValShape_store_extend; eauto.
+      eapply StoreResolvedValShape_store_extend; eauto.
     + destruct (heap_alloc_result heap r_alloc v_alloc l_alloc heap')
         as [HFresh _]; [exact HAlloc |].
-      eapply NStoreResolvedKontShape_store_extend; eauto.
+      eapply StoreResolvedKontShape_store_extend; eauto.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Done with (ty := ty).
-    + eapply NStoreKeysBoundedByHeap_alloc; eauto.
-    + eapply NStoreResolvedHeapShape_alloc; eauto.
+    eapply SRSS_Done with (ty := ty).
+    + eapply StoreKeysBoundedByHeap_alloc; eauto.
+    + eapply StoreResolvedHeapShape_alloc; eauto.
     + destruct (heap_alloc_result heap r_alloc v_alloc l_alloc heap')
         as [HFresh _]; [exact HAlloc |].
-      eapply NStoreResolvedValShape_store_extend; eauto.
+      eapply StoreResolvedValShape_store_extend; eauto.
   - subst heap_current.
     simpl.
-    eapply NSRSS_Error.
-    + eapply NStoreKeysBoundedByHeap_alloc; eauto.
-    + eapply NStoreResolvedHeapShape_alloc; eauto.
+    eapply SRSS_Error.
+    + eapply StoreKeysBoundedByHeap_alloc; eauto.
+    + eapply StoreResolvedHeapShape_alloc; eauto.
   - simpl.
     pose proof
-      (NStoreResolvedStateShape_aligned _ _ _ HState1)
+      (StoreResolvedStateShape_aligned _ _ _ HState1)
       as HAlignedLeft.
     pose proof
-      (NStoreResolvedStateShape_aligned _ _ _ HState2)
+      (StoreResolvedStateShape_aligned _ _ _ HState2)
       as HAlignedRight.
     destruct
       (with_state_heap_aligned heap' left_state HAlignedLeft)
@@ -1961,7 +1961,7 @@ Proof.
       rewrite <- H.
       exact HStateHeap.
     }
-    eapply NSRSS_PairParRun with
+    eapply SRSS_PairParRun with
       (heap := heap') (ty1 := ty1) (ty2 := ty2).
     + exact HLeftHeap'.
     + exact HRightHeap'.
@@ -1969,21 +1969,21 @@ Proof.
     + eapply IHHState2; eauto.
     + destruct (heap_alloc_result heap_current r_alloc v_alloc l_alloc heap')
         as [HFresh _]; [exact HAlloc |].
-      eapply NStoreResolvedKontShape_store_extend; eauto.
+      eapply StoreResolvedKontShape_store_extend; eauto.
 Qed.
 
-Lemma NRegularResolvedValShape_heap_alloc :
+Lemma RegularResolvedValShape_heap_alloc :
   forall heap r_alloc v_alloc l_alloc heap' v ty,
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
-    NRegularResolvedValShape heap v ty ->
-    NRegularResolvedValShape heap' v ty
-with NRegularResolvedEnvShape_heap_alloc :
+    RegularResolvedValShape heap v ty ->
+    RegularResolvedValShape heap' v ty
+with RegularResolvedEnvShape_heap_alloc :
   forall rho heap env gamma r_alloc v_alloc l_alloc heap',
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
-    NRegularResolvedEnvShape rho heap env gamma ->
-    NRegularResolvedEnvShape rho heap' env gamma.
+    RegularResolvedEnvShape rho heap env gamma ->
+    RegularResolvedEnvShape rho heap' env gamma.
 Proof.
   - intros heap r_alloc v_alloc l_alloc heap' v ty
       HBounded HAlloc HVal.
@@ -1992,14 +1992,14 @@ Proof.
     + constructor.
     + constructor.
     + constructor.
-    + eapply NRRVS_Pair; eauto.
-    + eapply NRRVS_Loc; eauto.
+    + eapply RRVS_Pair; eauto.
+    + eapply RRVS_Loc; eauto.
       eapply heap_lookup_alloc_old; eauto.
-    + eapply NRRVS_Closure with
+    + eapply RRVS_Closure with
         (gamma := gamma) (omega := omega)
         (ty_arg := ty_arg) (ty_body := ty_body);
         eauto.
-    + eapply NRRVS_RegionClosure with
+    + eapply RRVS_RegionClosure with
         (gamma := gamma) (omega := omega);
         eauto.
   - intros rho heap env gamma r_alloc v_alloc l_alloc heap'
@@ -2009,13 +2009,13 @@ Proof.
     + econstructor; eauto.
 Qed.
 
-Lemma NRegularResolvedHeapShape_alloc :
+Lemma RegularResolvedHeapShape_alloc :
   forall heap r_alloc v_alloc ty_alloc l_alloc heap',
-    NHeapKeysBounded heap ->
-    NRegularResolvedHeapShape heap ->
-    NRegularResolvedValShape heap v_alloc ty_alloc ->
+    HeapKeysBounded heap ->
+    RegularResolvedHeapShape heap ->
+    RegularResolvedValShape heap v_alloc ty_alloc ->
     heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
-    NRegularResolvedHeapShape heap'.
+    RegularResolvedHeapShape heap'.
 Proof.
   intros heap r_alloc v_alloc ty_alloc l_alloc heap'
     HBounded HHeap HAllocVal HAlloc.
@@ -2023,99 +2023,99 @@ Proof.
   destruct
     (heap_alloc_result heap r_alloc v_alloc l_alloc heap' HAlloc)
     as [-> ->].
-  unfold NRegularResolvedHeapShape in *.
+  unfold RegularResolvedHeapShape in *.
   intros r l v HLookup.
   simpl in HLookup.
   destruct (Nat.eqb r r_alloc && Nat.eqb l (length heap)) eqn:HEq.
   - inversion HLookup; subst.
     exists ty_alloc.
-    eapply NRegularResolvedValShape_heap_alloc; eauto.
+    eapply RegularResolvedValShape_heap_alloc; eauto.
   - destruct (HHeap r l v HLookup) as (ty & HVal).
     exists ty.
-    eapply NRegularResolvedValShape_heap_alloc; eauto.
+    eapply RegularResolvedValShape_heap_alloc; eauto.
 Qed.
 
-Lemma NRegularResolvedKontShape_heap_alloc :
+Lemma RegularResolvedKontShape_heap_alloc :
   forall heap r_alloc v_alloc ty_alloc l_alloc heap' k ty_in ty_out,
-    NHeapKeysBounded heap ->
-    NRegularResolvedValShape heap v_alloc ty_alloc ->
+    HeapKeysBounded heap ->
+    RegularResolvedValShape heap v_alloc ty_alloc ->
     heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
-    NRegularResolvedKontShape heap k ty_in ty_out ->
-    NRegularResolvedKontShape heap' k ty_in ty_out.
+    RegularResolvedKontShape heap k ty_in ty_out ->
+    RegularResolvedKontShape heap' k ty_in ty_out.
 Proof.
   intros heap r_alloc v_alloc ty_alloc l_alloc heap' k ty_in ty_out
     HBounded HAllocVal HAlloc HK.
   induction HK; try solve [econstructor; eauto].
-  - eapply NRRKS_MuAppFun with
+  - eapply RRKS_MuAppFun with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary)
       (eff_arg := eff_arg);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_MuAppArg with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_MuAppArg with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_EffAppFun with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_EffAppFun with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary)
       (eff_arg := eff_arg);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_EffAppArg with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_EffAppArg with
       (gamma := gamma) (omega := omega)
       (ty_arg := ty_arg) (ty_body := ty_body)
       (eff_body := eff_body) (eff_summary := eff_summary);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_PairParEff1 with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_PairParEff1 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2)
       (eff_summary2 := eff_summary2);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_PairParEff2 with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_PairParEff2 with
       (gamma := gamma) (omega := omega)
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_Cond with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_Cond with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
       (eff_t := eff_t) (eff_f := eff_f);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_AssignLoc with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_AssignLoc with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
       (eff_v := eff_v);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_AssignVal; eauto.
-    eapply NRegularResolvedValShape_heap_alloc; eauto.
-  - eapply NRRKS_PlusL with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_AssignVal; eauto.
+    eapply RegularResolvedValShape_heap_alloc; eauto.
+  - eapply RRKS_PlusL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_MinusL with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_MinusL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_TimesL with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_TimesL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_EqL with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_EqL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
-  - eapply NRRKS_ConcatL with
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_ConcatL with
       (gamma := gamma) (omega := omega) (eff := eff);
-      eauto using NRegularResolvedEnvShape_heap_alloc.
+      eauto using RegularResolvedEnvShape_heap_alloc.
 Qed.
 
-Lemma NRegularResolvedStateShape_heap_alloc :
+Lemma RegularResolvedStateShape_heap_alloc :
   forall state ty heap r_alloc v_alloc ty_alloc l_alloc heap',
-    NHeapKeysBounded heap ->
+    HeapKeysBounded heap ->
     state_heap state = heap ->
-    NRegularResolvedValShape heap v_alloc ty_alloc ->
+    RegularResolvedValShape heap v_alloc ty_alloc ->
     heap_alloc r_alloc v_alloc heap = (l_alloc, heap') ->
-    NRegularResolvedStateShape state ty ->
-    NRegularResolvedStateShape (with_state_heap heap' state) ty.
+    RegularResolvedStateShape state ty ->
+    RegularResolvedStateShape (with_state_heap heap' state) ty.
 Proof.
   intros state ty heap r_alloc v_alloc ty_alloc l_alloc heap'
     HBounded HStateHeap HAllocVal HAlloc HState.
@@ -2127,36 +2127,36 @@ Proof.
     simpl in HStateHeap.
   - subst heap_current.
     simpl.
-    eapply NRRSS_Eval with
+    eapply RRSS_Eval with
       (gamma := gamma) (omega := omega)
       (ty := ty) (eff := eff);
       eauto using
-        NRegularResolvedHeapShape_alloc,
-        NRegularResolvedEnvShape_heap_alloc,
-        NRegularResolvedKontShape_heap_alloc.
+        RegularResolvedHeapShape_alloc,
+        RegularResolvedEnvShape_heap_alloc,
+        RegularResolvedKontShape_heap_alloc.
   - subst heap_current.
     simpl.
-    eapply NRRSS_Return with (ty := ty);
+    eapply RRSS_Return with (ty := ty);
       eauto using
-        NRegularResolvedHeapShape_alloc,
-        NRegularResolvedValShape_heap_alloc,
-        NRegularResolvedKontShape_heap_alloc.
+        RegularResolvedHeapShape_alloc,
+        RegularResolvedValShape_heap_alloc,
+        RegularResolvedKontShape_heap_alloc.
   - subst heap_current.
     simpl.
-    eapply NRRSS_Done with (ty := ty);
+    eapply RRSS_Done with (ty := ty);
       eauto using
-        NRegularResolvedHeapShape_alloc,
-        NRegularResolvedValShape_heap_alloc.
+        RegularResolvedHeapShape_alloc,
+        RegularResolvedValShape_heap_alloc.
   - subst heap_current.
     simpl.
-    eapply NRRSS_Error;
-      eauto using NRegularResolvedHeapShape_alloc.
+    eapply RRSS_Error;
+      eauto using RegularResolvedHeapShape_alloc.
   - simpl.
     pose proof
-      (NRegularResolvedStateShape_aligned _ _ HState1)
+      (RegularResolvedStateShape_aligned _ _ HState1)
       as HAlignedLeft.
     pose proof
-      (NRegularResolvedStateShape_aligned _ _ HState2)
+      (RegularResolvedStateShape_aligned _ _ HState2)
       as HAlignedRight.
     destruct
       (with_state_heap_aligned heap' left_state HAlignedLeft)
@@ -2174,12 +2174,12 @@ Proof.
     }
     assert (HShapeHeap : heap = heap_current) by congruence.
     subst heap.
-    eapply NRRSS_PairParRun with
+    eapply RRSS_PairParRun with
       (heap := heap') (ty1 := ty1) (ty2 := ty2).
     + exact HLeftHeap'.
     + exact HRightHeap'.
     + eapply IHHState1; eauto.
     + eapply IHHState2; eauto.
-    + eapply NRegularResolvedKontShape_heap_alloc; eauto.
+    + eapply RegularResolvedKontShape_heap_alloc; eauto.
       rewrite <- HShapeHeap. exact H1.
 Qed.

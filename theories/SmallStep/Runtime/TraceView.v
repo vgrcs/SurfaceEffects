@@ -6,36 +6,36 @@ Require Import theories.SmallStep.Runtime.Trace.
 
 Import ListNotations.
 
-Inductive NTraceView :=
-| NTraceEmpty : NTraceView
-| NTraceAction : DynamicAction -> NTraceView
-| NTraceSeq : NTraceView -> NTraceView -> NTraceView
-| NTracePar : NTraceView -> NTraceView -> NTraceView.
+Inductive TraceView :=
+| TraceEmpty : TraceView
+| TraceAction : DynamicAction -> TraceView
+| TraceSeq : TraceView -> TraceView -> TraceView
+| TracePar : TraceView -> TraceView -> TraceView.
 
-Fixpoint trace_view_flatten (view : NTraceView) : Trace :=
+Fixpoint trace_view_flatten (view : TraceView) : Trace :=
   match view with
-  | NTraceEmpty => []
-  | NTraceAction action => [action]
-  | NTraceSeq view1 view2 =>
+  | TraceEmpty => []
+  | TraceAction action => [action]
+  | TraceSeq view1 view2 =>
       trace_view_flatten view1 ++ trace_view_flatten view2
-  | NTracePar view1 view2 =>
+  | TracePar view1 view2 =>
       trace_view_flatten view1 ++ trace_view_flatten view2
   end.
 
-Definition TraceViewRepresents (view : NTraceView) (phi : Trace) : Prop :=
+Definition TraceViewRepresents (view : TraceView) (phi : Trace) : Prop :=
   trace_view_flatten view = phi.
 
 Definition TraceViewCoveredBySummary
-    (view : NTraceView) (theta : Summary) : Prop :=
+    (view : TraceView) (theta : Summary) : Prop :=
   TraceCoveredBySummary (trace_view_flatten view) theta.
 
-Definition ReadOnlyTraceView (view : NTraceView) : Prop :=
+Definition ReadOnlyTraceView (view : TraceView) : Prop :=
   ReadOnlyTrace (trace_view_flatten view).
 
-Definition label_view (label : NLabel) : NTraceView :=
+Definition label_view (label : Label) : TraceView :=
   match label with
-  | LSilent => NTraceEmpty
-  | LAction action => NTraceAction action
+  | LSilent => TraceEmpty
+  | LAction action => TraceAction action
   end.
 
 Lemma label_view_flatten :
@@ -45,20 +45,20 @@ Proof.
   intros [| action]; reflexivity.
 Qed.
 
-Inductive NStepsView : NState -> NTraceView -> NState -> Prop :=
+Inductive StepsView : State -> TraceView -> State -> Prop :=
 | StepsViewRefl :
     forall state,
-      NStepsView state NTraceEmpty state
+      StepsView state TraceEmpty state
 | StepsViewStep :
     forall state label state' view state'',
-      NStep state label state' ->
-      NStepsView state' view state'' ->
-      NStepsView state (NTraceSeq (label_view label) view) state''.
+      Step state label state' ->
+      StepsView state' view state'' ->
+      StepsView state (TraceSeq (label_view label) view) state''.
 
-Lemma NStepsView_to_NSteps :
+Lemma StepsView_to_Steps :
   forall state view state',
-    NStepsView state view state' ->
-    NSteps state (trace_view_flatten view) state'.
+    StepsView state view state' ->
+    Steps state (trace_view_flatten view) state'.
 Proof.
   intros state view state' HSteps.
   induction HSteps.
@@ -68,20 +68,20 @@ Proof.
     eapply StepsStep; eauto.
 Qed.
 
-Lemma NSteps_to_NStepsView :
+Lemma Steps_to_StepsView :
   forall state phi state',
-    NSteps state phi state' ->
+    Steps state phi state' ->
     exists view,
-      NStepsView state view state' /\
+      StepsView state view state' /\
       TraceViewRepresents view phi.
 Proof.
   intros state phi state' HSteps.
   induction HSteps as
     [state | state label state' phi state'' HStep _ IH].
-  - exists NTraceEmpty.
+  - exists TraceEmpty.
     split; [constructor | reflexivity].
   - destruct IH as (view & HViewSteps & HView).
-    exists (NTraceSeq (label_view label) view).
+    exists (TraceSeq (label_view label) view).
     split.
     + eapply StepsViewStep; eauto.
     + unfold TraceViewRepresents in *.
@@ -90,16 +90,16 @@ Proof.
       reflexivity.
 Qed.
 
-Lemma NStepsN_to_NStepsView :
+Lemma StepsN_to_StepsView :
   forall n state phi state',
-    NStepsN n state phi state' ->
+    StepsN n state phi state' ->
     exists view,
-      NStepsView state view state' /\
+      StepsView state view state' /\
       TraceViewRepresents view phi.
 Proof.
   intros n state phi state' HStepsN.
-  apply NSteps_to_NStepsView.
-  eapply NStepsN_to_NSteps; eauto.
+  apply Steps_to_StepsView.
+  eapply StepsN_to_Steps; eauto.
 Qed.
 
 Lemma trace_view_covered_top :
@@ -113,7 +113,7 @@ Qed.
 
 Lemma trace_view_covered_empty :
   forall theta,
-    TraceViewCoveredBySummary NTraceEmpty theta.
+    TraceViewCoveredBySummary TraceEmpty theta.
 Proof.
   intros theta.
   unfold TraceViewCoveredBySummary.
@@ -126,7 +126,7 @@ Lemma trace_view_covered_seq_summary_union :
     TraceViewCoveredBySummary view1 theta1 ->
     TraceViewCoveredBySummary view2 theta2 ->
     TraceViewCoveredBySummary
-      (NTraceSeq view1 view2)
+      (TraceSeq view1 view2)
       (summary_union theta1 theta2).
 Proof.
   intros view1 view2 theta1 theta2 HCovered1 HCovered2.
@@ -140,7 +140,7 @@ Lemma trace_view_covered_par_summary_union :
     TraceViewCoveredBySummary view1 theta1 ->
     TraceViewCoveredBySummary view2 theta2 ->
     TraceViewCoveredBySummary
-      (NTracePar view1 view2)
+      (TracePar view1 view2)
       (summary_union theta1 theta2).
 Proof.
   intros view1 view2 theta1 theta2 HCovered1 HCovered2.

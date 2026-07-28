@@ -61,7 +61,7 @@ theories/
 
 The paper-facing calculus is the active `SmallStep` development:
 
-- `SmallStep/Core/Syntax.v`: `NExpr`, including `EPairPar`.
+- `SmallStep/Core/Syntax.v`: `Expr`, including `EPairPar`.
 - `SmallStep/Typing/Judgments.v`: ordinary and checked typing judgments.
 - `SmallStep/Runtime/Machine.v`: continuation-machine semantics.
 - `SmallStep/Runtime/Trace.v`: finite executions and traces.
