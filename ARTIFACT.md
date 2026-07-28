@@ -18,11 +18,13 @@ theories/PaperTheorems.v
 
 Exports:
 
-- the `NewSmallStep` syntax `NExpr`, including `EPairPar`;
+- the `SmallStep` syntax `NExpr`, including `EPairPar`;
 - the ordinary and checked typing judgments, including `NTcExp`,
   `NCheckedTcExp`, and `NCheckedBackTriangle`;
 - progress, preservation, static-effect soundness, terminal determinism, and
-  terminal surface-effect correctness from `theories/NewSmallStep`.
+  terminal surface-effect correctness from `theories/SmallStep`;
+- checked pair-parallel scheduler determinism from
+  `theories/SmallStep/Determinism/Scheduler.v`.
 
 ## Known-Good Toolchain
 
@@ -72,12 +74,20 @@ Project build:
 
 ```sh
 eval $(opam env --switch=surfaceeffects)
-make
+make build-smallstep
+make build-bigstep
+```
+
+Equivalently:
+
+```sh
+make -C theories/SmallStep
+make -C theories/BigStep
 ```
 
 Expected result:
 
-- `_CoqProject` compiles.
+- the SmallStep and BigStep project files compile.
 
 Expected warnings:
 
@@ -112,10 +122,10 @@ Paper source split:
 Read in this order:
 
 1. `theories/PaperTheorems.v`
-2. `theories/NewSmallStep/Core/Syntax.v`
-3. `theories/NewSmallStep/Typing/Judgments.v`
-4. `theories/NewSmallStep/Runtime/Machine.v`
-5. `theories/NewSmallStep/Soundness/Correctness.v`
+2. `theories/SmallStep/Core/Syntax.v`
+3. `theories/SmallStep/Typing/Judgments.v`
+4. `theories/SmallStep/Runtime/Machine.v`
+5. `theories/SmallStep/Soundness/Correctness.v`
 
 Details: `REPORT.md`.
 
@@ -150,6 +160,15 @@ Pair-parallel dispatcher case:
 
 - `EPairPar_checked_store_context_case_from_below`
 
+Checked pair-parallel scheduler determinism:
+
+- `NScheduledPairParRun_checked_pairpar_left_then_right_embeds`
+- `NScheduledPairParRun_checked_pairpar_success_join_deterministic`
+- `NScheduledPairParRun_checked_pairpar_success_continuation_deterministic`
+- `NScheduledPairParRun_checked_pairpar_error_classifies`
+- `NScheduledPairParRun_checked_pairpar_error_same_cause`
+- `NScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic`
+
 Exported by:
 
 ```text
@@ -164,28 +183,22 @@ Use `REPORT.md` for the detailed proof narrative.
 For artifact checking, the shortest path is still the review path above:
 
 1. public facade;
-2. `NewSmallStep` syntax and checked typing;
+2. `SmallStep` syntax and checked typing;
 3. continuation machine, progress, and preservation;
-4. static-effect soundness and dispatcher terminal correctness.
+4. static-effect soundness and dispatcher terminal correctness;
+5. checked pair-parallel scheduler determinism.
 
 ## Scope
 
-This artifact proves the small-step continuation-machine results listed in the
-theorem map.
+This artifact proves the small-step continuation-machine and checked
+pair-parallel scheduler results listed in the theorem map.
 
 It does not prove:
 
 - terminal small-step/big-step adequacy;
 - equivalence with a separate sequential pair constructor;
 - termination or cost bounds for surface-effect evaluation;
-- surface-effect inference or synthesis;
-- scheduler determinism for a nondeterministic/interleaving scheduler.
-
-Archived:
-
-- old matched-trace bridge to the terminating evaluator;
-- location: `theories/Archive/`;
-- not part of `_CoqProject`.
+- surface-effect inference or synthesis.
 
 ## Git Hygiene
 

@@ -5,14 +5,14 @@ From Stdlib Require Import Sets.Ensembles.
 From Stdlib Require Import Ascii String.
 From Stdlib Require Import Lists.List.
 
-Require Import theories.Runtime.Heap.
-Require Import theories.Runtime.TraceSemantics.
-Require Import theories.Runtime.Semantics.
-Require Import theories.Core.DynamicActions.
-Require Import theories.Core.ComputedActions.
-Require Import theories.Meta.EffectFacts.
-Require Import theories.Meta.HeapFacts.
-Require Import theories.Meta.TraceFacts.
+Require Import theories.BigStep.Runtime.Heap.
+Require Import theories.BigStep.Runtime.TraceSemantics.
+Require Import theories.BigStep.Runtime.Semantics.
+Require Import theories.BigStep.Core.DynamicActions.
+Require Import theories.BigStep.Core.ComputedActions.
+Require Import theories.BigStep.Meta.EffectFacts.
+Require Import theories.BigStep.Meta.HeapFacts.
+Require Import theories.BigStep.Meta.TraceFacts.
 
 Lemma Seq_Left_Pres :
   forall phi1 phi1' heap1 heap1' n1 phi2,

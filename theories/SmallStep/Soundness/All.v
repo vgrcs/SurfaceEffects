@@ -1,7 +1,10 @@
-Require Export theories.SmallStep.Soundness.SmallStepBackTriangle.
-Require Export theories.SmallStep.Soundness.SmallStepCorrectnessBridge.
-Require Export theories.SmallStep.Soundness.SmallStepCorrectnessBase.
-Require Export theories.SmallStep.Soundness.SmallStepCorrectnessApps.
-Require Export theories.SmallStep.Soundness.SmallStepCorrectnessPairPar.
-Require Export theories.SmallStep.Soundness.SmallStepCorrectnessDirect.
-Require Export theories.SmallStep.Soundness.SmallStepPaperSoundness.
+Require Export theories.SmallStep.Soundness.BackTriangle.
+Require Export theories.SmallStep.Soundness.Correctness.
+Require Export theories.SmallStep.Soundness.StaticEffect.
+Require Export theories.SmallStep.Soundness.App.
+Require Export theories.SmallStep.Soundness.Summary.
+Require Export theories.SmallStep.Soundness.PairPar.
+Require Export theories.SmallStep.Soundness.Control.
+Require Export theories.SmallStep.Soundness.Arithmetic.
+Require Export theories.SmallStep.Soundness.References.
+Require Export theories.SmallStep.Soundness.Dispatcher.

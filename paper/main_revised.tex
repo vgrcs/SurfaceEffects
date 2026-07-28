@@ -61,7 +61,7 @@
 \newcommand{\MapDisjoint}{\mathsf{MapDisjoint}}
 \newcommand{\effconflict}{\mathrel{\otimes}}
 \newcommand{\traceconflict}{\mathrel{\boxtimes}}
-\newcommand{\traceset}[1]{\llbracket #1\rrbracket^{\subseteq}}% legacy alias
+\newcommand{\traceset}[1]{\llbracket #1\rrbracket^{\subseteq}}
 \newcommand{\dynset}[1]{\lvert #1\rvert_{\mathsf{dyn}}}
 \newcommand{\staticset}[1]{\lvert #1\rvert_{\epsilon}}
 \newcommand{\cerase}[1]{\lfloor #1 \rfloor_{\epsilon}}
@@ -1878,8 +1878,8 @@ The continuation-machine metatheory proves progress, preservation, terminal
 determinism, and terminal surface-effect correctness for checked executions.
 It does not prove termination of surface-effect terms, bound their cost, or compare
 that cost with dynamic validation mechanisms. A future adequacy theorem could
-relate terminal machine runs to the archived terminating evaluator, but that
-bridge is not used as a paper theorem here.
+relate terminal machine runs to a terminating evaluator, but that bridge is not
+used as a paper theorem here.
 
 Recent work on hybrid type and effect systems applied to concurrent
 programming is found in \citet{long2013}. The approach defines special static
@@ -1958,7 +1958,7 @@ future work.
 
 This appendix records the replay-oriented deterministic-parallelism layer used
 by the earlier trace semantics. It is separate from the primitive
-NewSmallStep continuation-machine trace in Section~\ref{sec:opsem}: the machine
+continuation-machine trace in Section~\ref{sec:opsem}: the machine
 trace there is a list of value-free dynamic actions, while this replay layer uses
 the richer trace syntax needed to state replay over heaps.
 

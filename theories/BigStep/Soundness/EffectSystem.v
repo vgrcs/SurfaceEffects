@@ -4,23 +4,23 @@ From Stdlib Require Import Program.Equality.
 From Stdlib Require Import Sets.Ensembles.
 From Stdlib Require Import String.
 
-Require Import theories.Meta.Tactics.
-Require Import theories.Runtime.Heap.
-Require Import theories.Runtime.HeapTyping.
-Require Import theories.Core.StaticActions.
-Require Import theories.Core.DynamicActions.
-Require Import theories.Typing.TypeSyntax.
-Require Import theories.Typing.TypingJudgments.
-Require Import theories.Core.Regions.
-Require Import theories.Core.Values.
-Require Import theories.Core.Expressions.
-Require Import theories.Runtime.Semantics.
-Require Import theories.Soundness.TypeSystem.
-Require Import theories.Meta.RegionFacts.
-Require Import theories.Meta.EffectFacts.
-Require Import theories.Meta.TypingWeakeningFacts.
-Require Import theories.Meta.TypeFacts.
-Require Import theories.Meta.LocallyNameless.
+Require Import theories.BigStep.Meta.Tactics.
+Require Import theories.BigStep.Runtime.Heap.
+Require Import theories.BigStep.Runtime.HeapTyping.
+Require Import theories.BigStep.Core.StaticActions.
+Require Import theories.BigStep.Core.DynamicActions.
+Require Import theories.BigStep.Typing.TypeSyntax.
+Require Import theories.BigStep.Typing.TypingJudgments.
+Require Import theories.BigStep.Core.Regions.
+Require Import theories.BigStep.Core.Values.
+Require Import theories.BigStep.Core.Expressions.
+Require Import theories.BigStep.Runtime.Semantics.
+Require Import theories.BigStep.Soundness.TypeSystem.
+Require Import theories.BigStep.Meta.RegionFacts.
+Require Import theories.BigStep.Meta.EffectFacts.
+Require Import theories.BigStep.Meta.TypingWeakeningFacts.
+Require Import theories.BigStep.Meta.TypeFacts.
+Require Import theories.BigStep.Meta.LocallyNameless.
 
 Module EffectSoundness.
 

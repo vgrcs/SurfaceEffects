@@ -10,25 +10,25 @@ From Stdlib Require Import Arith.PeanoNat.
 From Stdlib Require Import Lists.List.
 From Stdlib Require Import Arith.Compare_dec.
 
-Require Import theories.Core.Values.
-Require Import theories.Core.Expressions.
-Require Import theories.Runtime.Semantics.
-Require Import theories.Core.DynamicActions.
-Require Import theories.Core.ComputedActions.
-Require Import theories.Runtime.Heap.
-Require Import theories.Runtime.HeapTyping.
-Require Import theories.Typing.TypeSyntax.
-Require Import theories.Typing.TypingJudgments.
-Require Import theories.Core.Regions.
-Require Import theories.Meta.EffectFacts.
-Require Import theories.Meta.TypingWeakeningFacts.
-Require Import theories.Meta.TypeFacts.
-Require Import theories.Meta.HeapFacts.
-Require Import theories.Meta.RegionFacts.
-Require Import theories.Soundness.EffectSystem.
-Require Import theories.Soundness.TypeSystem.
-Require Import theories.Determinism.Determinism.
-Require Import theories.Soundness.Correctness.
+Require Import theories.BigStep.Core.Values.
+Require Import theories.BigStep.Core.Expressions.
+Require Import theories.BigStep.Runtime.Semantics.
+Require Import theories.BigStep.Core.DynamicActions.
+Require Import theories.BigStep.Core.ComputedActions.
+Require Import theories.BigStep.Runtime.Heap.
+Require Import theories.BigStep.Runtime.HeapTyping.
+Require Import theories.BigStep.Typing.TypeSyntax.
+Require Import theories.BigStep.Typing.TypingJudgments.
+Require Import theories.BigStep.Core.Regions.
+Require Import theories.BigStep.Meta.EffectFacts.
+Require Import theories.BigStep.Meta.TypingWeakeningFacts.
+Require Import theories.BigStep.Meta.TypeFacts.
+Require Import theories.BigStep.Meta.HeapFacts.
+Require Import theories.BigStep.Meta.RegionFacts.
+Require Import theories.BigStep.Soundness.EffectSystem.
+Require Import theories.BigStep.Soundness.TypeSystem.
+Require Import theories.BigStep.Determinism.Determinism.
+Require Import theories.BigStep.Soundness.Correctness.
 
 Import EffectSoundness.
 Import TypeSoundness.

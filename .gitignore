@@ -4,8 +4,11 @@
 **/*.vok
 **/*.vos
 .Makefile.d
+.Makefile.smallstep.d
 .Makefile.bigstep.d
 Makefile.conf
+Makefile.smallstep
+Makefile.smallstep.conf
 Makefile.bigstep
 Makefile.bigstep.conf
 .lia.cache

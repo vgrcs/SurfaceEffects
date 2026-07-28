@@ -4,13 +4,13 @@ From stdpp Require Import strings.
 From Stdlib Require Import Program.Equality.
 From Stdlib Require Import Sets.Ensembles.
 
-Require Import theories.Runtime.Heap.
-Require Import theories.Runtime.Semantics.
-Require Import theories.Core.Values.
-Require Import theories.Core.Regions.
-Require Import theories.Core.DynamicActions.
-Require Import theories.Meta.EffectFacts.
-Require Import theories.Meta.TraceFacts.
+Require Import theories.BigStep.Runtime.Heap.
+Require Import theories.BigStep.Runtime.Semantics.
+Require Import theories.BigStep.Core.Values.
+Require Import theories.BigStep.Core.Regions.
+Require Import theories.BigStep.Core.DynamicActions.
+Require Import theories.BigStep.Meta.EffectFacts.
+Require Import theories.BigStep.Meta.TraceFacts.
 
 Import Expressions.
 Import ComputedActions.

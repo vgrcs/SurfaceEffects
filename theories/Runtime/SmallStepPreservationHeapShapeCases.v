@@ -1,3 +1,0 @@
-Require Export theories.Runtime.SmallStepPreservationHeapShapeEvalCases.
-Require Export theories.Runtime.SmallStepPreservationHeapShapeHeadCases.
-Require Export theories.Runtime.SmallStepPreservationHeapShapeReturnCases.

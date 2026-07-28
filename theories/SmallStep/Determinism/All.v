@@ -1,2 +1,2 @@
-Require Export theories.SmallStep.Determinism.SmallStepStructuredReplay.
-Require Export theories.SmallStep.Determinism.SmallStepDeterminismExt.
+Require Export theories.SmallStep.Determinism.Terminal.
+Require Export theories.SmallStep.Determinism.Scheduler.

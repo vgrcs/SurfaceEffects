@@ -5,24 +5,24 @@ From stdpp Require Import fin_maps.
 From Stdlib Require Import Sets.Ensembles.
 From Stdlib Require Import Program.Equality.
 
-Require Import theories.Meta.Tactics.
-Require Import theories.Meta.LocallyNameless.
-Require Import theories.Runtime.Heap.
-Require Import theories.Runtime.TraceSemantics.
-Require Import theories.Runtime.HeapTyping.
-Require Import theories.Determinism.Determinism.
-Require Import theories.Typing.TypeSyntax.
-Require Import theories.Typing.TypingJudgments.
-Require Import theories.Core.DynamicActions.
-Require Import theories.Meta.EffectFacts.
-Require Import theories.Meta.RegionFacts.
-Require Import theories.Meta.MapFacts.
-Require Import theories.Meta.TypingWeakeningFacts.
-Require Import theories.Meta.TypeFacts.
-Require Import theories.Meta.StoreFacts.
-Require Import theories.Meta.HeapFacts.
-Require Import theories.Meta.TraceFacts.
-Require Import theories.Meta.TraceTypingFacts.
+Require Import theories.BigStep.Meta.Tactics.
+Require Import theories.BigStep.Meta.LocallyNameless.
+Require Import theories.BigStep.Runtime.Heap.
+Require Import theories.BigStep.Runtime.TraceSemantics.
+Require Import theories.BigStep.Runtime.HeapTyping.
+Require Import theories.BigStep.Determinism.Determinism.
+Require Import theories.BigStep.Typing.TypeSyntax.
+Require Import theories.BigStep.Typing.TypingJudgments.
+Require Import theories.BigStep.Core.DynamicActions.
+Require Import theories.BigStep.Meta.EffectFacts.
+Require Import theories.BigStep.Meta.RegionFacts.
+Require Import theories.BigStep.Meta.MapFacts.
+Require Import theories.BigStep.Meta.TypingWeakeningFacts.
+Require Import theories.BigStep.Meta.TypeFacts.
+Require Import theories.BigStep.Meta.StoreFacts.
+Require Import theories.BigStep.Meta.HeapFacts.
+Require Import theories.BigStep.Meta.TraceFacts.
+Require Import theories.BigStep.Meta.TraceTypingFacts.
 
 
 Module TypeSoundness.

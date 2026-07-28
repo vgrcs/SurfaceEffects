@@ -2,14 +2,14 @@
 
 This report records the current public proof surface.
 
-The paper-facing theorem facade re-exports the active `NewSmallStep`
+The paper-facing theorem facade re-exports the active `SmallStep`
 development:
 
 ```text
 theories/PaperTheorems.v
 ```
 
-It exports the `NewSmallStep` syntax and theorem stack directly. The syntax is
+It exports the `SmallStep` syntax and theorem stack directly. The syntax is
 `NExpr`, which now includes `EPairPar`; the checked typing and correctness
 surface uses `NCheckedTcExp` and `NCheckedBackTriangle`.
 
@@ -25,8 +25,10 @@ compiled with OCaml 4.14.2
 Verification commands:
 
 ```sh
-make build-newsmallstep
+make build-smallstep
 make build-bigstep
+make -C theories/SmallStep
+make -C theories/BigStep
 ```
 
 Current trust status:
@@ -41,15 +43,15 @@ Current trust status:
 Read these files first:
 
 1. `theories/PaperTheorems.v`
-2. `theories/NewSmallStep/Core/Syntax.v`
-3. `theories/NewSmallStep/Typing/Judgments.v`
-4. `theories/NewSmallStep/Runtime/Machine.v`
-5. `theories/NewSmallStep/Soundness/Correctness.v`
-6. `theories/NewSmallStep/Determinism/Terminal.v`
+2. `theories/SmallStep/Core/Syntax.v`
+3. `theories/SmallStep/Typing/Judgments.v`
+4. `theories/SmallStep/Runtime/Machine.v`
+5. `theories/SmallStep/Soundness/Correctness.v`
+6. `theories/SmallStep/Determinism/Terminal.v`
 
-The older proof experiments remain in the repository for comparison, but the
-public theorem facade is the `NewSmallStep` stack exported through
-`PaperTheorems.v`.
+The old SmallStep proof tree has been removed. The public theorem facade is the
+current `SmallStep` stack exported through `PaperTheorems.v`; the BigStep
+artifact remains available through the separate BigStep build.
 
 ## Public Theorem Map
 
@@ -78,6 +80,15 @@ Pair-parallel dispatcher case:
 
 - `EPairPar_checked_store_context_case_from_below`
 
+Checked pair-parallel scheduler determinism:
+
+- `NScheduledPairParRun_checked_pairpar_left_then_right_embeds`
+- `NScheduledPairParRun_checked_pairpar_success_join_deterministic`
+- `NScheduledPairParRun_checked_pairpar_success_continuation_deterministic`
+- `NScheduledPairParRun_checked_pairpar_error_classifies`
+- `NScheduledPairParRun_checked_pairpar_error_same_cause`
+- `NScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic`
+
 ## Current Boundary
 
 The current public calculus contains:
@@ -90,14 +101,14 @@ The current public calculus contains:
 - a continuation-machine small-step semantics;
 - static-effect trace soundness;
 - terminal determinism;
+- checked scheduler determinism for pair-parallel run phases;
 - closed terminal surface-effect correctness.
 
 Current non-goals:
 
 - terminal small-step/big-step adequacy;
 - termination or cost bounds for surface-effect evaluation;
-- surface-effect inference or synthesis;
-- scheduler determinism for a nondeterministic/interleaving scheduler.
+- surface-effect inference or synthesis.
 
 ## Paper Notes
 
