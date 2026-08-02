@@ -1,1 +1,1 @@
-Require Export theories.SmallStep.All.
+Require Export theories.SmallStep.Public.

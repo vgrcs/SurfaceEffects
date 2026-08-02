@@ -16,7 +16,7 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
-Definition PairParCheckFailSource (state : State) : Prop :=
+Definition PairParCheckedRejectSource (state : State) : Prop :=
   exists heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k,
     state =
       StReturn heap (VSummary theta2)
@@ -33,10 +33,12 @@ Inductive CheckedStep : State -> Label -> State -> Prop :=
 | CheckedStepRuntime :
     forall state label state',
       Step state label state' ->
-      ~ PairParCheckFailSource state ->
+      ~ PairParCheckedRejectSource state ->
       ~ PairParRunSource state ->
       CheckedStep state label state'
-| CheckedStepPairParCheckFail :
+(* The checked proof relation records the same failed precheck as rejection;
+   this is intentionally separate from the raw fallback transition. *)
+| CheckedStepPairParReject :
     forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k,
       summary_disjointb theta1 theta2 = false ->
       CheckedStep
@@ -353,12 +355,12 @@ Proof.
         end
       | exfalso;
         match goal with
-        | HNot : ~ PairParCheckFailSource
+        | HNot : ~ PairParCheckedRejectSource
             (StReturn ?heap (VSummary ?theta2)
               (KPairParEff2 ?ef1 ?ea1 ?ef2 ?ea2 ?env ?rho ?theta1 ?k)),
           HFail : summary_disjointb ?theta1 ?theta2 = false |- _ =>
             apply HNot;
-            unfold PairParCheckFailSource;
+            unfold PairParCheckedRejectSource;
             exists heap, theta1, theta2, ef1, ea1, ef2, ea2,
               env, rho, k;
             split; [reflexivity | exact HFail]
@@ -491,17 +493,17 @@ Proof.
   exact HComp.
 Qed.
 
-Lemma PairParCheckFailSource_append :
+Lemma PairParCheckedRejectSource_append :
   forall state tail,
-    PairParCheckFailSource state ->
-    PairParCheckFailSource (state_append_kont state tail).
+    PairParCheckedRejectSource state ->
+    PairParCheckedRejectSource (state_append_kont state tail).
 Proof.
   intros state tail HFail.
   destruct HFail as
     (heap & theta1 & theta2 & ef1 & ea1 & ef2 & ea2 &
       env & rho & k & HState & HCheck).
   subst state.
-  unfold PairParCheckFailSource.
+  unfold PairParCheckedRejectSource.
   exists heap, theta1, theta2, ef1, ea1, ef2, ea2,
     env, rho, (kont_append k tail).
   split; [reflexivity | exact HCheck].
@@ -536,7 +538,7 @@ Proof.
     + exact HRaw.
     + intros HFail.
       apply H0.
-      eapply PairParCheckFailSource_append; exact HFail.
+      eapply PairParCheckedRejectSource_append; exact HFail.
     + intros HRun.
       match goal with
       | HNotRun : ~ PairParRunSource (state_append_kont state tail) |- _ =>
@@ -558,7 +560,7 @@ Proof.
 	      end.
 	      exists (StError heap0).
 	      split.
-	      * eapply CheckedStepPairParCheckFail.
+	      * eapply CheckedStepPairParReject.
 	        match goal with
 	        | HFail : summary_disjointb _ _ = false |- _ =>
 	            exact HFail

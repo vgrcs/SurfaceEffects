@@ -1,0 +1,37 @@
+Require Import theories.SmallStep.Determinism.Scheduler.
+
+(** Stable entry points for the scheduler layer.
+
+    The detailed scheduler development remains available by importing
+    [theories.SmallStep.Determinism.Scheduler] directly.  This facade exposes
+    the checked PairPar statements clients normally need. *)
+
+Definition ScheduledPairParRun_checked_pairpar_left_then_right_embeds :=
+  ScheduledPairParRun_checked_pairpar_left_then_right_success.
+
+Definition ScheduledPairParRun_checked_pairpar_nsteps_embeds :=
+  Steps_checked_pairpar_kdone_terminal_embeds_scheduled.
+
+Definition ScheduledPairParRun_checked_pairpar_success_join_deterministic :=
+  ScheduledPairParRun_checked_pairpar_scheduled_join_determinism.
+
+Definition
+  ScheduledPairParRun_checked_pairpar_success_continuation_deterministic :=
+  ScheduledPairParRun_checked_pairpar_scheduled_continuation_terminal_trace_deterministic.
+
+Definition ScheduledPairParRun_checked_pairpar_error_classifies :=
+  ScheduledPairParRun_checked_pairpar_error_is_branch_error.
+
+Definition ScheduledPairParRun_checked_pairpar_error_same_cause :=
+  ScheduledPairParRun_checked_pairpar_error_cause_deterministic.
+
+Definition
+  ScheduledPairParRun_checked_pairpar_left_error_read_only_right_lookup :=
+  ScheduledPairParRun_checked_pairpar_left_error_read_only_right_heap_lookup_deterministic.
+
+Definition ScheduledPairParRun_checked_pairpar_success_error_disjoint :=
+  ScheduledPairParRun_checked_pairpar_success_error_impossible.
+
+Definition
+  ScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic :=
+  ScheduledPairParRun_checked_pairpar_outcome_deterministic.

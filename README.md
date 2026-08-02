@@ -4,11 +4,15 @@ SurfaceEffects is a Rocq mechanization of a language with regions, mutable
 references, dynamic traces, and executable surface effects.
 
 The current paper-facing semantics is a small-step continuation machine. The
-public theorem facade is:
+paper-facing theorem facade is:
 
 ```text
 theories/PaperTheorems.v
 ```
+
+`PaperTheorems.v` re-exports the curated small-step proof surface from
+`theories/SmallStep/Public.v`. The detailed proof libraries remain available
+under `theories/SmallStep`.
 
 ## Where To Look
 
@@ -19,6 +23,8 @@ theories/PaperTheorems.v
 - [paper/operational_semantics.tex](paper/operational_semantics.tex):
   paper-facing continuation-machine rules.
 - [theories/PaperTheorems.v](theories/PaperTheorems.v): public theorem exports.
+- [theories/SmallStep/Public.v](theories/SmallStep/Public.v): curated
+  small-step theorem facade.
 
 ## Quick Build
 
@@ -65,20 +71,28 @@ The paper-facing calculus is the active `SmallStep` development:
 - `SmallStep/Typing/Judgments.v`: ordinary and checked typing judgments.
 - `SmallStep/Runtime/Machine.v`: continuation-machine semantics.
 - `SmallStep/Runtime/Trace.v`: finite executions and traces.
+- `SmallStep/Runtime/TraceView.v`: structured trace views for scheduler
+  branch projections.
 - `SmallStep/Runtime/Progress.v`: progress for well-typed states.
 - `SmallStep/Runtime/RegularPreservation.v`: store-resolved preservation.
+- `SmallStep/Runtime/PreservationPublic.v`: stable preservation endpoints.
 - `SmallStep/Soundness/BackTriangle.v`: checked surface-effect relation.
-- `SmallStep/Soundness/PairParFallback.v`: proof-facing sequential fallback
-  relation for failed pair-parallel summary checks.
+- `SmallStep/Soundness/PairParFallback.v`: checked-pass and rejected-precheck
+  fallback facts for pair-parallel execution.
 - `SmallStep/Soundness/Dispatcher.v`: static-effect soundness and terminal
   correctness dispatcher.
 - `SmallStep/Determinism/Terminal.v`: terminal determinism.
-- `SmallStep/Determinism/Scheduler.v`: checked pair-parallel scheduler
-  determinism.
-- `PaperTheorems.v`: paper-facing theorem exports.
+- `SmallStep/Determinism/SchedulerPrelude.v`: trace-view and heap-footprint
+  support for scheduler proofs.
+- `SmallStep/Determinism/Scheduler.v`: internal checked pair-parallel scheduler
+  proof development.
+- `SmallStep/Determinism/SchedulerPublic.v`: stable scheduler endpoints.
+- `SmallStep/Public.v`: curated small-step proof surface.
+- `PaperTheorems.v`: paper-facing theorem exports, re-exporting
+  `SmallStep/Public.v`.
 
 The old SmallStep proof tree has been removed. The public theorem facade is the
-current `SmallStep` stack exported through `PaperTheorems.v`.
+curated `SmallStep` surface exported through `PaperTheorems.v`.
 
 ## Current Status
 

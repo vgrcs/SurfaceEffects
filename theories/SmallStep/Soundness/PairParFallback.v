@@ -11,11 +11,11 @@ Require Import theories.SmallStep.Typing.Regularity.
 
 Import ListNotations.
 
-Inductive PairParCheckErrorRun : State -> Trace -> State -> Prop :=
-| PPCER_CheckFail :
+Inductive PairParCheckedRejectRun : State -> Trace -> State -> Prop :=
+| PPCR_CheckReject :
     forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k,
       summary_disjointb theta1 theta2 = false ->
-      PairParCheckErrorRun
+      PairParCheckedRejectRun
         (StReturn heap (VSummary theta2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
         []
@@ -179,7 +179,7 @@ Proof.
   eapply PPFR_CheckedPass; eauto.
 Qed.
 
-Corollary PairParFallbackRun_check_fail_sequential :
+Corollary PairParFallbackRun_check_fallback_sequential :
   forall heap env rho ef1 ea1 ef2 ea2 k
     phi_summary_left phi_summary_right phi_left phi_right
     heap_summary_left heap_summary_right heap_left heap_right

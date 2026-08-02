@@ -17,6 +17,12 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
+(** Preservation for resolved state shapes.
+
+    This file contains the rule-by-rule proof layer.  Clients should prefer the
+    stable aliases in [Runtime.PreservationPublic] unless they need an internal
+    case lemma directly. *)
+
 Inductive ReturnSameContextKont : Kont -> Prop :=
 | RS_MuAppFun :
     forall ea env rho k,
@@ -1301,7 +1307,7 @@ Proof.
     constructor.
 Qed.
 
-Lemma ResolvedStateShape_pair_par_check_fail_preservation :
+Lemma ResolvedStateShape_pair_par_check_fallback_preservation :
   forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out,
     ResolvedStateShape
       (StReturn heap (VSummary theta2)
@@ -2064,7 +2070,7 @@ Proof.
   - eapply ResolvedStateShape_pair_par_eval_preservation; eauto.
   - eapply ResolvedStateShape_pair_par_eff1_preservation; eauto.
   - eapply ResolvedStateShape_pair_par_check_pass_preservation; eauto.
-  - eapply ResolvedStateShape_pair_par_check_fail_preservation; eauto.
+  - eapply ResolvedStateShape_pair_par_check_fallback_preservation; eauto.
   - eapply ResolvedStateShape_pair_par_fallback_left_return_preservation;
       eauto.
   - eapply ResolvedStateShape_pair_par_fallback_right_return_preservation;

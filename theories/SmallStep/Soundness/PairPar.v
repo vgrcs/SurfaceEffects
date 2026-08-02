@@ -1378,7 +1378,7 @@ Proof.
 	            (StEval heap_eff2 env rho (EMuApp ef1 ea1)
 	              (KPairParFallbackLeft ef2 ea2 env rho KDone))
 	            phi_after_eff2 heap_final v_final
-	            (StepPairParCheckFail
+	            (StepPairParCheckFallback
 	              heap_eff2 theta1 theta2 ef1 ea1 ef2 ea2 env rho
 	              KDone HCheckSummary)
 	            HAfterEff2)
@@ -1672,7 +1672,7 @@ Proof.
             LSilent
             (StError heap_eff2)
             phi_after_eff2 heap_final v_final
-            (CheckedStepPairParCheckFail
+            (CheckedStepPairParReject
               heap_eff2 theta1 theta2 ef1 ea1 ef2 ea2 env rho
               KDone HCheckSummary)
             HAfterEff2)

@@ -17,6 +17,11 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
+(** Preservation for checked/regular resolved state shapes.
+
+    The repeated case lemmas in this file are proof scaffolding for the compact
+    endpoints re-exported by [Runtime.PreservationPublic]. *)
+
 Lemma RegularResolvedStateShape_const_preservation :
   forall heap env rho n k ty_out,
     RegularResolvedStateShape
@@ -2053,7 +2058,7 @@ Proof.
     + constructor.
 Qed.
 
-Lemma StoreResolvedStateShape_pair_par_check_fail_preservation :
+Lemma StoreResolvedStateShape_pair_par_check_fallback_preservation :
   forall store heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out,
     StoreResolvedStateShape store
       (StReturn heap (VSummary theta2)
@@ -2389,7 +2394,7 @@ Proof.
             StoreResolvedStateShape_pair_par_eval_preservation,
             StoreResolvedStateShape_pair_par_eff1_preservation,
             StoreResolvedStateShape_pair_par_check_pass_preservation,
-            StoreResolvedStateShape_pair_par_check_fail_preservation,
+            StoreResolvedStateShape_pair_par_check_fallback_preservation,
             StoreResolvedStateShape_pair_par_fallback_left_return_preservation,
             StoreResolvedStateShape_pair_par_fallback_right_return_preservation,
             StoreResolvedStateShape_pair_par_left_error_preservation,
@@ -3708,7 +3713,7 @@ Proof.
     constructor.
 Qed.
 
-Lemma RegularResolvedStateShape_pair_par_check_fail_preservation :
+Lemma RegularResolvedStateShape_pair_par_check_fallback_preservation :
   forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out,
     RegularResolvedStateShape
       (StReturn heap (VSummary theta2)
@@ -4034,7 +4039,7 @@ Proof.
   - eapply RegularResolvedStateShape_pair_par_eval_preservation; eauto.
   - eapply RegularResolvedStateShape_pair_par_eff1_preservation; eauto.
   - eapply RegularResolvedStateShape_pair_par_check_pass_preservation; eauto.
-  - eapply RegularResolvedStateShape_pair_par_check_fail_preservation; eauto.
+  - eapply RegularResolvedStateShape_pair_par_check_fallback_preservation; eauto.
   - eapply RegularResolvedStateShape_pair_par_fallback_left_return_preservation;
       eauto.
   - eapply RegularResolvedStateShape_pair_par_fallback_right_return_preservation;

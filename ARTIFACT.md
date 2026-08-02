@@ -16,15 +16,21 @@ Public facade:
 theories/PaperTheorems.v
 ```
 
-Exports:
+`PaperTheorems.v` re-exports the curated small-step surface from:
+
+```text
+theories/SmallStep/Public.v
+```
+
+Exports include:
 
 - the `SmallStep` syntax `Expr`, including `EPairPar`;
 - the ordinary and checked typing judgments, including `TcExp`,
   `CheckedTcExp`, and `CheckedBackTriangle`;
-- progress, preservation, static-effect soundness, terminal determinism, and
-  terminal surface-effect correctness from `theories/SmallStep`;
-- checked pair-parallel scheduler determinism from
-  `theories/SmallStep/Determinism/Scheduler.v`.
+- progress, preservation, static-effect soundness, terminal determinism,
+  terminal surface-effect correctness, and pair-parallel fallback facts;
+- checked pair-parallel scheduler determinism through
+  `theories/SmallStep/Determinism/SchedulerPublic.v`.
 
 ## Known-Good Toolchain
 
@@ -122,10 +128,13 @@ Paper source split:
 Read in this order:
 
 1. `theories/PaperTheorems.v`
-2. `theories/SmallStep/Core/Syntax.v`
-3. `theories/SmallStep/Typing/Judgments.v`
-4. `theories/SmallStep/Runtime/Machine.v`
-5. `theories/SmallStep/Soundness/Correctness.v`
+2. `theories/SmallStep/Public.v`
+3. `theories/SmallStep/Core/Syntax.v`
+4. `theories/SmallStep/Typing/Judgments.v`
+5. `theories/SmallStep/Runtime/Machine.v`
+6. `theories/SmallStep/Runtime/PreservationPublic.v`
+7. `theories/SmallStep/Soundness/Correctness.v`
+8. `theories/SmallStep/Determinism/SchedulerPublic.v`
 
 Details: `REPORT.md`.
 
@@ -138,44 +147,48 @@ Main mechanized names:
 Runtime safety:
 
 - `Step_progress`
-- `Step_store_resolved_state_preservation`
-- `Steps_store_resolved_state_preservation`
-- `StepsN_store_resolved_state_preservation`
+- `Runtime_step_store_preservation`
+- `Runtime_steps_store_preservation`
+- `Runtime_stepsN_store_preservation`
+- `Runtime_steps_view_store_preservation`
 
 Static-effect soundness:
 
-- `checked_store_computation_trace_soundness`
+- `SmallStep_static_effect_soundness`
 
 Terminal determinism:
 
-- `Steps_terminal_trace_deterministic`
-- `Steps_terminal_deterministic`
+- `SmallStep_terminal_trace_deterministic`
+- `SmallStep_terminal_deterministic`
 
 Surface-effect correctness:
 
-- `checked_context_terminal_correctness_from_store_dispatch`
-- `checked_context_structured_terminal_correctness_from_store_dispatch`
+- `SmallStep_checked_terminal_correctness`
 
 Pair-parallel dispatcher case:
 
-- `EPairPar_checked_store_context_case_from_below`
+- `SmallStep_pairpar_dispatcher_case`
 
-Pair-parallel fallback relation:
+Pair-parallel fallback and static branch facts:
 
-- `PairParFallbackRun`
-- `PairParFallbackRun_checked_pass_to_Steps`
-- `PairParFallbackRun_check_fail_sequential`
-- `PairParFallbackRun_from_component_evaluations`
-- `PairParFallbackRun_checked_components`
+- `SmallStep_pairpar_fallback_run`
+- `SmallStep_pairpar_checked_reject_run`
+- `SmallStep_pairpar_checked_pass_fallback_embeds_steps`
+- `SmallStep_pairpar_precheck_rejection_falls_back_sequentially`
+- `SmallStep_pairpar_checked_components_fallback`
+- `SmallStep_pairpar_static_summary_noalloc`
+- `SmallStep_pairpar_static_summary_readonly`
 
 Checked pair-parallel scheduler determinism:
 
-- `ScheduledPairParRun_checked_pairpar_left_then_right_embeds`
-- `ScheduledPairParRun_checked_pairpar_success_join_deterministic`
-- `ScheduledPairParRun_checked_pairpar_success_continuation_deterministic`
-- `ScheduledPairParRun_checked_pairpar_error_classifies`
-- `ScheduledPairParRun_checked_pairpar_error_same_cause`
-- `ScheduledPairParRun_checked_pairpar_terminal_outcomes_deterministic`
+- `SmallStep_scheduler_checked_left_then_right_embeds`
+- `SmallStep_scheduler_checked_nsteps_embeds`
+- `SmallStep_scheduler_checked_success_join_deterministic`
+- `SmallStep_scheduler_checked_success_continuation_deterministic`
+- `SmallStep_scheduler_checked_error_classifies`
+- `SmallStep_scheduler_checked_error_same_cause`
+- `SmallStep_scheduler_checked_success_error_disjoint`
+- `SmallStep_scheduler_checked_terminal_outcomes_deterministic`
 
 Exported by:
 
@@ -191,10 +204,11 @@ Use `REPORT.md` for the detailed proof narrative.
 For artifact checking, the shortest path is still the review path above:
 
 1. public facade;
-2. `SmallStep` syntax and checked typing;
-3. continuation machine, progress, and preservation;
-4. static-effect soundness and dispatcher terminal correctness;
-5. checked pair-parallel scheduler determinism.
+2. curated small-step theorem facade;
+3. `SmallStep` syntax and checked typing;
+4. continuation machine, progress, and preservation facade;
+5. static-effect soundness and dispatcher terminal correctness;
+6. checked pair-parallel scheduler determinism.
 
 ## Scope
 

@@ -18,6 +18,12 @@ Require Import theories.SmallStep.Typing.Types.
 
 Import ListNotations.
 
+(** No-allocation preservation.
+
+    This layer is intentionally separate from ordinary preservation: scheduler
+    determinism uses it to know that PairPar run branches keep allocation
+    footprints stable. *)
+
 Inductive NoAllocKontShape :
     StoreTyping -> Kont -> Ty -> Ty -> Prop :=
 | NAKS_Done :
@@ -1551,7 +1557,7 @@ Proof.
     + constructor.
 Qed.
 
-Lemma NoAllocStateShape_pair_par_check_fail_preservation :
+Lemma NoAllocStateShape_pair_par_check_fallback_preservation :
   forall store heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out,
     NoAllocStateShape store
       (StReturn heap (VSummary theta2)
@@ -2707,7 +2713,7 @@ Proof.
             NoAllocStateShape_eff_app_body_preservation,
             NoAllocStateShape_pair_par_eff1_preservation,
             NoAllocStateShape_pair_par_check_pass_preservation,
-            NoAllocStateShape_pair_par_check_fail_preservation,
+            NoAllocStateShape_pair_par_check_fallback_preservation,
             NoAllocStateShape_pair_par_fallback_left_return_preservation,
             NoAllocStateShape_pair_par_fallback_right_return_preservation,
             NoAllocStateShape_pair_par_left_error_preservation,

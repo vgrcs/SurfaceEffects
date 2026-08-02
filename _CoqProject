@@ -21,6 +21,7 @@ theories/SmallStep/Runtime/RegularStateShape.v
 theories/SmallStep/Runtime/Preservation.v
 theories/SmallStep/Runtime/RegularPreservation.v
 theories/SmallStep/Runtime/NoAllocPreservation.v
+theories/SmallStep/Runtime/PreservationPublic.v
 theories/SmallStep/Runtime/Progress.v
 theories/SmallStep/Runtime/All.v
 theories/SmallStep/Soundness/BackTriangle.v
@@ -38,7 +39,10 @@ theories/SmallStep/Soundness/References.v
 theories/SmallStep/Soundness/Dispatcher.v
 theories/SmallStep/Soundness/All.v
 theories/SmallStep/Determinism/Terminal.v
+theories/SmallStep/Determinism/SchedulerPrelude.v
 theories/SmallStep/Determinism/Scheduler.v
+theories/SmallStep/Determinism/SchedulerPublic.v
 theories/SmallStep/Determinism/All.v
+theories/SmallStep/Public.v
 theories/SmallStep/All.v
 theories/PaperTheorems.v

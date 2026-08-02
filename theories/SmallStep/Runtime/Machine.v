@@ -235,7 +235,9 @@ Inductive Step : State -> Label -> State -> Prop :=
           []
           []
           k)
-| StepPairParCheckFail :
+(* The raw machine falls back to sequential execution when the PairPar
+   precheck rejects the computed summaries. *)
+| StepPairParCheckFallback :
     forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k,
       summary_disjointb theta1 theta2 = false ->
       Step

@@ -55,7 +55,7 @@ Ltac solve_nstep_constructor :=
   | HCheck : summary_disjointb _ _ = false
       |- Step (StReturn _ (VSummary _)
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ _ =>
-      eapply StepPairParCheckFail; exact HCheck
+      eapply StepPairParCheckFallback; exact HCheck
   | HCheck : summary_disjointb _ _ = true
       |- Step (StReturn _ (VSummary _)
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ _ =>
@@ -65,7 +65,7 @@ Ltac solve_nstep_constructor :=
       eapply StepPairParCheckPass
   | |- Step (StReturn _ (VSummary _)
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ (StEval _ _ _ _ _) =>
-      eapply StepPairParCheckFail
+      eapply StepPairParCheckFallback
   | |- Step (StReturn _ _
         (KPairParFallbackLeft _ _ _ _ _)) _ _ =>
       apply StepPairParFallbackLeftReturn

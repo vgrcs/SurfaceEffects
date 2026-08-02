@@ -6,6 +6,11 @@ Require Import theories.SmallStep.Runtime.Trace.
 
 Import ListNotations.
 
+(** Structured views of traces.
+
+    The scheduler uses [TracePar] to remember branch projections even when raw
+    flattened traces can be related only up to interleaving/permutation. *)
+
 Inductive TraceView :=
 | TraceEmpty : TraceView
 | TraceAction : DynamicAction -> TraceView

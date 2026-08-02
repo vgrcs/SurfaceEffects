@@ -64,7 +64,7 @@ Definition CheckedInitialRuntimeTyping
     CheckedRuntimeContext gamma omega heap env rho /\
     CheckedTcExp gamma omega expr ty eff.
 
-Lemma InitialRuntimeTyping_to_NWTState :
+Lemma InitialRuntimeTyping_to_WTState :
   forall gamma omega heap env rho expr,
     InitialRuntimeTyping gamma omega heap env rho expr ->
     WTState gamma omega (InitialState heap env rho expr).
@@ -89,13 +89,13 @@ Proof.
   repeat split; eauto using CheckedTcExp_to_TcExp.
 Qed.
 
-Lemma CheckedInitialRuntimeTyping_to_NWTState :
+Lemma CheckedInitialRuntimeTyping_to_WTState :
   forall gamma omega heap env rho expr,
     CheckedInitialRuntimeTyping gamma omega heap env rho expr ->
     WTState gamma omega (InitialState heap env rho expr).
 Proof.
   intros gamma omega heap env rho expr HRuntime.
-  eapply InitialRuntimeTyping_to_NWTState.
+  eapply InitialRuntimeTyping_to_WTState.
   eapply CheckedInitialRuntimeTyping_to_InitialRuntimeTyping; eauto.
 Qed.
 
@@ -309,7 +309,7 @@ Theorem checked_initial_progress :
 Proof.
   intros gamma omega heap env rho expr HRuntime.
   eapply Step_progress.
-  eapply CheckedInitialRuntimeTyping_to_NWTState; eauto.
+  eapply CheckedInitialRuntimeTyping_to_WTState; eauto.
 Qed.
 
 Theorem checked_initial_step_heap_neutral_preservation :

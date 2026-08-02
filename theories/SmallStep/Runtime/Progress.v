@@ -78,7 +78,7 @@ Proof.
       * eexists; eexists.
         eapply StepPairParCheckPass. exact HCheck.
       * eexists; eexists.
-        eapply StepPairParCheckFail. exact HCheck.
+        eapply StepPairParCheckFallback. exact HCheck.
     + eexists; eexists.
       constructor.
     + eexists; eexists.

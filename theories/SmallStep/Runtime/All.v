@@ -10,4 +10,5 @@ Require Export theories.SmallStep.Runtime.RegularStateShape.
 Require Export theories.SmallStep.Runtime.Preservation.
 Require Export theories.SmallStep.Runtime.RegularPreservation.
 Require Export theories.SmallStep.Runtime.NoAllocPreservation.
+Require Export theories.SmallStep.Runtime.PreservationPublic.
 Require Export theories.SmallStep.Runtime.Progress.
