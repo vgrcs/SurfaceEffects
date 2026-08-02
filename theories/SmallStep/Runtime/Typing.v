@@ -290,6 +290,22 @@ Inductive KontHasType :
       KontHasType gamma omega rho heap
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
+| KT_PairParFallbackLeft :
+    forall gamma omega rho heap ef2 ea2 env k ty1 ty2 eff2,
+      RuntimeEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      TcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      KontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      KontHasType gamma omega rho heap
+        (KPairParFallbackLeft ef2 ea2 env rho k)
+        ty1
+| KT_PairParFallbackRight :
+    forall gamma omega rho heap v_left k ty1 ty2,
+      ValHasType rho heap v_left ty1 ->
+      KontHasType gamma omega rho heap k (TyPair ty1 ty2) ->
+      KontHasType gamma omega rho heap
+        (KPairParFallbackRight v_left k)
+        ty2
 | KT_RgnApp :
     forall gamma omega rho heap r k eff ty,
       region_expr_wf omega r ->

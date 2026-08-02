@@ -20,10 +20,10 @@ machine step
 finite execution
   & $s\longrightarrow^{*}s'\,;\,\phi$
   & accumulated machine trace, represented as a list of actions\\
-trace view
-  & $\mathsf{view}(s,\Phi,s')$
-  & structured view whose flattening is a machine trace\\
-scheduled pair run
+checked finite execution
+  & $s\chksteps s'\,;\,\phi$
+  & execution variant that treats failed pair-parallel prechecks as checked failure\\
+scheduled pair-parallel run
   & $s\Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R}s'$
   & finite run-phase scheduler built from branch machine steps\\
 \bottomrule
@@ -31,15 +31,16 @@ scheduled pair run
 \end{center}
 
 The notation is intentionally separated.  Machine execution \emph{produces}
-trace fragments; the finite-run relation concatenates them into a list trace.
-The structured trace view used by the structured terminal theorem is derived
-from machine steps and flattens back to the same list trace.  A one-step
-transition emits only a fragment $\eta$: administrative steps emit $\Nil$, while
-heap operations emit singleton fragments such as $\Alloc(l\at r)$,
-$\Read(l\at r)$, and $\Write(l\at r)$.  The trace of a longer execution is not
-stored in the ordinary state or continuation; the pair-parallel runtime state
-temporarily stores the two branch traces so it can perform the final checked
-trace-disjointness test.
+trace fragments; the finite-run relation concatenates them into a list trace
+$\phi$. A one-step transition emits only a fragment $\eta$:
+administrative steps emit $\Nil$, while heap operations emit singleton
+fragments such as $\Alloc(l\at r)$, $\Read(l\at r)$, and $\Write(l\at r)$. The
+trace of a longer execution is not stored in the ordinary state or continuation;
+the pair-parallel runtime state temporarily stores the two branch traces so it
+can perform the final checked trace-disjointness test.
+Checked finite execution uses the same trace fragments, but changes the
+observable outcome of a failed pair-parallel computed-effect precheck from
+sequential fallback to checked failure.
 
 \begin{formalbox}{Operational Domains}
 \small
@@ -88,44 +89,20 @@ k\in\mathit{Kont}
   \mid K^{write}(k)
   \mid K^{concat}(\Theta,k)\\[.25ex]
 & \mid K^{\parallel}_1(\vec e,E,P,k)
-  \mid K^{\parallel}_2(\vec e,E,P,\Theta,k).
+  \mid K^{\parallel}_2(\vec e,E,P,\Theta,k)\\[.25ex]
+& \mid K^{\parallel}_{F1}(e,E,P,k)
+  \mid K^{\parallel}_{F2}(v,k).
 \end{aligned}
   & continuations
 \end{tabular*}
 \end{formalbox}
 
-\begin{formalbox}{Machine Operations}
-\small
+The initial state for expression $e$ is the expression state with the final
+continuation:
 \[
-\begin{array}{rcll}
-\mathsf{init}(H,E,P,e)\in\mathit{State}
-  & \triangleq & \langle H,E,P,e,\mathsf{doneK}\rangle
-  & \text{initial expression state}\\
-\mathsf{pairRun}(s_1,s_2,\phi_1,\phi_2,k)\in\mathit{State}
-  & \triangleq & \text{run }s_1,s_2\text{ with traces }\phi_1,\phi_2
-  & \text{pair-parallel run state}\\
-\mathsf{heap}(s)\in\mathit{Heap}
-  & \triangleq & \text{the }H\text{ carried by }s
-  & \text{state heap projection}\\
-s[H]\in\mathit{State}
-  & \triangleq & \text{state }s\text{ with heap }H
-  & \text{heap replacement}
-\end{array}
+\mathsf{init}(H,E,P,e)\triangleq
+\langle H,E,P,e,\mathsf{doneK}\rangle.
 \]
-
-For a list trace $\phi$, write
-\[
-\mathsf{Wr}(\phi)=
-  \{\,l\at r \mid \Write(l\at r)\in\phi\,\}
-\]
-for its heap-write footprint.  If $W$ is a set of heap addresses, write
-$H_1\equiv_{\overline W}H_2$ when the two heaps agree outside $W$:
-\[
-H_1\equiv_{\overline W}H_2
-\quad\Longleftrightarrow\quad
-\forall a.\; a\notin W \Rightarrow H_1(a)=H_2(a).
-\]
-\end{formalbox}
 
 \begin{formalbox}{Finite Machine Executions}
 \small
@@ -148,49 +125,45 @@ We write $\phi\equiv_{\mathsf{perm}}\phi'$ when two list traces contain the same
 actions up to permutation.
 Ordinary expression evaluation is the special case
 $\mathsf{init}(H,E,P,e)\longrightarrow^{*}\mathsf{done}(H',v)\,;\,\phi$.
-A surface-effect term is just an ordinary expression of type $\mathsf{eff}$;
-there is no separate surface-effect evaluator.
+
+The checked execution relation is the reflexive-transitive closure
+of a checked one-step relation $s\chkstep s'\,;\,\eta$.  Away from
+pair-parallel checking and pair-run states, checked steps agree with ordinary
+machine steps. At a failed pair-parallel computed-effect precheck, ordinary
+execution falls back to sequential evaluation, while checked execution reaches
+the terminal checked failure state. In a pair-run state, checked branch steps
+use $\chkstep$ recursively in the selected branch and otherwise perform the
+same heap rebasing and trace accumulation as the ordinary run-phase rules. The
+exceptional failed-precheck rule is displayed with the pair-parallel rules
+below.
+
+\begin{formalbox}{Checked Finite Machine Executions}
+\small
+\noindent\textbf{Checked finite execution}\hfill
+  $\boxed{s\chksteps s'\,;\,\phi}$
+
+\rulepair{
+\inferrule*[lab={[Chk-Refl]}]{ }
+  {s\chksteps s\,;\,\Nil}
+}{
+\inferrule*[lab={[Chk-Step]}]
+  {s\chkstep s_1\,;\,\eta \\
+   s_1\chksteps s_2\,;\,\phi}
+  {s\chksteps s_2\,;\,\eta\tracecat\phi}
+}
+\end{formalbox}
 
 The scheduled pair-run relation introduced below is finite in the same
 inductive sense, but it is not another reflexive-transitive closure of the
 ordinary global step relation. Each nonfinal scheduled rule consumes one
-ordinary machine step from one branch and then recurses; the global scheduled
-order may differ from the ordinary left-to-right machine order.
+ordinary machine step from one branch and then recurses, so the relation
+represents the possible interleavings of the two branch executions rather than
+only the ordinary left-to-right machine order.
 
-The continuation machine accumulates list traces. A trace view is either a
-one-step fragment $\eta$ or a sequential/parallel composition of views. The
-structured terminal correctness theorem uses this auxiliary view together with
-a flattening map back to the underlying machine trace. The first two rules
-are the two cases of the fragment form $\eta$.
-
-\begin{formalbox}{Trace Views}
-\small
-\noindent\textbf{Trace-view flattening}\hfill
-  $\boxed{\mathsf{flatten}(\Phi)=\phi}$
-
-\rulepair{
-\inferrule*[lab={[V-Nil]}]{ }
-  {\mathsf{flatten}(\Nil)=[\,]}
-}{
-\inferrule*[lab={[V-Action]}]{ }
-  {\mathsf{flatten}(\iota)=[\iota]}
-}
-
-\rulepair{
-\inferrule*[lab={[V-Seq]}]
-  {\mathsf{flatten}(\Phi_1)=\phi_1 \\
-   \mathsf{flatten}(\Phi_2)=\phi_2}
-  {\mathsf{flatten}(\Phi_1\tracecat\Phi_2)=\phi_1\tracecat\phi_2}
-}{
-\inferrule*[lab={[V-Par]}]
-  {\mathsf{flatten}(\Phi_1)=\phi_1 \\
-   \mathsf{flatten}(\Phi_2)=\phi_2}
-  {\mathsf{flatten}(\Phi_1\parallel\Phi_2)=\phi_1\tracecat\phi_2}
-}
-\end{formalbox}
-
-The flattening map records only the emitted list trace: both sequential and
-parallel view composition flatten by concatenating the component traces.
+The continuation machine accumulates list traces, not views. When a theorem
+must remember sequencing structure, we use the auxiliary judgment
+$\mathsf{view}(s,\Phi,s')$, defined by the rules below. Its trace component is
+recovered by the flattening map from Section~\ref{sec:effects}.
 
 \begin{formalbox}{Trace-View Executions}
 \small
@@ -217,12 +190,14 @@ parallel view composition flatten by concatenating the component traces.
 Trace-view execution is a structured presentation of finite machine execution:
 if $\mathsf{view}(s,\Phi,s')$, then
 $s\longrightarrow^{*}s'\,;\,\mathsf{flatten}(\Phi)$; conversely, every finite
-machine execution has a trace view with the same flattened trace.
+machine execution has a trace view with the same flattened trace. Thus
+$\mathsf{flatten}$ appears at the boundary between view-level statements and
+ordinary finite executions.
 
-The initial state for expression $e$ is $\mathsf{init}(H,E,P,e)$; terminal
-states $\mathsf{done}(H,v)$ and $\mathsf{error}(H)$ have no outgoing machine
-step.  The error state is the checked-failure terminal used when a
-pair-parallel computed-effect or trace check fails.  Continuations are
+Terminal states $\mathsf{done}(H,v)$ and $\mathsf{error}(H)$ have no outgoing
+machine step.  The error state is the checked-failure terminal used by checked
+execution when a pair-parallel computed-effect precheck fails, and by the
+ordinary run phase when the final branch-trace check fails.  Continuations are
 bookkeeping devices for the call-by-value evaluation order.
 A frame records the expression still to be evaluated, the environment and region
 map needed to resume evaluation, and the continuation to resume afterward.
@@ -393,20 +368,20 @@ $\Nil$.
 }
 \end{formalbox}
 
-\begin{formalbox}{Checked Pair-Parallel Steps}
-\small
-\noindent\textbf{One machine step}\hfill $\boxed{s\longrightarrow s'\,;\,\eta}$
+The pair-parallel run phase uses the state
+$\mathsf{pairRun}(s_1,s_2,\phi_1,\phi_2,k)$ to store two branch states, their
+accumulated branch traces, and the continuation that receives the final pair value.
 
 The checked pair-parallel form is operationally specialized to two computational
 applications.  The corresponding surface-effect applications are evaluated
-first.  If the computed-effect precheck fails, execution reaches the terminal
-checked-failure state $\mathsf{error}(H)$; if it succeeds, the machine runs the
-left branch to completion, then the right branch, accumulating separate branch
-traces and checking them before returning the pair.  This left-then-right order
-is the ordinary machine semantics.  For the scheduler theorem below, the same
-run states are also equipped with a derived scheduled relation: it does not add
-a new source step, but allows either live branch to take the next run-phase step
-while recording the two branch trace views separately.
+first.  If the computed-effect precheck succeeds, the ordinary machine enters a
+pair-run state, runs the left branch to completion and then the right branch,
+accumulating separate branch traces and checking them before returning the pair value.
+If the computed-effect precheck fails, the ordinary machine falls back to
+sequential evaluation of the two computational branches.  The checked execution
+relation uses the same successful run phase, but replaces this sequential
+fallback by terminal checked failure.
+
 For compactness, write
 \[
 \begin{array}{rcl}
@@ -415,6 +390,14 @@ e_i^\mu & \triangleq & \capp e_{fi}\,e_{ai}\\
 e_i^e & \triangleq & \eapp e_{fi}\,e_{ai}.
 \end{array}
 \]
+The run rules use two structural state operations.  If $s$ carries heap $H_0$,
+then $\mathsf{heap}(s)=H_0$.  The state $s[H]$ is obtained from $s$ by replacing
+only that carried heap by $H$.
+
+\begin{formalbox}{Pair-Parallel Steps and Checked Precheck Failure}
+\small
+\noindent\textbf{One machine step}\hfill $\boxed{s\longrightarrow s'\,;\,\eta}$
+
 \begin{rulemathpar}
 \inferrule*[lab={[S-Pair-Start]}]{ }
   {\langle H,E,P,\pairpar{e_1^\mu}{e_2^\mu},k\rangle
@@ -448,6 +431,27 @@ e_i^e & \triangleq & \eapp e_{fi}\,e_{ai}.
   {\langle H,\mathsf{eff}(\Theta_2),
       K^{\parallel}_2(\vec e,E,P,\Theta_1,k)\rangle
    \longrightarrow
+   \langle H,E,P,e_1^\mu,K^{\parallel}_{F1}(e_2^\mu,E,P,k)\rangle\,;\,\Nil}
+\end{rulemathpar}
+
+\rulepair{
+\inferrule*[lab={[S-Pair-Fallback-L]}]{ }
+  {\langle H,v_1,K^{\parallel}_{F1}(e_2^\mu,E,P,k)\rangle
+   \longrightarrow
+   \langle H,E,P,e_2^\mu,K^{\parallel}_{F2}(v_1,k)\rangle\,;\,\Nil}
+}{
+\inferrule*[lab={[S-Pair-Fallback-R]}]{ }
+  {\langle H,v_2,K^{\parallel}_{F2}(v_1,k)\rangle
+   \longrightarrow
+   \langle H,(v_1,v_2),k\rangle\,;\,\Nil}
+}
+
+\begin{rulemathpar}
+\inferrule*[lab={[C-Pair-Check-Fail]}]
+  {\Theta_1 \effconflict \Theta_2}
+  {\langle H,\mathsf{eff}(\Theta_2),
+      K^{\parallel}_2(\vec e,E,P,\Theta_1,k)\rangle
+   \chkstep
    \mathsf{error}(H)\,;\,\Nil}
 \end{rulemathpar}
 
@@ -485,22 +489,32 @@ e_i^e & \triangleq & \eapp e_{fi}\,e_{ai}.
    \longrightarrow
    \mathsf{error}(H)\,;\,\Nil}
 \end{rulemathpar}
-If either branch reaches $\mathsf{error}(H)$, the pair-parallel state steps to
-the same checked-failure terminal state.
 \end{formalbox}
+
+The ordinary semantics uses [S-Pair-Check-Fail] for a failed computed-effect
+precheck. The checked relation uses [C-Pair-Check-Fail] in its place. Its
+pair-run left and right rules are the checked counterparts of [S-Pair-Run-L]
+and [S-Pair-Run-R], with $\chkstep$ in the branch premise; the state update,
+heap rebasing, and emitted trace fragment are unchanged. The final pair-run
+cases are shared by the ordinary and checked relations. If either branch
+reaches $\mathsf{error}(H)$, the pair-parallel state steps to the same
+checked-failure terminal state.
+
+For the scheduler theorem, the same pair-run states are equipped with a derived
+scheduled relation. It does not add a new source step; it allows either live
+branch to take the next run-phase step while recording the two branch trace
+views separately. The final scheduled cases coincide with the checked
+pair-parallel run phase. For example, [Sch-Done-OK] has the same state-level
+premise and conclusion as [S-Pair-Done-OK], but it is a base case of the finite
+scheduled relation rather than one primitive machine step. Its branch views are
+$\Nil,\Nil$ because the join itself emits no branch action; the accumulated
+branch traces $\phi_1,\phi_2$ are already stored in the $\mathsf{pairRun}$
+state.
 
 \begin{formalbox}{Scheduled Pair-Parallel Runs}
 \small
 \noindent\textbf{Scheduled run}\hfill
   $\boxed{s\Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R}s'}$
-
-Write $s\notin\mathsf{Err}$ when $s\neq\mathsf{error}(H)$ for every heap $H$.
-The final cases coincide with the checked pair-parallel run phase.
-For example, [Sch-Done-OK] has the same state-level premise and conclusion as
-[S-Pair-Done-OK], but it is a base case of the finite scheduled relation rather
-than one primitive machine step. Its branch views are $\Nil,\Nil$ because the
-join itself emits no branch action; the accumulated branch traces
-$\phi_1,\phi_2$ are already stored in the $\mathsf{pairRun}$ state.
 
 \rulepair{
 \inferrule*[lab={[Sch-Err-L]}]{ }
@@ -531,7 +545,7 @@ $\phi_1,\phi_2$ are already stored in the $\mathsf{pairRun}$ state.
 \begin{rulemathpar}
 \inferrule*[lab={[Sch-Run-L]}]
   {s_1\longrightarrow s'_1\,;\,\eta \\
-   s_2\notin\mathsf{Err} \\
+   \neg\exists H_e.\;s_2=\mathsf{error}(H_e) \\
    \mathsf{pairRun}(s'_1,s_2[\mathsf{heap}(s'_1)],
       \phi_1\tracecat\eta,\phi_2,k)
       \Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R} s}
@@ -542,7 +556,7 @@ $\phi_1,\phi_2$ are already stored in the $\mathsf{pairRun}$ state.
 \begin{rulemathpar}
 \inferrule*[lab={[Sch-Run-R]}]
   {s_2\longrightarrow s'_2\,;\,\eta \\
-   s_1\notin\mathsf{Err} \\
+   \neg\exists H_e.\;s_1=\mathsf{error}(H_e) \\
    \mathsf{pairRun}(s_1[\mathsf{heap}(s'_2)],s'_2,
       \phi_1,\phi_2\tracecat\eta,k)
       \Longrightarrow_{\mathsf{sch}}^{\Phi_L,\Phi_R} s}

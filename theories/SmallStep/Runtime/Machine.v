@@ -54,6 +54,8 @@ Inductive Kont :=
 | KEffAppArg : Env -> Rho -> VarId -> VarId -> Expr -> Expr -> Kont -> Kont
 | KPairParEff1 : Expr -> Expr -> Expr -> Expr -> Env -> Rho -> Kont -> Kont
 | KPairParEff2 : Expr -> Expr -> Expr -> Expr -> Env -> Rho -> Summary -> Kont -> Kont
+| KPairParFallbackLeft : Expr -> Expr -> Env -> Rho -> Kont -> Kont
+| KPairParFallbackRight : Val -> Kont -> Kont
 | KRgnApp : RegionExpr -> Rho -> Kont -> Kont
 | KCond : Expr -> Expr -> Env -> Rho -> Kont -> Kont
 | KRef : RegionId -> Kont -> Kont
@@ -240,7 +242,23 @@ Inductive Step : State -> Label -> State -> Prop :=
         (StReturn heap (VSummary theta2)
           (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
         LSilent
-        (StError heap)
+        (StEval heap env rho (EMuApp ef1 ea1)
+          (KPairParFallbackLeft ef2 ea2 env rho k))
+| StepPairParFallbackLeftReturn :
+    forall heap v_left ef2 ea2 env rho k,
+      Step
+        (StReturn heap v_left
+          (KPairParFallbackLeft ef2 ea2 env rho k))
+        LSilent
+        (StEval heap env rho (EMuApp ef2 ea2)
+          (KPairParFallbackRight v_left k))
+| StepPairParFallbackRightReturn :
+    forall heap v_left v_right k,
+      Step
+        (StReturn heap v_right
+          (KPairParFallbackRight v_left k))
+        LSilent
+        (StReturn heap (VPair v_left v_right) k)
 | StepPairParRunLeft :
     forall left_state right_state phi_left phi_right k label left_state',
       Step left_state label left_state' ->

@@ -256,6 +256,26 @@ Inductive ResolvedKontShape : Heap -> Kont -> Ty -> Ty -> Prop :=
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
         ty_out
+| RKS_PairParFallbackLeft :
+    forall heap ef2 ea2 env rho k gamma omega
+      ty_left_res ty2 ty2_res eff2 ty_out,
+      ResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty2 ty2_res ->
+      TcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      ResolvedKontShape heap k (TyPair ty_left_res ty2_res) ty_out ->
+      ResolvedKontShape heap
+        (KPairParFallbackLeft ef2 ea2 env rho k)
+        ty_left_res
+        ty_out
+| RKS_PairParFallbackRight :
+    forall heap v_left k ty_left_res ty2_res ty_out,
+      ResolvedValShape heap v_left ty_left_res ->
+      ResolvedKontShape heap k (TyPair ty_left_res ty2_res) ty_out ->
+      ResolvedKontShape heap
+        (KPairParFallbackRight v_left k)
+        ty2_res
+        ty_out
 | RKS_RgnApp :
     forall heap r arg_rho r_val k eff ty ty_out,
       eval_region arg_rho r = Some r_val ->

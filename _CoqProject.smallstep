@@ -25,6 +25,7 @@ theories/SmallStep/Runtime/Progress.v
 theories/SmallStep/Runtime/All.v
 theories/SmallStep/Soundness/BackTriangle.v
 theories/SmallStep/Soundness/Correctness.v
+theories/SmallStep/Soundness/CheckedExecution.v
 theories/SmallStep/Soundness/Counterexamples.v
 theories/SmallStep/Soundness/StaticEffect.v
 theories/SmallStep/Soundness/App.v

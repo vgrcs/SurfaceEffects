@@ -307,6 +307,28 @@ Inductive RegularResolvedKontShape :
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
         ty_out
+| RRKS_PairParFallbackLeft :
+    forall heap ef2 ea2 env rho k gamma omega
+      ty_left_res ty2 ty2_res eff2 ty_out,
+      RegularResolvedEnvShape rho heap env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      RegularResolvedKontShape heap k
+        (TyPair ty_left_res ty2_res) ty_out ->
+      RegularResolvedKontShape heap
+        (KPairParFallbackLeft ef2 ea2 env rho k)
+        ty_left_res
+        ty_out
+| RRKS_PairParFallbackRight :
+    forall heap v_left k ty_left_res ty2_res ty_out,
+      RegularResolvedValShape heap v_left ty_left_res ->
+      RegularResolvedKontShape heap k
+        (TyPair ty_left_res ty2_res) ty_out ->
+      RegularResolvedKontShape heap
+        (KPairParFallbackRight v_left k)
+        ty2_res
+        ty_out
 | RRKS_RgnApp :
     forall heap r arg_rho r_val k eff ty ty_out,
       eval_region arg_rho r = Some r_val ->
@@ -577,6 +599,14 @@ Proof.
       eauto using
         RegularResolvedEnvShape_to_resolved,
         CheckedTcExp_to_TcExp.
+  - eapply RKS_PairParFallbackLeft with
+      (gamma := gamma) (omega := omega)
+      (ty2 := ty2) (eff2 := eff2);
+      eauto using
+        RegularResolvedEnvShape_to_resolved,
+        CheckedTcExp_to_TcExp.
+  - eapply RKS_PairParFallbackRight; eauto using
+      RegularResolvedValShape_to_resolved.
   - eapply RKS_RgnApp; eauto.
   - eapply RKS_Cond with
       (gamma := gamma) (omega := omega)
@@ -1091,6 +1121,28 @@ Inductive StoreResolvedKontShape :
       StoreResolvedKontShape store
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
         TyEffect
+        ty_out
+| SRKS_PairParFallbackLeft :
+    forall store ef2 ea2 env rho k gamma omega
+      ty_left_res ty2 ty2_res eff2 ty_out,
+      StoreResolvedEnvShape store rho env gamma ->
+      RhoModels omega rho ->
+      ResolveTy rho ty2 ty2_res ->
+      CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 ->
+      StoreResolvedKontShape store k
+        (TyPair ty_left_res ty2_res) ty_out ->
+      StoreResolvedKontShape store
+        (KPairParFallbackLeft ef2 ea2 env rho k)
+        ty_left_res
+        ty_out
+| SRKS_PairParFallbackRight :
+    forall store v_left k ty_left_res ty2_res ty_out,
+      StoreResolvedValShape store v_left ty_left_res ->
+      StoreResolvedKontShape store k
+        (TyPair ty_left_res ty2_res) ty_out ->
+      StoreResolvedKontShape store
+        (KPairParFallbackRight v_left k)
+        ty2_res
         ty_out
 | SRKS_RgnApp :
     forall store r arg_rho r_val k eff ty ty_out,
@@ -1687,6 +1739,12 @@ Proof.
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2);
       eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_PairParFallbackLeft with
+      (gamma := gamma) (omega := omega)
+      (ty2 := ty2) (eff2 := eff2);
+      eauto using StoreResolvedEnvShape_store_extend.
+  - eapply SRKS_PairParFallbackRight; eauto.
+    eapply StoreResolvedValShape_store_extend; eauto.
   - eapply SRKS_Cond with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)
@@ -2079,6 +2137,12 @@ Proof.
       (ty1 := ty1) (ty2 := ty2)
       (eff1 := eff1) (eff2 := eff2);
       eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_PairParFallbackLeft with
+      (gamma := gamma) (omega := omega)
+      (ty2 := ty2) (eff2 := eff2);
+      eauto using RegularResolvedEnvShape_heap_alloc.
+  - eapply RRKS_PairParFallbackRight; eauto.
+    eapply RegularResolvedValShape_heap_alloc; eauto.
   - eapply RRKS_Cond with
       (gamma := gamma) (omega := omega)
       (ty := ty) (ty_res := ty_res)

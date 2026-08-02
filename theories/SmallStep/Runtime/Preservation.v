@@ -32,6 +32,14 @@ Inductive ReturnSameContextKont : Kont -> Prop :=
     forall ef1 ea1 ef2 ea2 env rho theta1 k,
       ReturnSameContextKont
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k)
+| RS_PairParFallbackLeft :
+    forall ef2 ea2 env rho k,
+      ReturnSameContextKont
+        (KPairParFallbackLeft ef2 ea2 env rho k)
+| RS_PairParFallbackRight :
+    forall v_left k,
+      ReturnSameContextKont
+        (KPairParFallbackRight v_left k)
 | RS_Cond :
     forall et ef env rho k,
       ReturnSameContextKont (KCond et ef env rho k)
@@ -278,7 +286,18 @@ Proof.
     + exact HRho.
     + eassumption.
   - inversion HSame; subst.
-    eapply WT_Error; eauto.
+    inversion HK; subst.
+    inversion HV; subst.
+    eapply WT_Eval; eauto.
+    eapply KT_PairParFallbackLeft; eauto.
+  - inversion HSame; subst.
+    inversion HK; subst.
+    eapply WT_Eval; eauto.
+    eapply KT_PairParFallbackRight; eauto.
+  - inversion HSame; subst.
+    inversion HK; subst.
+    eapply WT_Return; eauto.
+    eapply VT_Pair; eauto.
   - inversion HSame; subst.
     inversion HK; subst.
     eapply WT_Eval; eauto.
@@ -734,15 +753,14 @@ Proof.
       heap1 closure_env0 closure_rho0 x0 e0 gamma omega
       ty ty_res eff eff_res HEnv HRho HEffResolve HTyResolve HTyped];
     subst; clear HV.
-  inversion HK as
-    [| | | | | | |
-      heap2 r0 arg_rho0 r_val0 k1 eff0 ty0 ty_out1
-      HRgnKont HKInner | | | | | | | | | | | | | | | | |];
-    subst; clear HK.
-  rewrite HRgn in HRgnKont.
-  inversion HRgnKont.
-  subst r_val0.
-  clear HRgnKont.
+  inversion HK; subst; clear HK.
+  match goal with
+  | HRgnKont : eval_region arg_rho r = Some ?r_val0 |- _ =>
+      rewrite HRgn in HRgnKont;
+      inversion HRgnKont;
+      subst r_val0;
+      clear HRgnKont
+  end.
   destruct (HBodyWF gamma omega ty eff HTyped)
     as (HFresh & HCtxWF & HTyWF).
   eapply RSS_Eval with
@@ -1289,13 +1307,66 @@ Lemma ResolvedStateShape_pair_par_check_fail_preservation :
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       ty_out ->
-    ResolvedStateShape (StError heap) ty_out.
+    ResolvedStateShape
+      (StEval heap env rho (EMuApp ef1 ea1)
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      ty_out.
 Proof.
   intros heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out HState.
   inversion HState as
     [| heap0 v0 k0 ty ty_out0 HHeap HV HK | | |];
     subst; clear HState.
-  eapply RSS_Error; eauto.
+  inversion HK; subst.
+  inversion HV; subst.
+  eapply RSS_Eval with
+    (gamma := gamma) (omega := omega)
+    (ty := ty1) (ty_res := ty1_res) (eff := eff1);
+    eauto.
+  eapply RKS_PairParFallbackLeft with
+    (gamma := gamma) (omega := omega)
+    (ty2 := ty2) (ty2_res := ty2_res) (eff2 := eff2);
+    eauto.
+Qed.
+
+Lemma ResolvedStateShape_pair_par_fallback_left_return_preservation :
+  forall heap v_left ef2 ea2 env rho k ty_out,
+    ResolvedStateShape
+      (StReturn heap v_left
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      ty_out ->
+    ResolvedStateShape
+      (StEval heap env rho (EMuApp ef2 ea2)
+        (KPairParFallbackRight v_left k))
+      ty_out.
+Proof.
+  intros heap v_left ef2 ea2 env rho k ty_out HState.
+  inversion HState as
+    [| heap0 v0 k0 ty ty_out0 HHeap HV HK | | |];
+    subst; clear HState.
+  inversion HK; subst.
+  eapply RSS_Eval with
+    (gamma := gamma) (omega := omega)
+    (ty := ty2) (ty_res := ty2_res) (eff := eff2);
+    eauto.
+  eapply RKS_PairParFallbackRight; eauto.
+Qed.
+
+Lemma ResolvedStateShape_pair_par_fallback_right_return_preservation :
+  forall heap v_left v_right k ty_out,
+    ResolvedStateShape
+      (StReturn heap v_right (KPairParFallbackRight v_left k))
+      ty_out ->
+    ResolvedStateShape
+      (StReturn heap (VPair v_left v_right) k)
+      ty_out.
+Proof.
+  intros heap v_left v_right k ty_out HState.
+  inversion HState as
+    [| heap0 v0 k0 ty ty_out0 HHeap HV HK | | |];
+    subst; clear HState.
+  inversion HK; subst.
+  eapply RSS_Return; eauto.
+  eapply RVS_Pair; eauto.
 Qed.
 
 Lemma ResolvedStateShape_pair_par_done_pass_preservation :
@@ -1994,6 +2065,10 @@ Proof.
   - eapply ResolvedStateShape_pair_par_eff1_preservation; eauto.
   - eapply ResolvedStateShape_pair_par_check_pass_preservation; eauto.
   - eapply ResolvedStateShape_pair_par_check_fail_preservation; eauto.
+  - eapply ResolvedStateShape_pair_par_fallback_left_return_preservation;
+      eauto.
+  - eapply ResolvedStateShape_pair_par_fallback_right_return_preservation;
+      eauto.
   - eapply ResolvedStateShape_pair_par_run_left_preservation_from_child;
       eauto.
   - eapply ResolvedStateShape_pair_par_run_right_preservation_from_child;

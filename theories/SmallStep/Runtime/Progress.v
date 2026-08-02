@@ -79,6 +79,10 @@ Proof.
         eapply StepPairParCheckPass. exact HCheck.
       * eexists; eexists.
         eapply StepPairParCheckFail. exact HCheck.
+    + eexists; eexists.
+      constructor.
+    + eexists; eexists.
+      constructor.
     + inversion HV; subst.
       destruct
         (RhoModels_eval_region omega rho r HRho H)

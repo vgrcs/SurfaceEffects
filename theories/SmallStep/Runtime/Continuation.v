@@ -61,11 +61,17 @@ Ltac solve_nstep_constructor :=
         (KPairParEff2 _ _ _ _ _ _ _ _)) _ _ =>
       eapply StepPairParCheckPass; exact HCheck
   | |- Step (StReturn _ (VSummary _)
-        (KPairParEff2 _ _ _ _ _ _ _ _)) _ (StEval _ _ _ _ _) =>
+        (KPairParEff2 _ _ _ _ _ _ _ _)) _ (StPairParRun _ _ _ _ _) =>
       eapply StepPairParCheckPass
   | |- Step (StReturn _ (VSummary _)
-        (KPairParEff2 _ _ _ _ _ _ _ _)) _ (StError _) =>
+        (KPairParEff2 _ _ _ _ _ _ _ _)) _ (StEval _ _ _ _ _) =>
       eapply StepPairParCheckFail
+  | |- Step (StReturn _ _
+        (KPairParFallbackLeft _ _ _ _ _)) _ _ =>
+      apply StepPairParFallbackLeftReturn
+  | |- Step (StReturn _ _
+        (KPairParFallbackRight _ _)) _ _ =>
+      apply StepPairParFallbackRightReturn
   | |- Step (StPairParRun (StError _) _ _ _ _) _ _ =>
       apply StepPairParRunLeftError
   | |- Step (StPairParRun (StDone _ _) (StError _) _ _ _) _ _ =>
@@ -143,6 +149,10 @@ Fixpoint kont_append (k tail : Kont) : Kont :=
   | KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k' =>
       KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1
         (kont_append k' tail)
+  | KPairParFallbackLeft ef2 ea2 env rho k' =>
+      KPairParFallbackLeft ef2 ea2 env rho (kont_append k' tail)
+  | KPairParFallbackRight v_left k' =>
+      KPairParFallbackRight v_left (kont_append k' tail)
   | KRgnApp r rho k' =>
       KRgnApp r rho (kont_append k' tail)
   | KCond et ef env rho k' =>

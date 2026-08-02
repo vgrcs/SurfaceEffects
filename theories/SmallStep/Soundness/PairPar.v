@@ -10,6 +10,7 @@ Require Import theories.SmallStep.Runtime.Machine.
 Require Import theories.SmallStep.Runtime.RegularStateShape.
 Require Import theories.SmallStep.Runtime.Trace.
 Require Import theories.SmallStep.Soundness.App.
+Require Import theories.SmallStep.Soundness.CheckedExecution.
 Require Import theories.SmallStep.Soundness.Correctness.
 Require Import theories.SmallStep.Soundness.Summary.
 Require Import theories.SmallStep.Determinism.Terminal.
@@ -386,12 +387,12 @@ Qed.
 Lemma KPairParEff2_summary_terminal_check_pass :
   forall heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k
     phi heap_final v_final,
+    summary_disjointb theta1 theta2 = true ->
     Steps
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       phi
       (StDone heap_final v_final) ->
-    summary_disjointb theta1 theta2 = true /\
     exists phi_tail,
       Steps
         (StPairParRun
@@ -403,67 +404,43 @@ Lemma KPairParEff2_summary_terminal_check_pass :
       phi = phi_tail.
 Proof.
   intros heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k
-    phi heap_final v_final HSteps.
-  destruct (summary_disjointb theta1 theta2) eqn:HCheck.
-  - remember
-      (StReturn heap (VSummary theta2)
-        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
-      as start eqn:HStart.
-    remember (StDone heap_final v_final) as final eqn:HFinal.
-    destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
-    + rewrite HStart in HFinal. inversion HFinal.
-    + subst state state''.
-      destruct
-        (Step_deterministic
-          (StReturn heap (VSummary theta2)
-            (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
-          LSilent
-          (StPairParRun
-            (StEval heap env rho (EMuApp ef1 ea1) KDone)
-            (StEval heap env rho (EMuApp ef2 ea2) KDone)
-            [] [] k)
-          label state'
-          (StepPairParCheckPass
-            heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k HCheck)
-          HStep)
-        as [HLabel HState].
-      subst label state'.
-      split; [reflexivity |].
-      exists phi0.
-      split; [assumption | reflexivity].
-  - remember
-      (StReturn heap (VSummary theta2)
-        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
-      as start eqn:HStart.
-    remember (StDone heap_final v_final) as final eqn:HFinal.
-    destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
-    + rewrite HStart in HFinal. inversion HFinal.
-    + subst state state''.
-      destruct
-        (Step_deterministic
-          (StReturn heap (VSummary theta2)
-            (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
-          LSilent
-          (StError heap)
-          label state'
-          (StepPairParCheckFail
-            heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k HCheck)
-          HStep)
-        as [HLabel HState].
-      subst label state'.
-      exfalso.
-      eapply StError_no_done; eauto.
+    phi heap_final v_final HCheck HSteps.
+  remember
+    (StReturn heap (VSummary theta2)
+      (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
+    as start eqn:HStart.
+  remember (StDone heap_final v_final) as final eqn:HFinal.
+  destruct HSteps as [state | state label state' phi0 state'' HStep HTail].
+  - rewrite HStart in HFinal. inversion HFinal.
+  - subst state state''.
+    destruct
+      (Step_deterministic
+        (StReturn heap (VSummary theta2)
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
+        LSilent
+        (StPairParRun
+          (StEval heap env rho (EMuApp ef1 ea1) KDone)
+          (StEval heap env rho (EMuApp ef2 ea2) KDone)
+          [] [] k)
+        label state'
+        (StepPairParCheckPass
+          heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k HCheck)
+        HStep)
+      as [HLabel HState].
+    subst label state'.
+    exists phi0.
+    split; [assumption | reflexivity].
 Qed.
 
 Lemma KPairParEff2_summary_terminal_check_pass_N :
   forall n heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k
     phi heap_final v_final,
+    summary_disjointb theta1 theta2 = true ->
     StepsN n
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       phi
       (StDone heap_final v_final) ->
-    summary_disjointb theta1 theta2 = true /\
     exists n_tail phi_tail,
       n = S n_tail /\
       StepsN n_tail
@@ -476,41 +453,90 @@ Lemma KPairParEff2_summary_terminal_check_pass_N :
       phi = phi_tail.
 Proof.
   intros n heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k
-    phi heap_final v_final HSteps.
-  destruct (summary_disjointb theta1 theta2) eqn:HCheck.
-  - destruct
-      (StepsN_known_first_step_terminal_inv
-        n
-        (StReturn heap (VSummary theta2)
-          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
-        LSilent
-        (StPairParRun
-          (StEval heap env rho (EMuApp ef1 ea1) KDone)
-          (StEval heap env rho (EMuApp ef2 ea2) KDone)
-          [] [] k)
-        phi heap_final v_final
-        (StepPairParCheckPass
-          heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k HCheck)
-        HSteps)
-      as (n_tail & phi_tail & Hn & HTail & HTrace).
-    simpl in HTrace.
-    split; [reflexivity |].
-    exists n_tail, phi_tail.
-    repeat split; assumption.
-  - destruct
-      (StepsN_known_first_step_terminal_inv
-        n
-        (StReturn heap (VSummary theta2)
-          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
-        LSilent
-        (StError heap)
-        phi heap_final v_final
-        (StepPairParCheckFail
-          heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k HCheck)
-        HSteps)
-      as (n_tail & phi_tail & _ & HTail & _).
-    exfalso.
-    eapply StError_no_done_N; exact HTail.
+    phi heap_final v_final HCheck HSteps.
+  destruct
+    (StepsN_known_first_step_terminal_inv
+      n
+      (StReturn heap (VSummary theta2)
+        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
+      LSilent
+      (StPairParRun
+        (StEval heap env rho (EMuApp ef1 ea1) KDone)
+        (StEval heap env rho (EMuApp ef2 ea2) KDone)
+        [] [] k)
+      phi heap_final v_final
+      (StepPairParCheckPass
+        heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k HCheck)
+      HSteps)
+    as (n_tail & phi_tail & Hn & HTail & HTrace).
+  simpl in HTrace.
+  exists n_tail, phi_tail.
+  repeat split; assumption.
+Qed.
+
+Lemma KPairParFallbackLeft_terminal_first_step_N :
+  forall n heap v_left ef2 ea2 env rho k phi heap_final v_final,
+    StepsN n
+      (StReturn heap v_left
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      phi
+      (StDone heap_final v_final) ->
+    exists n_tail phi_tail,
+      n = S n_tail /\
+      StepsN n_tail
+        (StEval heap env rho (EMuApp ef2 ea2)
+          (KPairParFallbackRight v_left k))
+        phi_tail
+        (StDone heap_final v_final) /\
+      phi = phi_tail.
+Proof.
+  intros n heap v_left ef2 ea2 env rho k phi heap_final v_final HSteps.
+  destruct
+    (StepsN_known_first_step_terminal_inv
+      n
+      (StReturn heap v_left
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      LSilent
+      (StEval heap env rho (EMuApp ef2 ea2)
+        (KPairParFallbackRight v_left k))
+      phi heap_final v_final
+      (StepPairParFallbackLeftReturn
+        heap v_left ef2 ea2 env rho k)
+      HSteps)
+    as (n_tail & phi_tail & Hn & HTail & HTrace).
+  simpl in HTrace.
+  exists n_tail, phi_tail.
+  repeat split; assumption.
+Qed.
+
+Lemma KPairParFallbackRight_terminal_first_step_N :
+  forall n heap v_left v_right k phi heap_final v_final,
+    StepsN n
+      (StReturn heap v_right (KPairParFallbackRight v_left k))
+      phi
+      (StDone heap_final v_final) ->
+    exists n_tail phi_tail,
+      n = S n_tail /\
+      StepsN n_tail
+        (StReturn heap (VPair v_left v_right) k)
+        phi_tail
+        (StDone heap_final v_final) /\
+      phi = phi_tail.
+Proof.
+  intros n heap v_left v_right k phi heap_final v_final HSteps.
+  destruct
+    (StepsN_known_first_step_terminal_inv
+      n
+      (StReturn heap v_right (KPairParFallbackRight v_left k))
+      LSilent
+      (StReturn heap (VPair v_left v_right) k)
+      phi heap_final v_final
+      (StepPairParFallbackRightReturn heap v_left v_right k)
+      HSteps)
+    as (n_tail & phi_tail & Hn & HTail & HTrace).
+  simpl in HTrace.
+  exists n_tail, phi_tail.
+  repeat split; assumption.
 Qed.
 
 Lemma StPairParRun_right_phase_decomposition_N :
@@ -966,6 +992,235 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma CheckedStPairParRun_right_phase_counted_decomposition_N :
+  forall n heap_left v_left right_state phi_left_acc phi_right_acc
+    phi heap_final v_final,
+    CheckedStepsN n
+      (StPairParRun
+        (StDone heap_left v_left)
+        right_state
+        phi_left_acc
+        phi_right_acc
+        KDone)
+      phi
+      (StDone heap_final v_final) ->
+    exists n_right phi_right heap_right v_right,
+      CheckedStepsN n_right right_state phi_right
+        (StDone heap_right v_right) /\
+      n_right < n /\
+      trace_disjointb phi_left_acc (phi_right_acc ++ phi_right) = true /\
+      heap_final = heap_right /\
+      v_final = VPair v_left v_right /\
+      phi = phi_right.
+Proof.
+  induction n as [| n IH];
+    intros heap_left v_left right_state phi_left_acc phi_right_acc
+      phi heap_final v_final HRun.
+  - inversion HRun.
+  - inversion HRun as
+      [| n0 state0 label state1 phi0 state2 HStep0 HTail0];
+      subst; clear HRun.
+    inversion HStep0; subst.
+    all: try solve
+      [ match goal with
+        | HNotRun : ~ PairParRunSource (StPairParRun _ _ _ _ _) |- _ =>
+            exfalso; apply HNotRun; simpl; exact I
+        end
+      | match goal with
+        | H : CheckedStep (StDone _ _) _ _ |- _ =>
+            exfalso; eapply CheckedStep_done_absurd; exact H
+        end
+      | match goal with
+        | H : CheckedStepsN _ (StError _) _ (StDone _ _) |- _ =>
+            exfalso; eapply CheckedStepsN_error_no_done; exact H
+        end
+      | congruence ].
+    all: try match goal with
+    | HRightStep : CheckedStep ?right_state0 ?label ?right_state' |- _ =>
+        destruct
+          (IH (state_heap right_state') v_left right_state'
+            phi_left_acc (phi_right_acc ++ label_trace label)
+            phi0 heap_final v_final HTail0)
+          as (n_right_tail & phi_right_tail & heap_right & v_right &
+            HRightTail & HRightCount & HCheck & HHeap & HVal &
+            HTraceTail);
+        exists (S n_right_tail), (label_trace label ++ phi_right_tail),
+          heap_right, v_right;
+        split;
+        [ eapply CheckedStepsNStep; eauto
+        | split;
+          [ lia
+          | split;
+            [ rewrite <- app_assoc in HCheck; exact HCheck
+            | repeat split; try assumption;
+              subst phi0; reflexivity ] ] ]
+    end.
+    all: try match goal with
+    | HTail : CheckedStepsN _
+        (StReturn ?heap (VPair ?v_left0 ?v2) KDone)
+        ?phi_tail (StDone ?heap_final0 ?v_final0) |- _ =>
+        destruct
+          (Steps_return_done_inv
+            heap
+            (VPair v_left0 v2)
+            phi_tail
+            heap_final0
+            v_final0
+            (StepsN_to_Steps _ _ _ _
+              (CheckedStepsN_to_StepsN_done _ _ _ _ _ HTail)))
+          as (HHeap & HVal & HTrace);
+        subst heap_final0 v_final0 phi_tail;
+        exists 0, [], heap, v2;
+        split;
+        [ constructor
+        | split;
+          [ lia
+          | split;
+            [ rewrite app_nil_r; assumption
+            | repeat split; try assumption; reflexivity ] ] ]
+    end.
+Qed.
+
+Lemma CheckedStPairParRun_left_phase_counted_decomposition_N :
+  forall n left_state env rho e_right phi_left_acc phi_right_acc
+    phi heap_final v_final,
+    CheckedStepsN n
+      (StPairParRun
+        left_state
+        (InitialState (state_heap left_state) env rho e_right)
+        phi_left_acc
+        phi_right_acc
+        KDone)
+      phi
+      (StDone heap_final v_final) ->
+    exists n_left n_after_left phi_left heap_left v_left phi_after_left,
+      CheckedStepsN n_left left_state phi_left
+        (StDone heap_left v_left) /\
+      CheckedStepsN n_after_left
+        (StPairParRun
+          (StDone heap_left v_left)
+          (InitialState heap_left env rho e_right)
+          (phi_left_acc ++ phi_left)
+          phi_right_acc
+          KDone)
+        phi_after_left
+        (StDone heap_final v_final) /\
+      n_left < n /\
+      n = n_left + n_after_left /\
+      phi = phi_left ++ phi_after_left.
+Proof.
+  induction n as [| n IH];
+    intros left_state env rho e_right phi_left_acc phi_right_acc
+      phi heap_final v_final HRun.
+  - inversion HRun.
+  - inversion HRun as
+      [| n0 state0 label state1 phi0 state2 HStep0 HTail0];
+      subst; clear HRun.
+    inversion HStep0; subst.
+    all: try solve
+      [ match goal with
+        | HNotRun : ~ PairParRunSource (StPairParRun _ _ _ _ _) |- _ =>
+            exfalso; apply HNotRun; simpl; exact I
+        end
+      | match goal with
+        | H : CheckedStep (StError _) _ _ |- _ =>
+            exfalso; eapply CheckedStep_error_absurd; exact H
+        end
+      | match goal with
+        | H : CheckedStepsN _ (StError _) _ (StDone _ _) |- _ =>
+            exfalso; eapply CheckedStepsN_error_no_done; exact H
+        end
+      | congruence ].
+    + simpl in *.
+      destruct
+        (IH left_state' env rho e_right
+          (phi_left_acc ++ label_trace label)
+          phi_right_acc
+          phi0 heap_final v_final HTail0)
+        as (n_left_tail & n_after_left & phi_left_tail & heap_left &
+          v_left & phi_after_left &
+          HLeftTail & HAfterLeft & HCountLeft & HCountTotal &
+          HTraceTail).
+      exists (S n_left_tail), n_after_left,
+        (label_trace label ++ phi_left_tail), heap_left, v_left,
+        phi_after_left.
+      split.
+      * eapply CheckedStepsNStep; eauto.
+      * split.
+        -- rewrite app_assoc.
+           exact HAfterLeft.
+        -- split; [lia |].
+           split; [lia |].
+           subst phi0.
+           rewrite app_assoc.
+           reflexivity.
+    + exists 0, (S n), [], heap, v1, (label_trace label ++ phi0).
+      split.
+      * constructor.
+      * split.
+        -- rewrite app_nil_r.
+           eapply CheckedStepsNStep.
+           ++ exact HStep0.
+           ++ exact HTail0.
+        -- repeat split; try lia.
+Qed.
+
+Lemma CheckedStPairParRun_initial_counted_decomposition_N :
+  forall n heap env rho e_left e_right phi heap_final v_final,
+    CheckedStepsN n
+      (StPairParRun
+        (InitialState heap env rho e_left)
+        (InitialState heap env rho e_right)
+        [] [] KDone)
+      phi
+      (StDone heap_final v_final) ->
+    exists n_left n_right
+      phi_left phi_right heap_left v_left heap_right v_right,
+      CheckedStepsN n_left
+        (InitialState heap env rho e_left)
+        phi_left
+        (StDone heap_left v_left) /\
+      CheckedStepsN n_right
+        (InitialState heap_left env rho e_right)
+        phi_right
+        (StDone heap_right v_right) /\
+      n_left < n /\
+      n_right < n /\
+      trace_disjointb phi_left phi_right = true /\
+      heap_final = heap_right /\
+      v_final = VPair v_left v_right /\
+      phi = phi_left ++ phi_right.
+Proof.
+  intros n heap env rho e_left e_right phi heap_final v_final HRun.
+  destruct
+    (CheckedStPairParRun_left_phase_counted_decomposition_N
+      n
+      (InitialState heap env rho e_left)
+      env rho e_right [] [] phi heap_final v_final HRun)
+    as (n_left & n_after_left & phi_left & heap_left & v_left &
+      phi_after_left &
+      HLeft & HAfterLeft & HLeftCount & HCountTotal & HTraceLeft).
+  simpl in HAfterLeft.
+  destruct
+    (CheckedStPairParRun_right_phase_counted_decomposition_N
+      n_after_left heap_left v_left
+      (InitialState heap_left env rho e_right)
+      phi_left [] phi_after_left heap_final v_final HAfterLeft)
+    as (n_right & phi_right & heap_right & v_right &
+      HRight & HRightCount & HCheck & HHeap & HVal & HTraceRight).
+  exists n_left, n_right, phi_left, phi_right,
+    heap_left, v_left, heap_right, v_right.
+  split; [exact HLeft |].
+  split; [exact HRight |].
+  split; [exact HLeftCount |].
+  split; [lia |].
+  split; [exact HCheck |].
+  split; [exact HHeap |].
+  split; [exact HVal |].
+  rewrite HTraceLeft, HTraceRight.
+  reflexivity.
+Qed.
+
 Definition EPairParCountedDecompositionGoal : Prop :=
   forall n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
     StepsN n
@@ -993,15 +1248,16 @@ Definition EPairParCountedDecompositionGoal : Prop :=
         (InitialState heap_left env rho (EMuApp ef2 ea2))
         phi_right
         (StDone heap_right v_right) /\
-      n_eff1 < n /\
-      n_eff2 < n /\
-      n_left < n /\
-      n_right < n /\
-      summary_disjointb theta1 theta2 = true /\
-      trace_disjointb phi_left phi_right = true /\
-      heap_final = heap_right /\
-      v_final = VPair v_left v_right /\
-      phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
+	      n_eff1 < n /\
+	      n_eff2 < n /\
+	      n_left < n /\
+	      n_right < n /\
+	      ((summary_disjointb theta1 theta2 = true /\
+	        trace_disjointb phi_left phi_right = true) \/
+	       summary_disjointb theta1 theta2 = false) /\
+	      heap_final = heap_right /\
+	      v_final = VPair v_left v_right /\
+	      phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
 
 Theorem EPairPar_counted_decomposition :
   EPairParCountedDecompositionGoal.
@@ -1074,32 +1330,356 @@ Proof.
             (StDone heap_final v_final)
             HAfterEff2))
         as (theta2 & HTheta2).
+	      subst v_eff2.
+	      destruct (summary_disjointb theta1 theta2) eqn:HCheckSummary.
+	      * destruct
+	          (KPairParEff2_summary_terminal_check_pass_N
+	            n_after_eff2 heap_eff2 theta1 theta2 ef1 ea1 ef2 ea2
+	            env rho KDone phi_after_eff2 heap_final v_final
+	            HCheckSummary HAfterEff2)
+	          as (n_pair & phi_pair & HCountAfterEff2 &
+	            HPairRun & HTraceAfterEff2).
+	        destruct
+	          (StPairParRun_initial_counted_decomposition_N
+	            n_pair heap_eff2 env rho
+	            (EMuApp ef1 ea1)
+	            (EMuApp ef2 ea2)
+	            phi_pair heap_final v_final HPairRun)
+	          as (n_left & n_right & phi_left & phi_right &
+	            heap_left & v_left & heap_right & v_right &
+	            HLeft & HRight & HLeftCount & HRightCount &
+	            HCheckTrace & HHeap & HVal & HTracePair).
+	        exists n_eff1, n_eff2, n_left, n_right,
+	          phi_eff1, phi_eff2, phi_left, phi_right,
+	          theta1, theta2, heap_eff1, heap_eff2,
+	          heap_left, heap_right, v_left, v_right.
+	        split; [exact HSummary1 |].
+	        split; [exact HSummary2 |].
+	        split; [exact HLeft |].
+	        split; [exact HRight |].
+	        split; [lia |].
+	        split; [lia |].
+	        split; [lia |].
+	        split; [lia |].
+	        split.
+	        -- left. split; assumption.
+	        -- split; [exact HHeap |].
+	           split; [exact HVal |].
+	           rewrite HTraceStart, HTraceEff1, HTraceAfterEff1,
+	             HTraceEff2, HTraceAfterEff2, HTracePair.
+	           repeat rewrite app_assoc.
+	           reflexivity.
+	      * destruct
+	          (StepsN_known_first_step_terminal_inv
+	            n_after_eff2
+	            (StReturn heap_eff2 (VSummary theta2)
+	              (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
+	            LSilent
+	            (StEval heap_eff2 env rho (EMuApp ef1 ea1)
+	              (KPairParFallbackLeft ef2 ea2 env rho KDone))
+	            phi_after_eff2 heap_final v_final
+	            (StepPairParCheckFail
+	              heap_eff2 theta1 theta2 ef1 ea1 ef2 ea2 env rho
+	              KDone HCheckSummary)
+	            HAfterEff2)
+	          as (n_fallback & phi_fallback & HCountAfterEff2 &
+	            HFallback & HTraceAfterEff2).
+	        simpl in HTraceAfterEff2.
+	        destruct
+	          (StepsN_append_kont_terminal_split_counted
+	            n_fallback
+	            (StEval heap_eff2 env rho (EMuApp ef1 ea1)
+	              (KPairParFallbackLeft ef2 ea2 env rho KDone))
+	            phi_fallback
+	            heap_final v_final
+	            HFallback
+	            (InitialState heap_eff2 env rho (EMuApp ef1 ea1))
+	            (KPairParFallbackLeft ef2 ea2 env rho KDone)
+	            eq_refl)
+	          as (n_left & n_after_left & phi_left & heap_left & v_left &
+	            phi_after_left & HLeft & HAfterLeft & HCountLeft &
+	            HTraceLeft).
+	        -- intros heap_done v_done HDone. inversion HDone.
+	        -- destruct
+	            (StepsN_known_first_step_terminal_inv
+	              n_after_left
+	              (StReturn heap_left v_left
+	                (KPairParFallbackLeft ef2 ea2 env rho KDone))
+	              LSilent
+	              (StEval heap_left env rho (EMuApp ef2 ea2)
+	                (KPairParFallbackRight v_left KDone))
+	              phi_after_left heap_final v_final
+	              (StepPairParFallbackLeftReturn
+	                heap_left v_left ef2 ea2 env rho KDone)
+	              HAfterLeft)
+	            as (n_right_tail & phi_right_tail & HCountAfterLeft &
+	              HRightWithKont & HTraceAfterLeft).
+	          simpl in HTraceAfterLeft.
+	          destruct
+	            (StepsN_append_kont_terminal_split_counted
+	              n_right_tail
+	              (StEval heap_left env rho (EMuApp ef2 ea2)
+	                (KPairParFallbackRight v_left KDone))
+	              phi_right_tail
+	              heap_final v_final
+	              HRightWithKont
+	              (InitialState heap_left env rho (EMuApp ef2 ea2))
+	              (KPairParFallbackRight v_left KDone)
+	              eq_refl)
+	            as (n_right & n_after_right & phi_right & heap_right &
+	              v_right & phi_after_right & HRight & HAfterRight &
+	              HCountRight & HTraceRight).
+	          ++ intros heap_done v_done HDone. inversion HDone.
+	          ++ destruct
+	              (StepsN_known_first_step_terminal_inv
+	                n_after_right
+	                (StReturn heap_right v_right
+	                  (KPairParFallbackRight v_left KDone))
+	                LSilent
+	                (StReturn heap_right (VPair v_left v_right) KDone)
+	                phi_after_right heap_final v_final
+	                (StepPairParFallbackRightReturn
+	                  heap_right v_left v_right KDone)
+	                HAfterRight)
+	              as (n_done & phi_done & _HCountAfterRight &
+	                HDoneTail & HTraceAfterRight).
+	            simpl in HTraceAfterRight.
+	            destruct
+	              (Steps_return_done_inv
+	                heap_right (VPair v_left v_right) phi_done
+	                heap_final v_final
+	                (StepsN_to_Steps
+	                  n_done
+	                  (StReturn heap_right (VPair v_left v_right) KDone)
+	                  phi_done
+	                  (StDone heap_final v_final)
+	                  HDoneTail))
+	              as (HHeap & HVal & HTraceDone).
+	            exists n_eff1, n_eff2, n_left, n_right,
+	              phi_eff1, phi_eff2, phi_left, phi_right,
+	              theta1, theta2, heap_eff1, heap_eff2,
+	              heap_left, heap_right, v_left, v_right.
+	            split; [exact HSummary1 |].
+	            split; [exact HSummary2 |].
+	            split; [exact HLeft |].
+	            split; [exact HRight |].
+	            split; [lia |].
+	            split; [lia |].
+	            split; [lia |].
+	            split; [lia |].
+	            split.
+	            ** right. exact HCheckSummary.
+	            ** split; [exact HHeap |].
+	               split; [exact HVal |].
+	               rewrite HTraceStart, HTraceEff1, HTraceAfterEff1,
+	                 HTraceEff2, HTraceAfterEff2, HTraceLeft,
+	                 HTraceAfterLeft, HTraceRight, HTraceAfterRight,
+	                 HTraceDone.
+	               repeat rewrite app_assoc.
+	               rewrite app_nil_r.
+	               reflexivity.
+Qed.
+
+Definition CheckedEPairParCountedDecompositionGoal : Prop :=
+  forall n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final,
+    CheckedStepsN n
+      (InitialState heap env rho
+        (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
+      phi
+      (StDone heap_final v_final) ->
+    exists n_eff1 n_eff2 n_left n_right
+      phi_eff1 phi_eff2 phi_left phi_right
+      theta1 theta2 heap_eff1 heap_eff2 heap_left heap_right
+      v_left v_right,
+      CheckedStepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
+        phi_eff1
+        (StDone heap_eff1 (VSummary theta1)) /\
+      CheckedStepsN n_eff2
+        (InitialState heap_eff1 env rho (EEffApp ef2 ea2))
+        phi_eff2
+        (StDone heap_eff2 (VSummary theta2)) /\
+      CheckedStepsN n_left
+        (InitialState heap_eff2 env rho (EMuApp ef1 ea1))
+        phi_left
+        (StDone heap_left v_left) /\
+      CheckedStepsN n_right
+        (InitialState heap_left env rho (EMuApp ef2 ea2))
+        phi_right
+        (StDone heap_right v_right) /\
+      n_eff1 < n /\
+      n_eff2 < n /\
+      n_left < n /\
+      n_right < n /\
+      summary_disjointb theta1 theta2 = true /\
+      trace_disjointb phi_left phi_right = true /\
+      heap_final = heap_right /\
+      v_final = VPair v_left v_right /\
+      phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
+
+Theorem CheckedEPairPar_counted_decomposition :
+  CheckedEPairParCountedDecompositionGoal.
+Proof.
+  unfold CheckedEPairParCountedDecompositionGoal.
+  intros n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps.
+  destruct
+    (CheckedStepsN_known_first_step_terminal_inv
+      n
+      (InitialState heap env rho
+        (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
+      LSilent
+      (StEval heap env rho (EEffApp ef1 ea1)
+        (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
+      phi heap_final v_final
+      ltac:(eapply CheckedStepRuntime;
+        [ apply StepPairPar
+        | intros HFail;
+          inversion HFail as
+            (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & HState & _);
+          discriminate
+        | intros HRun; exact HRun ])
+      HSteps)
+    as (n_eff1_tail & phi_tail & HnStart &
+      HSummary1WithKont & HTraceStart).
+  destruct
+    (CheckedStepsN_append_kont_terminal_split_counted
+      n_eff1_tail
+      (StEval heap env rho (EEffApp ef1 ea1)
+        (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
+      phi_tail
+      heap_final v_final
+      HSummary1WithKont
+      (InitialState heap env rho (EEffApp ef1 ea1))
+      (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone)
+      eq_refl)
+    as (n_eff1 & n_after_eff1 & phi_eff1 & heap_eff1 & v_eff1 &
+      phi_after_eff1 & HSummary1 & HAfterEff1 & HCountEff1 &
+      HTraceEff1).
+  - intros heap_done v_done HDone. inversion HDone.
+  - destruct
+      (KPairParEff1_terminal_value_is_summary
+        heap_eff1 v_eff1 ef1 ea1 ef2 ea2 env rho KDone
+        phi_after_eff1 heap_final v_final
+        (StepsN_to_Steps _ _ _ _
+          (CheckedStepsN_to_StepsN_done _ _ _ _ _ HAfterEff1)))
+      as (theta1 & HTheta1).
+    subst v_eff1.
+    destruct
+      (CheckedStepsN_known_first_step_terminal_inv
+        n_after_eff1
+        (StReturn heap_eff1 (VSummary theta1)
+          (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
+        LSilent
+        (StEval heap_eff1 env rho (EEffApp ef2 ea2)
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
+        phi_after_eff1 heap_final v_final
+        ltac:(eapply CheckedStepRuntime;
+          [ apply StepPairParEff1
+          | intros HFail;
+            inversion HFail as
+              (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & HState & _);
+            discriminate
+          | intros HRun; exact HRun ])
+        HAfterEff1)
+      as (n_eff2_tail & phi_eff2_tail & HCountAfterEff1 &
+        HSummary2WithKont & HTraceAfterEff1).
+    destruct
+      (CheckedStepsN_append_kont_terminal_split_counted
+        n_eff2_tail
+        (StEval heap_eff1 env rho (EEffApp ef2 ea2)
+          (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
+        phi_eff2_tail
+        heap_final v_final
+        HSummary2WithKont
+        (InitialState heap_eff1 env rho (EEffApp ef2 ea2))
+        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone)
+        eq_refl)
+      as (n_eff2 & n_after_eff2 & phi_eff2 & heap_eff2 & v_eff2 &
+        phi_after_eff2 & HSummary2 & HAfterEff2 & HCountEff2 &
+        HTraceEff2).
+    + intros heap_done v_done HDone. inversion HDone.
+    + destruct
+        (KPairParEff2_terminal_value_is_summary
+          heap_eff2 v_eff2 ef1 ea1 ef2 ea2 env rho theta1 KDone
+          phi_after_eff2 heap_final v_final
+          (StepsN_to_Steps _ _ _ _
+            (CheckedStepsN_to_StepsN_done _ _ _ _ _ HAfterEff2)))
+        as (theta2 & HTheta2).
       subst v_eff2.
-      destruct
-        (KPairParEff2_summary_terminal_check_pass_N
-          n_after_eff2 heap_eff2 theta1 theta2 ef1 ea1 ef2 ea2 env rho
-          KDone phi_after_eff2 heap_final v_final HAfterEff2)
-        as (HCheckSummary & n_pair & phi_pair & HCountAfterEff2 &
-          HPairRun & HTraceAfterEff2).
-      destruct
-        (StPairParRun_initial_counted_decomposition_N
-          n_pair heap_eff2 env rho
-          (EMuApp ef1 ea1)
-          (EMuApp ef2 ea2)
-          phi_pair heap_final v_final HPairRun)
-        as (n_left & n_right & phi_left & phi_right &
-          heap_left & v_left & heap_right & v_right &
-          HLeft & HRight & HLeftCount & HRightCount &
-          HCheckTrace & HHeap & HVal & HTracePair).
-      exists n_eff1, n_eff2, n_left, n_right,
-        phi_eff1, phi_eff2, phi_left, phi_right,
-        theta1, theta2, heap_eff1, heap_eff2,
-        heap_left, heap_right, v_left, v_right.
-      repeat split; try assumption; try lia.
-      rewrite HTraceStart, HTraceEff1, HTraceAfterEff1, HTraceEff2,
-        HTraceAfterEff2, HTracePair.
-      repeat rewrite app_assoc.
-      reflexivity.
+      destruct (summary_disjointb theta1 theta2) eqn:HCheckSummary.
+      * destruct
+          (CheckedStepsN_known_first_step_terminal_inv
+            n_after_eff2
+            (StReturn heap_eff2 (VSummary theta2)
+              (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
+            LSilent
+            (StPairParRun
+              (StEval heap_eff2 env rho (EMuApp ef1 ea1) KDone)
+              (StEval heap_eff2 env rho (EMuApp ef2 ea2) KDone)
+              []
+              []
+              KDone)
+            phi_after_eff2 heap_final v_final
+            ltac:(eapply CheckedStepRuntime;
+              [ eapply StepPairParCheckPass; exact HCheckSummary
+              | intros HFail;
+                destruct HFail as
+                  (? & ? & ? & ? & ? & ? & ? & ? & ? & ? &
+                    HState & HFailCheck);
+                inversion HState; subst;
+                rewrite HCheckSummary in HFailCheck;
+                discriminate
+              | intros HRun; exact HRun ])
+            HAfterEff2)
+          as (n_pair & phi_pair & HCountAfterEff2 &
+            HPairRun & HTraceAfterEff2).
+        destruct
+          (CheckedStPairParRun_initial_counted_decomposition_N
+            n_pair heap_eff2 env rho
+            (EMuApp ef1 ea1)
+            (EMuApp ef2 ea2)
+            phi_pair heap_final v_final HPairRun)
+          as (n_left & n_right & phi_left & phi_right &
+            heap_left & v_left & heap_right & v_right &
+            HLeft & HRight & HLeftCount & HRightCount &
+            HCheckTrace & HHeap & HVal & HTracePair).
+        exists n_eff1, n_eff2, n_left, n_right,
+          phi_eff1, phi_eff2, phi_left, phi_right,
+          theta1, theta2, heap_eff1, heap_eff2,
+          heap_left, heap_right, v_left, v_right.
+        split; [exact HSummary1 |].
+        split; [exact HSummary2 |].
+        split; [exact HLeft |].
+        split; [exact HRight |].
+        split; [lia |].
+        split; [lia |].
+        split; [lia |].
+        split; [lia |].
+        split; [exact HCheckSummary |].
+        split; [exact HCheckTrace |].
+        split; [exact HHeap |].
+        split; [exact HVal |].
+        rewrite HTraceStart, HTraceEff1, HTraceAfterEff1,
+          HTraceEff2, HTraceAfterEff2, HTracePair.
+        simpl.
+        repeat rewrite app_assoc.
+        reflexivity.
+      * destruct
+          (CheckedStepsN_known_first_step_terminal_inv
+            n_after_eff2
+            (StReturn heap_eff2 (VSummary theta2)
+              (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
+            LSilent
+            (StError heap_eff2)
+            phi_after_eff2 heap_final v_final
+            (CheckedStepPairParCheckFail
+              heap_eff2 theta1 theta2 ef1 ea1 ef2 ea2 env rho
+              KDone HCheckSummary)
+            HAfterEff2)
+          as (n_error & phi_error & _HCountAfterEff2 &
+            HErrorTail & _HTraceAfterEff2).
+        exfalso.
+        eapply CheckedStepsN_error_no_done. exact HErrorTail.
 Qed.
 
 Definition EPairParDecompositionGoal : Prop :=
@@ -1121,14 +1701,15 @@ Definition EPairParDecompositionGoal : Prop :=
       ComputationEvaluation
         heap_eff2 env rho (EMuApp ef1 ea1)
         phi_left heap_left v_left /\
-      ComputationEvaluation
-        heap_left env rho (EMuApp ef2 ea2)
-        phi_right heap_right v_right /\
-      summary_disjointb theta1 theta2 = true /\
-      trace_disjointb phi_left phi_right = true /\
-      heap_final = heap_right /\
-      v_final = VPair v_left v_right /\
-      phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
+	      ComputationEvaluation
+	        heap_left env rho (EMuApp ef2 ea2)
+	        phi_right heap_right v_right /\
+	      ((summary_disjointb theta1 theta2 = true /\
+	        trace_disjointb phi_left phi_right = true) \/
+	       summary_disjointb theta1 theta2 = false) /\
+	      heap_final = heap_right /\
+	      v_final = VPair v_left v_right /\
+	      phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
 
 Theorem EPairPar_decomposition :
   EPairParDecompositionGoal.
@@ -1136,110 +1717,41 @@ Proof.
   unfold EPairParDecompositionGoal.
   intros heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps.
   destruct
-    (EPairPar_terminal_first_step
-      heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps)
-    as (phi_tail & HSummary1WithKont & HTraceStart).
-  destruct
     (Steps_to_StepsN
-      (StEval heap env rho (EEffApp ef1 ea1)
-        (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
-      phi_tail
+      (InitialState heap env rho
+        (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2)))
+      phi
       (StDone heap_final v_final)
-      HSummary1WithKont)
-    as (n_eff1 & HSummary1WithKontN).
+      HSteps)
+    as (n & HStepsN).
   destruct
-    (StepsN_append_kont_terminal_split
-      n_eff1
-      (StEval heap env rho (EEffApp ef1 ea1)
-        (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone))
-      phi_tail
-      heap_final
-      v_final
-      HSummary1WithKontN
-      (InitialState heap env rho (EEffApp ef1 ea1))
-      (KPairParEff1 ef1 ea1 ef2 ea2 env rho KDone)
-      eq_refl)
-    as (phi_eff1 & heap_eff1 & v_eff1 & phi_after_eff1 &
-      HSummary1 & HAfterEff1 & HTraceEff1).
-  destruct
-    (KPairParEff1_terminal_value_is_summary
-      heap_eff1 v_eff1 ef1 ea1 ef2 ea2 env rho KDone
-      phi_after_eff1 heap_final v_final HAfterEff1)
-    as (theta1 & HTheta1).
-  subst v_eff1.
-  destruct
-    (KPairParEff1_summary_terminal_first_step
-      heap_eff1 theta1 ef1 ea1 ef2 ea2 env rho KDone
-      phi_after_eff1 heap_final v_final HAfterEff1)
-    as (phi_eff2_tail & HSummary2WithKont & HTraceAfterEff1).
-  destruct
-    (Steps_to_StepsN
-      (StEval heap_eff1 env rho (EEffApp ef2 ea2)
-        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
-      phi_eff2_tail
-      (StDone heap_final v_final)
-      HSummary2WithKont)
-    as (n_eff2 & HSummary2WithKontN).
-  destruct
-    (StepsN_append_kont_terminal_split
-      n_eff2
-      (StEval heap_eff1 env rho (EEffApp ef2 ea2)
-        (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone))
-      phi_eff2_tail
-      heap_final
-      v_final
-      HSummary2WithKontN
-      (InitialState heap_eff1 env rho (EEffApp ef2 ea2))
-      (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 KDone)
-      eq_refl)
-    as (phi_eff2 & heap_eff2 & v_eff2 & phi_after_eff2 &
-      HSummary2 & HAfterEff2 & HTraceEff2).
-  destruct
-    (KPairParEff2_terminal_value_is_summary
-      heap_eff2 v_eff2 ef1 ea1 ef2 ea2 env rho theta1 KDone
-      phi_after_eff2 heap_final v_final HAfterEff2)
-    as (theta2 & HTheta2).
-  subst v_eff2.
-  destruct
-    (KPairParEff2_summary_terminal_check_pass
-      heap_eff2 theta1 theta2 ef1 ea1 ef2 ea2 env rho KDone
-      phi_after_eff2 heap_final v_final HAfterEff2)
-    as (HCheckSummary & phi_pair & HPairRun & HTraceAfterEff2).
-  destruct
-    (Steps_to_StepsN
-      (StPairParRun
-        (StEval heap_eff2 env rho (EMuApp ef1 ea1) KDone)
-        (StEval heap_eff2 env rho (EMuApp ef2 ea2) KDone)
-        [] [] KDone)
-      phi_pair
-      (StDone heap_final v_final)
-      HPairRun)
-    as (n_pair & HPairRunN).
-  destruct
-    (StPairParRun_initial_decomposition_N
-      n_pair heap_eff2 env rho
-      (EMuApp ef1 ea1)
-      (EMuApp ef2 ea2)
-      phi_pair heap_final v_final HPairRunN)
-    as (phi_left & phi_right & heap_left & v_left &
-      heap_right & v_right &
-      HLeft & HRight & HCheckTrace & HHeap & HVal & HTracePair).
+    (EPairPar_counted_decomposition
+      n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HStepsN)
+    as (_n_eff1 & _n_eff2 & _n_left & _n_right &
+      phi_eff1 & phi_eff2 & phi_left & phi_right &
+      theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
+      v_left & v_right &
+      HSummary1 & HSummary2 & HLeft & HRight &
+      _ & _ & _ & _ & HCheckOutcome & HHeap & HVal & HTrace).
   exists phi_eff1, phi_eff2, phi_left, phi_right,
     theta1, theta2, heap_eff1, heap_eff2, heap_left, heap_right,
     v_left, v_right.
-  unfold SummaryEvaluation, ComputationEvaluation in *.
-  split; [exact HSummary1 |].
-  split; [exact HSummary2 |].
-  split; [exact HLeft |].
-  split; [exact HRight |].
-  split; [exact HCheckSummary |].
-  split; [exact HCheckTrace |].
+  split.
+  - unfold SummaryEvaluation.
+    eapply StepsN_to_Steps. exact HSummary1.
+  - split.
+    + unfold SummaryEvaluation.
+      eapply StepsN_to_Steps. exact HSummary2.
+    + split.
+      * unfold ComputationEvaluation.
+        eapply StepsN_to_Steps. exact HLeft.
+      * split.
+        -- unfold ComputationEvaluation.
+           eapply StepsN_to_Steps. exact HRight.
+        -- split; [exact HCheckOutcome |].
   split; [exact HHeap |].
   split; [exact HVal |].
-  rewrite HTraceStart, HTraceEff1, HTraceAfterEff1, HTraceEff2,
-    HTraceAfterEff2, HTracePair.
-  repeat rewrite app_assoc.
-  reflexivity.
+  exact HTrace.
 Qed.
 
 Definition EPairParHeapNeutralSummaryDecompositionGoal : Prop :=
@@ -1262,15 +1774,16 @@ Definition EPairParHeapNeutralSummaryDecompositionGoal : Prop :=
       ComputationEvaluation
         heap env rho (EMuApp ef1 ea1)
         phi_left heap_left v_left /\
-      ComputationEvaluation
-        heap_left env rho (EMuApp ef2 ea2)
-        phi_right heap_right v_right /\
-      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
-      summary_disjointb theta1 theta2 = true /\
-      trace_disjointb phi_left phi_right = true /\
-      heap_final = heap_right /\
-      v_final = VPair v_left v_right /\
-      phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
+	      ComputationEvaluation
+	        heap_left env rho (EMuApp ef2 ea2)
+	        phi_right heap_right v_right /\
+	      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
+	      ((summary_disjointb theta1 theta2 = true /\
+	        trace_disjointb phi_left phi_right = true) \/
+	       summary_disjointb theta1 theta2 = false) /\
+	      heap_final = heap_right /\
+	      v_final = VPair v_left v_right /\
+	      phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
 
 Theorem EPairPar_decomposition_with_heap_neutral_summaries :
   EPairParHeapNeutralSummaryDecompositionGoal.
@@ -1281,11 +1794,11 @@ Proof.
   destruct
     (EPairPar_decomposition
       heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HSteps)
-    as (phi_eff1 & phi_eff2 & phi_left & phi_right &
-      theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
-      v_left & v_right &
-      HSummary1 & HSummary2 & HLeft & HRight &
-      HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
+	    as (phi_eff1 & phi_eff2 & phi_left & phi_right &
+	      theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
+	      v_left & v_right &
+	      HSummary1 & HSummary2 & HLeft & HRight &
+	      HCheckOutcome & HHeap & HVal & HTrace).
   destruct
     (HNeutralSummary1 heap env rho phi_eff1 heap_eff1 theta1 HSummary1)
     as (HHeapEff1 & HNeutralTrace1).
@@ -1301,12 +1814,11 @@ Proof.
   split; [exact HLeft |].
   split; [exact HRight |].
   split.
-  - apply heap_neutral_trace_app; assumption.
-  - split; [exact HCheckSummary |].
-    split; [exact HCheckTrace |].
-    split; [exact HHeap |].
-    split; [exact HVal |].
-	    exact HTrace.
+	  - apply heap_neutral_trace_app; assumption.
+	  - split; [exact HCheckOutcome |].
+	    split; [exact HHeap |].
+	    split; [exact HVal |].
+		    exact HTrace.
 Qed.
 
 Definition CheckedEPairParHeapNeutralStoreDecompositionGoal : Prop :=
@@ -1332,14 +1844,15 @@ Definition CheckedEPairParHeapNeutralStoreDecompositionGoal : Prop :=
       ComputationEvaluation
         heap env rho (EMuApp ef1 ea1)
         phi_left heap_left v_left /\
-      ComputationEvaluation
-        heap_left env rho (EMuApp ef2 ea2)
-        phi_right heap_right v_right /\
-      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
-      summary_disjointb theta1 theta2 = true /\
-      trace_disjointb phi_left phi_right = true /\
-      heap_final = heap_right /\
-      StoreKeysBoundedByHeap heap_final store /\
+	      ComputationEvaluation
+	        heap_left env rho (EMuApp ef2 ea2)
+	        phi_right heap_right v_right /\
+	      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
+	      ((summary_disjointb theta1 theta2 = true /\
+	        trace_disjointb phi_left phi_right = true) \/
+	       summary_disjointb theta1 theta2 = false) /\
+	      heap_final = heap_right /\
+	      StoreKeysBoundedByHeap heap_final store /\
       StoreResolvedHeapShape heap_final store /\
       StoreResolvedValShape store v_left ty_left /\
       StoreResolvedValShape store v_right ty_right /\
@@ -1359,10 +1872,10 @@ Proof.
       (VPair v_left v_right)
       HNeutralSummary1 HNeutralSummary2 HComp)
     as (phi_eff1 & phi_eff2 & phi_left & phi_right &
-      theta1 & theta2 & heap_left & heap_right & v_left_decomp &
-      v_right_decomp &
-      HSummary1 & HSummary2 & HLeft & HRight & HNeutralTrace &
-      HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
+	      theta1 & theta2 & heap_left & heap_right & v_left_decomp &
+	      v_right_decomp &
+	      HSummary1 & HSummary2 & HLeft & HRight & HNeutralTrace &
+	      HCheckOutcome & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
     (CBT_PairPar_summary_static_heap_neutral
@@ -1383,12 +1896,11 @@ Proof.
     theta1, theta2, heap_left, heap_right, store, ty_left, ty_right.
   split; [exact HSummary1 |].
   split; [exact HSummary2 |].
-  split; [exact HLeft |].
-  split; [exact HRight |].
-  split; [exact HNeutralTrace |].
-  split; [exact HCheckSummary |].
-  split; [exact HCheckTrace |].
-  split; [reflexivity |].
+	  split; [exact HLeft |].
+	  split; [exact HRight |].
+	  split; [exact HNeutralTrace |].
+	  split; [exact HCheckOutcome |].
+	  split; [reflexivity |].
   split; [exact HStoreBounded |].
   split; [exact HStoreHeap |].
   split; [exact HValLeft |].
@@ -1421,9 +1933,10 @@ Definition CheckedEPairParStaticTraceStoreDecompositionGoal : Prop :=
       ComputationEvaluation
         heap_left env rho (EMuApp ef2 ea2)
         phi_right heap_right v_right /\
-      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
-      summary_disjointb theta1 theta2 = true /\
-      trace_disjointb phi_left phi_right = true /\
+	      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
+	      ((summary_disjointb theta1 theta2 = true /\
+	        trace_disjointb phi_left phi_right = true) \/
+	       summary_disjointb theta1 theta2 = false) /\
       heap_final = heap_right /\
       StoreKeysBoundedByHeap heap_final store /\
       StoreResolvedHeapShape heap_final store /\
@@ -1445,10 +1958,10 @@ Proof.
       heap env rho ef1 ea1 ef2 ea2 phi heap_final
       (VPair v_left v_right) HComp)
     as (phi_eff1 & phi_eff2 & phi_left & phi_right &
-      theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
-      v_left_decomp & v_right_decomp &
-      HSummary1 & HSummary2 & HLeft & HRight &
-      HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
+	      theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
+	      v_left_decomp & v_right_decomp &
+	      HSummary1 & HSummary2 & HLeft & HRight &
+	      HCheckOutcome & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
     (CBT_PairPar_summary_static_heap_neutral
@@ -1521,11 +2034,10 @@ Proof.
   split; [exact HSummary2 |].
   split; [exact HLeft |].
   split; [exact HRight |].
-  split.
-  - apply heap_neutral_trace_app; assumption.
-  - split; [exact HCheckSummary |].
-    split; [exact HCheckTrace |].
-    split; [reflexivity |].
+	  split.
+	  - apply heap_neutral_trace_app; assumption.
+	  - split; [exact HCheckOutcome |].
+	    split; [reflexivity |].
     split; [exact HStoreBounded |].
     split; [exact HStoreHeap |].
     split; [exact HValLeft |].
@@ -1565,12 +2077,13 @@ Definition CheckedEPairParCountedStaticTraceStoreDecompositionGoal : Prop :=
         (StDone heap_right v_right) /\
       n_eff1 < n /\
       n_eff2 < n /\
-      n_left < n /\
-      n_right < n /\
-      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
-      summary_disjointb theta1 theta2 = true /\
-      trace_disjointb phi_left phi_right = true /\
-      heap_final = heap_right /\
+	      n_left < n /\
+	      n_right < n /\
+	      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
+	      ((summary_disjointb theta1 theta2 = true /\
+	        trace_disjointb phi_left phi_right = true) \/
+	       summary_disjointb theta1 theta2 = false) /\
+	      heap_final = heap_right /\
       StoreKeysBoundedByHeap heap_final store /\
       StoreResolvedHeapShape heap_final store /\
       StoreResolvedValShape store v_left ty_left /\
@@ -1590,13 +2103,14 @@ Proof.
     (EPairPar_counted_decomposition
       n heap env rho ef1 ea1 ef2 ea2 phi heap_final
       (VPair v_left v_right) HComp)
-    as (n_eff1 & n_eff2 & n_left & n_right &
-      phi_eff1 & phi_eff2 & phi_left & phi_right &
-      theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
-      v_left_decomp & v_right_decomp &
-      HSummary1N & HSummary2N & HLeftN & HRightN &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
+	    as (n_eff1 & n_eff2 & n_left & n_right &
+	      phi_eff1 & phi_eff2 & phi_left & phi_right &
+	      theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
+	      v_left_decomp & v_right_decomp &
+	      HSummary1N & HSummary2N & HLeftN & HRightN & HRest).
+	  destruct HRest as
+	    (HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      HCheckOutcome & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
     (CBT_PairPar_summary_static_heap_neutral
@@ -1693,12 +2207,11 @@ Proof.
   split; [exact HCountEff1 |].
   split; [exact HCountEff2 |].
   split; [exact HCountLeft |].
-  split; [exact HCountRight |].
-  split.
-  - apply heap_neutral_trace_app; assumption.
-  - split; [exact HCheckSummary |].
-    split; [exact HCheckTrace |].
-    split; [reflexivity |].
+	  split; [exact HCountRight |].
+	  split.
+	  - apply heap_neutral_trace_app; assumption.
+	  - split; [exact HCheckOutcome |].
+	    split; [reflexivity |].
     split; [exact HStoreBounded |].
     split; [exact HStoreHeap |].
     split; [exact HValLeft |].
@@ -1739,12 +2252,13 @@ Definition CheckedStoreEPairParCountedStaticTraceStoreDecompositionGoal :
         (StDone heap_right v_right) /\
       n_eff1 < n /\
       n_eff2 < n /\
-      n_left < n /\
-      n_right < n /\
-      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
-      summary_disjointb theta1 theta2 = true /\
-      trace_disjointb phi_left phi_right = true /\
-      heap_final = heap_right /\
+	      n_left < n /\
+	      n_right < n /\
+	      HeapNeutralTrace (phi_eff1 ++ phi_eff2) /\
+	      ((summary_disjointb theta1 theta2 = true /\
+	        trace_disjointb phi_left phi_right = true) \/
+	       summary_disjointb theta1 theta2 = false) /\
+	      heap_final = heap_right /\
       StoreKeysBoundedByHeap heap_final store /\
       StoreResolvedHeapShape heap_final store /\
       StoreResolvedValShape store v_left ty_left /\
@@ -1767,10 +2281,10 @@ Proof.
     as (n_eff1 & n_eff2 & n_left & n_right &
       phi_eff1 & phi_eff2 & phi_left & phi_right &
       theta1 & theta2 & heap_eff1 & heap_eff2 & heap_left & heap_right &
-      v_left_decomp & v_right_decomp &
-      HSummary1N & HSummary2N & HLeftN & HRightN &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      HCheckSummary & HCheckTrace & HHeap & HVal & HTrace).
+	      v_left_decomp & v_right_decomp &
+	      HSummary1N & HSummary2N & HLeftN & HRightN &
+	      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      HCheckOutcome & HHeap & HVal & HTrace).
   inversion HVal; subst v_left_decomp v_right_decomp.
   destruct
     (CBT_PairPar_summary_static_heap_neutral
@@ -1866,12 +2380,11 @@ Proof.
   split; [exact HCountEff1 |].
   split; [exact HCountEff2 |].
   split; [exact HCountLeft |].
-  split; [exact HCountRight |].
-  split.
-  - apply heap_neutral_trace_app; assumption.
-  - split; [exact HCheckSummary |].
-    split; [exact HCheckTrace |].
-    split; [reflexivity |].
+	  split; [exact HCountRight |].
+	  split.
+	  - apply heap_neutral_trace_app; assumption.
+	  - split; [exact HCheckOutcome |].
+	    split; [reflexivity |].
     split; [exact HStoreBounded |].
     split; [exact HStoreHeap |].
     split; [exact HValLeft |].
@@ -1904,13 +2417,15 @@ Proof.
       n gamma omega heap env rho ef1 ea1 ef2 ea2
       phi heap_final v_left v_right
       HBack HContext HSummaryTraceSound HComp)
-    as (_ & _ & n_left & _ &
-      _ & _ & phi_left & _ &
-      _ & _ & heap_left & _ &
-      _ & _ & _ &
-      _ & _ & HLeftN & _ &
-      _ & _ & HCountLeft & _ &
-      _ & _ & _ & _ & _ & _ & _ & _ & _).
+    as (_n_eff1 & _n_eff2 & n_left & _n_right &
+      _phi_eff1 & _phi_eff2 & phi_left & _phi_right &
+      _theta1 & _theta2 & heap_left & _heap_right &
+      _store & _ty_left & _ty_right &
+      _HSummary1N & _HSummary2N & HLeftN & _HRightN & HRest).
+  destruct HRest as
+    (_HCountEff1 & _HCountEff2 & HCountLeft & _HCountRight &
+      _HNeutral & _HCheckOutcome & _HHeap & _HStoreBounded &
+      _HStoreHeap & _HValLeft & _HValRight & _HTrace).
   destruct
     (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
@@ -2125,9 +2640,9 @@ Proof.
       phi_eff1 & phi_eff2 & phi_left & phi_right &
       theta1 & theta2 & heap_eff1 & heap_eff2 &
       heap_left & heap_right & v_left & v_right &
-      HSummary1 & HSummary2 & HLeft & HRight &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      _ & _ & _ & _ & HTrace).
+	      HSummary1 & HSummary2 & HLeft & HRight &
+	      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      _HOutcome & _HHeap & _HVal & HTrace).
   eapply
     (EPairPar_terminal_trace_covered_from_sequential_concat_summary
       heap env rho ef1 ea1 ef2 ea2
@@ -2200,13 +2715,15 @@ Proof.
       n gamma omega heap env rho ef1 ea1 ef2 ea2
       phi heap_final v_left v_right
       HBack HContext HSummaryTraceSound HComp)
-    as (n_eff1 & n_eff2 & n_left & n_right &
-      phi_eff1 & phi_eff2 & phi_left & phi_right &
-      theta1 & theta2 & heap_left & heap_right &
-      store & ty_left & ty_right &
-      HSummary1N & HSummary2N & HLeftN & HRightN &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      _ & _ & _ & _ & _ & _ & _ & _ & HTrace).
+	    as (n_eff1 & n_eff2 & n_left & n_right &
+	      phi_eff1 & phi_eff2 & phi_left & phi_right &
+	      theta1 & theta2 & heap_left & heap_right &
+	      store & ty_left & ty_right &
+	      HSummary1N & HSummary2N & HLeftN & HRightN & HRest).
+	  destruct HRest as
+	    (HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      _HNeutral & _HCheckOutcome & _HHeap & _HStoreBounded &
+	      _HStoreHeap & _HValLeft & _HValRight & HTrace).
   destruct
     (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
@@ -2320,10 +2837,10 @@ Proof.
     as (n_eff1 & n_eff2 & n_left & n_right &
       phi_eff1 & phi_eff2 & phi_left & phi_right &
       theta1 & theta2 & heap_left & heap_right &
-      store & ty_left & ty_right &
-      HSummary1N & HSummary2N & HLeftN & HRightN &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      _ & _ & _ & _ & _ & _ & _ & _ & HTrace).
+	      store & ty_left & ty_right &
+	      HSummary1N & HSummary2N & HLeftN & HRightN &
+	      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      _ & _ & _ & _ & _ & _ & _ & HTrace).
   destruct
     (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
@@ -2453,13 +2970,15 @@ Proof.
       n gamma omega heap env rho ef1 ea1 ef2 ea2
       phi heap_final v_left v_right
       HBack HContext HSummaryTraceSound HComp)
-    as (n_eff1 & n_eff2 & n_left & n_right &
-      phi_eff1 & phi_eff2 & phi_left & phi_right &
-      theta1 & theta2 & heap_left & heap_right &
-      store & ty_left & ty_right &
-      HSummary1N & HSummary2N & HLeftN & HRightN &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      _ & _ & _ & _ & _ & _ & _ & _ & HTrace).
+	    as (n_eff1 & n_eff2 & n_left & n_right &
+	      phi_eff1 & phi_eff2 & phi_left & phi_right &
+	      theta1 & theta2 & heap_left & heap_right &
+	      store & ty_left & ty_right &
+	      HSummary1N & HSummary2N & HLeftN & HRightN & HRest).
+	  destruct HRest as
+	    (HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      _HNeutral & _HCheckOutcome & _HHeap & _HStoreBounded &
+	      _HStoreHeap & _HValLeft & _HValRight & HTrace).
   destruct
     (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
@@ -2760,14 +3279,43 @@ Proof.
       HSummaryDisjoint HNeutralSummary2 HCoveredSummary2 HCoveredLeft
       HContextRight)
     as (phi_summary & heap_summary & HSummaryRight).
-  eapply
-    (HBelow
-      n_right gamma omega heap_left env rho
-      (EMuApp ef2 ea2) (EEffApp ef2 ea2)
-      phi_right heap_right v_right
-      phi_summary heap_summary theta2);
-	    eauto.
+	  eapply
+	    (HBelow
+	      n_right gamma omega heap_left env rho
+	      (EMuApp ef2 ea2) (EEffApp ef2 ea2)
+	      phi_right heap_right v_right
+	      phi_summary heap_summary theta2);
+		    eauto.
 Qed.
+
+Definition EPairParFallbackOutcome
+    (heap : Heap) (env : Env) (rho : Rho)
+    (ef1 ea1 ef2 ea2 : Expr)
+    (phi : Trace) (heap_final : Heap) (v_final : Val) : Prop :=
+  exists phi_eff1 phi_eff2 phi_left phi_right
+    theta1 theta2 heap_eff1 heap_eff2 heap_left heap_right
+    v_left v_right,
+    SummaryEvaluation heap env rho (EEffApp ef1 ea1)
+      phi_eff1 heap_eff1 theta1 /\
+    SummaryEvaluation heap_eff1 env rho (EEffApp ef2 ea2)
+      phi_eff2 heap_eff2 theta2 /\
+    ComputationEvaluation heap_eff2 env rho (EMuApp ef1 ea1)
+      phi_left heap_left v_left /\
+    ComputationEvaluation heap_left env rho (EMuApp ef2 ea2)
+      phi_right heap_right v_right /\
+    summary_disjointb theta1 theta2 = false /\
+    heap_final = heap_right /\
+    v_final = VPair v_left v_right /\
+    phi = phi_eff1 ++ phi_eff2 ++ phi_left ++ phi_right.
+
+Definition EPairParCheckedOutcome
+    (heap : Heap) (env : Env) (rho : Rho)
+    (ef1 ea1 ef2 ea2 : Expr)
+    (phi : Trace) (heap_final : Heap) (v_final : Val)
+    (theta : Summary) : Prop :=
+  TraceCoveredBySummary phi theta \/
+  EPairParFallbackOutcome
+    heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final.
 
 Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_left_replayed_after_left :
   forall n gamma omega heap env rho ef1 ea1 ef2 ea2
@@ -2792,16 +3340,17 @@ Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_left_rep
         phi_eff1
         (StDone heap (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
-    (forall n_eff2 phi_eff2 theta2,
-      n_eff2 < n ->
-      StepsN n_eff2
-        (InitialState heap env rho (EEffApp ef2 ea2))
-        phi_eff2
-        (StDone heap (VSummary theta2)) ->
-      TraceCoveredBySummary phi_eff2 theta2) ->
-    EPairParRightSummaryReplayAfterLeftBelow
-      n gamma omega heap env rho ef1 ea1 ef2 ea2 ->
-    TraceCoveredBySummary phi theta.
+	    (forall n_eff2 phi_eff2 theta2,
+	      n_eff2 < n ->
+	      StepsN n_eff2
+	        (InitialState heap env rho (EEffApp ef2 ea2))
+	        phi_eff2
+	        (StDone heap (VSummary theta2)) ->
+	      TraceCoveredBySummary phi_eff2 theta2) ->
+	    EPairParRightSummaryReplayAfterLeftBelow
+	      n gamma omega heap env rho ef1 ea1 ef2 ea2 ->
+	    EPairParCheckedOutcome heap env rho ef1 ea1 ef2 ea2
+	      phi heap_final (VPair v_left v_right) theta.
 Proof.
   intros n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta
@@ -2816,11 +3365,11 @@ Proof.
       phi_eff1 & phi_eff2 & phi_left & phi_right &
       theta1 & theta2 & heap_left & heap_right &
       store & ty_left & ty_right &
-      HSummary1N & HSummary2N & HLeftN & HRightN &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      HNeutralSummaries & HSummaryDisjoint & _HTraceDisjoint &
-      _HHeap & _HStoreBounded & _HStoreHeap & _HValLeft &
-      _HValRight & HTrace).
+	      HSummary1N & HSummary2N & HLeftN & HRightN & HRest).
+	  destruct HRest as
+	    (HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      HNeutralSummaries & HCheckOutcome & _HHeap & _HStoreBounded &
+	      _HStoreHeap & _HValLeft & _HValRight & HTrace).
   destruct
     (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
@@ -2886,42 +3435,65 @@ Proof.
   assert
     (HNeutralSummary2 :
       HeapNeutralTrace phi_eff2).
-  {
-    eapply heap_neutral_trace_app_r.
-    exact HNeutralSummaries.
-  }
-  eapply
-    (EPairPar_terminal_trace_covered_from_sequential_concat_summary
-      heap env rho ef1 ea1 ef2 ea2
-      phi phi_summary heap_summary theta
+	  {
+	    eapply heap_neutral_trace_app_r.
+	    exact HNeutralSummaries.
+	  }
+	  destruct HCheckOutcome as
+	    [(HSummaryDisjoint & _HTraceDisjoint) | HSummaryFail].
+	  - left.
+	    eapply
+	    (EPairPar_terminal_trace_covered_from_sequential_concat_summary
+	      heap env rho ef1 ea1 ef2 ea2
+	      phi phi_summary heap_summary theta
       phi_eff1 phi_eff2 phi_left phi_right theta1 theta2
       heap heap).
-  - exact HSummary1.
-  - exact HSummary2.
-  - exact HSummaryConcat.
-  - exact HTrace.
-  - eapply HCoveredSummary1.
-    + exact HCountEff1.
-    + exact HSummary1N.
-  - exact HCoveredSummary2Actual.
-  - exact HCoveredLeft.
-  - eapply
-      (EPairPar_right_coverage_from_store_below_replayed_after_left_summary
-        n gamma omega heap env rho ef1 ea1 ef2 ea2).
-    + exact HBelow.
-    + exact HBackRight.
-    + exact HReplay.
-    + exact HCountEff2.
-    + exact HSummary2N.
-    + exact HCountLeft.
-    + exact HLeftN.
-    + exact HSummaryDisjoint.
-    + exact HNeutralSummary2.
-    + exact HCoveredSummary2Actual.
-    + exact HCoveredLeft.
-    + exact HCountRight.
-    + exact HLeftStoreContext.
-    + exact HRightN.
+	    + exact HSummary1.
+	    + exact HSummary2.
+	    + exact HSummaryConcat.
+	    + exact HTrace.
+	    + eapply HCoveredSummary1.
+	      * exact HCountEff1.
+	      * exact HSummary1N.
+	    + exact HCoveredSummary2Actual.
+	    + exact HCoveredLeft.
+	    + eapply
+	      (EPairPar_right_coverage_from_store_below_replayed_after_left_summary
+	        n gamma omega heap env rho ef1 ea1 ef2 ea2).
+	      * exact HBelow.
+	      * exact HBackRight.
+	      * exact HReplay.
+	      * exact HCountEff2.
+	      * exact HSummary2N.
+	      * exact HCountLeft.
+	      * exact HLeftN.
+	      * exact HSummaryDisjoint.
+	      * exact HNeutralSummary2.
+	      * exact HCoveredSummary2Actual.
+	      * exact HCoveredLeft.
+	      * exact HCountRight.
+	      * exact HLeftStoreContext.
+	      * exact HRightN.
+	  - right.
+		    exists phi_eff1, phi_eff2, phi_left, phi_right,
+		      theta1, theta2, heap, heap, heap_left, heap_right,
+		      v_left, v_right.
+		    split.
+		    + unfold SummaryEvaluation.
+		      eapply StepsN_to_Steps. exact HSummary1N.
+		    + split.
+		      * unfold SummaryEvaluation.
+		        eapply StepsN_to_Steps. exact HSummary2N.
+		      * split.
+		        -- unfold ComputationEvaluation.
+		           eapply StepsN_to_Steps. exact HLeftN.
+		        -- split.
+		           ++ unfold ComputationEvaluation.
+		              eapply StepsN_to_Steps. exact HRightN.
+		           ++ split; [exact HSummaryFail |].
+		              split; [exact _HHeap |].
+		              split; [reflexivity |].
+		              exact HTrace.
 Qed.
 
 Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_left_replayed_after_left :
@@ -2947,16 +3519,17 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_left_repla
         phi_eff1
         (StDone heap (VSummary theta1)) ->
       TraceCoveredBySummary phi_eff1 theta1) ->
-    (forall n_eff2 phi_eff2 theta2,
-      n_eff2 < n ->
-      StepsN n_eff2
-        (InitialState heap env rho (EEffApp ef2 ea2))
-        phi_eff2
-        (StDone heap (VSummary theta2)) ->
-      TraceCoveredBySummary phi_eff2 theta2) ->
-    EPairParRightSummaryReplayAfterLeftBelow
-      n gamma omega heap env rho ef1 ea1 ef2 ea2 ->
-    TraceCoveredBySummary phi theta.
+	    (forall n_eff2 phi_eff2 theta2,
+	      n_eff2 < n ->
+	      StepsN n_eff2
+	        (InitialState heap env rho (EEffApp ef2 ea2))
+	        phi_eff2
+	        (StDone heap (VSummary theta2)) ->
+	      TraceCoveredBySummary phi_eff2 theta2) ->
+	    EPairParRightSummaryReplayAfterLeftBelow
+	      n gamma omega heap env rho ef1 ea1 ef2 ea2 ->
+	    EPairParCheckedOutcome heap env rho ef1 ea1 ef2 ea2
+	      phi heap_final (VPair v_left v_right) theta.
 Proof.
   intros n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta
@@ -2971,11 +3544,11 @@ Proof.
       phi_eff1 & phi_eff2 & phi_left & phi_right &
       theta1 & theta2 & heap_left & heap_right &
       store & ty_left & ty_right &
-      HSummary1N & HSummary2N & HLeftN & HRightN &
-      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
-      HNeutralSummaries & HSummaryDisjoint & _HTraceDisjoint &
-      _HHeap & _HStoreBounded & _HStoreHeap & _HValLeft &
-      _HValRight & HTrace).
+	      HSummary1N & HSummary2N & HLeftN & HRightN & HRest).
+	  destruct HRest as
+	    (HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+	      HNeutralSummaries & HCheckOutcome & _HHeap & _HStoreBounded &
+	      _HStoreHeap & _HValLeft & _HValRight & HTrace).
   destruct
     (CBT_PairPar_components
       gamma omega ef1 ea1 ef2 ea2 HBack)
@@ -3040,42 +3613,65 @@ Proof.
   assert
     (HNeutralSummary2 :
       HeapNeutralTrace phi_eff2).
-  {
-    eapply heap_neutral_trace_app_r.
-    exact HNeutralSummaries.
-  }
-  eapply
-    (EPairPar_terminal_trace_covered_from_sequential_concat_summary
-      heap env rho ef1 ea1 ef2 ea2
-      phi phi_summary heap_summary theta
-      phi_eff1 phi_eff2 phi_left phi_right theta1 theta2
-      heap heap).
-  - exact HSummary1.
-  - exact HSummary2.
-  - exact HSummaryConcat.
-  - exact HTrace.
-  - eapply HCoveredSummary1.
-    + exact HCountEff1.
-    + exact HSummary1N.
-  - exact HCoveredSummary2Actual.
-  - exact HCoveredLeft.
-  - eapply
-      (EPairPar_right_coverage_from_store_below_replayed_after_left_summary
-        n gamma omega heap env rho ef1 ea1 ef2 ea2).
-    + exact HBelow.
-    + exact HBackRight.
-    + exact HReplay.
-    + exact HCountEff2.
-    + exact HSummary2N.
-    + exact HCountLeft.
-    + exact HLeftN.
-    + exact HSummaryDisjoint.
-    + exact HNeutralSummary2.
-    + exact HCoveredSummary2Actual.
-    + exact HCoveredLeft.
-    + exact HCountRight.
-    + exact HLeftStoreContext.
-    + exact HRightN.
+	  {
+	    eapply heap_neutral_trace_app_r.
+	    exact HNeutralSummaries.
+	  }
+	  destruct HCheckOutcome as
+	    [(HSummaryDisjoint & _HTraceDisjoint) | HSummaryFail].
+	  - left.
+	    eapply
+	      (EPairPar_terminal_trace_covered_from_sequential_concat_summary
+	        heap env rho ef1 ea1 ef2 ea2
+	        phi phi_summary heap_summary theta
+	        phi_eff1 phi_eff2 phi_left phi_right theta1 theta2
+	        heap heap).
+	    + exact HSummary1.
+	    + exact HSummary2.
+	    + exact HSummaryConcat.
+	    + exact HTrace.
+	    + eapply HCoveredSummary1.
+	      * exact HCountEff1.
+	      * exact HSummary1N.
+	    + exact HCoveredSummary2Actual.
+	    + exact HCoveredLeft.
+	    + eapply
+	        (EPairPar_right_coverage_from_store_below_replayed_after_left_summary
+	          n gamma omega heap env rho ef1 ea1 ef2 ea2).
+	      * exact HBelow.
+	      * exact HBackRight.
+	      * exact HReplay.
+	      * exact HCountEff2.
+	      * exact HSummary2N.
+	      * exact HCountLeft.
+	      * exact HLeftN.
+	      * exact HSummaryDisjoint.
+	      * exact HNeutralSummary2.
+	      * exact HCoveredSummary2Actual.
+	      * exact HCoveredLeft.
+	      * exact HCountRight.
+	      * exact HLeftStoreContext.
+	      * exact HRightN.
+	  - right.
+	    exists phi_eff1, phi_eff2, phi_left, phi_right,
+	      theta1, theta2, heap, heap, heap_left, heap_right,
+	      v_left, v_right.
+	    split.
+	    + unfold SummaryEvaluation.
+	      eapply StepsN_to_Steps. exact HSummary1N.
+	    + split.
+	      * unfold SummaryEvaluation.
+	        eapply StepsN_to_Steps. exact HSummary2N.
+	      * split.
+	        -- unfold ComputationEvaluation.
+	           eapply StepsN_to_Steps. exact HLeftN.
+	        -- split.
+	           ++ unfold ComputationEvaluation.
+	              eapply StepsN_to_Steps. exact HRightN.
+	           ++ split; [exact HSummaryFail |].
+	              split; [exact _HHeap |].
+	              split; [reflexivity |].
+	              exact HTrace.
 Qed.
 
 Theorem EPairPar_checked_store_context_counted_trace_covered_from_below_bodies :
@@ -3397,13 +3993,14 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_summary_va
     CountedComputationEvaluation n heap env rho
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       phi heap_final (VPair v_left v_right) ->
-    SummaryEvaluation
-      heap env rho
-      (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2))
-      phi_summary heap_summary theta ->
-    EPairParRightSummaryReplayAfterLeftBelow
-      n gamma omega heap env rho ef1 ea1 ef2 ea2 ->
-    TraceCoveredBySummary phi theta.
+	    SummaryEvaluation
+	      heap env rho
+	      (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2))
+	      phi_summary heap_summary theta ->
+	    EPairParRightSummaryReplayAfterLeftBelow
+	      n gamma omega heap env rho ef1 ea1 ef2 ea2 ->
+	    EPairParCheckedOutcome heap env rho ef1 ea1 ef2 ea2
+	      phi heap_final (VPair v_left v_right) theta.
 Proof.
   intros n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta
@@ -3466,13 +4063,14 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_summary_va
     CountedComputationEvaluation n heap env rho
       (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
       phi heap_final (VPair v_left v_right) ->
-    SummaryEvaluation
-      heap env rho
-      (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2))
-      phi_summary heap_summary theta ->
-    SummaryReplayUnderReadAgreementBelow
-      n gamma omega heap env rho (EEffApp ef2 ea2) ->
-    TraceCoveredBySummary phi theta.
+	    SummaryEvaluation
+	      heap env rho
+	      (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2))
+	      phi_summary heap_summary theta ->
+	    SummaryReplayUnderReadAgreementBelow
+	      n gamma omega heap env rho (EEffApp ef2 ea2) ->
+	    EPairParCheckedOutcome heap env rho ef1 ea1 ef2 ea2
+	      phi heap_final (VPair v_left v_right) theta.
 Proof.
   intros n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta
@@ -3504,7 +4102,8 @@ Theorem EPairPar_checked_store_entry_counted_trace_covered_from_below_summary_va
       heap env rho
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2))
       phi_summary heap_summary theta ->
-    TraceCoveredBySummary phi theta.
+    EPairParCheckedOutcome heap env rho ef1 ea1 ef2 ea2
+      phi heap_final (VPair v_left v_right) theta.
 Proof.
   intros n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_left v_right phi_summary heap_summary theta
@@ -3535,7 +4134,8 @@ Theorem EPairPar_checked_store_context_case_from_below :
       heap env rho
       (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2))
       phi_summary heap_summary theta ->
-    TraceCoveredBySummary phi theta.
+    EPairParCheckedOutcome heap env rho ef1 ea1 ef2 ea2
+      phi heap_final v_final theta.
 Proof.
   intros n gamma omega heap env rho ef1 ea1 ef2 ea2
     phi heap_final v_final phi_summary heap_summary theta
@@ -3546,12 +4146,11 @@ Proof.
       n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final HComp)
     as (_n_eff1 & _n_eff2 & _n_left & _n_right &
       _phi_eff1 & _phi_eff2 & _phi_left & _phi_right &
-      _theta1 & _theta2 & _heap_eff1 & _heap_eff2 &
-      _heap_left & _heap_right & v_left & v_right &
-      _HSummary1 & _HSummary2 & _HLeft & _HRight &
-      _HLtEff1 & _HLtEff2 & _HLtLeft & _HLtRight &
-      _HSummaryDisjoint & _HTraceDisjoint &
-      _HHeapFinal & HValueFinal & _HTrace).
+	      _theta1 & _theta2 & _heap_eff1 & _heap_eff2 &
+	      _heap_left & _heap_right & v_left & v_right &
+	      _HSummary1 & _HSummary2 & _HLeft & _HRight &
+	      _HLtEff1 & _HLtEff2 & _HLtLeft & _HLtRight &
+	      _HCheckOutcome & _HHeapFinal & HValueFinal & _HTrace).
   subst v_final.
   eapply
     (EPairPar_checked_store_entry_counted_trace_covered_from_below_summary_value_closed
@@ -3613,10 +4212,10 @@ Proof.
       phi heap_final v_left v_right
       HBack HContext HSummaryTraceSound HComp)
     as (phi_eff1 & phi_eff2 & phi_left & phi_right &
-      theta1 & theta2 & heap_left & heap_right &
-      store & ty_left & ty_right &
-      HSummary1 & HSummary2 & HLeft & HRight &
-      _ & _ & _ & _ & _ & _ & _ & _ & HTrace).
+	      theta1 & theta2 & heap_left & heap_right &
+	      store & ty_left & ty_right &
+	      HSummary1 & HSummary2 & HLeft & HRight &
+	      _ & _ & _ & _ & _ & _ & _ & HTrace).
   eapply
     (EPairPar_terminal_trace_covered_from_concat_summary
       heap env rho ef1 ea1 ef2 ea2
@@ -3630,4 +4229,252 @@ Proof.
   - eapply HCoveredSummary2; eauto.
   - eapply HCoveredLeft; eauto.
   - eapply HCoveredRight; eauto.
+Qed.
+
+Theorem EPairPar_checked_execution_store_context_case_from_below :
+  forall n gamma omega heap env rho ef1 ea1 ef2 ea2
+    phi heap_final v_final phi_summary heap_summary theta,
+    CheckedExecutionStoreContextSmallStepCorrectnessBelow n ->
+    CheckedExecutionStoreSummaryValueSoundnessBelow n ->
+    CheckedBackTriangle gamma omega
+      (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
+      (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2)) ->
+    CheckedStoreRuntimeContext gamma omega heap env rho ->
+    CheckedSummaryTraceSoundnessFor gamma omega heap env rho ->
+    CheckedCountedComputationEvaluation n heap env rho
+      (EPairPar (EMuApp ef1 ea1) (EMuApp ef2 ea2))
+      phi heap_final v_final ->
+    SummaryEvaluation
+      heap env rho
+      (EConcat (EEffApp ef1 ea1) (EEffApp ef2 ea2))
+      phi_summary heap_summary theta ->
+    TraceCoveredBySummary phi theta.
+Proof.
+  intros n gamma omega heap env rho ef1 ea1 ef2 ea2
+    phi heap_final v_final phi_summary heap_summary theta
+    HBelow HSummaryValueBelow HBack HContext HSummaryTraceSound
+    HComp HSummaryConcat.
+  destruct
+    (CheckedEPairPar_counted_decomposition
+      n heap env rho ef1 ea1 ef2 ea2 phi heap_final v_final
+      HComp)
+    as (n_eff1 & n_eff2 & n_left & n_right &
+      phi_eff1 & phi_eff2 & phi_left & phi_right &
+      theta1 & theta2 & heap_eff1 & heap_eff2 &
+      heap_left & heap_right & v_left & v_right &
+      HSummary1N & HSummary2N & HLeftN & HRightN &
+      HCountEff1 & HCountEff2 & HCountLeft & HCountRight &
+      HSummaryDisjoint & _HTraceDisjoint & _HHeapFinal &
+      _HValueFinal & HTrace).
+  destruct
+    (CBT_PairPar_components
+      gamma omega ef1 ea1 ef2 ea2 HBack)
+    as (ty1 & _ty2 & eff1 & _eff2 &
+      eff_summary1 & eff_summary2 &
+      HCheckedLeft & _HCheckedRight &
+      HCheckedSummary1 & HCheckedSummary2 &
+      HStaticNeutral1 & HStaticNeutral2 &
+      _HNoAlloc1 & _HNoAlloc2 & HBackLeft & HBackRight).
+  pose proof
+    (CheckedStoreRuntimeContext_to_rho_models
+      gamma omega heap env rho HContext)
+    as HRho.
+  assert
+    (HSummary1RawN :
+      StepsN n_eff1
+        (InitialState heap env rho (EEffApp ef1 ea1))
+        phi_eff1
+        (StDone heap_eff1 (VSummary theta1))).
+  {
+    eapply CheckedStepsN_to_StepsN_done.
+    exact HSummary1N.
+  }
+  assert
+    (HSummary1 :
+      SummaryEvaluation heap env rho (EEffApp ef1 ea1)
+        phi_eff1 heap_eff1 theta1).
+  {
+    unfold SummaryEvaluation.
+    eapply StepsN_to_Steps.
+    exact HSummary1RawN.
+  }
+  pose proof
+    (CheckedTcExp_eff_wf
+      gamma omega (EEffApp ef1 ea1) TyEffect eff_summary1
+      HCheckedSummary1)
+    as HSummaryWF1.
+  destruct
+    (ResolveStaticEffect_exists
+      0 omega rho eff_summary1 HRho HSummaryWF1)
+    as (eff_summary1_res & HResolveSummary1).
+  pose proof
+    (HSummaryTraceSound
+      (EEffApp ef1 ea1) eff_summary1
+      phi_eff1 heap_eff1 theta1 eff_summary1_res
+      HCheckedSummary1 HSummary1 HResolveSummary1)
+    as HStaticCoveredSummary1.
+  destruct
+    (summary_static_heap_neutral
+      heap env rho (EEffApp ef1 ea1)
+      phi_eff1 heap_eff1 theta1
+      eff_summary1 eff_summary1_res
+      HSummary1 HResolveSummary1 HStaticCoveredSummary1
+      HStaticNeutral1)
+    as (HHeapEff1 & _HNeutralSummary1).
+  subst heap_eff1.
+  assert
+    (HSummary2RawN :
+      StepsN n_eff2
+        (InitialState heap env rho (EEffApp ef2 ea2))
+        phi_eff2
+        (StDone heap_eff2 (VSummary theta2))).
+  {
+    eapply CheckedStepsN_to_StepsN_done.
+    exact HSummary2N.
+  }
+  assert
+    (HSummary2 :
+      SummaryEvaluation heap env rho (EEffApp ef2 ea2)
+        phi_eff2 heap_eff2 theta2).
+  {
+    unfold SummaryEvaluation.
+    eapply StepsN_to_Steps.
+    exact HSummary2RawN.
+  }
+  pose proof
+    (CheckedTcExp_eff_wf
+      gamma omega (EEffApp ef2 ea2) TyEffect eff_summary2
+      HCheckedSummary2)
+    as HSummaryWF2.
+  destruct
+    (ResolveStaticEffect_exists
+      0 omega rho eff_summary2 HRho HSummaryWF2)
+    as (eff_summary2_res & HResolveSummary2).
+  pose proof
+    (HSummaryTraceSound
+      (EEffApp ef2 ea2) eff_summary2
+      phi_eff2 heap_eff2 theta2 eff_summary2_res
+      HCheckedSummary2 HSummary2 HResolveSummary2)
+    as HStaticCoveredSummary2.
+  destruct
+    (summary_static_heap_neutral
+      heap env rho (EEffApp ef2 ea2)
+      phi_eff2 heap_eff2 theta2
+      eff_summary2 eff_summary2_res
+      HSummary2 HResolveSummary2 HStaticCoveredSummary2
+      HStaticNeutral2)
+    as (HHeapEff2 & HNeutralSummary2).
+  subst heap_eff2.
+  assert
+    (HCoveredSummary1 : TraceCoveredBySummary phi_eff1 theta1).
+  {
+    eapply
+      (HSummaryValueBelow
+        n_eff1 gamma omega heap env rho
+        (EMuApp ef1 ea1) (EEffApp ef1 ea1)
+        eff_summary1 phi_eff1 heap theta1);
+      eauto.
+  }
+  assert
+    (HCoveredSummary2 : TraceCoveredBySummary phi_eff2 theta2).
+  {
+    eapply
+      (HSummaryValueBelow
+        n_eff2 gamma omega heap env rho
+        (EMuApp ef2 ea2) (EEffApp ef2 ea2)
+        eff_summary2 phi_eff2 heap theta2);
+      eauto.
+  }
+  assert
+    (HLeftRawN :
+      StepsN n_left
+        (InitialState heap env rho (EMuApp ef1 ea1))
+        phi_left
+        (StDone heap_left v_left)).
+  {
+    eapply CheckedStepsN_to_StepsN_done.
+    exact HLeftN.
+  }
+  assert
+    (HLeftComp :
+      CountedComputationEvaluation n_left heap env rho
+        (EMuApp ef1 ea1) phi_left heap_left v_left).
+  {
+    unfold CountedComputationEvaluation.
+    exact HLeftRawN.
+  }
+  assert
+    (HCoveredLeft : TraceCoveredBySummary phi_left theta1).
+  {
+    eapply
+      (HBelow
+        n_left gamma omega heap env rho
+        (EMuApp ef1 ea1) (EEffApp ef1 ea1)
+        phi_left heap_left v_left
+        phi_eff1 heap theta1);
+      eauto.
+  }
+  assert
+    (HLeftStoreContext :
+      CheckedStoreRuntimeContext gamma omega heap_left env rho).
+  {
+    eapply
+      (checked_store_counted_computation_store_runtime_context
+        n_left gamma omega heap env rho
+        (EMuApp ef1 ea1) ty1 eff1 phi_left heap_left v_left);
+      eauto.
+  }
+  assert
+    (HRightSummaryReplay :
+      exists phi_summary_right heap_summary_right,
+        SummaryEvaluation heap_left env rho (EEffApp ef2 ea2)
+          phi_summary_right heap_summary_right theta2).
+  {
+    pose proof
+      (SummaryReplayUnderReadAgreementBelow_from_heap_neutral_replay
+        n gamma omega heap env rho (EEffApp ef2 ea2))
+      as HReplayRead.
+    pose proof
+      (EPairParRightSummaryReplayAfterLeftBelow_from_read_agreement_store
+        n gamma omega heap env rho ef1 ea1 ef2 ea2
+        HContext HReplayRead)
+      as HReplay.
+    eapply HReplay.
+    - exact HCountEff2.
+    - exact HSummary2RawN.
+    - exact HCountLeft.
+    - exact HLeftRawN.
+    - exact HSummaryDisjoint.
+    - exact HNeutralSummary2.
+    - exact HCoveredSummary2.
+    - exact HCoveredLeft.
+    - exact HLeftStoreContext.
+  }
+  destruct HRightSummaryReplay as
+    (phi_summary_right & heap_summary_right & HSummaryRight).
+  assert
+    (HCoveredRight : TraceCoveredBySummary phi_right theta2).
+  {
+    eapply
+      (HBelow
+        n_right gamma omega heap_left env rho
+        (EMuApp ef2 ea2) (EEffApp ef2 ea2)
+        phi_right heap_right v_right
+        phi_summary_right heap_summary_right theta2);
+      eauto.
+  }
+  eapply
+    (EPairPar_terminal_trace_covered_from_sequential_concat_summary
+      heap env rho ef1 ea1 ef2 ea2
+      phi phi_summary heap_summary theta
+      phi_eff1 phi_eff2 phi_left phi_right theta1 theta2
+      heap heap).
+  - exact HSummary1.
+  - exact HSummary2.
+  - exact HSummaryConcat.
+  - exact HTrace.
+  - exact HCoveredSummary1.
+  - exact HCoveredSummary2.
+  - exact HCoveredLeft.
+  - exact HCoveredRight.
 Qed.

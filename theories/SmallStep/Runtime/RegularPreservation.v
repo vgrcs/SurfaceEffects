@@ -2059,14 +2059,89 @@ Lemma StoreResolvedStateShape_pair_par_check_fail_preservation :
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       ty_out ->
-    StoreResolvedStateShape store (StError heap) ty_out.
+    StoreResolvedStateShape store
+      (StEval heap env rho (EMuApp ef1 ea1)
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      ty_out.
 Proof.
   intros store heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out
     HState.
   inversion HState as
     [| store0 heap0 v0 k0 ty ty_out0 HBounded HHeap HV HK | | |];
     subst; clear HState.
-  eapply SRSS_Error; eauto.
+  inversion HK; subst.
+  inversion HV; subst.
+  eapply SRSS_Eval with
+    (gamma := gamma) (omega := omega)
+    (ty := ty1) (ty_res := ty1_res) (eff := eff1).
+  - unfold StoreResolvedRuntimeShape.
+    split; [assumption | split; assumption].
+  - match goal with
+    | H : RhoModels omega rho |- _ => exact H
+    end.
+  - match goal with
+    | H : ResolveTy rho ty1 ty1_res |- _ => exact H
+    end.
+  - match goal with
+    | H : CheckedTcExp gamma omega (EMuApp ef1 ea1) ty1 eff1 |- _ =>
+        exact H
+    end.
+  - eapply SRKS_PairParFallbackLeft with
+      (gamma := gamma) (omega := omega)
+      (ty2 := ty2) (ty2_res := ty2_res) (eff2 := eff2);
+      eauto.
+Qed.
+
+Lemma StoreResolvedStateShape_pair_par_fallback_left_return_preservation :
+  forall store heap v_left ef2 ea2 env rho k ty_out,
+    StoreResolvedStateShape store
+      (StReturn heap v_left
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      ty_out ->
+    StoreResolvedStateShape store
+      (StEval heap env rho (EMuApp ef2 ea2)
+        (KPairParFallbackRight v_left k))
+      ty_out.
+Proof.
+  intros store heap v_left ef2 ea2 env rho k ty_out HState.
+  inversion HState as
+    [| store0 heap0 v0 k0 ty ty_out0 HBounded HHeap HV HK | | |];
+    subst; clear HState.
+  inversion HK; subst.
+  eapply SRSS_Eval with
+    (gamma := gamma) (omega := omega)
+    (ty := ty2) (ty_res := ty2_res) (eff := eff2).
+  - unfold StoreResolvedRuntimeShape.
+    split; [assumption | split; assumption].
+  - match goal with
+    | H : RhoModels omega rho |- _ => exact H
+    end.
+  - match goal with
+    | H : ResolveTy rho ty2 ty2_res |- _ => exact H
+    end.
+  - match goal with
+    | H : CheckedTcExp gamma omega (EMuApp ef2 ea2) ty2 eff2 |- _ =>
+        exact H
+    end.
+  - eapply SRKS_PairParFallbackRight; eauto.
+Qed.
+
+Lemma StoreResolvedStateShape_pair_par_fallback_right_return_preservation :
+  forall store heap v_left v_right k ty_out,
+    StoreResolvedStateShape store
+      (StReturn heap v_right (KPairParFallbackRight v_left k))
+      ty_out ->
+    StoreResolvedStateShape store
+      (StReturn heap (VPair v_left v_right) k)
+      ty_out.
+Proof.
+  intros store heap v_left v_right k ty_out HState.
+  inversion HState as
+    [| store0 heap0 v0 k0 ty ty_out0 HBounded HHeap HV HK | | |];
+    subst; clear HState.
+  inversion HK; subst.
+  eapply SRSS_Return; eauto.
+  eapply SRVS_Pair; eauto.
 Qed.
 
 Lemma StoreResolvedStateShape_pair_par_done_pass_preservation :
@@ -2315,6 +2390,8 @@ Proof.
             StoreResolvedStateShape_pair_par_eff1_preservation,
             StoreResolvedStateShape_pair_par_check_pass_preservation,
             StoreResolvedStateShape_pair_par_check_fail_preservation,
+            StoreResolvedStateShape_pair_par_fallback_left_return_preservation,
+            StoreResolvedStateShape_pair_par_fallback_right_return_preservation,
             StoreResolvedStateShape_pair_par_left_error_preservation,
             StoreResolvedStateShape_pair_par_right_error_preservation,
             StoreResolvedStateShape_pair_par_done_pass_preservation,
@@ -2357,7 +2434,7 @@ Proof.
         | apply StoreStepTransport_same; reflexivity ] ].
   - inversion HState as
       [| | | |
-        store0 left_state0 right_state0 phi_left0 phi_right0 k0 heap
+        store0 left_state0 right_state0 phi_left0 phi_right0 k0 heap_run
         ty1 ty2 ty_out0 HHeapLeft HHeapRight HLeft HRight HK];
       subst; clear HState.
     destruct (IHHStep store ty1 HLeft) as
@@ -3637,13 +3714,66 @@ Lemma RegularResolvedStateShape_pair_par_check_fail_preservation :
       (StReturn heap (VSummary theta2)
         (KPairParEff2 ef1 ea1 ef2 ea2 env rho theta1 k))
       ty_out ->
-    RegularResolvedStateShape (StError heap) ty_out.
+    RegularResolvedStateShape
+      (StEval heap env rho (EMuApp ef1 ea1)
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      ty_out.
 Proof.
   intros heap theta1 theta2 ef1 ea1 ef2 ea2 env rho k ty_out HState.
   inversion HState as
     [| heap0 v0 k0 ty ty_out0 HHeap HV HK | | |];
     subst; clear HState.
-  eapply RRSS_Error; eauto.
+  inversion HK; subst.
+  inversion HV; subst.
+  eapply RRSS_Eval with
+    (gamma := gamma) (omega := omega)
+    (ty := ty1) (ty_res := ty1_res) (eff := eff1);
+    eauto.
+  eapply RRKS_PairParFallbackLeft with
+    (gamma := gamma) (omega := omega)
+    (ty2 := ty2) (ty2_res := ty2_res) (eff2 := eff2);
+    eauto.
+Qed.
+
+Lemma RegularResolvedStateShape_pair_par_fallback_left_return_preservation :
+  forall heap v_left ef2 ea2 env rho k ty_out,
+    RegularResolvedStateShape
+      (StReturn heap v_left
+        (KPairParFallbackLeft ef2 ea2 env rho k))
+      ty_out ->
+    RegularResolvedStateShape
+      (StEval heap env rho (EMuApp ef2 ea2)
+        (KPairParFallbackRight v_left k))
+      ty_out.
+Proof.
+  intros heap v_left ef2 ea2 env rho k ty_out HState.
+  inversion HState as
+    [| heap0 v0 k0 ty ty_out0 HHeap HV HK | | |];
+    subst; clear HState.
+  inversion HK; subst.
+  eapply RRSS_Eval with
+    (gamma := gamma) (omega := omega)
+    (ty := ty2) (ty_res := ty2_res) (eff := eff2);
+    eauto.
+  eapply RRKS_PairParFallbackRight; eauto.
+Qed.
+
+Lemma RegularResolvedStateShape_pair_par_fallback_right_return_preservation :
+  forall heap v_left v_right k ty_out,
+    RegularResolvedStateShape
+      (StReturn heap v_right (KPairParFallbackRight v_left k))
+      ty_out ->
+    RegularResolvedStateShape
+      (StReturn heap (VPair v_left v_right) k)
+      ty_out.
+Proof.
+  intros heap v_left v_right k ty_out HState.
+  inversion HState as
+    [| heap0 v0 k0 ty ty_out0 HHeap HV HK | | |];
+    subst; clear HState.
+  inversion HK; subst.
+  eapply RRSS_Return; eauto.
+  eapply RRVS_Pair; eauto.
 Qed.
 
 Lemma RegularResolvedStateShape_pair_par_done_pass_preservation :
@@ -3905,6 +4035,10 @@ Proof.
   - eapply RegularResolvedStateShape_pair_par_eff1_preservation; eauto.
   - eapply RegularResolvedStateShape_pair_par_check_pass_preservation; eauto.
   - eapply RegularResolvedStateShape_pair_par_check_fail_preservation; eauto.
+  - eapply RegularResolvedStateShape_pair_par_fallback_left_return_preservation;
+      eauto.
+  - eapply RegularResolvedStateShape_pair_par_fallback_right_return_preservation;
+      eauto.
   - eapply RegularResolvedStateShape_pair_par_run_left_preservation_from_child;
       eauto.
   - eapply RegularResolvedStateShape_pair_par_run_right_preservation_from_child;
